@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "properties": {
+    "payer_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "payment_type": {
+      "type": "string",
+      "enum": [
+        "Registration",
+        "Monthly Dues",
+        "Event Fee",
+        "Other"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Confirmed",
+        "Pending",
+        "Failed"
+      ]
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "XtremeForcePayment"
+}
