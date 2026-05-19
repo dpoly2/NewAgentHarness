@@ -1,0 +1,307 @@
+/* XFTC Membership — Public Styles */
+
+:root {
+    --xftc-red:    #c8102e;
+    --xftc-dark:   #1a1a2e;
+    --xftc-gray:   #6c757d;
+    --xftc-light:  #f8f9fa;
+    --xftc-border: #dee2e6;
+    --xftc-radius: 8px;
+}
+
+/* ── Forms ─────────────────────────────────────────────────────────────────── */
+.xftc-form-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 32px;
+    background: #fff;
+    border-radius: var(--xftc-radius);
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+}
+
+.xftc-form-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--xftc-dark);
+    margin: 0 0 8px;
+}
+
+.xftc-form-subtitle {
+    color: var(--xftc-gray);
+    margin: 0 0 28px;
+    font-size: 15px;
+}
+
+.xftc-form-group {
+    margin-bottom: 18px;
+}
+
+.xftc-form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: var(--xftc-dark);
+}
+
+.xftc-form-group input,
+.xftc-form-group select,
+.xftc-form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--xftc-border);
+    border-radius: var(--xftc-radius);
+    font-size: 15px;
+    transition: border-color .2s;
+    box-sizing: border-box;
+}
+
+.xftc-form-group input:focus,
+.xftc-form-group select:focus {
+    border-color: var(--xftc-red);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(200,16,46,.1);
+}
+
+.xftc-required { color: var(--xftc-red); }
+
+.xftc-form-row.xftc-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+@media (max-width: 540px) {
+    .xftc-form-row.xftc-two-col { grid-template-columns: 1fr; }
+}
+
+.xftc-form-submit {
+    margin-top: 24px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.xftc-login-link {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--xftc-gray);
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────────────── */
+.xftc-btn {
+    display: inline-block;
+    padding: 10px 22px;
+    border-radius: var(--xftc-radius);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all .2s;
+    text-decoration: none;
+}
+
+.xftc-btn-primary {
+    background: var(--xftc-red);
+    color: #fff;
+    border-color: var(--xftc-red);
+}
+
+.xftc-btn-primary:hover {
+    background: #a00d24;
+    border-color: #a00d24;
+    color: #fff;
+}
+
+.xftc-btn-outline {
+    background: transparent;
+    color: var(--xftc-red);
+    border-color: var(--xftc-red);
+}
+
+.xftc-btn-outline:hover {
+    background: var(--xftc-red);
+    color: #fff;
+}
+
+.xftc-btn-sm {
+    padding: 6px 14px;
+    font-size: 13px;
+}
+
+/* ── Messages ──────────────────────────────────────────────────────────────── */
+.xftc-message {
+    padding: 12px 16px;
+    border-radius: var(--xftc-radius);
+    margin-bottom: 16px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.xftc-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.xftc-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ── Portal ────────────────────────────────────────────────────────────────── */
+.xftc-portal-wrap { max-width: 900px; margin: 0 auto; }
+
+.xftc-portal-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--xftc-border);
+}
+
+.xftc-portal-header h2 {
+    margin: 0;
+    flex: 1;
+    font-size: 26px;
+    color: var(--xftc-dark);
+}
+
+.xftc-active-season-badge {
+    background: var(--xftc-red);
+    color: #fff;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.xftc-portal-section {
+    margin-bottom: 36px;
+}
+
+.xftc-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.xftc-section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--xftc-dark);
+}
+
+/* Athlete Cards */
+.xftc-athlete-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.xftc-athlete-card {
+    background: #fff;
+    border: 1px solid var(--xftc-border);
+    border-radius: var(--xftc-radius);
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    transition: box-shadow .2s;
+}
+
+.xftc-athlete-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+
+.xftc-athlete-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--xftc-red);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.xftc-athlete-info { flex: 1; }
+.xftc-athlete-info strong { display: block; font-size: 16px; color: var(--xftc-dark); }
+
+.xftc-tag {
+    display: inline-block;
+    background: var(--xftc-light);
+    color: var(--xftc-gray);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.xftc-athlete-school {
+    font-size: 13px;
+    color: var(--xftc-gray);
+    margin-top: 4px;
+}
+
+.xftc-athlete-actions { margin-top: 10px; }
+
+/* Empty state */
+.xftc-empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    background: var(--xftc-light);
+    border-radius: var(--xftc-radius);
+    border: 2px dashed var(--xftc-border);
+}
+
+/* ── Modal ─────────────────────────────────────────────────────────────────── */
+.xftc-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.xftc-modal-inner {
+    background: #fff;
+    border-radius: var(--xftc-radius);
+    width: 100%;
+    max-width: 580px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.xftc-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--xftc-border);
+}
+
+.xftc-modal-header h3 { margin: 0; font-size: 18px; }
+
+.xftc-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--xftc-gray);
+    line-height: 1;
+}
+
+.xftc-modal-inner form { padding: 24px; }
