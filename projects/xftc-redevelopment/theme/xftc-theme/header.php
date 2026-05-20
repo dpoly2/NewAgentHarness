@@ -1,0 +1,1 @@
+<?php xftc_partial( 'header' ); ?>
