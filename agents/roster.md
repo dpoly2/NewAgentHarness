@@ -20,11 +20,56 @@
 
 ---
 
-## Web Development Agent
+## Web Development Agents
 
-| Agent Name     | Specialty                              | Status  |
-|----------------|----------------------------------------|---------|
-| wordpressagent | WordPress fixing, building, themes     | Pending |
+| Agent Name              | Specialty                              | Status  |
+|-------------------------|----------------------------------------|---------|
+| wordpressagent          | WordPress fixing, building, themes     | Active  |
+| wordpresspluginsagent   | Custom plugin development              | Active  |
+| researchagent           | Site audits & strategy reports         | Active  |
+
+---
+
+## Research & Funding Agents
+
+| Agent Name          | Specialty                                      | Status  |
+|---------------------|------------------------------------------------|---------|
+| grantsresearchagent | Grant discovery, funding opps, revenue ideas   | Active  |
+| grantwriteragent    | Program-level grant application writing        | Active  |
+
+---
+
+## YEPC — Youth Elite Performance Complex Agents
+
+| Agent Name                    | Specialty                                              | Status  |
+|-------------------------------|--------------------------------------------------------|---------|
+| yepcrprojectmanageragent      | Master project tracker, milestone management           | Active  |
+| yepcrealestateresearchagent   | Zoning, permitting, EDC incentives, TxDOT/CAMPO        | Active  |
+| yepccapitalfundraisingagent   | Investor decks, naming rights, sponsorships, lending   | Active  |
+| yepcgovernmentrelationsagent  | City/county meetings, TxDOT, CAMPO monitoring          | Active  |
+| yepcgrantwriteragent          | Capital project grant applications (EDA, HUD, etc.)   | Active  |
+
+---
+
+## Active Automations
+
+| Automation                        | Schedule                   | Status  |
+|-----------------------------------|----------------------------|---------|
+| Daily Email Digest                | Every day at 8:00 AM CT    | Active  |
+| XFTC Signup & Payment Logger      | Every 4 hours              | Active  |
+| Weekly Monday Grant Digest        | Every Monday at 8:00 AM CT | Active  |
+
+---
+
+## Open Items / Pending Info
+- [ ] Psi Beta Sigma chapter city/location (for local grant targeting)
+- [ ] Nutrue Apparel LLC registration (unlocks more grant pools)
+- [ ] Smith Capital / YEPC: Confirm CR 132 parcel Opportunity Zone status
+- [ ] Smith Capital / YEPC: Confirm parcel ownership / acquisition status
+- [ ] Smith Capital: Affordable vs. market-rate housing focus (for HUD/LIHTC)
+- [ ] staging.s2tdesigns.com: API auth fix still pending (app password needed)
+- [ ] Gravity Forms PayPal Standard Add-on: Manual deletion still needed on XFTC site
+- [ ] 17 legacy Gravity Forms: Manual deactivation still needed on XFTC site
 
 ---
 
@@ -33,3 +78,5 @@
 - nutrueapparel is on a custom domain — SMTP/IMAP credentials needed
 - All Gmail accounts will connect via OAuth
 - Outlook account (allensmithagent) will connect via Microsoft/Outlook OAuth
+- XFTC 501(c)(3) status is the anchor nonprofit for YEPC capital grant strategy
+- YEPC project file: .agents/projects/yepc/PROJECT.md
