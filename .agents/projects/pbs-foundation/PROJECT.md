@@ -1,10 +1,10 @@
-# Phi Beta Sigma Fraternity — Collegiate Travel Foundation
+# Phi Beta Sigma Collegiate Pathways Foundation
 ## Master Project File
 
 ---
 
 ## Project Overview
-- **Project Name:** Phi Beta Sigma Collegiate Travel & Leadership Foundation (working title)
+- **Foundation Name:** Phi Beta Sigma Collegiate Pathways Foundation
 - **Parent Organization:** Psi Beta Sigma 1914 (existing nonprofit)
 - **Beneficiaries:** Collegiate members of Phi Beta Sigma Fraternity
 - **Purpose:** Offset conference travel costs and support educational/leadership development for collegiate members
@@ -22,7 +22,7 @@
 
 ### Phase 1 — Legal Formation
 - [ ] Decide: Standalone new 501(c)(3) OR fiscal sponsorship under Psi Beta Sigma 1914
-- [ ] Choose foundation name (check trademark/name availability)
+- [ ] Confirm name availability — "Phi Beta Sigma Collegiate Pathways Foundation"
 - [ ] Draft Articles of Incorporation (nonprofit corporation)
 - [ ] File with Texas Secretary of State (or applicable state)
 - [ ] Obtain EIN from IRS
@@ -81,7 +81,7 @@
 - Crowdfunding campaigns (tied to conference season)
 - Peer-to-peer fundraising (chapter members fundraise individually)
 - Email newsletter campaigns
-- Social media campaigns (#TravelWithSigma or similar)
+- Social media campaigns
 
 ### Corporate
 - Fraternity-aligned corporate sponsors (Black-owned businesses, HBCUs, financial services)
@@ -125,7 +125,6 @@
 
 ## Key Decisions Needed
 - [ ] Standalone 501(c)(3) vs. program under Psi Beta Sigma 1914?
-- [ ] Foundation name — options to brainstorm
 - [ ] State of incorporation (TX recommended if leadership is TX-based)
 - [ ] Board member candidates
 - [ ] Initial fundraising goal (Year 1)
@@ -145,3 +144,4 @@
 - Psi Beta Sigma 1914 already exists as a nonprofit — explore whether foundation can operate as a program/fund under its umbrella first (faster path, lower cost) before forming separate entity
 - Form 1023-EZ is available if projected annual gross receipts ≤ $50K/year for first 3 years
 - IRS processing time for 1023: 3–6 months; 1023-EZ: 2–4 weeks
+- Foundation name confirmed: "Phi Beta Sigma Collegiate Pathways Foundation"
