@@ -20,11 +20,32 @@
 
 ---
 
-## Web Development Agent
+## Web Development Agents
 
-| Agent Name     | Specialty                              | Status  |
-|----------------|----------------------------------------|---------|
-| wordpressagent | WordPress fixing, building, themes     | Pending |
+| Agent Name              | Specialty                              | Status  |
+|-------------------------|----------------------------------------|---------|
+| wordpressagent          | WordPress fixing, building, themes     | Active  |
+| wordpresspluginsagent   | Custom plugin development              | Active  |
+| researchagent           | Site audits & strategy reports         | Active  |
+
+---
+
+## Research & Funding Agents
+
+| Agent Name          | Specialty                                      | Status  |
+|---------------------|------------------------------------------------|---------|
+| grantsresearchagent | Grant discovery, funding opps, revenue ideas   | Active  |
+| grantwriteragent    | Grant application writing & submission prep    | Active  |
+
+---
+
+## Active Automations
+
+| Automation                        | Schedule                  | Status  |
+|-----------------------------------|---------------------------|---------|
+| Daily Email Digest                | Every day at 8:00 AM CT   | Active  |
+| XFTC Signup & Payment Logger      | Every 4 hours             | Active  |
+| Weekly Monday Grant Digest        | Every Monday at 8:00 AM CT| Active  |
 
 ---
 
@@ -33,3 +54,6 @@
 - nutrueapparel is on a custom domain — SMTP/IMAP credentials needed
 - All Gmail accounts will connect via OAuth
 - Outlook account (allensmithagent) will connect via Microsoft/Outlook OAuth
+- Nutrue Apparel LLC registration pending — will unlock additional grant pools
+- Psi Beta Sigma chapter city/location still needed for local grant targeting
+- Smith Capital Properties housing focus (affordable vs. market-rate) still TBD
