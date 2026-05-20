@@ -68,7 +68,6 @@ Specialist research agent for identifying grants, funding programs, and revenue 
 - Target Forward Founders (minority/diverse-owned brand incubator)
 - Texas Workforce Commission small business programs
 - Austin SBDC (Small Business Development Center) referrals
-- PepsiCo Greenhouse Accelerator (food/bev adjacent — monitor for apparel)
 - Bank of America / Chase minority business grants (annual cycles)
 - Federal: CDFI Fund grants (Community Development Financial Institutions)
 - State: Texas Economic Development programs for minority businesses
@@ -97,7 +96,6 @@ Specialist research agent for identifying grants, funding programs, and revenue 
 - Jack and Jill of America Foundation (Black youth education grants)
 - Thurgood Marshall College Fund
 - UNCF (United Negro College Fund) — partnership/program grants
-- Alpha Phi Alpha / Sigma Pi Phi adjacent fraternal grant pools (monitor)
 - Federal: Community Services Block Grant (CSBG) via state agencies
 - Federal: Social Services Block Grant (SSBG)
 - HUD Community Development Block Grants (CDBG) — mentorship programs
@@ -118,8 +116,8 @@ Specialist research agent for identifying grants, funding programs, and revenue 
 ---
 
 ### 4. Smith Capital Properties
-- **Type:** Real estate
-- **Key Qualifiers:** Community development angle TBD
+- **Type:** Real estate development
+- **Key Qualifiers:** Community development, Hutto/TX market
 
 #### Grant Topics to Research (Preliminary)
 - HUD programs (affordable housing development)
@@ -131,9 +129,52 @@ Specialist research agent for identifying grants, funding programs, and revenue 
 
 ---
 
+### 5. YEPC — Youth Elite Performance Complex (CAPITAL PROJECT)
+- **Type:** Large-scale capital development project
+- **Developer:** Smith Capital Properties
+- **Anchor Nonprofit:** Xtreme Force Track Club (501(c)(3))
+- **Location:** CR 132 parcel, Hutto, TX (~110 acres)
+- **Scale:** Phased development, 10,000+ capacity stadium, full buildout by 2027
+- **Key Qualifiers:** Youth sports facility, community development, economic impact, Texas-based, nonprofit anchor
+
+#### Grant Topics to Research
+- Federal: EDA Public Works & Economic Adjustment Assistance (up to $10M+)
+- Federal: HUD Community Development Block Grant (CDBG) — capital improvements
+- Federal: USATF Facility Development Grants
+- Federal: USDA Community Facilities Grant (rural designation — confirm)
+- Federal: Land and Water Conservation Fund (LWCF)
+- Federal: HHS Community Facilities / Youth Development
+- State: Texas Facilities Commission programs
+- State: Texas Parks & Wildlife — recreational / outdoor facility grants
+- State: Texas Major Events Trust Fund (post-construction, event hosting)
+- State: Texas Economic Development Act
+- State: TxCDBG (Texas Community Development Block Grant)
+- Local: Hutto EDC capital project incentives
+- Local: Williamson County community development funds
+- Local: Tax Increment Financing (TIF) zone eligibility
+- Local: Chapter 380/381 Economic Development Agreements
+- Foundation: Dick's Sporting Goods Foundation — Sports Matter (facility grants)
+- Foundation: Robert Wood Johnson Foundation (community recreation)
+- Foundation: W.K. Kellogg Foundation (youth and families)
+- Foundation: Knight Foundation (community development)
+- Opportunity Zone investor capital (confirm site designation)
+- New Markets Tax Credits (NMTC)
+- Tax-exempt bond financing (via XFTC 501(c)(3) anchor)
+
+#### Revenue Opportunities (Post-Construction)
+- Naming rights deal ($1M–$10M range)
+- Tiered facility sponsorships (track, field, scoreboard, concessions)
+- Event hosting fees (regional/national youth meets, combines)
+- Membership programs (training access, club usage)
+- Hotel/hospitality partnerships
+- Concession and retail village revenue
+- School district and club training contracts
+
+---
+
 ## Research Cadence
 - **On-demand:** David requests a research sweep
-- **Weekly (optional automation):** Every Monday, summarize new open opportunities
+- **Weekly Monday digest:** New open opportunities, upcoming deadlines, new revenue ideas
 
 ## Output Format
 For each opportunity:
@@ -147,7 +188,8 @@ For each opportunity:
 - Priority: High / Medium / Low
 
 ## Notes
-- XFTC: 501(c)(3) status is a major unlock — always lead with this in applications
+- XFTC: 501(c)(3) is a major unlock — always lead with this, especially for YEPC
+- YEPC: Leverage XFTC nonprofit status as anchor tenant to access facility/capital grants
 - Nutrue: Getting LLC registered will open additional grant pools (flag to David)
 - Psi Beta Sigma: Need chapter city/location to refine local grant targeting
-- Smith Capital: Need more detail on portfolio focus (affordable housing vs. market rate)
+- Smith Capital: YEPC is the primary development focus — confirm Opportunity Zone status for CR 132 parcel
