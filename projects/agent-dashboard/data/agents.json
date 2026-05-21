@@ -1,0 +1,20 @@
+﻿[
+  {
+    "id": "agent-1",
+    "name": "wordpresspluginsagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": ["Agent initialized."]
+  },
+  {
+    "id": "agent-2",
+    "name": "researchagent",
+    "status": "running",
+    "progress": 42,
+    "logs": [
+      "Searching codebase for xftc_ prefixes...",
+      "Found 489 matches",
+      "Starting replacements (dry-run)..."
+    ]
+  }
+]
