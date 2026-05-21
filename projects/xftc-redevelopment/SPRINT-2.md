@@ -5,6 +5,25 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 
 ---
 
+## ✅ SPRINT 2 VERIFIED — May 20, 2026
+
+**End-to-end registration test PASSED on staging.s2tdesigns.com**
+
+| Test | Result |
+|------|--------|
+| Step 1 — Parent account form | ✅ Pass |
+| Step 2 — Athlete info form | ✅ Pass |
+| Step 3 — Season & tier selection | ✅ Pass |
+| Step 4 — Review summary + waiver | ✅ Pass |
+| AJAX submit → WP user created | ✅ Pass |
+| Auto-login after registration | ✅ Pass |
+| Redirect to `/portal/` | ✅ Pass |
+| Portal renders athlete card | ✅ Pass |
+
+**Test account created:** Jane TestParent / Alex TestRunner (Mailinator — staging only)
+
+---
+
 ## Tasks
 
 ### 1. Meet Management (Admin + Parent Portal)
@@ -95,17 +114,19 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 
 ---
 
-## Remaining Before Full Definition of Done
-1. Enter Stripe API keys in WP Admin → Xtreme Force → Payments
-2. Install Stripe PHP SDK on staging server via Composer
-3. Wire admin dashboard widgets (Sprint 2 extension or Sprint 3)
-4. Wire athlete portal tabs (stats, meet history, travel bookings)
+## Sprint 3 — Remaining Items (Carried Forward)
+1. **Stripe live keys** — enter in WP Admin → Xtreme Force → Payments
+2. **Stripe PHP SDK** — install on staging via Composer
+3. **Admin dashboard widgets** — Upcoming meets, Recent payments, Payroll due, New registrations
+4. **Athlete portal tabs** — stats, meet history, travel bookings per athlete
+5. **Coach/Staff front-end portal** — eliminate WP Admin dependency for non-admins
+6. **Tag release** — `git tag v0.2.0` on verified staging commit
+7. **Production deploy** — plugin + theme to xtremeforcetrackclub.org
 
 ---
 
 ## Dependencies
 - Stripe account + API keys (publishable + secret) required before payment testing
-- Staging site (staging.s2tdesigns.com) must have Sprint 1 plugin active
 - Composer or manual Stripe PHP SDK inclusion
 
 ---
@@ -115,6 +136,9 @@ wordpresspluginsagent
 
 ## Completed
 2026-05-20
+
+## Staging Verified
+2026-05-20 — Full end-to-end registration test passed ✅
 
 ## Timeline
 Weeks 7–10 ✅
