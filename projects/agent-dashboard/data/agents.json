@@ -1,20 +1,35 @@
-﻿[
+[
   {
     "id": "agent-1",
     "name": "wordpresspluginsagent",
-    "status": "idle",
+    "status": "running",
     "progress": 0,
-    "logs": ["Agent initialized."]
+    "logs": [
+      "Agent initialized.",
+      "2026-05-21T03:32:56.399Z - started",
+      "2026-05-21T03:33:46.249Z - stopped",
+      "2026-05-21T03:37:06.443Z - started"
+    ]
   },
   {
     "id": "agent-2",
     "name": "researchagent",
-    "status": "running",
-    "progress": 42,
+    "status": "idle",
+    "progress": 100,
     "logs": [
       "Searching codebase for xftc_ prefixes...",
       "Found 489 matches",
-      "Starting replacements (dry-run)..."
+      "Starting replacements (dry-run)...",
+      "2026-05-21T03:36:07.942Z - progress 47%",
+      "2026-05-21T03:36:12.949Z - progress 55%",
+      "2026-05-21T03:36:17.960Z - progress 57%",
+      "2026-05-21T03:36:22.969Z - progress 67%",
+      "2026-05-21T03:36:27.984Z - progress 71%",
+      "2026-05-21T03:36:32.990Z - progress 80%",
+      "2026-05-21T03:36:37.993Z - progress 86%",
+      "2026-05-21T03:36:43.001Z - progress 93%",
+      "2026-05-21T03:36:48.011Z - progress 97%",
+      "2026-05-21T03:36:53.027Z - progress 100%"
     ]
   }
 ]
