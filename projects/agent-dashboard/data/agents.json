@@ -31,5 +31,95 @@
       "2026-05-21T03:36:48.011Z - progress 97%",
       "2026-05-21T03:36:53.027Z - progress 100%"
     ]
+  },
+  {
+    "id": "agent-3",
+    "name": "sigmasignalconstantcontactmonitor",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-4",
+    "name": "wordpressagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-5",
+    "name": "grantsresearchagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-6",
+    "name": "grantwriteragent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-7",
+    "name": "yepcrprojectmanageragent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-8",
+    "name": "yepcrealestateresearchagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-9",
+    "name": "yepccapitalfundraisingagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-10",
+    "name": "yepcgovernmentrelationsagent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
+  },
+  {
+    "id": "agent-11",
+    "name": "yepcgrantwriteragent",
+    "status": "idle",
+    "progress": 0,
+    "logs": [
+      "Agent profile created.",
+      "Awaiting Constant Contact credentials."
+    ]
   }
 ]

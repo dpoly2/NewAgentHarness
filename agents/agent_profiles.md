@@ -24,6 +24,12 @@
 - **Tasks:** Newsletter coordination, subscriber emails, announcements
 - **Integrations:** Gmail OAuth
 
+## sigmasignalconstantcontactmonitor
+- **Provider:** Constant Contact
+- **Identity:** The Sigma Signal newsletter monitoring
+- **Tasks:** Monitor campaign health, bounces, unsubscribes, list growth, engagement trends, and follow-up opportunities
+- **Integrations:** Constant Contact OAuth/API, Gmail OAuth for The Sigma Signal account
+
 ## nutrueapparel
 - **Provider:** Custom Domain
 - **Identity:** Nutrue Apparel brand

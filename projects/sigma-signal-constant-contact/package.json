@@ -1,0 +1,14 @@
+{
+  "name": "sigma-signal-constant-contact-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monitoring app for The Sigma Signal newsletter request inbox and Constant Contact cadence.",
+  "scripts": {
+    "start": "node server.js",
+    "monitor": "node scripts/monitor.js",
+    "check": "node scripts/monitor.js --check"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

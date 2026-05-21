@@ -1,0 +1,38 @@
+{
+  "gmail": {
+    "watchAddress": "thesigmasignal.1stvp1914@gmail.com",
+    "requestQuery": "to:thesigmasignal.1stvp1914@gmail.com newer_than:14d (request OR submission OR announcement OR sponsor OR advertise OR event OR newsletter)",
+    "requiresConnection": true,
+    "currentConnectorStatus": "not connected in this Codex thread"
+  },
+  "newsletter": {
+    "cadenceDays": 14,
+    "nextIssueWindow": "2026-05-25 through 2026-05-31",
+    "nextIssueTargetDate": "2026-05-28",
+    "timezone": "America/Chicago"
+  },
+  "constantContact": {
+    "account": "The Sigma Signal",
+    "connectionStatus": "pending",
+    "watchFor": [
+      "scheduled campaign status",
+      "failed sends",
+      "bounces",
+      "unsubscribes",
+      "spam complaints",
+      "high-engagement replies or link clicks"
+    ]
+  },
+  "thresholds": {
+    "highPriorityKeywords": [
+      "urgent",
+      "deadline",
+      "correction",
+      "sponsor",
+      "advertising",
+      "press release",
+      "event this week"
+    ],
+    "maxUnresolvedAgeDays": 3
+  }
+}

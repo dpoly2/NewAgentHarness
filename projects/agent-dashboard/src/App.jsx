@@ -71,14 +71,21 @@ export default function App(){
           <p>Status: {selAgent ? selAgent.status : '—'}</p>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <button disabled={!selAgent || busy || (selAgent && selAgent.status === 'running')} onClick={() => commandAgent(selAgent.id, 'start')}>Start</button>
-            <button disabled={!selAgent || busy || (selAgent && selAgent.status !== 'running')} onClick={() => commandAgent(selAgent.id, 'stop')}>Stop</button>
-            <button disabled={!selAgent || busy} onClick={() => commandAgent(selAgent.id, 'ping')}>Ping</button>
+            <button disabled={!selAgent || busy || (selAgent && selAgent.status === 'running')} onClick={() => commandAgent(selAgent.id, 'start')}>
+              {busy ? 'Working...' : 'Start'}
+            </button>
+            <button disabled={!selAgent || busy || (selAgent && selAgent.status !== 'running')} onClick={() => commandAgent(selAgent.id, 'stop')}>
+              {busy ? 'Working...' : 'Stop'}
+            </button>
+            <button disabled={!selAgent || busy} onClick={() => commandAgent(selAgent.id, 'ping')}>
+              {busy ? 'Working...' : 'Ping'}
+            </button>
           </div>
 
-          <div style={{ height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
-            <div style={{ width: `${selAgent ? selAgent.progress : 0}%`, height: 8, background: '#10b981' }} />
+          <div className="progress-outer" aria-hidden={!selAgent}>
+            <div className="progress-inner" style={{ width: `${selAgent ? Math.max(0, Math.min(100, selAgent.progress || 0)) : 0}%` }} />
           </div>
+          {selAgent && <div><small>{selAgent.progress ?? 0}% complete</small></div> }
           <h4>Recent logs</h4>
           <div style={{ maxHeight: 200, overflow: 'auto', background: '#0f172a', color: '#fff', padding: 8 }}>
             {(selAgent && selAgent.logs) ? selAgent.logs.slice(-10).map((l, i) => (<div key={i}><small>{l}</small></div>)) : <small>No logs</small>}
