@@ -1,4 +1,4 @@
-/**
+﻿/**
  * XFTC Membership Plugin — Public JS
  * Handles: registration form, login, meet registration AJAX, chart loading
  */
@@ -10,7 +10,7 @@
 
     // ── Utility ─────────────────────────────────────────────────────────────
     function showFeedback($el, msg, type) {
-        $el.html('<div class="xftc-notice xftc-notice--' + type + '">' + msg + '</div>');
+        $el.html('<div class="ts-notice ts-notice--' + type + '">' + msg + '</div>');
     }
 
     function serializeFormObj($form) {
@@ -20,19 +20,19 @@
     }
 
     // ── Multi-step Registration Form ─────────────────────────────────────────
-    const $regForm = $('#xftc-register-form');
+    const $regForm = $('#ts-register-form');
     if ($regForm.length) {
         let currentStep = 1;
-        const totalSteps = $regForm.find('.xftc-form__step').length;
+        const totalSteps = $regForm.find('.ts-form__step').length;
 
         function showStep(step) {
-            $regForm.find('.xftc-form__step').hide();
+            $regForm.find('.ts-form__step').hide();
             $regForm.find('[data-step="' + step + '"]').show();
             currentStep = step;
         }
 
         // Next step
-        $regForm.on('click', '.xftc-next-step', function () {
+        $regForm.on('click', '.ts-next-step', function () {
             const $step = $regForm.find('[data-step="' + currentStep + '"]');
 
             // Basic validation
@@ -51,7 +51,7 @@
                 const pw1 = $('#reg_password').val();
                 const pw2 = $('#reg_password2').val();
                 if (pw1 !== pw2) {
-                    showFeedback($regForm.find('.xftc-form__feedback'), 'Passwords do not match.', 'error');
+                    showFeedback($regForm.find('.ts-form__feedback'), 'Passwords do not match.', 'error');
                     valid = false;
                 }
             }
@@ -68,7 +68,7 @@
         });
 
         // Prev step
-        $regForm.on('click', '.xftc-prev-step', function () {
+        $regForm.on('click', '.ts-prev-step', function () {
             showStep(currentStep - 1);
         });
 
@@ -83,20 +83,20 @@
                 ['Team Level', d.team_level || 'Not selected'],
                 ['Membership Tier', tier.charAt(0).toUpperCase() + tier.slice(1)],
             ].map(function (r) {
-                return '<div class="xftc-review-summary__row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
+                return '<div class="ts-review-summary__row"><span>' + r[0] + '</span><strong>' + r[1] + '</strong></div>';
             }).join('');
-            $('#xftc-review-summary').html(html);
+            $('#ts-review-summary').html(html);
         }
 
         // Submit
         $regForm.on('submit', function (e) {
             e.preventDefault();
-            const $btn = $('#xftc-submit-btn');
-            const $fb  = $regForm.find('.xftc-form__feedback');
+            const $btn = $('#ts-submit-btn');
+            const $fb  = $regForm.find('.ts-form__feedback');
 
             $btn.prop('disabled', true).text('Registering…');
 
-            $.post(ajax, $regForm.serialize() + '&xftc_nonce=' + nonce, function (res) {
+            $.post(ajax, $regForm.serialize() + '&TRACKSUITE_nonce=' + nonce, function (res) {
                 if (res.success) {
                     showFeedback($fb, res.data.message, 'success');
                     setTimeout(function () {
@@ -114,15 +114,15 @@
     }
 
     // ── Login Form ──────────────────────────────────────────────────────────
-    $('#xftc-login-form').on('submit', function (e) {
+    $('#ts-login-form').on('submit', function (e) {
         e.preventDefault();
         const $form = $(this);
-        const $fb   = $form.find('.xftc-form__feedback');
+        const $fb   = $form.find('.ts-form__feedback');
         const $btn  = $form.find('[type="submit"]');
 
         $btn.prop('disabled', true).text('Logging in…');
 
-        $.post(ajax, $form.serialize() + '&xftc_nonce=' + nonce, function (res) {
+        $.post(ajax, $form.serialize() + '&TRACKSUITE_nonce=' + nonce, function (res) {
             if (res.success) {
                 showFeedback($fb, 'Logged in! Redirecting…', 'success');
                 setTimeout(function () {
@@ -139,7 +139,7 @@
     });
 
     // ── Meet Registration Button ─────────────────────────────────────────────
-    $(document).on('click', '.xftc-register-meet-btn', function () {
+    $(document).on('click', '.ts-register-meet-btn', function () {
         if (!xftcPublic.isLoggedIn) {
             window.location.href = xftcPublic.portalUrl;
             return;
@@ -160,16 +160,16 @@
         $btn.prop('disabled', true).text('Registering…');
 
         $.post(ajax, {
-            action:     'xftc_register_for_meet',
-            xftc_nonce: nonce,
+            action:     'TRACKSUITE_register_for_meet',
+            TRACKSUITE_nonce: nonce,
             meet_id:    meetId,
             athlete_id: athleteId,
         }, function (res) {
             if (res.success) {
                 $btn.text('✅ Registered').css('background', '#28a745');
                 // Show inline confirmation
-                const $notice = $('<div class="xftc-notice xftc-notice--success" style="margin-top:.5rem">' + res.data.message + '</div>');
-                $btn.closest('.xftc-meet-card').append($notice);
+                const $notice = $('<div class="ts-notice ts-notice--success" style="margin-top:.5rem">' + res.data.message + '</div>');
+                $btn.closest('.ts-meet-card').append($notice);
             } else {
                 alert(res.data.message || 'Registration failed.');
                 $btn.prop('disabled', false).text('Register');
@@ -182,7 +182,7 @@
 
     // ── Results Chart (Chart.js) ─────────────────────────────────────────────
     function initResultsChart() {
-        const canvas = document.getElementById('xftc-results-chart');
+        const canvas = document.getElementById('ts-results-chart');
         if (!canvas || typeof Chart === 'undefined') return;
 
         const raw = canvas.dataset.chartData;
@@ -242,7 +242,7 @@
     }
 
     // Load Chart.js on demand for results pages
-    if (document.getElementById('xftc-results-chart')) {
+    if (document.getElementById('ts-results-chart')) {
         if (typeof Chart !== 'undefined') {
             initResultsChart();
         } else {
@@ -254,20 +254,20 @@
     }
 
     // ── Event selector for chart (portal results view) ───────────────────────
-    $(document).on('change', '#xftc-event-selector', function () {
+    $(document).on('change', '#ts-event-selector', function () {
         const athleteId = $(this).data('athlete-id');
         const event     = $(this).val();
         if (!athleteId || !event) return;
 
         $.post(ajax, {
-            action:     'xftc_get_chart_data',
-            xftc_nonce: nonce,
+            action:     'TRACKSUITE_get_chart_data',
+            TRACKSUITE_nonce: nonce,
             athlete_id: athleteId,
             event:      event,
         }, function (res) {
             if (res.success) {
                 // Update the canvas data and re-init
-                const canvas = document.getElementById('xftc-results-chart');
+                const canvas = document.getElementById('ts-results-chart');
                 if (canvas) {
                     canvas.dataset.chartData = JSON.stringify(res.data);
                     // Destroy existing chart instance
@@ -280,3 +280,4 @@
     });
 
 }(jQuery));
+

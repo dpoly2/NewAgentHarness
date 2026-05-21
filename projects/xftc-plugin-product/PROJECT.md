@@ -1,4 +1,4 @@
-# TrackSuite — WordPress Plugin Product Roadmap
+﻿# TrackSuite — WordPress Plugin Product Roadmap
 
 **Project:** Productization of the XFTC Membership Plugin + Theme
 **Working Title:** TrackSuite (placeholder — to be finalized)
@@ -72,7 +72,7 @@ Replace all hardcoded strings with `get_option()` calls:
 - Live preview in Customizer
 
 ### 1.3 — Database table prefix abstraction
-Current tables: `wp_xftc_athletes`, `wp_xftc_meets`, etc.
+Current tables: `wp_ts_athletes`, `wp_ts_meets`, etc.
 Change to: `wp_ts_athletes`, `wp_ts_meets` (or make prefix configurable)
 Add migration script for existing XFTC installs
 
@@ -110,9 +110,9 @@ Gate Pro features behind a license key validated against a remote license server
 **Recommendation:** Start with **Freemius** for speed to market — handles payments, license keys, auto-updates, and analytics out of the box. Move to EDD if revenue share becomes painful at scale.
 
 ### Pro-gated features:
-- `class-xftc-payments.php` (Stripe integration)
-- `class-xftc-payroll.php`
-- `class-xftc-travel.php`
+- `class-ts-payments.php` (Stripe integration)
+- `class-ts-payroll.php`
+- `class-ts-travel.php`
 - Results analytics + Chart.js graphs
 - CSV export functions
 - API endpoints
@@ -171,7 +171,7 @@ Abstract "track & field" event types into a configurable system so the plugin ca
 
 ## Codebase Changes Required (Priority Order)
 
-1. [ ] Rename all `xftc_` prefixes → `tracksuite_` (plugin functions, hooks, options)
+1. [ ] Rename all `TRACKSUITE_` prefixes → `tracksuite_` (plugin functions, hooks, options)
 2. [ ] Replace hardcoded strings with Settings API calls
 3. [ ] Abstract DB table prefix
 4. [ ] Add WP Customizer panel for theme branding
@@ -193,11 +193,12 @@ Abstract "track & field" event types into a configurable system so the plugin ca
 ---
 
 ## Related Projects
-- [XFTC Redevelopment](../xftc-redevelopment/PROJECT.md) — source codebase
-- [XFTC Sprint 2](../xftc-redevelopment/SPRINT-2.md) — current verified state
+- [XFTC Redevelopment](../ts-redevelopment/PROJECT.md) — source codebase
+- [XFTC Sprint 2](../ts-redevelopment/SPRINT-2.md) — current verified state
 
 ---
 
 ## Assignees
 - wordpresspluginsagent — technical execution
 - AgentJames — project coordination, roadmap management
+

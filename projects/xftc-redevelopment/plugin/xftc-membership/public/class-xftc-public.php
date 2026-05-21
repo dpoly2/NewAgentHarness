@@ -1,49 +1,49 @@
-<?php
+﻿<?php
 /**
  * Front-end shortcodes, AJAX handlers, and public-facing hooks.
  *
  * Shortcodes registered:
- *  [xftc_meets]            — Upcoming meets list or card grid
- *  [xftc_schedule]         — Full season schedule with filters
- *  [xftc_results]          — Meet results table
- *  [xftc_club_records]     — Club records table
- *  [xftc_leaderboard]      — Season leaderboard
- *  [xftc_roster]           — Athlete roster cards or list
- *  [xftc_register_form]    — Multi-step registration form
- *  [xftc_login_form]       — Login form with redirect
- *  [xftc_my_athletes]      — Portal: logged-in parent's athletes
- *  [xftc_my_schedule]      — Portal: athlete schedules + meet sign-up
- *  [xftc_my_results]       — Portal: athlete results with chart
- *  [xftc_my_payments]      — Portal: payment history + receipts
- *  [xftc_my_travel]        — Portal: travel bookings
+ *  [TRACKSUITE_meets]            — Upcoming meets list or card grid
+ *  [TRACKSUITE_schedule]         — Full season schedule with filters
+ *  [TRACKSUITE_results]          — Meet results table
+ *  [TRACKSUITE_club_records]     — Club records table
+ *  [TRACKSUITE_leaderboard]      — Season leaderboard
+ *  [TRACKSUITE_roster]           — Athlete roster cards or list
+ *  [TRACKSUITE_register_form]    — Multi-step registration form
+ *  [TRACKSUITE_login_form]       — Login form with redirect
+ *  [TRACKSUITE_my_athletes]      — Portal: logged-in parent's athletes
+ *  [TRACKSUITE_my_schedule]      — Portal: athlete schedules + meet sign-up
+ *  [TRACKSUITE_my_results]       — Portal: athlete results with chart
+ *  [TRACKSUITE_my_payments]      — Portal: payment history + receipts
+ *  [TRACKSUITE_my_travel]        — Portal: travel bookings
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Public {
+class TRACKSUITE_Public {
 
     public function init(): void {
         // ── Shortcodes ──────────────────────────────────────────────────────
         $shortcodes = [
-            'xftc_meets'         => 'shortcode_meets',
-            'xftc_schedule'      => 'shortcode_schedule',
-            'xftc_results'       => 'shortcode_results',
-            'xftc_club_records'  => 'shortcode_club_records',
-            'xftc_leaderboard'   => 'shortcode_leaderboard',
-            'xftc_roster'        => 'shortcode_roster',
-            'xftc_register_form' => 'shortcode_register_form',
-            'xftc_login_form'    => 'shortcode_login_form',
-            'xftc_my_athletes'   => 'shortcode_my_athletes',
-            'xftc_my_schedule'   => 'shortcode_my_schedule',
-            'xftc_my_results'    => 'shortcode_my_results',
-            'xftc_my_payments'   => 'shortcode_my_payments',
-            'xftc_my_travel'     => 'shortcode_my_travel',
+            'TRACKSUITE_meets'         => 'shortcode_meets',
+            'TRACKSUITE_schedule'      => 'shortcode_schedule',
+            'TRACKSUITE_results'       => 'shortcode_results',
+            'TRACKSUITE_club_records'  => 'shortcode_club_records',
+            'TRACKSUITE_leaderboard'   => 'shortcode_leaderboard',
+            'TRACKSUITE_roster'        => 'shortcode_roster',
+            'TRACKSUITE_register_form' => 'shortcode_register_form',
+            'TRACKSUITE_login_form'    => 'shortcode_login_form',
+            'TRACKSUITE_my_athletes'   => 'shortcode_my_athletes',
+            'TRACKSUITE_my_schedule'   => 'shortcode_my_schedule',
+            'TRACKSUITE_my_results'    => 'shortcode_my_results',
+            'TRACKSUITE_my_payments'   => 'shortcode_my_payments',
+            'TRACKSUITE_my_travel'     => 'shortcode_my_travel',
             // Legacy aliases (Sprint 1)
-            'xftc_register'      => 'shortcode_register_form',
-            'xftc_portal'        => 'shortcode_my_athletes',
+            'TRACKSUITE_register'      => 'shortcode_register_form',
+            'TRACKSUITE_portal'        => 'shortcode_my_athletes',
         ];
         foreach ( $shortcodes as $tag => $method ) {
             add_shortcode( $tag, [ $this, $method ] );
@@ -51,10 +51,10 @@ class XFTC_Public {
 
         // ── AJAX ────────────────────────────────────────────────────────────
         $ajax_actions = [
-            'xftc_register_athlete'    => 'ajax_register_athlete',
-            'xftc_register_for_meet'   => 'ajax_register_for_meet',
-            'xftc_login'               => 'ajax_login',
-            'xftc_get_chart_data'      => 'ajax_get_chart_data',
+            'TRACKSUITE_register_athlete'    => 'ajax_register_athlete',
+            'TRACKSUITE_register_for_meet'   => 'ajax_register_for_meet',
+            'TRACKSUITE_login'               => 'ajax_login',
+            'TRACKSUITE_get_chart_data'      => 'ajax_get_chart_data',
         ];
         foreach ( $ajax_actions as $action => $method ) {
             add_action( "wp_ajax_{$action}",        [ $this, $method ] );
@@ -70,21 +70,21 @@ class XFTC_Public {
 
     public function enqueue_assets(): void {
         wp_enqueue_style(
-            'xftc-public',
-            XFTC_PLUGIN_URL . 'public/assets/public.css',
+            'ts-public',
+            TRACKSUITE_PLUGIN_URL . 'public/assets/public.css',
             [],
-            XFTC_VERSION
+            TRACKSUITE_VERSION
         );
         wp_enqueue_script(
-            'xftc-public',
-            XFTC_PLUGIN_URL . 'public/assets/public.js',
+            'ts-public',
+            TRACKSUITE_PLUGIN_URL . 'public/assets/public.js',
             [ 'jquery' ],
-            XFTC_VERSION,
+            TRACKSUITE_VERSION,
             true
         );
-        wp_localize_script( 'xftc-public', 'xftcPublic', [
+        wp_localize_script( 'ts-public', 'xftcPublic', [
             'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
-            'nonce'         => wp_create_nonce( 'xftc_public_nonce' ),
+            'nonce'         => wp_create_nonce( 'TRACKSUITE_public_nonce' ),
             'isLoggedIn'    => is_user_logged_in(),
             'portalUrl'     => home_url( '/portal' ),
             'registerUrl'   => home_url( '/register' ),
@@ -92,7 +92,7 @@ class XFTC_Public {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_meets]
+    // SHORTCODE: [TRACKSUITE_meets]
     // Attrs: limit (int), view (cards|list), status (upcoming|all)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -101,26 +101,26 @@ class XFTC_Public {
             'limit'  => 4,
             'view'   => 'cards',
             'status' => 'upcoming',
-        ], $atts, 'xftc_meets' );
+        ], $atts, 'TRACKSUITE_meets' );
 
-        $meets_obj = new XFTC_Meets();
+        $meets_obj = new TRACKSUITE_Meets();
         $meets = $atts['status'] === 'upcoming'
             ? $meets_obj->get_upcoming_meets()
             : $meets_obj->get_all_meets();
         $meets = array_slice( $meets, 0, (int) $atts['limit'] );
 
         if ( empty( $meets ) ) {
-            return '<p class="xftc-empty">No upcoming meets scheduled. Check back soon!</p>';
+            return '<p class="ts-empty">No upcoming meets scheduled. Check back soon!</p>';
         }
 
         ob_start();
         $view = sanitize_key( $atts['view'] );
-        include XFTC_PLUGIN_DIR . "public/views/meets.php";
+        include TRACKSUITE_PLUGIN_DIR . "public/views/meets.php";
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_schedule]
+    // SHORTCODE: [TRACKSUITE_schedule]
     // Attrs: show_filters (true|false), show_register (true|false)
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -128,9 +128,9 @@ class XFTC_Public {
         $atts = shortcode_atts( [
             'show_filters'  => 'true',
             'show_register' => 'false',
-        ], $atts, 'xftc_schedule' );
+        ], $atts, 'TRACKSUITE_schedule' );
 
-        $meets_obj = new XFTC_Meets();
+        $meets_obj = new TRACKSUITE_Meets();
         $all_meets = $meets_obj->get_all_meets();
 
         // Group by month
@@ -142,12 +142,12 @@ class XFTC_Public {
         ksort( $by_month );
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/meets.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/meets.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_results]
+    // SHORTCODE: [TRACKSUITE_results]
     // Attrs: limit, meet_id, highlight_pb, highlight_cr, show_filters, view
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -159,18 +159,18 @@ class XFTC_Public {
             'highlight_cr' => 'true',
             'show_filters' => 'false',
             'view'         => 'table',
-        ], $atts, 'xftc_results' );
+        ], $atts, 'TRACKSUITE_results' );
 
-        $results_obj = new XFTC_Results();
+        $results_obj = new TRACKSUITE_Results();
 
         if ( (int) $atts['meet_id'] > 0 ) {
             $results = $results_obj->get_meet_results( (int) $atts['meet_id'] );
         } else {
             // Get recent results across all meets
             global $wpdb;
-            $results_table  = $wpdb->prefix . 'xftc_results';
-            $athletes_table = $wpdb->prefix . 'xftc_athletes';
-            $meets_table    = $wpdb->prefix . 'xftc_meets';
+            $results_table  = $wpdb->prefix . 'TRACKSUITE_results';
+            $athletes_table = $wpdb->prefix . 'TRACKSUITE_athletes';
+            $meets_table    = $wpdb->prefix . 'TRACKSUITE_meets';
             $limit          = (int) $atts['limit'];
             $results = $wpdb->get_results(
                 $wpdb->prepare(
@@ -188,33 +188,33 @@ class XFTC_Public {
         }
 
         if ( empty( $results ) ) {
-            return '<p class="xftc-empty">No results recorded yet.</p>';
+            return '<p class="ts-empty">No results recorded yet.</p>';
         }
 
         $show_pb = $atts['highlight_pb'] === 'true';
         $show_cr = $atts['highlight_cr'] === 'true';
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/results.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/results.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_club_records]
+    // SHORTCODE: [TRACKSUITE_club_records]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_club_records( array $atts ): string {
-        $results_obj = new XFTC_Results();
+        $results_obj = new TRACKSUITE_Results();
         $records     = $results_obj->get_club_records();
 
         if ( empty( $records ) ) {
-            return '<p class="xftc-empty">No club records on file yet.</p>';
+            return '<p class="ts-empty">No club records on file yet.</p>';
         }
 
         ob_start(); ?>
-        <div class="xftc-records-wrap">
-            <div class="xftc-table-wrap">
-                <table class="xftc-table xftc-results-table">
+        <div class="ts-records-wrap">
+            <div class="ts-table-wrap">
+                <table class="ts-table ts-results-table">
                     <thead>
                         <tr>
                             <th>Event</th>
@@ -228,9 +228,9 @@ class XFTC_Public {
                     <?php foreach ( $records as $r ) : ?>
                         <tr>
                             <td><strong><?php echo esc_html( $r['event_category'] ); ?></strong></td>
-                            <td class="xftc-result-val">
+                            <td class="ts-result-val">
                                 <?php echo esc_html( $r['result_value'] ); ?>
-                                <span class="xftc-badge xftc-badge--cr">CR</span>
+                                <span class="ts-badge ts-badge--cr">CR</span>
                             </td>
                             <td><?php echo esc_html( $r['first_name'] . ' ' . $r['last_name'] ); ?></td>
                             <td><?php echo esc_html( $r['meet_name'] ?? '—' ); ?></td>
@@ -246,7 +246,7 @@ class XFTC_Public {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_leaderboard]
+    // SHORTCODE: [TRACKSUITE_leaderboard]
     // Attrs: season (current|all), limit
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -254,11 +254,11 @@ class XFTC_Public {
         $atts = shortcode_atts( [
             'season' => 'current',
             'limit'  => 20,
-        ], $atts, 'xftc_leaderboard' );
+        ], $atts, 'TRACKSUITE_leaderboard' );
 
         global $wpdb;
-        $results_table  = $wpdb->prefix . 'xftc_results';
-        $athletes_table = $wpdb->prefix . 'xftc_athletes';
+        $results_table  = $wpdb->prefix . 'TRACKSUITE_results';
+        $athletes_table = $wpdb->prefix . 'TRACKSUITE_athletes';
         $limit          = (int) $atts['limit'];
 
         // Rank by number of PBs and top placements
@@ -281,13 +281,13 @@ class XFTC_Public {
         ) ?: [];
 
         if ( empty( $rows ) ) {
-            return '<p class="xftc-empty">Season leaderboard will appear once results are entered.</p>';
+            return '<p class="ts-empty">Season leaderboard will appear once results are entered.</p>';
         }
 
         ob_start(); ?>
-        <div class="xftc-leaderboard">
-            <div class="xftc-table-wrap">
-                <table class="xftc-table">
+        <div class="ts-leaderboard">
+            <div class="ts-table-wrap">
+                <table class="ts-table">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -301,7 +301,7 @@ class XFTC_Public {
                     </thead>
                     <tbody>
                     <?php foreach ( $rows as $i => $r ) : ?>
-                        <tr class="<?php echo $i < 3 ? 'xftc-top-' . ( $i + 1 ) : ''; ?>">
+                        <tr class="<?php echo $i < 3 ? 'ts-top-' . ( $i + 1 ) : ''; ?>">
                             <td><strong><?php echo $i + 1; ?></strong></td>
                             <td><?php echo esc_html( $r['first_name'] . ' ' . $r['last_name'] ); ?></td>
                             <td><?php echo esc_html( $r['team_level'] ?? '—' ); ?></td>
@@ -320,7 +320,7 @@ class XFTC_Public {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_roster]
+    // SHORTCODE: [TRACKSUITE_roster]
     // Attrs: limit, view (cards|list), show_stats, show_events
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -330,66 +330,66 @@ class XFTC_Public {
             'view'        => 'cards',
             'show_stats'  => 'false',
             'show_events' => 'false',
-        ], $atts, 'xftc_roster' );
+        ], $atts, 'TRACKSUITE_roster' );
 
-        $members_obj = new XFTC_Members();
+        $members_obj = new TRACKSUITE_Members();
         $athletes    = $members_obj->get_all( [ 'limit' => (int) $atts['limit'] ] );
 
         if ( empty( $athletes ) ) {
-            return '<p class="xftc-empty">Roster coming soon!</p>';
+            return '<p class="ts-empty">Roster coming soon!</p>';
         }
 
         $view       = sanitize_key( $atts['view'] );
         $show_stats = $atts['show_stats'] === 'true';
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/portal.php';  // roster section
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/portal.php';  // roster section
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_register_form]
+    // SHORTCODE: [TRACKSUITE_register_form]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_register_form( array $atts ): string {
         if ( is_user_logged_in() ) {
-            return '<div class="xftc-notice xftc-notice--info">You\'re logged in! <a href="' . esc_url( home_url( '/portal' ) ) . '">Go to your portal →</a></div>';
+            return '<div class="ts-notice ts-notice--info">You\'re logged in! <a href="' . esc_url( home_url( '/portal' ) ) . '">Go to your portal →</a></div>';
         }
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/register.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/register.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_login_form]
+    // SHORTCODE: [TRACKSUITE_login_form]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_login_form( array $atts ): string {
         if ( is_user_logged_in() ) {
-            return '<div class="xftc-notice xftc-notice--info">You\'re already logged in. <a href="' . esc_url( home_url( '/portal' ) ) . '">Go to your portal →</a></div>';
+            return '<div class="ts-notice ts-notice--info">You\'re already logged in. <a href="' . esc_url( home_url( '/portal' ) ) . '">Go to your portal →</a></div>';
         }
         $redirect = ! empty( $atts['redirect'] ) ? esc_url( $atts['redirect'] ) : home_url( '/portal' );
         ob_start(); ?>
-        <div class="xftc-login-wrap">
-            <form class="xftc-form xftc-login-form" id="xftc-login-form" novalidate>
-                <?php wp_nonce_field( 'xftc_public_nonce', 'xftc_nonce' ); ?>
-                <input type="hidden" name="action" value="xftc_login">
+        <div class="ts-login-wrap">
+            <form class="ts-form ts-login-form" id="ts-login-form" novalidate>
+                <?php wp_nonce_field( 'TRACKSUITE_public_nonce', 'TRACKSUITE_nonce' ); ?>
+                <input type="hidden" name="action" value="TRACKSUITE_login">
                 <input type="hidden" name="redirect" value="<?php echo esc_attr( $redirect ); ?>">
 
-                <div class="xftc-form__group">
-                    <label for="xftc-login-email"><?php esc_html_e( 'Email', 'xftc-membership' ); ?></label>
-                    <input type="email" id="xftc-login-email" name="email" required placeholder="parent@email.com">
+                <div class="ts-form__group">
+                    <label for="ts-login-email"><?php esc_html_e( 'Email', 'ts-membership' ); ?></label>
+                    <input type="email" id="ts-login-email" name="email" required placeholder="parent@email.com">
                 </div>
-                <div class="xftc-form__group">
-                    <label for="xftc-login-password"><?php esc_html_e( 'Password', 'xftc-membership' ); ?></label>
-                    <input type="password" id="xftc-login-password" name="password" required>
+                <div class="ts-form__group">
+                    <label for="ts-login-password"><?php esc_html_e( 'Password', 'ts-membership' ); ?></label>
+                    <input type="password" id="ts-login-password" name="password" required>
                 </div>
 
-                <div class="xftc-form__actions">
-                    <button type="submit" class="xftc-btn xftc-btn--primary"><?php esc_html_e( 'Log In', 'xftc-membership' ); ?></button>
-                    <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" class="xftc-link"><?php esc_html_e( 'Forgot password?', 'xftc-membership' ); ?></a>
+                <div class="ts-form__actions">
+                    <button type="submit" class="ts-btn ts-btn--primary"><?php esc_html_e( 'Log In', 'ts-membership' ); ?></button>
+                    <a href="<?php echo esc_url( wp_lostpassword_url() ); ?>" class="ts-link"><?php esc_html_e( 'Forgot password?', 'ts-membership' ); ?></a>
                 </div>
-                <div class="xftc-form__feedback" aria-live="polite"></div>
+                <div class="ts-form__feedback" aria-live="polite"></div>
             </form>
         </div>
         <?php
@@ -397,7 +397,7 @@ class XFTC_Public {
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_my_athletes]  — Portal: athlete list for logged-in parent
+    // SHORTCODE: [TRACKSUITE_my_athletes]  — Portal: athlete list for logged-in parent
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_my_athletes( array $atts ): string {
@@ -405,18 +405,18 @@ class XFTC_Public {
             return $this->login_prompt();
         }
         $user     = wp_get_current_user();
-        $members  = new XFTC_Members();
+        $members  = new TRACKSUITE_Members();
         $athletes = $members->get_by_parent( $user->ID );
-        $seasons  = new XFTC_Seasons();
+        $seasons  = new TRACKSUITE_Seasons();
         $active   = $seasons->get_active();
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/portal.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/portal.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_my_schedule]
+    // SHORTCODE: [TRACKSUITE_my_schedule]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_my_schedule( array $atts ): string {
@@ -424,9 +424,9 @@ class XFTC_Public {
         $atts = shortcode_atts( [ 'show_register' => 'true' ], $atts );
 
         $user     = wp_get_current_user();
-        $members  = new XFTC_Members();
+        $members  = new TRACKSUITE_Members();
         $athletes = $members->get_by_parent( $user->ID );
-        $meets_obj = new XFTC_Meets();
+        $meets_obj = new TRACKSUITE_Meets();
         $upcoming  = $meets_obj->get_upcoming_meets();
 
         // Get athlete meet entries
@@ -437,12 +437,12 @@ class XFTC_Public {
 
         ob_start();
         $show_register = $atts['show_register'] === 'true';
-        include XFTC_PLUGIN_DIR . 'public/views/meets.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/meets.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_my_results]
+    // SHORTCODE: [TRACKSUITE_my_results]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_my_results( array $atts ): string {
@@ -450,9 +450,9 @@ class XFTC_Public {
         $atts = shortcode_atts( [ 'show_chart' => 'true' ], $atts );
 
         $user       = wp_get_current_user();
-        $members    = new XFTC_Members();
+        $members    = new TRACKSUITE_Members();
         $athletes   = $members->get_by_parent( $user->ID );
-        $results_obj = new XFTC_Results();
+        $results_obj = new TRACKSUITE_Results();
 
         $all_results = [];
         $chart_data  = [];
@@ -478,12 +478,12 @@ class XFTC_Public {
         $show_chart = $atts['show_chart'] === 'true';
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/results.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/results.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_my_payments]
+    // SHORTCODE: [TRACKSUITE_my_payments]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_my_payments( array $atts ): string {
@@ -491,7 +491,7 @@ class XFTC_Public {
         $atts = shortcode_atts( [ 'show_receipts' => 'true' ], $atts );
 
         global $wpdb;
-        $payments_table = $wpdb->prefix . 'xftc_payments';
+        $payments_table = $wpdb->prefix . 'TRACKSUITE_payments';
         $user_id        = get_current_user_id();
 
         $payments = $wpdb->get_results(
@@ -503,24 +503,24 @@ class XFTC_Public {
         ) ?: [];
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/receipts.php';
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/receipts.php';
         return ob_get_clean();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SHORTCODE: [xftc_my_travel]
+    // SHORTCODE: [TRACKSUITE_my_travel]
     // ═══════════════════════════════════════════════════════════════════════
 
     public function shortcode_my_travel( array $atts ): string {
         if ( ! is_user_logged_in() ) return $this->login_prompt();
 
         $user    = wp_get_current_user();
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $athletes = $members->get_by_parent( $user->ID );
 
         global $wpdb;
-        $travel_table = $wpdb->prefix . 'xftc_travel';
-        $meets_table  = $wpdb->prefix . 'xftc_meets';
+        $travel_table = $wpdb->prefix . 'TRACKSUITE_travel';
+        $meets_table  = $wpdb->prefix . 'TRACKSUITE_meets';
 
         $travel = [];
         foreach ( $athletes as $athlete ) {
@@ -542,7 +542,7 @@ class XFTC_Public {
         }
 
         ob_start();
-        include XFTC_PLUGIN_DIR . 'public/views/receipts.php'; // travel section
+        include TRACKSUITE_PLUGIN_DIR . 'public/views/receipts.php'; // travel section
         return ob_get_clean();
     }
 
@@ -554,19 +554,19 @@ class XFTC_Public {
      * AJAX: Log in a parent/athlete
      */
     public function ajax_login(): void {
-        check_ajax_referer( 'xftc_public_nonce', 'xftc_nonce' );
+        check_ajax_referer( 'TRACKSUITE_public_nonce', 'TRACKSUITE_nonce' );
 
         $email    = sanitize_email( $_POST['email'] ?? '' );
         $password = $_POST['password'] ?? '';
         $redirect = esc_url_raw( $_POST['redirect'] ?? home_url( '/portal' ) );
 
         if ( ! $email || ! $password ) {
-            wp_send_json_error( [ 'message' => __( 'Email and password are required.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Email and password are required.', 'ts-membership' ) ] );
         }
 
         $user = get_user_by( 'email', $email );
         if ( ! $user ) {
-            wp_send_json_error( [ 'message' => __( 'No account found with that email.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'No account found with that email.', 'ts-membership' ) ] );
         }
 
         $result = wp_signon( [
@@ -576,7 +576,7 @@ class XFTC_Public {
         ], is_ssl() );
 
         if ( is_wp_error( $result ) ) {
-            wp_send_json_error( [ 'message' => __( 'Invalid password. Please try again.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Invalid password. Please try again.', 'ts-membership' ) ] );
         }
 
         wp_send_json_success( [ 'redirect' => $redirect ] );
@@ -586,18 +586,18 @@ class XFTC_Public {
      * AJAX: Register a new parent account + athlete profile
      */
     public function ajax_register_athlete(): void {
-        check_ajax_referer( 'xftc_public_nonce', 'xftc_nonce' );
+        check_ajax_referer( 'TRACKSUITE_public_nonce', 'TRACKSUITE_nonce' );
 
         $required = [ 'parent_email', 'parent_first', 'parent_last', 'password', 'athlete_first', 'athlete_last' ];
         foreach ( $required as $field ) {
             if ( empty( $_POST[ $field ] ) ) {
-                wp_send_json_error( [ 'message' => sprintf( __( 'Missing required field: %s', 'xftc-membership' ), $field ) ] );
+                wp_send_json_error( [ 'message' => sprintf( __( 'Missing required field: %s', 'ts-membership' ), $field ) ] );
             }
         }
 
         $email = sanitize_email( $_POST['parent_email'] );
         if ( email_exists( $email ) ) {
-            wp_send_json_error( [ 'message' => __( 'An account with this email already exists. Please log in.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'An account with this email already exists. Please log in.', 'ts-membership' ) ] );
         }
 
         // Create WP user
@@ -617,11 +617,11 @@ class XFTC_Public {
             'first_name'   => sanitize_text_field( $_POST['parent_first'] ),
             'last_name'    => sanitize_text_field( $_POST['parent_last'] ),
             'display_name' => sanitize_text_field( $_POST['parent_first'] . ' ' . $_POST['parent_last'] ),
-            'role'         => 'xftc_parent',
+            'role'         => 'TRACKSUITE_parent',
         ] );
 
         // Create athlete record
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $athlete_id = $members->create( [
             'parent_id'               => $user_id,
             'first_name'              => sanitize_text_field( $_POST['athlete_first'] ),
@@ -643,13 +643,13 @@ class XFTC_Public {
         wp_set_auth_cookie( $user_id, true );
 
         // Send welcome email
-        if ( class_exists( 'XFTC_Emails' ) ) {
-            $emails = new XFTC_Emails();
+        if ( class_exists( 'TRACKSUITE_Emails' ) ) {
+            $emails = new TRACKSUITE_Emails();
             $emails->send_parent_welcome( $user_id );
         }
 
         wp_send_json_success( [
-            'message'  => __( 'Welcome to Xtreme Force! Redirecting to your portal…', 'xftc-membership' ),
+            'message'  => __( 'Welcome to Xtreme Force! Redirecting to your portal…', 'ts-membership' ),
             'redirect' => home_url( '/portal' ),
         ] );
     }
@@ -658,10 +658,10 @@ class XFTC_Public {
      * AJAX: Register an athlete for a specific meet
      */
     public function ajax_register_for_meet(): void {
-        check_ajax_referer( 'xftc_public_nonce', 'xftc_nonce' );
+        check_ajax_referer( 'TRACKSUITE_public_nonce', 'TRACKSUITE_nonce' );
 
         if ( ! is_user_logged_in() ) {
-            wp_send_json_error( [ 'message' => __( 'You must be logged in.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'You must be logged in.', 'ts-membership' ) ] );
         }
 
         $meet_id    = absint( $_POST['meet_id'] ?? 0 );
@@ -670,28 +670,28 @@ class XFTC_Public {
         $division   = sanitize_text_field( $_POST['division'] ?? '' );
 
         if ( ! $meet_id || ! $athlete_id ) {
-            wp_send_json_error( [ 'message' => __( 'Invalid meet or athlete.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Invalid meet or athlete.', 'ts-membership' ) ] );
         }
 
         // Verify this athlete belongs to the logged-in parent
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $athlete = $members->get( $athlete_id );
         if ( ! $athlete || (int) $athlete->parent_id !== get_current_user_id() ) {
-            wp_send_json_error( [ 'message' => __( 'You do not have permission to register this athlete.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'You do not have permission to register this athlete.', 'ts-membership' ) ] );
         }
 
-        $meets  = new XFTC_Meets();
+        $meets  = new TRACKSUITE_Meets();
         $entry_id = $meets->register_athlete( $meet_id, $athlete_id, [
             'event_category' => $event,
             'division'       => $division,
         ] );
 
         if ( ! $entry_id ) {
-            wp_send_json_error( [ 'message' => __( 'Registration failed. Please try again.', 'xftc-membership' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Registration failed. Please try again.', 'ts-membership' ) ] );
         }
 
         wp_send_json_success( [
-            'message'  => sprintf( __( '%s has been registered for this meet!', 'xftc-membership' ), esc_html( $athlete->first_name ) ),
+            'message'  => sprintf( __( '%s has been registered for this meet!', 'ts-membership' ), esc_html( $athlete->first_name ) ),
             'entry_id' => $entry_id,
         ] );
     }
@@ -700,7 +700,7 @@ class XFTC_Public {
      * AJAX: Get chart data for an athlete's progression in an event
      */
     public function ajax_get_chart_data(): void {
-        check_ajax_referer( 'xftc_public_nonce', 'xftc_nonce' );
+        check_ajax_referer( 'TRACKSUITE_public_nonce', 'TRACKSUITE_nonce' );
 
         $athlete_id = absint( $_POST['athlete_id'] ?? 0 );
         $event      = sanitize_text_field( $_POST['event'] ?? '' );
@@ -709,7 +709,7 @@ class XFTC_Public {
             wp_send_json_error( [] );
         }
 
-        $results    = new XFTC_Results();
+        $results    = new TRACKSUITE_Results();
         $chart_data = $results->get_progression_chart_data( $athlete_id, $event );
         wp_send_json_success( $chart_data );
     }
@@ -719,9 +719,9 @@ class XFTC_Public {
     // ═══════════════════════════════════════════════════════════════════════
 
     private function login_prompt(): string {
-        return '<div class="xftc-notice xftc-notice--warning">'
+        return '<div class="ts-notice ts-notice--warning">'
             . sprintf(
-                __( 'Please <a href="%s">log in</a> to view this content.', 'xftc-membership' ),
+                __( 'Please <a href="%s">log in</a> to view this content.', 'ts-membership' ),
                 esc_url( home_url( '/portal' ) )
             )
             . '</div>';
@@ -738,3 +738,4 @@ class XFTC_Public {
     }
 
 }
+

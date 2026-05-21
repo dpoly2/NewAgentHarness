@@ -1,15 +1,15 @@
-<?php
+﻿<?php
 /**
  * Site Footer partial
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-$phone     = get_theme_mod( 'xftc_phone',     '' );
-$email     = get_theme_mod( 'xftc_email',     'info@xtremeforcetrackclub.org' );
-$address   = get_theme_mod( 'xftc_address',   'Austin / Pflugerville, TX' );
-$facebook  = get_theme_mod( 'xftc_facebook',  '' );
-$instagram = get_theme_mod( 'xftc_instagram', '' );
-$twitter   = get_theme_mod( 'xftc_twitter',   '' );
-$youtube   = get_theme_mod( 'xftc_youtube',   '' );
+$phone     = get_theme_mod( 'TRACKSUITE_phone',     '' );
+$email     = get_theme_mod( 'TRACKSUITE_email',     'info@xtremeforcetrackclub.org' );
+$address   = get_theme_mod( 'TRACKSUITE_address',   'Austin / Pflugerville, TX' );
+$facebook  = get_theme_mod( 'TRACKSUITE_facebook',  '' );
+$instagram = get_theme_mod( 'TRACKSUITE_instagram', '' );
+$twitter   = get_theme_mod( 'TRACKSUITE_twitter',   '' );
+$youtube   = get_theme_mod( 'TRACKSUITE_youtube',   '' );
 ?>
 </main><!-- /.site-main -->
 
@@ -17,7 +17,7 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
 <?php if ( is_active_sidebar( 'sponsor-strip' ) || is_front_page() ) : ?>
 <div class="sponsor-strip">
     <div class="container">
-        <p class="sponsor-strip__label"><?php esc_html_e( 'Proud Sponsors & Partners', 'xftc-theme' ); ?></p>
+        <p class="sponsor-strip__label"><?php esc_html_e( 'Proud Sponsors & Partners', 'ts-theme' ); ?></p>
         <div class="sponsor-strip__logos">
             <?php if ( is_active_sidebar( 'sponsor-strip' ) ) : ?>
                 <?php dynamic_sidebar( 'sponsor-strip' ); ?>
@@ -40,7 +40,7 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
                     <?php the_custom_logo(); ?>
                 <?php else : ?>
                     <div class="site-title" style="font-size:1.3rem;margin-bottom:.75rem;">
-                        XTREME <span style="color:var(--xftc-gold)">FORCE</span>
+                        XTREME <span style="color:var(--ts-gold)">FORCE</span>
                     </div>
                 <?php endif; ?>
 
@@ -63,7 +63,7 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
 
             <!-- Footer nav columns -->
             <div class="footer-widget">
-                <h4 class="footer-widget__title"><?php esc_html_e( 'Quick Links', 'xftc-theme' ); ?></h4>
+                <h4 class="footer-widget__title"><?php esc_html_e( 'Quick Links', 'ts-theme' ); ?></h4>
                 <?php
                 wp_nav_menu( [
                     'theme_location' => 'footer-1',
@@ -81,7 +81,7 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
             </div>
 
             <div class="footer-widget">
-                <h4 class="footer-widget__title"><?php esc_html_e( 'Program', 'xftc-theme' ); ?></h4>
+                <h4 class="footer-widget__title"><?php esc_html_e( 'Program', 'ts-theme' ); ?></h4>
                 <?php
                 wp_nav_menu( [
                     'theme_location' => 'footer-2',
@@ -99,7 +99,7 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
             </div>
 
             <div class="footer-widget">
-                <h4 class="footer-widget__title"><?php esc_html_e( 'Club', 'xftc-theme' ); ?></h4>
+                <h4 class="footer-widget__title"><?php esc_html_e( 'Club', 'ts-theme' ); ?></h4>
                 <?php
                 wp_nav_menu( [
                     'theme_location' => 'footer-3',
@@ -121,13 +121,13 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
         <div class="site-footer__bottom">
             <span>
                 &copy; <?php echo date( 'Y' ); ?> <?php bloginfo( 'name' ); ?>.
-                <?php esc_html_e( 'All rights reserved.', 'xftc-theme' ); ?>
+                <?php esc_html_e( 'All rights reserved.', 'ts-theme' ); ?>
             </span>
             <span>
                 <?php
                 printf(
-                    esc_html__( 'Built by %s', 'xftc-theme' ),
-                    '<a href="https://xtremeforcetrackclub.org" style="color:var(--xftc-gold)">XFTC Tech</a>'
+                    esc_html__( 'Built by %s', 'ts-theme' ),
+                    '<a href="https://xtremeforcetrackclub.org" style="color:var(--ts-gold)">XFTC Tech</a>'
                 );
                 ?>
             </span>
@@ -141,3 +141,4 @@ $youtube   = get_theme_mod( 'xftc_youtube',   '' );
 <?php wp_footer(); ?>
 </body>
 </html>
+

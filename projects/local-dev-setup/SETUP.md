@@ -1,4 +1,4 @@
-# Local Development Setup — AgentHarness Offline Mode
+﻿# Local Development Setup — AgentHarness Offline Mode
 **Date:** 2026-05-20
 **Goal:** Run all active projects locally using GitHub Copilot CLI + VS Code so development continues independently of Base44 credits.
 
@@ -7,8 +7,8 @@
 ## What You Have (Already in GitHub)
 All project files are at: https://github.com/dpoly2/AgentHarness
 
-- `/projects/xftc-redevelopment/` — XFTC plugin + theme (Sprint 2 verified)
-- `/projects/xftc-plugin-product/` — TrackSuite productization roadmap
+- `/projects/ts-redevelopment/` — XFTC plugin + theme (Sprint 2 verified)
+- `/projects/ts-plugin-product/` — TrackSuite productization roadmap
 - `/projects/pbs-foundation/` — Phi Beta Sigma Collegiate Pathways Foundation
 - `/projects/yepc/` — Youth Elite Performance Complex
 - `/agents/` — All agent profiles and roles
@@ -75,18 +75,18 @@ Use **LocalWP** (free, easiest) or **Laragon** (Windows) to run WordPress locall
 
 ```bash
 # Mac/Linux — symlink so edits are live:
-ln -s /path/to/AgentHarness/projects/xftc-redevelopment/plugin/xftc-membership \
-  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/plugins/xftc-membership
+ln -s /path/to/AgentHarness/projects/ts-redevelopment/plugin/ts-membership \
+  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/plugins/ts-membership
 
 # Windows (run as Admin):
-mklink /D "C:\Users\YOU\Local Sites\tracksuite-dev\app\public\wp-content\plugins\xftc-membership" \
-  "C:\path\to\AgentHarness\projects\xftc-redevelopment\plugin\xftc-membership"
+mklink /D "C:\Users\YOU\Local Sites\tracksuite-dev\app\public\wp-content\plugins\ts-membership" \
+  "C:\path\to\AgentHarness\projects\ts-redevelopment\plugin\ts-membership"
 ```
 
 6. Do the same for the theme:
 ```bash
-ln -s /path/to/AgentHarness/projects/xftc-redevelopment/theme/xftc-theme \
-  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/themes/xftc-theme
+ln -s /path/to/AgentHarness/projects/ts-redevelopment/theme/ts-theme \
+  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/themes/ts-theme
 ```
 
 ---
@@ -101,8 +101,8 @@ gh copilot explain "what does this PHP class do"
 
 ### Use Copilot Chat in VS Code:
 - `Ctrl+Shift+I` (or `Cmd+Shift+I`) opens Copilot Chat
-- Reference files directly: `@workspace explain the xftc-membership plugin structure`
-- Ask it to continue work: `@workspace continue Phase 1 de-brandification — replace all xftc_ prefixes with tracksuite_`
+- Reference files directly: `@workspace explain the ts-membership plugin structure`
+- Ask it to continue work: `@workspace continue Phase 1 de-brandification — replace all TRACKSUITE_ prefixes with tracksuite_`
 
 ### Copilot inline (while editing a file):
 - Start typing a function — Copilot autocompletes
@@ -121,7 +121,7 @@ git checkout -b phase1/de-brandification
 
 # Commit as you go:
 git add .
-git commit -m "Phase 1: replace xftc_ prefix with tracksuite_ in class-xftc-admin.php"
+git commit -m "Phase 1: replace TRACKSUITE_ prefix with tracksuite_ in class-ts-admin.php"
 
 # Push to GitHub:
 git push origin phase1/de-brandification
@@ -139,8 +139,8 @@ git push origin main
 Work these in order:
 
 ### XFTC + TrackSuite (most active)
-1. **Phase 1 — De-brandification** (`projects/xftc-plugin-product/PHASE-1.md`)
-   - Grep codebase for all `xftc_` strings
+1. **Phase 1 — De-brandification** (`projects/ts-plugin-product/PHASE-1.md`)
+   - Grep codebase for all `TRACKSUITE_` strings
    - Replace with `tracksuite_` + Settings API
    - Add WP Customizer color picker
 2. **Stripe integration** — add live keys to staging, run `composer require stripe/stripe-php` on staging server
@@ -161,21 +161,49 @@ Work these in order:
 
 ## Copilot Prompt Templates (Save These)
 
-Use these in Copilot Chat to continue work exactly where we left off:
+Use these in Copilot Chat to continue work exactly where we left off. Replace any <placeholders> before running.
+
+### Local Dev Setup (Copilot Chat Template)
 
 ```
-@workspace I'm building a WordPress plugin called TrackSuite (formerly xftc-membership). 
-Read the PROJECT.md in projects/xftc-plugin-product/ and continue Phase 1 de-brandification. 
-Start by grepping all xftc_ prefixes in the plugin directory and replacing them with tracksuite_.
+@workspace
+You are my Local Development Assistant. Goal: set up a reproducible, offline LocalWP development site for this repository and verify the site runs in VS Code + LocalWP + Git.
+Context:
+- Repo path: D:\Projects\agentharness
+- Editor: VS Code (with GitHub Copilot Chat installed)
+- Local WP app: Local by Flywheel (Local)
+
+Tasks (perform or provide exact Windows commands):
+1) Confirm repository files exist at the path above.
+2) Create a Local site named "agentharness-local" that maps to the project's public webroot (if the repo has a WordPress public folder, use it; otherwise create a new WP site and explain where to copy plugin/theme files).
+   - Provide precise Local UI steps and the equivalent powershell/winget/Local CLI commands (if available).
+3) Symlink plugin and theme directories from the repo into the Local site's wp-content (Windows mklink /D example required).
+4) Ensure runtime tools are present (PHP, Composer, Node). If missing, provide winget commands to install them.
+5) Run dependency installs for the project (composer install / npm ci) with commands and expected outputs.
+6) Start the Local site, open WP Admin, activate the theme and plugin, and flush permalinks. Provide exact steps and commands.
+7) Run basic verification: request the home page, check WP admin reachable, list active plugins and theme, and report any PHP errors (how to find logs).
+8) If any manual steps are required (GUI sign-in, database import), output a concise checklist and the exact files/paths to use.
+
+End by listing the commands run, files changed (or created), and a suggested git commit message to record the setup (e.g., "chore: add local dev site and symlinks").
+```
+
+---
+
+### Project-specific Quick Prompts
+
+```
+@workspace I'm building a WordPress plugin called TrackSuite (formerly ts-membership).
+Read the PROJECT.md in projects/ts-plugin-product/ and continue Phase 1 de-brandification.
+Start by grepping all TRACKSUITE_ prefixes in the plugin directory and replacing them with tracksuite_.
 ```
 
 ```
-@workspace Review SPRINT-2.md in projects/xftc-redevelopment/ and begin Sprint 3. 
+@workspace Review SPRINT-2.md in projects/ts-redevelopment/ and begin Sprint 3.
 Priority: wire the admin dashboard widgets in admin/views/dashboard.php.
 ```
 
 ```
-@workspace Read projects/pbs-foundation/CHARTER.md and BYLAWS.md. 
+@workspace Read projects/pbs-foundation/CHARTER.md and BYLAWS.md.
 Help me prepare the IRS Form 1023-EZ application for the Phi Beta Sigma Collegiate Pathways Foundation.
 ```
 
@@ -208,3 +236,4 @@ Come back here and I'll pick up exactly where Copilot left off. All state is in 
 | Phi Beta Sigma Foundation | ✅ Charter + Bylaws done | 501(c)(3) filing |
 | YEPC / CR 132 Site | ✅ Research + outreach done | Hutto EDC follow-up May 25 |
 | AgentHarness GitHub Repo | ✅ Synced | Daily auto-sync active |
+

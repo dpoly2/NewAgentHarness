@@ -1,20 +1,20 @@
-<?php
+﻿<?php
 /**
  * Registers and manages custom XFTC user roles and capabilities.
  *
  * Roles:
- *  - xftc_parent   : Register and manage athletes, pay fees, register for meets/travel
- *  - xftc_athlete  : View own stats, history, and upcoming meets
- *  - xftc_coach    : Create meets, register athletes, enter results
- *  - xftc_admin    : Full access to all plugin functionality
- *  - xftc_staff    : Update hours, view pay history
+ *  - TRACKSUITE_parent   : Register and manage athletes, pay fees, register for meets/travel
+ *  - TRACKSUITE_athlete  : View own stats, history, and upcoming meets
+ *  - TRACKSUITE_coach    : Create meets, register athletes, enter results
+ *  - TRACKSUITE_admin    : Full access to all plugin functionality
+ *  - TRACKSUITE_staff    : Update hours, view pay history
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Roles {
+class TRACKSUITE_Roles {
 
     /**
      * Hook into WordPress init to register roles.
@@ -30,77 +30,77 @@ class XFTC_Roles {
     public function register_roles() {
 
         // ── Parent ────────────────────────────────────────────────────────────
-        add_role( 'xftc_parent', __( 'XFTC Parent', 'xftc-membership' ), [
+        add_role( 'TRACKSUITE_parent', __( 'XFTC Parent', 'ts-membership' ), [
             'read'                      => true,
-            'xftc_register_athlete'     => true,
-            'xftc_manage_own_athletes'  => true,
-            'xftc_view_own_payments'    => true,
-            'xftc_register_for_meet'    => true,
-            'xftc_register_travel'      => true,
+            'TRACKSUITE_register_athlete'     => true,
+            'TRACKSUITE_manage_own_athletes'  => true,
+            'TRACKSUITE_view_own_payments'    => true,
+            'TRACKSUITE_register_for_meet'    => true,
+            'TRACKSUITE_register_travel'      => true,
         ] );
 
         // ── Athlete ───────────────────────────────────────────────────────────
-        add_role( 'xftc_athlete', __( 'XFTC Athlete', 'xftc-membership' ), [
+        add_role( 'TRACKSUITE_athlete', __( 'XFTC Athlete', 'ts-membership' ), [
             'read'                  => true,
-            'xftc_view_own_stats'   => true,
-            'xftc_view_own_history' => true,
-            'xftc_view_meets'       => true,
+            'TRACKSUITE_view_own_stats'   => true,
+            'TRACKSUITE_view_own_history' => true,
+            'TRACKSUITE_view_meets'       => true,
         ] );
 
         // ── Coach ─────────────────────────────────────────────────────────────
-        add_role( 'xftc_coach', __( 'XFTC Coach', 'xftc-membership' ), [
+        add_role( 'TRACKSUITE_coach', __( 'XFTC Coach', 'ts-membership' ), [
             'read'                      => true,
-            'xftc_create_meets'         => true,
-            'xftc_edit_meets'           => true,
-            'xftc_register_athletes'    => true,
-            'xftc_enter_results'        => true,
-            'xftc_view_all_athletes'    => true,
-            'xftc_view_all_stats'       => true,
+            'TRACKSUITE_create_meets'         => true,
+            'TRACKSUITE_edit_meets'           => true,
+            'TRACKSUITE_register_athletes'    => true,
+            'TRACKSUITE_enter_results'        => true,
+            'TRACKSUITE_view_all_athletes'    => true,
+            'TRACKSUITE_view_all_stats'       => true,
         ] );
 
         // ── Admin ─────────────────────────────────────────────────────────────
-        add_role( 'xftc_admin', __( 'XFTC Admin', 'xftc-membership' ), [
+        add_role( 'TRACKSUITE_admin', __( 'XFTC Admin', 'ts-membership' ), [
             'read'                      => true,
-            'xftc_manage_members'       => true,
-            'xftc_manage_seasons'       => true,
-            'xftc_manage_meets'         => true,
-            'xftc_manage_travel'        => true,
-            'xftc_manage_payments'      => true,
-            'xftc_manage_payroll'       => true,
-            'xftc_manage_staff'         => true,
-            'xftc_view_reports'         => true,
-            'xftc_export_data'          => true,
-            'xftc_manage_settings'      => true,
-            'xftc_register_athlete'     => true,
-            'xftc_enter_results'        => true,
-            'xftc_create_meets'         => true,
-            'xftc_edit_meets'           => true,
-            'xftc_view_all_athletes'    => true,
-            'xftc_view_all_stats'       => true,
+            'TRACKSUITE_manage_members'       => true,
+            'TRACKSUITE_manage_seasons'       => true,
+            'TRACKSUITE_manage_meets'         => true,
+            'TRACKSUITE_manage_travel'        => true,
+            'TRACKSUITE_manage_payments'      => true,
+            'TRACKSUITE_manage_payroll'       => true,
+            'TRACKSUITE_manage_staff'         => true,
+            'TRACKSUITE_view_reports'         => true,
+            'TRACKSUITE_export_data'          => true,
+            'TRACKSUITE_manage_settings'      => true,
+            'TRACKSUITE_register_athlete'     => true,
+            'TRACKSUITE_enter_results'        => true,
+            'TRACKSUITE_create_meets'         => true,
+            'TRACKSUITE_edit_meets'           => true,
+            'TRACKSUITE_view_all_athletes'    => true,
+            'TRACKSUITE_view_all_stats'       => true,
             // Standard WP admin caps
             'manage_options'            => true,
             'edit_users'                => true,
         ] );
 
         // ── Staff ─────────────────────────────────────────────────────────────
-        add_role( 'xftc_staff', __( 'XFTC Staff', 'xftc-membership' ), [
+        add_role( 'TRACKSUITE_staff', __( 'XFTC Staff', 'ts-membership' ), [
             'read'                      => true,
-            'xftc_update_own_hours'     => true,
-            'xftc_view_own_payroll'     => true,
+            'TRACKSUITE_update_own_hours'     => true,
+            'TRACKSUITE_view_own_payroll'     => true,
         ] );
 
         // Also give the built-in administrator role all XFTC caps
         $wp_admin = get_role( 'administrator' );
         if ( $wp_admin ) {
-            $xftc_caps = [
-                'xftc_manage_members', 'xftc_manage_seasons', 'xftc_manage_meets',
-                'xftc_manage_travel',  'xftc_manage_payments','xftc_manage_payroll',
-                'xftc_manage_staff',   'xftc_view_reports',   'xftc_export_data',
-                'xftc_manage_settings','xftc_register_athlete','xftc_enter_results',
-                'xftc_create_meets',   'xftc_edit_meets',     'xftc_view_all_athletes',
-                'xftc_view_all_stats',
+            $TRACKSUITE_caps = [
+                'TRACKSUITE_manage_members', 'TRACKSUITE_manage_seasons', 'TRACKSUITE_manage_meets',
+                'TRACKSUITE_manage_travel',  'TRACKSUITE_manage_payments','TRACKSUITE_manage_payroll',
+                'TRACKSUITE_manage_staff',   'TRACKSUITE_view_reports',   'TRACKSUITE_export_data',
+                'TRACKSUITE_manage_settings','TRACKSUITE_register_athlete','TRACKSUITE_enter_results',
+                'TRACKSUITE_create_meets',   'TRACKSUITE_edit_meets',     'TRACKSUITE_view_all_athletes',
+                'TRACKSUITE_view_all_stats',
             ];
-            foreach ( $xftc_caps as $cap ) {
+            foreach ( $TRACKSUITE_caps as $cap ) {
                 $wp_admin->add_cap( $cap );
             }
         }
@@ -111,10 +111,11 @@ class XFTC_Roles {
      * Called from uninstall.php.
      */
     public static function remove_roles() {
-        remove_role( 'xftc_parent' );
-        remove_role( 'xftc_athlete' );
-        remove_role( 'xftc_coach' );
-        remove_role( 'xftc_admin' );
-        remove_role( 'xftc_staff' );
+        remove_role( 'TRACKSUITE_parent' );
+        remove_role( 'TRACKSUITE_athlete' );
+        remove_role( 'TRACKSUITE_coach' );
+        remove_role( 'TRACKSUITE_admin' );
+        remove_role( 'TRACKSUITE_staff' );
     }
 }
+

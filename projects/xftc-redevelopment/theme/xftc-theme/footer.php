@@ -1,1 +1,1 @@
-<?php xftc_partial( 'footer' ); ?>
+﻿<?php TRACKSUITE_partial( 'footer' ); ?>

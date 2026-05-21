@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Plugin Name:     XFTC Membership
  * Plugin URI:      https://xtremeforcetrackclub.org
@@ -8,38 +8,38 @@
  * Author URI:      https://xtremeforcetrackclub.org
  * License:         GPL-2.0+
  * License URI:     https://www.gnu.org/licenses/gpl-2.0.txt
- * Text Domain:     xftc-membership
+ * Text Domain:     ts-membership
  * Domain Path:     /languages
  */
 
 defined( 'ABSPATH' ) || exit;
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-define( 'XFTC_VERSION',     '0.2.0' );
-define( 'XFTC_PLUGIN_FILE', __FILE__ );
-define( 'XFTC_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
-define( 'XFTC_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
-define( 'XFTC_PLUGIN_BASE', plugin_basename( __FILE__ ) );
+define( 'TRACKSUITE_VERSION',     '0.2.0' );
+define( 'TRACKSUITE_PLUGIN_FILE', __FILE__ );
+define( 'TRACKSUITE_PLUGIN_DIR',  plugin_dir_path( __FILE__ ) );
+define( 'TRACKSUITE_PLUGIN_URL',  plugin_dir_url( __FILE__ ) );
+define( 'TRACKSUITE_PLUGIN_BASE', plugin_basename( __FILE__ ) );
 
 // ─── Activator / Deactivator must load immediately (before activation hook fires) ──
-require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-activator.php';
-require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-deactivator.php';
+require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-activator.php';
+require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-deactivator.php';
 
 // ─── Activation / Deactivation hooks ─────────────────────────────────────────
-register_activation_hook(   __FILE__, [ 'XFTC_Activator',   'activate'   ] );
-register_deactivation_hook( __FILE__, [ 'XFTC_Deactivator', 'deactivate' ] );
+register_activation_hook(   __FILE__, [ 'TRACKSUITE_Activator',   'activate'   ] );
+register_deactivation_hook( __FILE__, [ 'TRACKSUITE_Deactivator', 'deactivate' ] );
 
 // ─── Autoloader (for runtime class resolution) ────────────────────────────────
 spl_autoload_register( function ( $class ) {
-    if ( strncmp( 'XFTC_', $class, 5 ) !== 0 ) {
+    if ( strncmp( 'TRACKSUITE_', $class, 5 ) !== 0 ) {
         return;
     }
-    $relative = strtolower( str_replace( [ 'XFTC_', '_' ], [ '', '-' ], $class ) );
+    $relative = strtolower( str_replace( [ 'TRACKSUITE_', '_' ], [ '', '-' ], $class ) );
     $paths = [
-        XFTC_PLUGIN_DIR . "includes/class-{$relative}.php",
-        XFTC_PLUGIN_DIR . "admin/class-{$relative}.php",
-        XFTC_PLUGIN_DIR . "public/class-{$relative}.php",
-        XFTC_PLUGIN_DIR . "api/class-{$relative}.php",
+        TRACKSUITE_PLUGIN_DIR . "includes/class-{$relative}.php",
+        TRACKSUITE_PLUGIN_DIR . "admin/class-{$relative}.php",
+        TRACKSUITE_PLUGIN_DIR . "public/class-{$relative}.php",
+        TRACKSUITE_PLUGIN_DIR . "api/class-{$relative}.php",
     ];
     foreach ( $paths as $path ) {
         if ( file_exists( $path ) ) {
@@ -50,41 +50,42 @@ spl_autoload_register( function ( $class ) {
 } );
 
 // ─── Bootstrap (runs after all plugins are loaded) ───────────────────────────
-function xftc_run() {
+function TRACKSUITE_run() {
     // Core includes
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-roles.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-members.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-seasons.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-registration.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-emails.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-meets.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-results.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-travel.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-payroll.php';
-    require_once XFTC_PLUGIN_DIR . 'includes/class-xftc-payments.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-roles.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-members.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-seasons.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-registration.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-emails.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-meets.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-results.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-travel.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-payroll.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'includes/class-ts-payments.php';
 
     // Admin & public layers
-    require_once XFTC_PLUGIN_DIR . 'admin/class-xftc-admin.php';
-    require_once XFTC_PLUGIN_DIR . 'public/class-xftc-public.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'admin/class-ts-admin.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'public/class-ts-public.php';
 
     // REST API
-    require_once XFTC_PLUGIN_DIR . 'api/class-xftc-rest-api.php';
+    require_once TRACKSUITE_PLUGIN_DIR . 'api/class-ts-rest-api.php';
 
     // Init roles
-    $roles = new XFTC_Roles();
+    $roles = new TRACKSUITE_Roles();
     $roles->init();
 
     // Init REST API
-    new XFTC_REST_API();
+    new TRACKSUITE_REST_API();
 
     // Init admin
-    $admin = new XFTC_Admin();
+    $admin = new TRACKSUITE_Admin();
     if ( is_admin() ) {
         $admin->init();
     }
 
     // Init public
-    $public = new XFTC_Public();
+    $public = new TRACKSUITE_Public();
     $public->init();
 }
-add_action( 'plugins_loaded', 'xftc_run' );
+add_action( 'plugins_loaded', 'TRACKSUITE_run' );
+

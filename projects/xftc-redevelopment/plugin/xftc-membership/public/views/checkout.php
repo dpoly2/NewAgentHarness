@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Public View — Stripe Checkout Flow
  *
- * Shortcode: [xftc_checkout]
+ * Shortcode: [TRACKSUITE_checkout]
  * Handles membership fee and travel fee payment initiation.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  *
  * ─── STRIPE SETUP REQUIRED ───────────────────────────────────────────────────
@@ -16,23 +16,23 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$payments     = new XFTC_Payments();
+$payments     = new TRACKSUITE_Payments();
 $is_configured = $payments->is_configured();
 $user         = wp_get_current_user();
 $is_logged_in = is_user_logged_in();
 ?>
 
-<div class="xftc-checkout-wrap">
+<div class="ts-checkout-wrap">
 
     <?php if ( ! $is_logged_in ) : ?>
         <!-- Not logged in -->
-        <div class="xftc-notice xftc-notice-warning">
+        <div class="ts-notice ts-notice-warning">
             <p>You must be logged in to complete a payment. <a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>">Log in here</a>.</p>
         </div>
 
     <?php elseif ( ! $is_configured ) : ?>
         <!-- Stripe not configured -->
-        <div class="xftc-notice xftc-notice-info">
+        <div class="ts-notice ts-notice-info">
             <h3>💳 Online Payments Coming Soon</h3>
             <p>We're setting up our secure payment system. In the meantime, please contact your coach or administrator to arrange payment.</p>
             <p><strong>Xtreme Force Track Club</strong><br>
@@ -49,9 +49,9 @@ $is_logged_in = is_user_logged_in();
         // $pending = get_pending_fees_for_user( $user->ID );
         ?>
 
-        <div class="xftc-checkout-summary">
+        <div class="ts-checkout-summary">
             <h3>Order Summary</h3>
-            <table class="xftc-order-table">
+            <table class="ts-order-table">
                 <thead>
                     <tr>
                         <th>Description</th>
@@ -77,11 +77,11 @@ $is_logged_in = is_user_logged_in();
         </div>
 
         <!-- Stripe Checkout Button -->
-        <div class="xftc-checkout-actions">
-            <button id="xftc-stripe-checkout-btn" class="xftc-btn xftc-btn-primary" disabled>
+        <div class="ts-checkout-actions">
+            <button id="ts-stripe-checkout-btn" class="ts-btn ts-btn-primary" disabled>
                 Pay with Card
             </button>
-            <p class="xftc-secure-notice">
+            <p class="ts-secure-notice">
                 🔒 Payments are processed securely via <a href="https://stripe.com" target="_blank">Stripe</a>. Your card information is never stored on our servers.
             </p>
         </div>
@@ -91,7 +91,7 @@ $is_logged_in = is_user_logged_in();
             // TODO: Initialize Stripe.js after keys are configured
             // const stripe = Stripe('<?php echo esc_js( $payments->get_publishable_key() ); ?>');
             //
-            // document.getElementById('xftc-stripe-checkout-btn').addEventListener('click', function() {
+            // document.getElementById('ts-stripe-checkout-btn').addEventListener('click', function() {
             //     fetch('/wp-json/xftc/v1/payments/checkout', {
             //         method: 'POST',
             //         headers: {
@@ -116,4 +116,5 @@ $is_logged_in = is_user_logged_in();
 
     <?php endif; ?>
 
-</div><!-- .xftc-checkout-wrap -->
+</div><!-- .ts-checkout-wrap -->
+

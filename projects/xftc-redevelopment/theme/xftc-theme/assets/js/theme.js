@@ -1,6 +1,6 @@
-/**
+﻿/**
  * XFTC Track & Field Theme — Main JS
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
 (function ($) {
     'use strict';
@@ -128,7 +128,7 @@
 
     // ── Results chart init (Chart.js — if present) ──────────────────────────
     function initResultsChart() {
-        const canvas = document.getElementById('xftc-results-chart');
+        const canvas = document.getElementById('ts-results-chart');
         if (!canvas || typeof Chart === 'undefined') return;
 
         const rawData = canvas.dataset.chartData;
@@ -187,7 +187,7 @@
     });
 
     // ── Flash message auto-dismiss ───────────────────────────────────────────
-    document.querySelectorAll('.xftc-notice[data-auto-dismiss]').forEach(notice => {
+    document.querySelectorAll('.ts-notice[data-auto-dismiss]').forEach(notice => {
         const delay = parseInt(notice.dataset.autoDismiss, 10) || 4000;
         setTimeout(() => {
             notice.style.opacity = '0';
@@ -197,3 +197,4 @@
     });
 
 }(jQuery));
+

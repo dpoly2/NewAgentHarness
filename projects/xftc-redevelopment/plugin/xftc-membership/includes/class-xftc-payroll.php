@@ -1,25 +1,25 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_Payroll
+ * Class TRACKSUITE_Payroll
  *
  * Manages staff records, payroll period entry,
  * gross/net pay calculation, and CSV export.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class XFTC_Payroll {
+class TRACKSUITE_Payroll {
 
     private string $staff_table;
     private string $payroll_table;
 
     public function __construct() {
         global $wpdb;
-        $this->staff_table   = $wpdb->prefix . 'xftc_staff';
-        $this->payroll_table = $wpdb->prefix . 'xftc_payroll';
+        $this->staff_table   = $wpdb->prefix . 'TRACKSUITE_staff';
+        $this->payroll_table = $wpdb->prefix . 'TRACKSUITE_payroll';
     }
 
     /** ─── STAFF CRUD ────────────────────────────────────────── */
@@ -215,7 +215,7 @@ class XFTC_Payroll {
             ? $this->get_period_totals( $period_start, $period_end )['entries']
             : $this->get_all_payroll();
 
-        $filename = 'xftc-payroll-' . ( $period_start ?: date( 'Y-m-d' ) ) . '.csv';
+        $filename = 'ts-payroll-' . ( $period_start ?: date( 'Y-m-d' ) ) . '.csv';
         header( 'Content-Type: text/csv' );
         header( "Content-Disposition: attachment; filename=\"{$filename}\"" );
 
@@ -239,3 +239,4 @@ class XFTC_Payroll {
         exit;
     }
 }
+

@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
  * Admin View — Payroll
  * WP Admin → Xtreme Force → Payroll
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$payroll_mgr = new XFTC_Payroll();
+$payroll_mgr = new TRACKSUITE_Payroll();
 
 // Handle actions
-if ( isset( $_POST['xftc_payroll_nonce'] ) && wp_verify_nonce( $_POST['xftc_payroll_nonce'], 'xftc_save_payroll' ) ) {
+if ( isset( $_POST['TRACKSUITE_payroll_nonce'] ) && wp_verify_nonce( $_POST['TRACKSUITE_payroll_nonce'], 'TRACKSUITE_save_payroll' ) ) {
     $action = sanitize_key( $_POST['action_type'] ?? 'create' );
     if ( $action === 'create_staff' ) {
         $payroll_mgr->add_staff( $_POST );
@@ -23,11 +23,11 @@ if ( isset( $_POST['xftc_payroll_nonce'] ) && wp_verify_nonce( $_POST['xftc_payr
             : '<div class="notice notice-error"><p>Failed to create entry.</p></div>';
     }
 }
-if ( isset( $_GET['mark_paid'] ) && check_admin_referer( 'xftc_payroll_paid' ) ) {
+if ( isset( $_GET['mark_paid'] ) && check_admin_referer( 'TRACKSUITE_payroll_paid' ) ) {
     $payroll_mgr->mark_paid( (int) $_GET['mark_paid'] );
     echo '<div class="notice notice-success"><p>Marked as paid.</p></div>';
 }
-if ( isset( $_GET['void'] ) && check_admin_referer( 'xftc_payroll_void' ) ) {
+if ( isset( $_GET['void'] ) && check_admin_referer( 'TRACKSUITE_payroll_void' ) ) {
     $payroll_mgr->void_entry( (int) $_GET['void'] );
 }
 if ( isset( $_GET['export_csv'] ) ) {
@@ -39,7 +39,7 @@ $all_payroll = $payroll_mgr->get_all_payroll();
 $pending     = $payroll_mgr->get_pending_payroll();
 ?>
 
-<div class="wrap xftc-admin-payroll">
+<div class="wrap ts-admin-payroll">
     <h1>💵 Payroll</h1>
 
     <!-- Pending Alert -->
@@ -52,7 +52,7 @@ $pending     = $payroll_mgr->get_pending_payroll();
     <!-- Export Controls -->
     <div style="margin-bottom:16px;">
         <form method="get" style="display:inline-flex;gap:8px;align-items:center;">
-            <input type="hidden" name="page" value="xftc-payroll">
+            <input type="hidden" name="page" value="ts-payroll">
             <input type="hidden" name="export_csv" value="1">
             <label>From: <input type="date" name="period_start"></label>
             <label>To: <input type="date" name="period_end"></label>
@@ -76,11 +76,11 @@ $pending     = $payroll_mgr->get_pending_payroll();
                 <td>$<?php echo number_format( $p['gross_pay'], 2 ); ?></td>
                 <td>$<?php echo number_format( $p['deductions'], 2 ); ?></td>
                 <td><strong>$<?php echo number_format( $p['net_pay'], 2 ); ?></strong></td>
-                <td><span class="xftc-status xftc-status-<?php echo esc_attr( $p['status'] ); ?>"><?php echo esc_html( ucfirst( $p['status'] ) ); ?></span></td>
+                <td><span class="ts-status ts-status-<?php echo esc_attr( $p['status'] ); ?>"><?php echo esc_html( ucfirst( $p['status'] ) ); ?></span></td>
                 <td>
                     <?php if ( $p['status'] === 'pending' ) : ?>
-                        <a href="?page=xftc-payroll&mark_paid=<?php echo $p['id']; ?>&<?php echo wp_create_nonce( 'xftc_payroll_paid' ); ?>">Mark Paid</a> |
-                        <a href="?page=xftc-payroll&void=<?php echo $p['id']; ?>&<?php echo wp_create_nonce( 'xftc_payroll_void' ); ?>" onclick="return confirm('Void this entry?')">Void</a>
+                        <a href="?page=ts-payroll&mark_paid=<?php echo $p['id']; ?>&<?php echo wp_create_nonce( 'TRACKSUITE_payroll_paid' ); ?>">Mark Paid</a> |
+                        <a href="?page=ts-payroll&void=<?php echo $p['id']; ?>&<?php echo wp_create_nonce( 'TRACKSUITE_payroll_void' ); ?>" onclick="return confirm('Void this entry?')">Void</a>
                     <?php else : echo '—'; endif; ?>
                 </td>
             </tr>
@@ -93,7 +93,7 @@ $pending     = $payroll_mgr->get_pending_payroll();
     <!-- Create Payroll Entry -->
     <h2>Create Payroll Entry</h2>
     <form method="post">
-        <?php wp_nonce_field( 'xftc_save_payroll', 'xftc_payroll_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_save_payroll', 'TRACKSUITE_payroll_nonce' ); ?>
         <input type="hidden" name="action_type" value="create_payroll">
         <table class="form-table">
             <tr>
@@ -147,7 +147,7 @@ $pending     = $payroll_mgr->get_pending_payroll();
                 <td><?php echo esc_html( $s['role'] ); ?></td>
                 <td>$<?php echo number_format( $s['hourly_wage'], 2 ); ?>/hr</td>
                 <td><?php echo esc_html( $s['hire_date'] ); ?></td>
-                <td><span class="xftc-status xftc-status-<?php echo esc_attr( $s['status'] ); ?>"><?php echo esc_html( ucfirst( $s['status'] ) ); ?></span></td>
+                <td><span class="ts-status ts-status-<?php echo esc_attr( $s['status'] ); ?>"><?php echo esc_html( ucfirst( $s['status'] ) ); ?></span></td>
             </tr>
         <?php endforeach; endif; ?>
         </tbody>
@@ -155,12 +155,12 @@ $pending     = $payroll_mgr->get_pending_payroll();
 
     <h3>Add Staff Member</h3>
     <form method="post">
-        <?php wp_nonce_field( 'xftc_save_payroll', 'xftc_payroll_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_save_payroll', 'TRACKSUITE_payroll_nonce' ); ?>
         <input type="hidden" name="action_type" value="create_staff">
         <table class="form-table">
             <tr>
                 <th><label>WordPress User</label></th>
-                <td><?php wp_dropdown_users( [ 'name' => 'user_id', 'show_option_none' => '— Select User —', 'role__in' => ['xftc_staff','xftc_coach','administrator'] ] ); ?></td>
+                <td><?php wp_dropdown_users( [ 'name' => 'user_id', 'show_option_none' => '— Select User —', 'role__in' => ['TRACKSUITE_staff','TRACKSUITE_coach','administrator'] ] ); ?></td>
             </tr>
             <tr>
                 <th><label>Role/Title</label></th>
@@ -178,3 +178,4 @@ $pending     = $payroll_mgr->get_pending_payroll();
         <?php submit_button( 'Add Staff Member', 'secondary' ); ?>
     </form>
 </div>
+

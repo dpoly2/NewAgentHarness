@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Main template fallback
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 ?>
 
 <div class="container" style="padding-block:3rem;">
@@ -11,8 +11,8 @@ xftc_partial( 'header' );
         <h1 class="section-header__title" style="font-family:var(--font-heading);font-size:2rem;letter-spacing:.04em;margin-bottom:2rem;">
             <?php
             if ( is_archive() ) the_archive_title();
-            elseif ( is_search() ) printf( esc_html__( 'Search: %s', 'xftc-theme' ), get_search_query() );
-            else esc_html_e( 'Latest News', 'xftc-theme' );
+            elseif ( is_search() ) printf( esc_html__( 'Search: %s', 'ts-theme' ), get_search_query() );
+            else esc_html_e( 'Latest News', 'ts-theme' );
             ?>
         </h1>
         <div class="grid-3">
@@ -20,7 +20,7 @@ xftc_partial( 'header' );
                 <article <?php post_class( 'card' ); ?>>
                     <?php if ( has_post_thumbnail() ) : ?>
                     <div class="card__image">
-                        <a href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'xftc-card' ); ?></a>
+                        <a href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'ts-card' ); ?></a>
                     </div>
                     <?php endif; ?>
                     <div class="card__body">
@@ -37,8 +37,9 @@ xftc_partial( 'header' );
         </div>
         <?php the_posts_pagination(); ?>
     <?php else : ?>
-        <p><?php esc_html_e( 'No content found.', 'xftc-theme' ); ?></p>
+        <p><?php esc_html_e( 'No content found.', 'ts-theme' ); ?></p>
     <?php endif; ?>
 </div>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

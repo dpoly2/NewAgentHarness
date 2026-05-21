@@ -1,25 +1,25 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
-<div class="wrap xftc-admin-wrap">
-    <h1 class="xftc-page-title">
+﻿<?php defined( 'ABSPATH' ) || exit; ?>
+<div class="wrap ts-admin-wrap">
+    <h1 class="ts-page-title">
         <span class="dashicons dashicons-calendar-alt"></span>
-        <?php esc_html_e( 'Seasons', 'xftc-membership' ); ?>
-        <a href="#" class="page-title-action xftc-open-modal" data-modal="xftc-add-season"><?php esc_html_e( 'Add New Season', 'xftc-membership' ); ?></a>
+        <?php esc_html_e( 'Seasons', 'ts-membership' ); ?>
+        <a href="#" class="page-title-action ts-open-modal" data-modal="ts-add-season"><?php esc_html_e( 'Add New Season', 'ts-membership' ); ?></a>
     </h1>
 
     <?php if ( empty( $list ) ) : ?>
-        <p><?php esc_html_e( 'No seasons found. Add your first season above.', 'xftc-membership' ); ?></p>
+        <p><?php esc_html_e( 'No seasons found. Add your first season above.', 'ts-membership' ); ?></p>
     <?php else : ?>
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th><?php esc_html_e( 'Season', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Type', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Dates', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Registration', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Standard Fee', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Premium Fee', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Status', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Actions', 'xftc-membership' ); ?></th>
+                <th><?php esc_html_e( 'Season', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Type', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Dates', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Registration', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Standard Fee', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Premium Fee', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Status', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Actions', 'ts-membership' ); ?></th>
             </tr>
         </thead>
         <tbody>
@@ -33,13 +33,13 @@
                 <td>$<?php echo number_format( (float) $season->fee_premium, 2 ); ?></td>
                 <td>
                     <?php if ( $season->is_active ) : ?>
-                        <span class="xftc-badge xftc-badge-active"><?php esc_html_e( 'Active', 'xftc-membership' ); ?></span>
+                        <span class="ts-badge ts-badge-active"><?php esc_html_e( 'Active', 'ts-membership' ); ?></span>
                     <?php else : ?>
-                        <span class="xftc-badge xftc-badge-inactive"><?php esc_html_e( 'Inactive', 'xftc-membership' ); ?></span>
+                        <span class="ts-badge ts-badge-inactive"><?php esc_html_e( 'Inactive', 'ts-membership' ); ?></span>
                     <?php endif; ?>
                 </td>
                 <td>
-                    <a href="#" class="xftc-set-active" data-id="<?php echo absint( $season->id ); ?>"><?php esc_html_e( 'Set Active', 'xftc-membership' ); ?></a>
+                    <a href="#" class="ts-set-active" data-id="<?php echo absint( $season->id ); ?>"><?php esc_html_e( 'Set Active', 'ts-membership' ); ?></a>
                 </td>
             </tr>
             <?php endforeach; ?>
@@ -47,3 +47,4 @@
     </table>
     <?php endif; ?>
 </div>
+

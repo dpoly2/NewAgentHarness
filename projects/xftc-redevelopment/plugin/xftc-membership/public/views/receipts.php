@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 /**
- * Public view — Payments & Travel (used by [xftc_my_payments] and [xftc_my_travel])
+ * Public view — Payments & Travel (used by [TRACKSUITE_my_payments] and [TRACKSUITE_my_travel])
  * Variables: $payments, $travel, $atts
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 defined( 'ABSPATH' ) || exit;
 ?>
@@ -10,10 +10,10 @@ defined( 'ABSPATH' ) || exit;
 <?php // ── Payments view ───────────────────────────────────────────────────────
 if ( isset( $payments ) ) :
     if ( empty( $payments ) ) : ?>
-        <p class="xftc-empty">No payment history yet.</p>
+        <p class="ts-empty">No payment history yet.</p>
     <?php else : ?>
-        <div class="xftc-table-wrap">
-            <table class="xftc-table">
+        <div class="ts-table-wrap">
+            <table class="ts-table">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -27,10 +27,10 @@ if ( isset( $payments ) ) :
                 <tbody>
                 <?php foreach ( $payments as $p ) :
                     $status_class = [
-                        'completed' => 'xftc-badge--success',
-                        'pending'   => 'xftc-badge--warning',
-                        'failed'    => 'xftc-badge--danger',
-                        'refunded'  => 'xftc-badge--info',
+                        'completed' => 'ts-badge--success',
+                        'pending'   => 'ts-badge--warning',
+                        'failed'    => 'ts-badge--danger',
+                        'refunded'  => 'ts-badge--info',
                     ][ $p['status'] ] ?? '';
                     $types = [
                         'membership' => 'Membership',
@@ -43,12 +43,12 @@ if ( isset( $payments ) ) :
                     <td><?php echo ! empty( $p['created_at'] ) ? esc_html( date( 'M j, Y', strtotime( $p['created_at'] ) ) ) : '—'; ?></td>
                     <td><?php echo esc_html( $types[ $p['reference_type'] ] ?? ucfirst( $p['reference_type'] ?? '' ) ); ?></td>
                     <td><strong>$<?php echo esc_html( number_format( (float) ( $p['amount'] ?? 0 ), 2 ) ); ?></strong></td>
-                    <td><span class="xftc-badge <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( ucfirst( $p['status'] ?? '' ) ); ?></span></td>
+                    <td><span class="ts-badge <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( ucfirst( $p['status'] ?? '' ) ); ?></span></td>
                     <td><?php echo esc_html( ucfirst( $p['gateway'] ?? 'Manual' ) ); ?></td>
                     <td>
                         <?php if ( ! empty( $p['transaction_id'] ) ) : ?>
                             <a href="<?php echo esc_url( home_url( '/receipt/?txn=' . $p['transaction_id'] ) ); ?>"
-                               class="xftc-link" target="_blank">
+                               class="ts-link" target="_blank">
                                 🧾 View
                             </a>
                         <?php else : ?>
@@ -67,10 +67,10 @@ if ( isset( $payments ) ) :
 <?php // ── Travel view ─────────────────────────────────────────────────────────
 if ( isset( $travel ) ) :
     if ( empty( $travel ) ) : ?>
-        <p class="xftc-empty">No travel bookings on record.</p>
+        <p class="ts-empty">No travel bookings on record.</p>
     <?php else : ?>
-        <div class="xftc-table-wrap">
-            <table class="xftc-table">
+        <div class="ts-table-wrap">
+            <table class="ts-table">
                 <thead>
                     <tr>
                         <th>Athlete</th>
@@ -87,8 +87,8 @@ if ( isset( $travel ) ) :
                 <tbody>
                 <?php foreach ( $travel as $t ) :
                     $status_class = $t['payment_status'] === 'paid'
-                        ? 'xftc-badge--success'
-                        : ( $t['payment_status'] === 'refunded' ? 'xftc-badge--info' : 'xftc-badge--warning' );
+                        ? 'ts-badge--success'
+                        : ( $t['payment_status'] === 'refunded' ? 'ts-badge--info' : 'ts-badge--warning' );
                     $types = [ 'bus' => '🚌 Bus', 'hotel' => '🏨 Hotel', 'both' => '🚌 Bus + 🏨 Hotel' ];
                 ?>
                 <tr>
@@ -100,7 +100,7 @@ if ( isset( $travel ) ) :
                     <td><?php echo esc_html( $t['bus_seat'] ?? '—' ); ?></td>
                     <td><?php echo esc_html( $t['hotel_room'] ?? '—' ); ?></td>
                     <td>$<?php echo esc_html( number_format( (float) ( $t['travel_fee'] ?? 0 ), 2 ) ); ?></td>
-                    <td><span class="xftc-badge <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( ucfirst( $t['payment_status'] ?? '' ) ); ?></span></td>
+                    <td><span class="ts-badge <?php echo esc_attr( $status_class ); ?>"><?php echo esc_html( ucfirst( $t['payment_status'] ?? '' ) ); ?></span></td>
                 </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -108,3 +108,4 @@ if ( isset( $travel ) ) :
         </div>
     <?php endif; ?>
 <?php endif; ?>
+

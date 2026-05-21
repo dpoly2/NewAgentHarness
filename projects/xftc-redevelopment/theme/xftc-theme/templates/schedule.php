@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Template Name: Meet Schedule
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 ?>
 
 <div class="portal-header">
@@ -26,9 +26,10 @@ xftc_partial( 'header' );
         </div>
 
         <!-- Plugin shortcode drives the data -->
-        <?php echo do_shortcode( '[xftc_schedule view="list" show_filters="false" show_register="true"]' ); ?>
+        <?php echo do_shortcode( '[TRACKSUITE_schedule view="list" show_filters="false" show_register="true"]' ); ?>
 
     </div>
 </section>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

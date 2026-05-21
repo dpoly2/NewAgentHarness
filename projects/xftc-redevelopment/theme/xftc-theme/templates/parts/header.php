@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Site Header partial
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-$announcements = xftc_get_announcements();
+$announcements = TRACKSUITE_get_announcements();
 ?>
 <!DOCTYPE html>
 <html <?php language_attributes(); ?>>
@@ -53,20 +53,20 @@ $announcements = xftc_get_announcements();
         </div>
 
         <!-- Primary Nav -->
-        <nav class="nav-primary" id="site-navigation" role="navigation" aria-label="<?php esc_attr_e( 'Primary', 'xftc-theme' ); ?>">
+        <nav class="nav-primary" id="site-navigation" role="navigation" aria-label="<?php esc_attr_e( 'Primary', 'ts-theme' ); ?>">
             <?php
             wp_nav_menu( [
                 'theme_location' => 'primary',
                 'menu_class'     => '',
                 'container'      => false,
-                'walker'         => new XFTC_Nav_Walker(),
-                'fallback_cb'    => 'xftc_fallback_nav',
+                'walker'         => new TRACKSUITE_Nav_Walker(),
+                'fallback_cb'    => 'TRACKSUITE_fallback_nav',
             ] );
             ?>
         </nav>
 
         <!-- Mobile Toggle -->
-        <button class="nav-toggle" aria-controls="site-navigation" aria-expanded="false" aria-label="<?php esc_attr_e( 'Toggle menu', 'xftc-theme' ); ?>">
+        <button class="nav-toggle" aria-controls="site-navigation" aria-expanded="false" aria-label="<?php esc_attr_e( 'Toggle menu', 'ts-theme' ); ?>">
             <span></span><span></span><span></span>
         </button>
 
@@ -74,3 +74,4 @@ $announcements = xftc_get_announcements();
 </header>
 
 <main class="site-main" id="main">
+

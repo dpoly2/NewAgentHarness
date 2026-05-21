@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 /**
  * Template tag helpers
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Output the page title block
  */
-function xftc_page_title( string $eyebrow = '', string $title = '', string $icon = '' ): void {
+function TRACKSUITE_page_title( string $eyebrow = '', string $title = '', string $icon = '' ): void {
     if ( ! $title ) $title = get_the_title();
     ?>
     <div class="portal-header">
@@ -26,7 +26,7 @@ function xftc_page_title( string $eyebrow = '', string $title = '', string $icon
 /**
  * Output a meet card
  */
-function xftc_meet_card( object $meet ): void {
+function TRACKSUITE_meet_card( object $meet ): void {
     $date  = ! empty( $meet->meet_date ) ? strtotime( $meet->meet_date ) : 0;
     $day   = $date ? date( 'j', $date ) : '—';
     $month = $date ? date( 'M', $date ) : '';
@@ -57,7 +57,7 @@ function xftc_meet_card( object $meet ): void {
 /**
  * Output an athlete card placeholder (used when plugin shortcodes aren't available)
  */
-function xftc_athlete_card_placeholder( string $name, string $events = '', string $division = '' ): void {
+function TRACKSUITE_athlete_card_placeholder( string $name, string $events = '', string $division = '' ): void {
     $initials = implode( '', array_map( fn($p) => strtoupper( $p[0] ), explode( ' ', $name ) ) );
     ?>
     <div class="athlete-card" data-division="<?php echo esc_attr( $division ); ?>">
@@ -75,7 +75,7 @@ function xftc_athlete_card_placeholder( string $name, string $events = '', strin
 /**
  * Output a results table row
  */
-function xftc_result_row( object $result, bool $show_athlete = true ): void {
+function TRACKSUITE_result_row( object $result, bool $show_athlete = true ): void {
     $pb_badge = ! empty( $result->is_personal_best ) ? '<span class="pb-badge">PB</span>' : '';
     $cr_badge = ! empty( $result->is_club_record )   ? '<span class="pb-badge cr-badge">CR</span>' : '';
     $place_class = '';
@@ -99,10 +99,11 @@ function xftc_result_row( object $result, bool $show_athlete = true ): void {
 /**
  * Print pagination
  */
-function xftc_pagination(): void {
+function TRACKSUITE_pagination(): void {
     the_posts_pagination( [
         'mid_size'  => 2,
         'prev_text' => '← Prev',
         'next_text' => 'Next →',
     ] );
 }
+

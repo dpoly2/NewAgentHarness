@@ -1,24 +1,24 @@
-<?php
+﻿<?php
 /**
  * Admin View — Travel & Logistics
  * WP Admin → Xtreme Force → Travel
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$travel_mgr = new XFTC_Travel();
-$meets_mgr  = new XFTC_Meets();
+$travel_mgr = new TRACKSUITE_Travel();
+$meets_mgr  = new TRACKSUITE_Meets();
 
 if ( isset( $_GET['export_manifest'] ) ) {
     $travel_mgr->export_manifest_csv( (int) $_GET['export_manifest'] );
 }
-if ( isset( $_GET['mark_paid'] ) && check_admin_referer( 'xftc_travel_paid' ) ) {
+if ( isset( $_GET['mark_paid'] ) && check_admin_referer( 'TRACKSUITE_travel_paid' ) ) {
     $travel_mgr->mark_paid( (int) $_GET['mark_paid'] );
     echo '<div class="notice notice-success"><p>Marked as paid.</p></div>';
 }
-if ( isset( $_POST['xftc_travel_nonce'] ) && wp_verify_nonce( $_POST['xftc_travel_nonce'], 'xftc_save_travel' ) ) {
+if ( isset( $_POST['TRACKSUITE_travel_nonce'] ) && wp_verify_nonce( $_POST['TRACKSUITE_travel_nonce'], 'TRACKSUITE_save_travel' ) ) {
     if ( ! empty( $_POST['assign_seat'] ) ) {
         $travel_mgr->assign_seat( (int) $_POST['booking_id'], sanitize_text_field( $_POST['bus_seat'] ) );
         $travel_mgr->assign_room( (int) $_POST['booking_id'], sanitize_text_field( $_POST['hotel_room'] ) );
@@ -32,12 +32,12 @@ $bookings      = $selected_meet ? $travel_mgr->get_meet_travel( $selected_meet )
 $totals        = $selected_meet ? $travel_mgr->get_meet_travel_totals( $selected_meet ) : [];
 ?>
 
-<div class="wrap xftc-admin-travel">
+<div class="wrap ts-admin-travel">
     <h1>🚌 Travel & Logistics</h1>
 
     <!-- Meet Selector -->
     <form method="get" style="margin-bottom:16px;">
-        <input type="hidden" name="page" value="xftc-travel">
+        <input type="hidden" name="page" value="ts-travel">
         <label><strong>View Travel For:</strong>
             <select name="meet_id" onchange="this.form.submit()">
                 <option value="">— Select Meet —</option>
@@ -49,17 +49,17 @@ $totals        = $selected_meet ? $travel_mgr->get_meet_travel_totals( $selected
             </select>
         </label>
         <?php if ( $selected_meet ) : ?>
-            <a href="?page=xftc-travel&meet_id=<?php echo $selected_meet; ?>&export_manifest=<?php echo $selected_meet; ?>" class="button">📥 Export Manifest</a>
+            <a href="?page=ts-travel&meet_id=<?php echo $selected_meet; ?>&export_manifest=<?php echo $selected_meet; ?>" class="button">📥 Export Manifest</a>
         <?php endif; ?>
     </form>
 
     <?php if ( $selected_meet && ! empty( $totals ) ) : ?>
     <!-- Totals Summary -->
-    <div class="xftc-stats-row" style="display:flex;gap:16px;margin-bottom:16px;">
-        <div class="xftc-stat-card"><strong><?php echo $totals['total_bookings']; ?></strong><span>Total Bookings</span></div>
-        <div class="xftc-stat-card"><strong>$<?php echo number_format( $totals['total_due'], 2 ); ?></strong><span>Total Due</span></div>
-        <div class="xftc-stat-card"><strong>$<?php echo number_format( $totals['total_paid'], 2 ); ?></strong><span>Collected</span></div>
-        <div class="xftc-stat-card"><strong style="color:#c0392b;">$<?php echo number_format( $totals['total_unpaid'], 2 ); ?></strong><span>Outstanding</span></div>
+    <div class="ts-stats-row" style="display:flex;gap:16px;margin-bottom:16px;">
+        <div class="ts-stat-card"><strong><?php echo $totals['total_bookings']; ?></strong><span>Total Bookings</span></div>
+        <div class="ts-stat-card"><strong>$<?php echo number_format( $totals['total_due'], 2 ); ?></strong><span>Total Due</span></div>
+        <div class="ts-stat-card"><strong>$<?php echo number_format( $totals['total_paid'], 2 ); ?></strong><span>Collected</span></div>
+        <div class="ts-stat-card"><strong style="color:#c0392b;">$<?php echo number_format( $totals['total_unpaid'], 2 ); ?></strong><span>Outstanding</span></div>
     </div>
 
     <!-- Bookings Table -->
@@ -76,10 +76,10 @@ $totals        = $selected_meet ? $travel_mgr->get_meet_travel_totals( $selected
                 <td><?php echo esc_html( $b['bus_seat'] ?: '—' ); ?></td>
                 <td><?php echo esc_html( $b['hotel_room'] ?: '—' ); ?></td>
                 <td>$<?php echo number_format( $b['travel_fee'], 2 ); ?></td>
-                <td><span class="xftc-status xftc-status-<?php echo esc_attr( $b['payment_status'] ); ?>"><?php echo esc_html( ucfirst( $b['payment_status'] ) ); ?></span></td>
+                <td><span class="ts-status ts-status-<?php echo esc_attr( $b['payment_status'] ); ?>"><?php echo esc_html( ucfirst( $b['payment_status'] ) ); ?></span></td>
                 <td>
                     <?php if ( $b['payment_status'] === 'unpaid' ) : ?>
-                        <a href="?page=xftc-travel&meet_id=<?php echo $selected_meet; ?>&mark_paid=<?php echo $b['id']; ?>&<?php echo wp_create_nonce( 'xftc_travel_paid' ); ?>">Mark Paid</a> |
+                        <a href="?page=ts-travel&meet_id=<?php echo $selected_meet; ?>&mark_paid=<?php echo $b['id']; ?>&<?php echo wp_create_nonce( 'TRACKSUITE_travel_paid' ); ?>">Mark Paid</a> |
                     <?php endif; ?>
                     <a href="#assign-<?php echo $b['id']; ?>">Assign Seat/Room</a>
                 </td>
@@ -88,7 +88,7 @@ $totals        = $selected_meet ? $travel_mgr->get_meet_travel_totals( $selected
             <tr id="assign-<?php echo $b['id']; ?>" style="display:none;">
                 <td colspan="8">
                     <form method="post" style="display:flex;gap:8px;align-items:center;padding:8px;">
-                        <?php wp_nonce_field( 'xftc_save_travel', 'xftc_travel_nonce' ); ?>
+                        <?php wp_nonce_field( 'TRACKSUITE_save_travel', 'TRACKSUITE_travel_nonce' ); ?>
                         <input type="hidden" name="booking_id" value="<?php echo $b['id']; ?>">
                         <input type="hidden" name="assign_seat" value="1">
                         <label>Bus Seat: <input type="text" name="bus_seat" value="<?php echo esc_attr( $b['bus_seat'] ); ?>" style="width:60px;"></label>
@@ -107,15 +107,15 @@ $totals        = $selected_meet ? $travel_mgr->get_meet_travel_totals( $selected
     <!-- Travel Fee Settings -->
     <h2>Travel Fee Settings</h2>
     <form method="post" action="options.php">
-        <?php settings_fields( 'xftc_travel_settings' ); ?>
+        <?php settings_fields( 'TRACKSUITE_travel_settings' ); ?>
         <table class="form-table">
             <tr>
                 <th>Bus Fee ($)</th>
-                <td><input type="number" step="0.01" name="xftc_travel_fee_bus" value="<?php echo esc_attr( get_option( 'xftc_travel_fee_bus', '25.00' ) ); ?>" class="small-text"></td>
+                <td><input type="number" step="0.01" name="TRACKSUITE_travel_fee_bus" value="<?php echo esc_attr( get_option( 'TRACKSUITE_travel_fee_bus', '25.00' ) ); ?>" class="small-text"></td>
             </tr>
             <tr>
                 <th>Hotel Fee ($)</th>
-                <td><input type="number" step="0.01" name="xftc_travel_fee_hotel" value="<?php echo esc_attr( get_option( 'xftc_travel_fee_hotel', '75.00' ) ); ?>" class="small-text"></td>
+                <td><input type="number" step="0.01" name="TRACKSUITE_travel_fee_hotel" value="<?php echo esc_attr( get_option( 'TRACKSUITE_travel_fee_hotel', '75.00' ) ); ?>" class="small-text"></td>
             </tr>
         </table>
         <?php submit_button( 'Save Fee Settings' ); ?>
@@ -131,3 +131,4 @@ document.querySelectorAll('a[href^="#assign-"]').forEach(link => {
     });
 });
 </script>
+

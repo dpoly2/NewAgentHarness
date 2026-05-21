@@ -1,16 +1,16 @@
-/* XFTC Membership — Admin Styles */
+﻿/* XFTC Membership — Admin Styles */
 
 :root {
-    --xftc-red:   #c8102e;
-    --xftc-dark:  #1a1a2e;
-    --xftc-light: #f8f9fa;
+    --ts-red:   #c8102e;
+    --ts-dark:  #1a1a2e;
+    --ts-light: #f8f9fa;
 }
 
-.xftc-admin-wrap {
+.ts-admin-wrap {
     max-width: 1400px;
 }
 
-.xftc-page-title {
+.ts-page-title {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -18,39 +18,39 @@
     margin-bottom: 20px !important;
 }
 
-.xftc-page-title .dashicons {
-    color: var(--xftc-red);
+.ts-page-title .dashicons {
+    color: var(--ts-red);
     font-size: 26px;
     width: 26px;
     height: 26px;
 }
 
 /* Stats Grid */
-.xftc-stats-grid {
+.ts-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 16px;
     margin-bottom: 28px;
 }
 
-.xftc-stat-card {
+.ts-stat-card {
     background: #fff;
     border: 1px solid #e2e4e7;
-    border-top: 4px solid var(--xftc-red);
+    border-top: 4px solid var(--ts-red);
     border-radius: 4px;
     padding: 20px;
     text-align: center;
     box-shadow: 0 1px 3px rgba(0,0,0,.04);
 }
 
-.xftc-stat-number {
+.ts-stat-number {
     font-size: 32px;
     font-weight: 700;
-    color: var(--xftc-dark);
+    color: var(--ts-dark);
     line-height: 1;
 }
 
-.xftc-stat-label {
+.ts-stat-label {
     font-size: 13px;
     color: #666;
     margin-top: 6px;
@@ -59,17 +59,17 @@
 }
 
 /* Quick Links */
-.xftc-quick-links {
+.ts-quick-links {
     margin-top: 8px;
 }
 
-.xftc-quick-links .button {
+.ts-quick-links .button {
     margin-right: 8px;
     margin-bottom: 8px;
 }
 
 /* Badges */
-.xftc-badge {
+.ts-badge {
     display: inline-block;
     padding: 3px 8px;
     border-radius: 12px;
@@ -79,17 +79,17 @@
     letter-spacing: .5px;
 }
 
-.xftc-badge-active {
+.ts-badge-active {
     background: #d4edda;
     color: #155724;
 }
 
-.xftc-badge-inactive {
+.ts-badge-inactive {
     background: #f8d7da;
     color: #721c24;
 }
 
-.xftc-badge-pending {
+.ts-badge-pending {
     background: #fff3cd;
     color: #856404;
 }
@@ -98,3 +98,4 @@
 .wp-list-table th {
     font-weight: 600;
 }
+

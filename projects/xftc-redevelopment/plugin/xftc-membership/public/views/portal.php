@@ -1,31 +1,31 @@
-<?php
+﻿<?php
 /**
  * Public view — Portal (athlete list + roster cards)
- * Used by: [xftc_my_athletes] and [xftc_roster]
+ * Used by: [TRACKSUITE_my_athletes] and [TRACKSUITE_roster]
  * Variables: $athletes, $active (active season), $user, $view, $show_stats
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 defined( 'ABSPATH' ) || exit;
 
-// ── [xftc_roster] — public athlete card grid ────────────────────────────────
+// ── [TRACKSUITE_roster] — public athlete card grid ────────────────────────────────
 if ( isset( $view ) ) :
     if ( $view === 'cards' ) : ?>
-        <div class="xftc-roster-grid">
+        <div class="ts-roster-grid">
             <?php if ( empty( $athletes ) ) : ?>
-                <p class="xftc-empty">Roster coming soon!</p>
+                <p class="ts-empty">Roster coming soon!</p>
             <?php else : foreach ( $athletes as $athlete ) :
                 $initials = strtoupper( substr( $athlete->first_name, 0, 1 ) . substr( $athlete->last_name, 0, 1 ) );
                 $age = ! empty( $athlete->dob ) ? floor( ( time() - strtotime( $athlete->dob ) ) / 31557600 ) : null;
             ?>
-            <div class="xftc-athlete-card" data-division="<?php echo esc_attr( $this->age_to_division( $age ) ); ?>">
-                <div class="xftc-athlete-card__photo">
-                    <div class="xftc-athlete-card__initials"><?php echo esc_html( $initials ); ?></div>
+            <div class="ts-athlete-card" data-division="<?php echo esc_attr( $this->age_to_division( $age ) ); ?>">
+                <div class="ts-athlete-card__photo">
+                    <div class="ts-athlete-card__initials"><?php echo esc_html( $initials ); ?></div>
                 </div>
-                <div class="xftc-athlete-card__body">
-                    <div class="xftc-athlete-card__name">
+                <div class="ts-athlete-card__body">
+                    <div class="ts-athlete-card__name">
                         <?php echo esc_html( $athlete->first_name . ' ' . $athlete->last_name ); ?>
                     </div>
-                    <div class="xftc-athlete-card__details">
+                    <div class="ts-athlete-card__details">
                         <?php
                         $meta = [];
                         if ( $age ) $meta[] = 'Age ' . $age;
@@ -36,13 +36,13 @@ if ( isset( $view ) ) :
                     </div>
                     <?php if ( $show_stats ) :
                         global $wpdb;
-                        $rt = $wpdb->prefix . 'xftc_results';
+                        $rt = $wpdb->prefix . 'TRACKSUITE_results';
                         $pbs   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$rt} WHERE athlete_id=%d AND is_personal_best=1", $athlete->id ) );
                         $golds = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$rt} WHERE athlete_id=%d AND placement=1", $athlete->id ) );
                     ?>
-                    <div class="xftc-athlete-card__stats">
-                        <div class="xftc-athlete-card__stat"><strong><?php echo $pbs; ?></strong> PBs</div>
-                        <div class="xftc-athlete-card__stat"><strong><?php echo $golds; ?></strong> 🥇</div>
+                    <div class="ts-athlete-card__stats">
+                        <div class="ts-athlete-card__stat"><strong><?php echo $pbs; ?></strong> PBs</div>
+                        <div class="ts-athlete-card__stat"><strong><?php echo $golds; ?></strong> 🥇</div>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -51,8 +51,8 @@ if ( isset( $view ) ) :
         </div>
 
     <?php else : // list view ?>
-        <div class="xftc-table-wrap">
-            <table class="xftc-table">
+        <div class="ts-table-wrap">
+            <table class="ts-table">
                 <thead><tr><th>Name</th><th>Level</th><th>School</th></tr></thead>
                 <tbody>
                 <?php foreach ( $athletes as $athlete ) : ?>
@@ -67,20 +67,20 @@ if ( isset( $view ) ) :
         </div>
     <?php endif; ?>
 
-<?php // ── [xftc_my_athletes] — portal dashboard ─────────────────────────────
+<?php // ── [TRACKSUITE_my_athletes] — portal dashboard ─────────────────────────────
 else : ?>
-    <div class="xftc-portal">
+    <div class="ts-portal">
         <?php if ( empty( $athletes ) ) : ?>
-            <div class="xftc-empty-state">
+            <div class="ts-empty-state">
                 <p>No athletes registered yet.</p>
-                <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="xftc-btn xftc-btn--primary">
+                <a href="<?php echo esc_url( home_url( '/register' ) ); ?>" class="ts-btn ts-btn--primary">
                     ➕ Add an Athlete
                 </a>
             </div>
         <?php else : ?>
 
             <?php if ( ! empty( $active ) ) : ?>
-            <div class="xftc-season-banner">
+            <div class="ts-season-banner">
                 <strong>Active Season:</strong> <?php echo esc_html( $active->name ?? '' ); ?>
                 <?php if ( ! empty( $active->reg_close ) ) : ?>
                     — Registration closes <?php echo esc_html( date( 'M j, Y', strtotime( $active->reg_close ) ) ); ?>
@@ -88,28 +88,28 @@ else : ?>
             </div>
             <?php endif; ?>
 
-            <div class="xftc-athletes-list">
+            <div class="ts-athletes-list">
                 <?php foreach ( $athletes as $athlete ) :
                     $initials = strtoupper( substr( $athlete->first_name, 0, 1 ) . substr( $athlete->last_name, 0, 1 ) );
                     $age      = ! empty( $athlete->dob ) ? floor( ( time() - strtotime( $athlete->dob ) ) / 31557600 ) : null;
 
                     // Mini stats
                     global $wpdb;
-                    $rt    = $wpdb->prefix . 'xftc_results';
+                    $rt    = $wpdb->prefix . 'TRACKSUITE_results';
                     $pbs   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$rt} WHERE athlete_id=%d AND is_personal_best=1", $athlete->id ) );
                     $golds = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$rt} WHERE athlete_id=%d AND placement=1", $athlete->id ) );
                     $total = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$rt} WHERE athlete_id=%d", $athlete->id ) );
                 ?>
-                <div class="xftc-portal-athlete-card">
-                    <div class="xftc-portal-athlete-card__avatar"><?php echo esc_html( $initials ); ?></div>
-                    <div class="xftc-portal-athlete-card__info">
+                <div class="ts-portal-athlete-card">
+                    <div class="ts-portal-athlete-card__avatar"><?php echo esc_html( $initials ); ?></div>
+                    <div class="ts-portal-athlete-card__info">
                         <h3><?php echo esc_html( $athlete->first_name . ' ' . $athlete->last_name ); ?></h3>
-                        <div class="xftc-portal-athlete-card__meta">
+                        <div class="ts-portal-athlete-card__meta">
                             <?php if ( $age ) echo esc_html( 'Age ' . $age . ' · ' ); ?>
                             <?php echo esc_html( $athlete->team_level ?? '' ); ?>
                             <?php if ( ! empty( $athlete->school ) ) echo ' · ' . esc_html( $athlete->school ); ?>
                         </div>
-                        <div class="xftc-portal-athlete-card__stats">
+                        <div class="ts-portal-athlete-card__stats">
                             <span>🏅 <?php echo $total; ?> Results</span>
                             <span>⚡ <?php echo $pbs; ?> PBs</span>
                             <span>🥇 <?php echo $golds; ?> Wins</span>
@@ -122,3 +122,4 @@ else : ?>
         <?php endif; ?>
     </div>
 <?php endif; ?>
+

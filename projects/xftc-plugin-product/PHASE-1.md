@@ -1,7 +1,7 @@
-# Phase 1 — De-brandification
+﻿# Phase 1 — De-brandification
 
 **Status:** Not Started
-**Goal:** Remove all XFTC-specific hardcoding and make the plugin fully config-driven
+**Goal:** Remove all ts-specific hardcoding and make the plugin fully config-driven
 **Prerequisite for:** Every other phase — nothing ships until this is done
 
 ---
@@ -25,9 +25,9 @@
 - [ ] All JS strings passed via `wp_localize_script()`
 
 ### 4. Rename plugin function prefixes
-- [ ] `xftc_` → `tracksuite_` for all public functions and hooks
-- [ ] `XFTC_` → `TRACKSUITE_` for all constants
-- [ ] `wp_xftc_` → `wp_ts_` for all DB table names
+- [ ] `TRACKSUITE_` → `tracksuite_` for all public functions and hooks
+- [ ] `TRACKSUITE_` → `TRACKSUITE_` for all constants
+- [ ] `wp_ts_` → `wp_ts_` for all DB table names
 - [ ] Add DB migration script for existing XFTC installs
 
 ### 5. Theme Customizer panel
@@ -40,7 +40,7 @@
 - [ ] Replace hardcoded `#1a1a2e` / `#f5a623` in style.css with `var(--ts-primary)` / `var(--ts-accent)`
 
 ### 6. CSS class rename
-- [ ] `.xftc-*` → `.ts-*` throughout plugin and theme CSS/JS
+- [ ] `.ts-*` → `.ts-*` throughout plugin and theme CSS/JS
 - [ ] Update all PHP view files referencing old class names
 - [ ] Update public.js AJAX selectors
 
@@ -51,7 +51,7 @@
 - [ ] Fallback to hardcoded defaults if not configured
 
 ### 8. DB migration script
-- [ ] `class-ts-migrator.php` — detects old `wp_xftc_*` tables and renames them
+- [ ] `class-ts-migrator.php` — detects old `wp_ts_*` tables and renames them
 - [ ] One-time migration notice in WP Admin for existing installs
 - [ ] Safe rollback if migration fails
 
@@ -61,16 +61,16 @@
 
 | File | Changes |
 |------|---------|
-| `xftc-membership.php` | Rename to `tracksuite.php`, update headers, prefix all hooks |
-| `includes/class-xftc-*.php` | Rename files + classes to `class-ts-*.php` |
-| `admin/class-xftc-admin.php` | Rename + refactor settings page |
-| `admin/assets/admin.css` | Replace `.xftc-*` with `.ts-*` |
-| `public/class-xftc-public.php` | Rename + update shortcode tags |
+| `ts-membership.php` | Rename to `tracksuite.php`, update headers, prefix all hooks |
+| `includes/class-ts-*.php` | Rename files + classes to `class-ts-*.php` |
+| `admin/class-ts-admin.php` | Rename + refactor settings page |
+| `admin/assets/admin.css` | Replace `.ts-*` with `.ts-*` |
+| `public/class-ts-public.php` | Rename + update shortcode tags |
 | `public/assets/public.css` | Replace hardcoded colors + class names |
 | `public/assets/public.js` | Replace selectors + localized strings |
 | `admin/views/*.php` | Replace all display strings |
 | `public/views/*.php` | Replace all display strings |
-| `api/class-xftc-rest-api.php` | Update namespace from `xftc/v1` to `tracksuite/v1` |
+| `api/class-ts-rest-api.php` | Update namespace from `xftc/v1` to `tracksuite/v1` |
 | `theme/style.css` | Replace hardcoded colors with CSS vars |
 | `theme/functions.php` | Update enqueue handles, add Customizer |
 
@@ -88,3 +88,4 @@
 
 ## Estimated Effort
 3–4 days (wordpresspluginsagent)
+

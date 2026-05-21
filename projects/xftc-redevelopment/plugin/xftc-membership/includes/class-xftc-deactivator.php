@@ -1,13 +1,13 @@
-<?php
+﻿<?php
 /**
  * Fired during plugin deactivation.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Deactivator {
+class TRACKSUITE_Deactivator {
 
     /**
      * Run on plugin deactivation.
@@ -18,3 +18,4 @@ class XFTC_Deactivator {
         flush_rewrite_rules();
     }
 }
+

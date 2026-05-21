@@ -1,4 +1,4 @@
-# AgentHarness
+﻿# AgentHarness
 
 David Smith's personal AI agent system — built on Base44 Superagent.
 
@@ -24,9 +24,9 @@ AgentHarness/
 ├── rules/
 │   └── wordpress_xtremeforce.md     # XFTC WordPress site rules
 ├── projects/
-│   ├── xftc-redevelopment/          # XFTC custom plugin & theme (Sprint 2 ✅)
-│   │   ├── plugin/xftc-membership/  # Full WordPress membership plugin v2.0.0
-│   │   ├── theme/xftc-theme/        # Standalone XFTC theme v1.0.0
+│   ├── ts-redevelopment/          # XFTC custom plugin & theme (Sprint 2 ✅)
+│   │   ├── plugin/ts-membership/  # Full WordPress membership plugin v2.0.0
+│   │   ├── theme/ts-theme/        # Standalone XFTC theme v1.0.0
 │   │   ├── SPRINT-1.md
 │   │   ├── SPRINT-2.md
 │   │   ├── ARCHITECTURE.md
@@ -75,7 +75,7 @@ Each email identity has a dedicated agent profile:
 
 ## Active Projects
 
-### 1. XFTC Redevelopment — `projects/xftc-redevelopment/`
+### 1. XFTC Redevelopment — `projects/ts-redevelopment/`
 Custom WordPress membership plugin + standalone theme for Xtreme Force Track Club.
 
 | Sprint | Status | Details |
@@ -134,8 +134,9 @@ Youth Elite Performance Complex — 110-acre development site in Hutto, TX (CR 1
 
 ## Quick Links
 
-- [XFTC Plugin README](projects/xftc-redevelopment/plugin/xftc-membership/README.md)
-- [XFTC Theme README](projects/xftc-redevelopment/theme/xftc-theme/README.md)
+- [XFTC Plugin README](projects/ts-redevelopment/plugin/ts-membership/README.md)
+- [XFTC Theme README](projects/ts-redevelopment/theme/ts-theme/README.md)
 - [PBS Foundation Charter](projects/pbs-foundation/CHARTER.md)
 - [YEPC Project](projects/yepc/PROJECT.md)
 - [Agent Roster](agents/roster.md)
+

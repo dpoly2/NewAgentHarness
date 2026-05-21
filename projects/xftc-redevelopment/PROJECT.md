@@ -1,4 +1,4 @@
-# Project: Xtreme Force Track Club — Full Website Redevelopment
+﻿# Project: Xtreme Force Track Club — Full Website Redevelopment
 
 ## Status
 🟡 Active — Discovery & Planning Phase
@@ -19,9 +19,9 @@
 
 ## Repositories
 - **GitHub Repo:** dpoly2/AgentHarness
-- **Project Path:** projects/xftc-redevelopment/
-- **Plugin Path:** projects/xftc-redevelopment/plugin/ (to be created in Sprint 1)
-- **Theme Path:** projects/xftc-redevelopment/theme/ (to be created in Sprint 1)
+- **Project Path:** projects/ts-redevelopment/
+- **Plugin Path:** projects/ts-redevelopment/plugin/ (to be created in Sprint 1)
+- **Theme Path:** projects/ts-redevelopment/theme/ (to be created in Sprint 1)
 
 ## Key Docs
 - `PROJECT.md` — This file
@@ -43,3 +43,4 @@
 - Must retain and migrate all existing content
 - Plugin designed to be reusable for other AAU clubs (SaaS potential)
 - Mobile-first, WooCommerce integrated
+

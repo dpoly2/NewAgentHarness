@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_Payments
+ * Class TRACKSUITE_Payments
  *
  * Handles Stripe Checkout session creation, webhook processing,
  * and manual payment entry for XFTC membership, travel, and meet fees.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  *
  * ─── STRIPE SETUP REQUIRED ───────────────────────────────────────────────────
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-class XFTC_Payments {
+class TRACKSUITE_Payments {
 
     /**
      * Stripe Publishable Key (from WP options).
@@ -57,14 +57,14 @@ class XFTC_Payments {
     private bool $test_mode;
 
     public function __construct() {
-        $this->test_mode       = (bool) get_option( 'xftc_stripe_test_mode', true );
+        $this->test_mode       = (bool) get_option( 'TRACKSUITE_stripe_test_mode', true );
         $this->publishable_key = $this->test_mode
-            ? get_option( 'xftc_stripe_test_publishable_key', '' )
-            : get_option( 'xftc_stripe_live_publishable_key', '' );
+            ? get_option( 'TRACKSUITE_stripe_test_publishable_key', '' )
+            : get_option( 'TRACKSUITE_stripe_live_publishable_key', '' );
         $this->secret_key      = $this->test_mode
-            ? get_option( 'xftc_stripe_test_secret_key', '' )
-            : get_option( 'xftc_stripe_live_secret_key', '' );
-        $this->webhook_secret  = get_option( 'xftc_stripe_webhook_secret', '' );
+            ? get_option( 'TRACKSUITE_stripe_test_secret_key', '' )
+            : get_option( 'TRACKSUITE_stripe_live_secret_key', '' );
+        $this->webhook_secret  = get_option( 'TRACKSUITE_stripe_webhook_secret', '' );
     }
 
     /**
@@ -84,14 +84,14 @@ class XFTC_Payments {
      */
     private function load_stripe_sdk(): bool {
         // Composer autoloader (preferred)
-        $composer_autoload = XFTC_PLUGIN_DIR . 'vendor/autoload.php';
+        $composer_autoload = TRACKSUITE_PLUGIN_DIR . 'vendor/autoload.php';
         if ( file_exists( $composer_autoload ) ) {
             require_once $composer_autoload;
             return true;
         }
 
         // Manual SDK path fallback
-        $manual_sdk = XFTC_PLUGIN_DIR . 'vendor/stripe/stripe-php/init.php';
+        $manual_sdk = TRACKSUITE_PLUGIN_DIR . 'vendor/stripe/stripe-php/init.php';
         if ( file_exists( $manual_sdk ) ) {
             require_once $manual_sdk;
             return true;
@@ -150,9 +150,9 @@ class XFTC_Payments {
         //     'success_url' => $args['success_url'],
         //     'cancel_url'  => $args['cancel_url'],
         //     'metadata'    => [
-        //         'xftc_type'         => $args['type'],
-        //         'xftc_reference_id' => $args['reference_id'],
-        //         'xftc_user_id'      => $args['user_id'],
+        //         'TRACKSUITE_type'         => $args['type'],
+        //         'TRACKSUITE_reference_id' => $args['reference_id'],
+        //         'TRACKSUITE_user_id'      => $args['user_id'],
         //     ],
         // ]);
         //
@@ -208,7 +208,7 @@ class XFTC_Payments {
 
     /**
      * Mark a payment as completed after webhook confirmation.
-     * Updates wp_xftc_payments, wp_xftc_memberships, and wp_xftc_travel as needed.
+     * Updates wp_ts_payments, wp_ts_memberships, and wp_ts_travel as needed.
      *
      * @param object $session Stripe Checkout Session object
      */
@@ -217,30 +217,30 @@ class XFTC_Payments {
         // global $wpdb;
         //
         // $meta        = $session->metadata;
-        // $type        = $meta->xftc_type;
-        // $ref_id      = $meta->xftc_reference_id;
+        // $type        = $meta->TRACKSUITE_type;
+        // $ref_id      = $meta->TRACKSUITE_reference_id;
         // $transaction = $session->payment_intent;
         // $amount      = $session->amount_total / 100;
         //
-        // $wpdb->update( "{$wpdb->prefix}xftc_payments",
+        // $wpdb->update( "{$wpdb->prefix}TRACKSUITE_payments",
         //     ['status' => 'completed', 'transaction_id' => $transaction],
         //     ['reference_type' => $type, 'reference_id' => $ref_id]
         // );
         //
         // if ( $type === 'membership' ) {
-        //     $wpdb->update( "{$wpdb->prefix}xftc_memberships",
+        //     $wpdb->update( "{$wpdb->prefix}TRACKSUITE_memberships",
         //         ['payment_status' => 'paid', 'amount_paid' => $amount],
         //         ['id' => $ref_id]
         //     );
         // } elseif ( $type === 'travel' ) {
-        //     $wpdb->update( "{$wpdb->prefix}xftc_travel",
+        //     $wpdb->update( "{$wpdb->prefix}TRACKSUITE_travel",
         //         ['payment_status' => 'paid'],
         //         ['id' => $ref_id]
         //     );
         // }
         //
         // // Send receipt email
-        // $emails = new XFTC_Emails();
+        // $emails = new TRACKSUITE_Emails();
         // $emails->send_payment_receipt( $ref_id, $type, $amount );
     }
 
@@ -255,7 +255,7 @@ class XFTC_Payments {
     }
 
     /**
-     * Log a pending payment record to wp_xftc_payments.
+     * Log a pending payment record to wp_ts_payments.
      *
      * @param array  $args       Payment args passed to create_checkout_session()
      * @param string $session_id Stripe session ID
@@ -263,7 +263,7 @@ class XFTC_Payments {
     private function log_payment_pending( array $args, string $session_id ): void {
         // TODO: Implement DB insert
         // global $wpdb;
-        // $wpdb->insert( "{$wpdb->prefix}xftc_payments", [
+        // $wpdb->insert( "{$wpdb->prefix}TRACKSUITE_payments", [
         //     'user_id'        => $args['user_id'],
         //     'reference_type' => $args['type'],
         //     'reference_id'   => $args['reference_id'],
@@ -291,7 +291,7 @@ class XFTC_Payments {
         global $wpdb;
 
         // TODO: Uncomment when DB tables are confirmed active
-        // return $wpdb->insert( "{$wpdb->prefix}xftc_payments", [
+        // return $wpdb->insert( "{$wpdb->prefix}TRACKSUITE_payments", [
         //     'user_id'        => $args['user_id'],
         //     'reference_type' => $args['type'],
         //     'reference_id'   => $args['reference_id'],
@@ -324,9 +324,10 @@ class XFTC_Payments {
         global $wpdb;
         // TODO: Uncomment when DB is active
         // return $wpdb->get_results( $wpdb->prepare(
-        //     "SELECT * FROM {$wpdb->prefix}xftc_payments WHERE user_id = %d ORDER BY created_at DESC",
+        //     "SELECT * FROM {$wpdb->prefix}TRACKSUITE_payments WHERE user_id = %d ORDER BY created_at DESC",
         //     $user_id
         // ), ARRAY_A );
         return []; // Placeholder
     }
 }
+

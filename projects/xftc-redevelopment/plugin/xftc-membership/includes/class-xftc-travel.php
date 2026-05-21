@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_Travel
+ * Class TRACKSUITE_Travel
  *
  * Manages bus/hotel travel bookings per meet,
  * seat/room assignments, fees, and CSV manifest export.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class XFTC_Travel {
+class TRACKSUITE_Travel {
 
     private string $travel_table;
     private string $meets_table;
@@ -19,9 +19,9 @@ class XFTC_Travel {
 
     public function __construct() {
         global $wpdb;
-        $this->travel_table   = $wpdb->prefix . 'xftc_travel';
-        $this->meets_table    = $wpdb->prefix . 'xftc_meets';
-        $this->athletes_table = $wpdb->prefix . 'xftc_athletes';
+        $this->travel_table   = $wpdb->prefix . 'TRACKSUITE_travel';
+        $this->meets_table    = $wpdb->prefix . 'TRACKSUITE_meets';
+        $this->athletes_table = $wpdb->prefix . 'TRACKSUITE_athletes';
     }
 
     /** ─── BOOKING CRUD ──────────────────────────────────────── */
@@ -158,8 +158,8 @@ class XFTC_Travel {
      * Fees are configurable via WP options; defaults shown below.
      */
     public function calculate_fee( string $type, int $meet_id = 0 ): float {
-        $bus_fee   = (float) get_option( 'xftc_travel_fee_bus', 25.00 );
-        $hotel_fee = (float) get_option( 'xftc_travel_fee_hotel', 75.00 );
+        $bus_fee   = (float) get_option( 'TRACKSUITE_travel_fee_bus', 25.00 );
+        $hotel_fee = (float) get_option( 'TRACKSUITE_travel_fee_hotel', 75.00 );
         return match ( $type ) {
             'bus'   => $bus_fee,
             'hotel' => $hotel_fee,
@@ -217,3 +217,4 @@ class XFTC_Travel {
         exit;
     }
 }
+

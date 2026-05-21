@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_Results
+ * Class TRACKSUITE_Results
  *
  * Handles athlete result entry, personal best detection,
  * club record tracking, and performance stats.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class XFTC_Results {
+class TRACKSUITE_Results {
 
     private string $results_table;
     private string $meets_table;
@@ -19,9 +19,9 @@ class XFTC_Results {
 
     public function __construct() {
         global $wpdb;
-        $this->results_table  = $wpdb->prefix . 'xftc_results';
-        $this->meets_table    = $wpdb->prefix . 'xftc_meets';
-        $this->athletes_table = $wpdb->prefix . 'xftc_athletes';
+        $this->results_table  = $wpdb->prefix . 'TRACKSUITE_results';
+        $this->meets_table    = $wpdb->prefix . 'TRACKSUITE_meets';
+        $this->athletes_table = $wpdb->prefix . 'TRACKSUITE_athletes';
     }
 
     /** ─── RESULT ENTRY ──────────────────────────────────────── */
@@ -254,3 +254,4 @@ class XFTC_Results {
         ) ) ?: [];
     }
 }
+

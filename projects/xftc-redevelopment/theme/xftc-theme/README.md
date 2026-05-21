@@ -1,4 +1,4 @@
-# XFTC Theme
+﻿# XFTC Theme
 
 **Version:** 1.0.0
 **Last Updated:** May 20, 2026
@@ -8,7 +8,7 @@
 
 ## Overview
 
-`xftc-theme` is the standalone WordPress theme for Xtreme Force Track Club. It handles all front-end presentation and is fully decoupled from the data layer — all dynamic content is rendered via shortcodes provided by the `xftc-membership` plugin.
+`ts-theme` is the standalone WordPress theme for Xtreme Force Track Club. It handles all front-end presentation and is fully decoupled from the data layer — all dynamic content is rendered via shortcodes provided by the `ts-membership` plugin.
 
 The theme degrades gracefully if the plugin is inactive, displaying fallback messages instead of breaking.
 
@@ -17,7 +17,7 @@ The theme degrades gracefully if the plugin is inactive, displaying fallback mes
 ## File Structure
 
 ```
-xftc-theme/
+ts-theme/
 ├── style.css              # Theme header + base styles
 ├── theme.json             # Block editor / FSE settings
 ├── functions.php          # Theme setup, script/style enqueuing
@@ -35,11 +35,11 @@ xftc-theme/
 │   └── js/
 │       └── theme.js       # Theme JS (nav, misc interactions)
 └── templates/
-    ├── register.php        # Registration page → [xftc_register_form]
-    ├── portal.php          # Parent portal → [xftc_portal]
-    ├── schedule.php        # Meet schedule → [xftc_meets]
-    ├── results.php         # Results board → [xftc_results]
-    ├── roster.php          # Team roster → [xftc_roster]
+    ├── register.php        # Registration page → [TRACKSUITE_register_form]
+    ├── portal.php          # Parent portal → [TRACKSUITE_portal]
+    ├── schedule.php        # Meet schedule → [TRACKSUITE_meets]
+    ├── results.php         # Results board → [TRACKSUITE_results]
+    ├── roster.php          # Team roster → [TRACKSUITE_roster]
     └── parts/
         ├── header.php      # Reusable header partial
         └── footer.php      # Reusable footer partial
@@ -51,11 +51,11 @@ xftc-theme/
 
 | Template | Shortcode Used | URL |
 |----------|---------------|-----|
-| `register.php` | `[xftc_register_form]` | `/register/` |
-| `portal.php` | `[xftc_portal]` | `/portal/` |
-| `schedule.php` | `[xftc_meets]` | `/schedule/` |
-| `results.php` | `[xftc_results]` | `/results/` |
-| `roster.php` | `[xftc_roster]` | `/roster/` |
+| `register.php` | `[TRACKSUITE_register_form]` | `/register/` |
+| `portal.php` | `[TRACKSUITE_portal]` | `/portal/` |
+| `schedule.php` | `[TRACKSUITE_meets]` | `/schedule/` |
+| `results.php` | `[TRACKSUITE_results]` | `/results/` |
+| `roster.php` | `[TRACKSUITE_roster]` | `/roster/` |
 
 ---
 
@@ -71,16 +71,17 @@ xftc-theme/
 ## Dependencies
 
 - WordPress 6.0+
-- `xftc-membership` plugin (for all dynamic content)
+- `ts-membership` plugin (for all dynamic content)
 - PHP 8.0+
 
 ---
 
 ## Deployment
 
-To install: upload the `xftc-theme/` folder to `/wp-content/themes/` and activate via WP Admin > Appearance > Themes.
+To install: upload the `ts-theme/` folder to `/wp-content/themes/` and activate via WP Admin > Appearance > Themes.
 
 After activation:
 1. Flush permalinks: Settings > Permalinks > Save Changes
 2. Assign template pages: Register, Portal, Schedule, Results, Roster
 3. Configure menus in WP Admin > Appearance > Menus
+

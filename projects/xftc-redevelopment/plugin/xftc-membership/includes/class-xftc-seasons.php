@@ -1,20 +1,20 @@
-<?php
+﻿<?php
 /**
  * Season management — create, read, update, delete seasons.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Seasons {
+class TRACKSUITE_Seasons {
 
     /** @var string */
     private $table;
 
     public function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'xftc_seasons';
+        $this->table = $wpdb->prefix . 'TRACKSUITE_seasons';
     }
 
     /**
@@ -27,7 +27,7 @@ class XFTC_Seasons {
         global $wpdb;
 
         if ( empty( $data['name'] ) || empty( $data['type'] ) ) {
-            return new WP_Error( 'missing_fields', __( 'Season name and type are required.', 'xftc-membership' ) );
+            return new WP_Error( 'missing_fields', __( 'Season name and type are required.', 'ts-membership' ) );
         }
 
         $insert = [
@@ -124,3 +124,4 @@ class XFTC_Seasons {
         $wpdb->update( $this->table, [ 'is_active' => 1 ], [ 'id' => $id ] );
     }
 }
+

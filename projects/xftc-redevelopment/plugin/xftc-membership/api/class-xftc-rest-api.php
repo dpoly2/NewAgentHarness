@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_REST_API
+ * Class TRACKSUITE_REST_API
  *
  * Registers all custom REST API endpoints for the XFTC Membership plugin.
  * Namespace: /wp-json/xftc/v1/
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class XFTC_REST_API {
+class TRACKSUITE_REST_API {
 
     private string $namespace = 'xftc/v1';
 
@@ -106,32 +106,32 @@ class XFTC_REST_API {
     /** ─── ATHLETE HANDLERS ──────────────────────────────────── */
 
     public function get_athletes( \WP_REST_Request $req ): \WP_REST_Response {
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         return new \WP_REST_Response( $members->get_all_members(), 200 );
     }
 
     public function create_athlete( \WP_REST_Request $req ): \WP_REST_Response {
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $id = $members->create_member( $req->get_json_params() );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Could not create athlete.' ], 400 );
         return new \WP_REST_Response( [ 'id' => $id ], 201 );
     }
 
     public function get_athlete( \WP_REST_Request $req ): \WP_REST_Response {
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $athlete = $members->get_member( (int) $req['id'] );
         if ( ! $athlete ) return new \WP_REST_Response( [ 'error' => 'Not found.' ], 404 );
         return new \WP_REST_Response( $athlete, 200 );
     }
 
     public function update_athlete( \WP_REST_Request $req ): \WP_REST_Response {
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $updated = $members->update_member( (int) $req['id'], $req->get_json_params() );
         return new \WP_REST_Response( [ 'updated' => $updated ], $updated ? 200 : 400 );
     }
 
     public function get_athlete_stats( \WP_REST_Request $req ): \WP_REST_Response {
-        $results = new XFTC_Results();
+        $results = new TRACKSUITE_Results();
         $id      = (int) $req['id'];
         return new \WP_REST_Response( [
             'athlete_id'    => $id,
@@ -144,12 +144,12 @@ class XFTC_REST_API {
     /** ─── SEASON HANDLERS ───────────────────────────────────── */
 
     public function get_seasons( \WP_REST_Request $req ): \WP_REST_Response {
-        $seasons = new XFTC_Seasons();
+        $seasons = new TRACKSUITE_Seasons();
         return new \WP_REST_Response( $seasons->get_all_seasons(), 200 );
     }
 
     public function create_season( \WP_REST_Request $req ): \WP_REST_Response {
-        $seasons = new XFTC_Seasons();
+        $seasons = new TRACKSUITE_Seasons();
         $id = $seasons->create_season( $req->get_json_params() );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Could not create season.' ], 400 );
         return new \WP_REST_Response( [ 'id' => $id ], 201 );
@@ -158,33 +158,33 @@ class XFTC_REST_API {
     /** ─── MEET HANDLERS ─────────────────────────────────────── */
 
     public function get_meets( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets  = new XFTC_Meets();
+        $meets  = new TRACKSUITE_Meets();
         $status = sanitize_text_field( $req->get_param( 'status' ) ?? '' );
         return new \WP_REST_Response( $meets->get_all_meets( $status ), 200 );
     }
 
     public function create_meet( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets = new XFTC_Meets();
+        $meets = new TRACKSUITE_Meets();
         $id    = $meets->create_meet( $req->get_json_params() );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Could not create meet.' ], 400 );
         return new \WP_REST_Response( [ 'id' => $id ], 201 );
     }
 
     public function get_meet( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets = new XFTC_Meets();
+        $meets = new TRACKSUITE_Meets();
         $meet  = $meets->get_meet( (int) $req['id'] );
         if ( ! $meet ) return new \WP_REST_Response( [ 'error' => 'Not found.' ], 404 );
         return new \WP_REST_Response( $meet, 200 );
     }
 
     public function update_meet( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets   = new XFTC_Meets();
+        $meets   = new TRACKSUITE_Meets();
         $updated = $meets->update_meet( (int) $req['id'], $req->get_json_params() );
         return new \WP_REST_Response( [ 'updated' => $updated ], $updated ? 200 : 400 );
     }
 
     public function register_for_meet( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets  = new XFTC_Meets();
+        $meets  = new TRACKSUITE_Meets();
         $params = $req->get_json_params();
         $id     = $meets->register_athlete( (int) $req['id'], (int) $params['athlete_id'], $params );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Registration failed.' ], 400 );
@@ -192,27 +192,27 @@ class XFTC_REST_API {
     }
 
     public function get_meet_roster( \WP_REST_Request $req ): \WP_REST_Response {
-        $meets = new XFTC_Meets();
+        $meets = new TRACKSUITE_Meets();
         return new \WP_REST_Response( $meets->get_meet_roster( (int) $req['id'] ), 200 );
     }
 
     /** ─── RESULT HANDLERS ───────────────────────────────────── */
 
     public function add_result( \WP_REST_Request $req ): \WP_REST_Response {
-        $results = new XFTC_Results();
+        $results = new TRACKSUITE_Results();
         $id      = $results->add_result( $req->get_json_params() );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Could not save result.' ], 400 );
         return new \WP_REST_Response( [ 'id' => $id ], 201 );
     }
 
     public function update_result( \WP_REST_Request $req ): \WP_REST_Response {
-        $results = new XFTC_Results();
+        $results = new TRACKSUITE_Results();
         $updated = $results->update_result( (int) $req['id'], $req->get_json_params() );
         return new \WP_REST_Response( [ 'updated' => $updated ], $updated ? 200 : 400 );
     }
 
     public function delete_result( \WP_REST_Request $req ): \WP_REST_Response {
-        $results = new XFTC_Results();
+        $results = new TRACKSUITE_Results();
         $deleted = $results->delete_result( (int) $req['id'] );
         return new \WP_REST_Response( [ 'deleted' => $deleted ], $deleted ? 200 : 400 );
     }
@@ -220,7 +220,7 @@ class XFTC_REST_API {
     /** ─── TRAVEL HANDLERS ───────────────────────────────────── */
 
     public function get_travel( \WP_REST_Request $req ): \WP_REST_Response {
-        $travel  = new XFTC_Travel();
+        $travel  = new TRACKSUITE_Travel();
         $meet_id = (int) $req->get_param( 'meet_id' );
         $data    = $meet_id
             ? $travel->get_meet_travel( $meet_id )
@@ -229,20 +229,20 @@ class XFTC_REST_API {
     }
 
     public function book_travel( \WP_REST_Request $req ): \WP_REST_Response {
-        $travel = new XFTC_Travel();
+        $travel = new TRACKSUITE_Travel();
         $id     = $travel->create_booking( $req->get_json_params() );
         if ( ! $id ) return new \WP_REST_Response( [ 'error' => 'Booking failed.' ], 400 );
         return new \WP_REST_Response( [ 'booking_id' => $id ], 201 );
     }
 
     public function update_travel( \WP_REST_Request $req ): \WP_REST_Response {
-        $travel  = new XFTC_Travel();
+        $travel  = new TRACKSUITE_Travel();
         $updated = $travel->update_booking( (int) $req['id'], $req->get_json_params() );
         return new \WP_REST_Response( [ 'updated' => $updated ], $updated ? 200 : 400 );
     }
 
     public function cancel_travel( \WP_REST_Request $req ): \WP_REST_Response {
-        $travel  = new XFTC_Travel();
+        $travel  = new TRACKSUITE_Travel();
         $deleted = $travel->delete_booking( (int) $req['id'] );
         return new \WP_REST_Response( [ 'cancelled' => $deleted ], $deleted ? 200 : 400 );
     }
@@ -250,7 +250,7 @@ class XFTC_REST_API {
     /** ─── PAYMENT HANDLERS ──────────────────────────────────── */
 
     public function create_checkout( \WP_REST_Request $req ): \WP_REST_Response {
-        $payments = new XFTC_Payments();
+        $payments = new TRACKSUITE_Payments();
         $params   = $req->get_json_params();
         $params['user_id']     = get_current_user_id();
         $params['success_url'] = home_url( '/portal/?payment=success' );
@@ -263,7 +263,7 @@ class XFTC_REST_API {
     }
 
     public function handle_webhook( \WP_REST_Request $req ): \WP_REST_Response {
-        $payments = new XFTC_Payments();
+        $payments = new TRACKSUITE_Payments();
         return $payments->handle_webhook( $req );
     }
 
@@ -271,7 +271,7 @@ class XFTC_REST_API {
 
     public function get_report( \WP_REST_Request $req ): \WP_REST_Response {
         $type = sanitize_key( $req['type'] );
-        // TODO: Wire to class-xftc-reports.php (Sprint 3)
+        // TODO: Wire to class-ts-reports.php (Sprint 3)
         return new \WP_REST_Response( [ 'report' => $type, 'status' => 'coming in Sprint 3' ], 200 );
     }
 
@@ -282,18 +282,19 @@ class XFTC_REST_API {
     }
 
     public function require_parent_or_admin(): bool {
-        return current_user_can( 'xftc_parent' )
-            || current_user_can( 'xftc_admin' )
+        return current_user_can( 'TRACKSUITE_parent' )
+            || current_user_can( 'TRACKSUITE_admin' )
             || current_user_can( 'administrator' );
     }
 
     public function require_coach_or_admin(): bool {
-        return current_user_can( 'xftc_coach' )
-            || current_user_can( 'xftc_admin' )
+        return current_user_can( 'TRACKSUITE_coach' )
+            || current_user_can( 'TRACKSUITE_admin' )
             || current_user_can( 'administrator' );
     }
 
     public function require_admin(): bool {
-        return current_user_can( 'xftc_admin' ) || current_user_can( 'administrator' );
+        return current_user_can( 'TRACKSUITE_admin' ) || current_user_can( 'administrator' );
     }
 }
+

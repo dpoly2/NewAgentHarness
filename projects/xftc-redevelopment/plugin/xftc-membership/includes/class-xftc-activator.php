@@ -1,14 +1,14 @@
-<?php
+﻿<?php
 /**
  * Fired during plugin activation.
  * Creates all custom database tables using dbDelta.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Activator {
+class TRACKSUITE_Activator {
 
     /**
      * Run on plugin activation.
@@ -31,7 +31,7 @@ class XFTC_Activator {
         $tables = [];
 
         // ── Athletes ──────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_athletes (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_athletes (
             id                      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             parent_id               BIGINT UNSIGNED NOT NULL,
             first_name              VARCHAR(100) NOT NULL,
@@ -49,7 +49,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Seasons ───────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_seasons (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_seasons (
             id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             name         VARCHAR(100) NOT NULL,
             type         ENUM('indoor','outdoor','summer','fall') NOT NULL,
@@ -65,7 +65,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Memberships ───────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_memberships (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_memberships (
             id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             athlete_id     BIGINT UNSIGNED NOT NULL,
             season_id      BIGINT UNSIGNED NOT NULL,
@@ -82,7 +82,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Meets ─────────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_meets (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_meets (
             id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             name       VARCHAR(200) NOT NULL,
             meet_date  DATE DEFAULT NULL,
@@ -97,7 +97,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Meet Entries ──────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_meet_entries (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_meet_entries (
             id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             meet_id          BIGINT UNSIGNED NOT NULL,
             athlete_id       BIGINT UNSIGNED NOT NULL,
@@ -111,7 +111,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Results ───────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_results (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_results (
             id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             meet_id          BIGINT UNSIGNED NOT NULL,
             athlete_id       BIGINT UNSIGNED NOT NULL,
@@ -129,7 +129,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Travel ────────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_travel (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_travel (
             id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             meet_id        BIGINT UNSIGNED NOT NULL,
             athlete_id     BIGINT UNSIGNED NOT NULL,
@@ -146,7 +146,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Staff ─────────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_staff (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_staff (
             id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id     BIGINT UNSIGNED NOT NULL,
             role        VARCHAR(100) DEFAULT NULL,
@@ -159,7 +159,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Payroll ───────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_payroll (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_payroll (
             id           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             staff_id     BIGINT UNSIGNED NOT NULL,
             period_start DATE NOT NULL,
@@ -177,7 +177,7 @@ class XFTC_Activator {
         ) $charset;";
 
         // ── Payments ──────────────────────────────────────────────────────────
-        $tables[] = "CREATE TABLE {$wpdb->prefix}xftc_payments (
+        $tables[] = "CREATE TABLE {$wpdb->prefix}TRACKSUITE_payments (
             id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             user_id        BIGINT UNSIGNED NOT NULL,
             reference_type ENUM('membership','travel','uniform','other') NOT NULL DEFAULT 'membership',
@@ -195,17 +195,18 @@ class XFTC_Activator {
             dbDelta( $sql );
         }
 
-        update_option( 'xftc_db_version', XFTC_VERSION );
+        update_option( 'TRACKSUITE_db_version', TRACKSUITE_VERSION );
     }
 
     /**
      * Set default plugin options on first activation.
      */
     private static function set_default_options() {
-        add_option( 'xftc_stripe_mode',       'test' );
-        add_option( 'xftc_stripe_public_key', '' );
-        add_option( 'xftc_stripe_secret_key', '' );
-        add_option( 'xftc_admin_email',       get_option( 'admin_email' ) );
-        add_option( 'xftc_club_name',         'Xtreme Force Track Club' );
+        add_option( 'TRACKSUITE_stripe_mode',       'test' );
+        add_option( 'TRACKSUITE_stripe_public_key', '' );
+        add_option( 'TRACKSUITE_stripe_secret_key', '' );
+        add_option( 'TRACKSUITE_admin_email',       get_option( 'admin_email' ) );
+        add_option( 'TRACKSUITE_club_name',         'Xtreme Force Track Club' );
     }
 }
+

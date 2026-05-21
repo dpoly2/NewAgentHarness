@@ -1,4 +1,4 @@
-# Sprint 2 — Meets, Results, Travel, Payroll & Stripe (Weeks 7–10)
+﻿# Sprint 2 — Meets, Results, Travel, Payroll & Stripe (Weeks 7–10)
 
 ## Sprint Goal
 Deliver full meet lifecycle management, athlete results tracking, travel/logistics booking, staff payroll system, and Stripe payment integration — all wired into the admin dashboard and parent portal.
@@ -27,7 +27,7 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 ## Tasks
 
 ### 1. Meet Management (Admin + Parent Portal)
-- [x] `class-xftc-meets.php` — full CRUD for meets
+- [x] `class-ts-meets.php` — full CRUD for meets
 - [x] Admin view: create/edit meets (name, date, time, location, type, categories)
 - [x] Admin view: meet roster — list all registered athletes per event
 - [x] Parent portal: browse upcoming meets, register athletes per event category
@@ -35,7 +35,7 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 - [x] Meet status workflow: upcoming → active → completed → cancelled
 
 ### 2. Meet Results Entry
-- [x] `class-xftc-results.php` — results CRUD
+- [x] `class-ts-results.php` — results CRUD
 - [x] Coach/Admin view: results entry form per meet (athlete, event, placement, result value)
 - [x] Auto-detect personal best (compare against athlete's prior results)
 - [x] Auto-detect club record (compare against all-time club bests)
@@ -43,7 +43,7 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 - [x] Chart.js performance graph — progress over time per event category
 
 ### 3. Travel & Logistics
-- [x] `class-xftc-travel.php` — travel booking CRUD
+- [x] `class-ts-travel.php` — travel booking CRUD
 - [x] Admin view: manage bus seats + hotel rooms per meet
 - [x] Parent portal: register athlete for travel (bus/hotel/both)
 - [x] Travel fee calculation at checkout
@@ -51,7 +51,7 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 - [x] Travel manifest export (CSV) per meet
 
 ### 4. Payroll System
-- [x] `class-xftc-payroll.php` — payroll CRUD
+- [x] `class-ts-payroll.php` — payroll CRUD
 - [x] Admin view: staff list — add/edit staff (role, hourly wage, hire date, status)
 - [x] Admin view: payroll entry — select staff, period dates, hours worked → auto-calculate gross/net
 - [x] Staff portal view: logged-in staff can see their own pay history
@@ -59,11 +59,11 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 - [x] Basic payroll summary report (exportable CSV)
 
 ### 5. Stripe Payment Integration
-- [x] `class-xftc-payments.php` — Stripe Checkout + webhook handler (placeholder — awaiting API keys)
+- [x] `class-ts-payments.php` — Stripe Checkout + webhook handler (placeholder — awaiting API keys)
 - [x] Stripe Checkout session creation stubbed with full implementation comments
 - [x] Webhook handler (`/wp-json/xftc/v1/payments/webhook`) — registered and ready
 - [x] Payment history table in admin dashboard
-- [x] Receipt/confirmation email on successful payment (via `class-xftc-emails.php`) — wired, awaiting keys
+- [x] Receipt/confirmation email on successful payment (via `class-ts-emails.php`) — wired, awaiting keys
 - [x] Manual payment entry option (cash/check) for admin
 - [ ] Stripe PHP SDK installation (requires Composer on staging server)
 - [ ] Live Stripe API keys entered in WP Admin → Xtreme Force → Payments
@@ -96,12 +96,12 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 
 | File | Status |
 |------|--------|
-| `includes/class-xftc-meets.php` | ✅ Complete |
-| `includes/class-xftc-results.php` | ✅ Complete |
-| `includes/class-xftc-travel.php` | ✅ Complete |
-| `includes/class-xftc-payroll.php` | ✅ Complete |
-| `includes/class-xftc-payments.php` | ✅ Placeholder (awaiting Stripe keys) |
-| `api/class-xftc-rest-api.php` | ✅ Complete |
+| `includes/class-ts-meets.php` | ✅ Complete |
+| `includes/class-ts-results.php` | ✅ Complete |
+| `includes/class-ts-travel.php` | ✅ Complete |
+| `includes/class-ts-payroll.php` | ✅ Complete |
+| `includes/class-ts-payments.php` | ✅ Placeholder (awaiting Stripe keys) |
+| `api/class-ts-rest-api.php` | ✅ Complete |
 | `admin/views/meets.php` | ✅ Complete |
 | `admin/views/results.php` | ✅ Complete |
 | `admin/views/travel.php` | ✅ Complete |
@@ -142,3 +142,4 @@ wordpresspluginsagent
 
 ## Timeline
 Weeks 7–10 ✅
+

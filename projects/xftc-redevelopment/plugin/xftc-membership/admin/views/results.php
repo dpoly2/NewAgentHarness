@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
  * Admin View — Results Entry
  * WP Admin → Xtreme Force → Results
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$results_mgr = new XFTC_Results();
-$meets_mgr   = new XFTC_Meets();
+$results_mgr = new TRACKSUITE_Results();
+$meets_mgr   = new TRACKSUITE_Meets();
 
-if ( isset( $_POST['xftc_results_nonce'] ) && wp_verify_nonce( $_POST['xftc_results_nonce'], 'xftc_save_result' ) ) {
+if ( isset( $_POST['TRACKSUITE_results_nonce'] ) && wp_verify_nonce( $_POST['TRACKSUITE_results_nonce'], 'TRACKSUITE_save_result' ) ) {
     $id = $results_mgr->add_result( $_POST );
     echo $id
         ? '<div class="notice notice-success"><p>Result saved.' . ( $_POST['is_personal_best'] ?? false ? ' 🏅 Personal Best!' : '' ) . '</p></div>'
@@ -24,12 +24,12 @@ $meet_results  = $selected_meet ? $results_mgr->get_meet_results( $selected_meet
 $club_records  = $results_mgr->get_club_records();
 ?>
 
-<div class="wrap xftc-admin-results">
+<div class="wrap ts-admin-results">
     <h1>📊 Results</h1>
 
     <!-- Meet Selector -->
     <form method="get" style="margin-bottom:16px;">
-        <input type="hidden" name="page" value="xftc-results">
+        <input type="hidden" name="page" value="ts-results">
         <label><strong>View Results For:</strong>
             <select name="meet_id" onchange="this.form.submit()">
                 <option value="">— Select Meet —</option>
@@ -69,7 +69,7 @@ $club_records  = $results_mgr->get_club_records();
     <!-- Add Result Form -->
     <h2>Enter Result</h2>
     <form method="post">
-        <?php wp_nonce_field( 'xftc_save_result', 'xftc_results_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_save_result', 'TRACKSUITE_results_nonce' ); ?>
         <table class="form-table">
             <tr>
                 <th><label>Meet</label></th>
@@ -138,3 +138,4 @@ $club_records  = $results_mgr->get_club_records();
         </tbody>
     </table>
 </div>
+
