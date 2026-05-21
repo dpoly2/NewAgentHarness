@@ -17,7 +17,7 @@ jobs:
         run: |
           cd projects/agent-dashboard
           npm ci
-      - name: Copy agent-dashboard to server
+      - name: Copy agent-dashboard to server (release)
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -25,8 +25,8 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.DEPLOY_PORT || '22' }}
           source: "projects/agent-dashboard/*"
-          target: "${{ secrets.DEPLOY_PATH }}/"
-      - name: Install & restart on remote
+          target: "${{ secrets.DEPLOY_PATH }}/releases/${{ github.run_id }}/projects/agent-dashboard/"
+      - name: Install, switch release, restart and healthcheck
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -35,11 +35,38 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || '22' }}
           script: |
             set -e
-            mkdir -p "${{ secrets.DEPLOY_PATH }}"
-            cd "${{ secrets.DEPLOY_PATH }}"/projects/agent-dashboard
+            DEPLOY_PATH="${{ secrets.DEPLOY_PATH }}"
+            RELEASE_DIR="${{ secrets.DEPLOY_PATH }}/releases/${{ github.run_id }}/projects/agent-dashboard"
+            CURRENT_LINK="${{ secrets.DEPLOY_PATH }}/current"
+            mkdir -p "$RELEASE_DIR"
             # ensure pm2 is installed
             if ! command -v pm2 >/dev/null 2>&1; then
               npm install -g pm2
             fi
+            # Install deps in the release dir
+            cd "$RELEASE_DIR"
             npm ci --production
-            pm2 reload ecosystem.config.js --update-env || pm2 start ecosystem.config.js --update-env
+            # Capture previous release for rollback
+            PREV_RELEASE=""
+            if [ -L "$CURRENT_LINK" ]; then
+              PREV_RELEASE=$(readlink -f "$CURRENT_LINK")
+            fi
+            # Switch symlink to new release
+            ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
+            cd "$CURRENT_LINK"
+            pm2 reload ecosystem.config.js --update-env --env production || pm2 start ecosystem.config.js --update-env --env production
+            # Healthcheck
+            HEALTH_URL="http://127.0.0.1:${{ secrets.AGENT_SERVER_PORT || '4000' }}/agents"
+            echo "Checking $HEALTH_URL"
+            if ! curl -fsS --retry 5 --retry-delay 2 "$HEALTH_URL"; then
+              echo "Healthcheck failed, rolling back"
+              if [ -n "$PREV_RELEASE" ]; then
+                ln -sfn "$PREV_RELEASE" "$CURRENT_LINK"
+                cd "$CURRENT_LINK"
+                pm2 reload ecosystem.config.js --update-env --env production || pm2 start ecosystem.config.js --update-env --env production
+                exit 1
+              else
+                echo "No previous release to rollback to"
+                exit 1
+              fi
+            fi
