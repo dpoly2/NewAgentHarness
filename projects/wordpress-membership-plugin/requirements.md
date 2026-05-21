@@ -1,4 +1,4 @@
-﻿# Requirements — Custom WordPress Membership Plugin
+# Requirements — Custom WordPress Membership Plugin
 
 ## 1. Member Registration
 - Custom registration form (integrates with or replaces Gravity Forms)
@@ -44,9 +44,9 @@
 - Historical records preserved
 
 ## 8. Shortcodes / Blocks
-- [TRACKSUITE_register] — Registration form
-- [TRACKSUITE_portal] — Member portal
-- [TRACKSUITE_members] — Public member directory (optional, admin-controlled)
+- [xftc_register] — Registration form
+- [xftc_portal] — Member portal
+- [xftc_members] — Public member directory (optional, admin-controlled)
 
 ## 9. REST API Endpoints
 - GET /wp-json/xftc/v1/members — list members (authenticated)
@@ -59,4 +59,3 @@
 - Nonce verification for form submissions
 - Data sanitization and validation on all inputs
 - GDPR-friendly data handling
-
