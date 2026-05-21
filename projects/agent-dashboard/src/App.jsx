@@ -3,21 +3,50 @@
 export default function App(){
   const [agents, setAgents] = useState([])
   const [selected, setSelected] = useState(null)
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    function load() {
-      if (window.electron && window.electron.getAgents) {
-        const data = window.electron.getAgents()
-        setAgents(data)
-        if (!selected && data.length) setSelected(data[0].id)
+    let mounted = true
+    async function load() {
+      try {
+        if (window.electron && window.electron.getAgents) {
+          const maybe = window.electron.getAgents()
+          const data = (maybe && typeof maybe.then === 'function') ? await maybe : maybe
+          console.log('Loaded agents', data)
+          if (!mounted) return
+          setAgents(data || [])
+          if (!selected && data && data.length) setSelected(data[0].id)
+        }
+      } catch (e) {
+        console.error('Failed to load agents', e)
       }
     }
     load()
     const t = setInterval(load, 3000)
-    return () => clearInterval(t)
+    // Listen for real-time updates
+    if (window.electron && window.electron.on) {
+      window.electron.on('agents-updated', (data) => { if (mounted) setAgents(data || []) })
+    }
+    return () => { mounted = false; clearInterval(t) }
   }, [])
 
-  const selAgent = agents.find(a => a.id === selected) || agents[0]
+  const selAgent = (Array.isArray(agents) ? agents.find(a => a.id === selected) : null) || (Array.isArray(agents) ? agents[0] : null)
+
+  async function commandAgent(id, action) {
+    if (!window.electron || !window.electron.invoke) return
+    try {
+      setBusy(true)
+      await window.electron.invoke('agent-command', { id, action })
+      // Refresh local copy
+      const maybe = window.electron.getAgents()
+      const data = (maybe && typeof maybe.then === 'function') ? await maybe : maybe
+      setAgents(data || [])
+    } catch (e) {
+      console.error('agent command failed', e)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="app">
@@ -32,7 +61,7 @@ export default function App(){
             </li>
           ))}
         </ul>
-        <button onClick={() => { if (window.electron && window.electron.getAgents) setAgents(window.electron.getAgents()) }}>Refresh</button>
+        <button onClick={() => { if (window.electron && window.electron.getAgents) { const m = window.electron.getAgents(); if (m && typeof m.then === 'function') { m.then(d => setAgents(d||[])) } else { setAgents(m||[]) } } }}>Refresh</button>
       </aside>
 
       <main className="main">
@@ -40,6 +69,13 @@ export default function App(){
         <section className="chat">
           <h3>{selAgent ? selAgent.name : 'No agent selected'}</h3>
           <p>Status: {selAgent ? selAgent.status : '—'}</p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button disabled={!selAgent || busy || (selAgent && selAgent.status === 'running')} onClick={() => commandAgent(selAgent.id, 'start')}>Start</button>
+            <button disabled={!selAgent || busy || (selAgent && selAgent.status !== 'running')} onClick={() => commandAgent(selAgent.id, 'stop')}>Stop</button>
+            <button disabled={!selAgent || busy} onClick={() => commandAgent(selAgent.id, 'ping')}>Ping</button>
+          </div>
+
           <div style={{ height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
             <div style={{ width: `${selAgent ? selAgent.progress : 0}%`, height: 8, background: '#10b981' }} />
           </div>

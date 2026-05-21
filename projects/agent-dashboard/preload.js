@@ -1,20 +1,12 @@
 ﻿const { contextBridge, ipcRenderer } = require('electron')
-const path = require('path')
-const fs = require('fs')
 
-const dataPath = path.join(__dirname, 'data', 'agents.json')
-
-function readAgents() {
-  try {
-    const raw = fs.readFileSync(dataPath, 'utf8')
-    return JSON.parse(raw)
-  } catch (e) {
-    return []
-  }
-}
+// Use IPC to ask the main process to read files. Some preload environments
+// don't provide access to Node core modules like 'fs'. Using ipcRenderer.invoke
+// keeps the file access in the main process where Node is available.
 
 contextBridge.exposeInMainWorld('electron', {
-  getAgents: () => readAgents(),
+  getAgents: () => ipcRenderer.invoke('read-agents'),
+  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
   onAgentsUpdated: (cb) => {
     ipcRenderer.on('agents-updated', (e, data) => cb(data))
   },
