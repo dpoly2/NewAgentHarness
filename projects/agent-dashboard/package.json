@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "dev": "vite",
-    "start": "electron .",
+    "start": "node agent-server.js",
+    "electron": "electron .",
     "build": "vite build"
   },
   "devDependencies": {

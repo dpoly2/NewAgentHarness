@@ -175,7 +175,9 @@ function receiveMobileMessage(input) {
   task.mobileFrom = from
   task.logs = (task.logs || []).concat([`${now} - Received from ${from} through ${mobileBridge.channel || 'mobile bridge'}.`])
   tasks.unshift(task)
+  // start the task on the routed agent for live processing
   if (routed) {
+    try { startTaskOnAgent(task, routed) } catch (e) { console.error('Failed to start mobile task on agent:', e) }
     routed.logs = (routed.logs || []).concat([`${now} - Mobile message routed as ${task.id}: ${text}`])
   }
   mobileBridge.messages = [{
@@ -260,6 +262,26 @@ function executeTaskRecord(taskId) {
     `${now} - completed`
   ])
   return task
+}
+
+// Task worker helpers for deterministic offline/production execution
+const runningTasks = {}
+
+function estimateTaskDurationSeconds(message) {
+  const len = String(message || '').length
+  return Math.min(120, Math.max(5, Math.floor(len / 20) + 5))
+}
+
+function startTaskOnAgent(task, agent) {
+  const now = new Date().toISOString()
+  agent.status = 'running'
+  agent.progress = 0
+  agent.logs = (agent.logs || []).concat([`${now} - started task ${task.id}`])
+  task.status = 'running'
+  task.updatedAt = now
+  task.logs = (task.logs || []).concat([`${now} - Execution started by ${agent.name}.`])
+  const total = estimateTaskDurationSeconds(task.description || task.title)
+  runningTasks[agent.id] = { taskId: task.id, remaining: total, total }
 }
 
 const server = http.createServer((req, res) => {
@@ -440,7 +462,9 @@ const server = http.createServer((req, res) => {
         const routed = routeTask(message)
         const task = createTaskRecord(message, routed)
         tasks.unshift(task)
+        // start the task on the routed agent so offline/production mode processes it
         if (routed) {
+          try { startTaskOnAgent(task, routed) } catch (e) { console.error('Failed to start task on agent:', e) }
           routed.logs = (routed.logs || []).concat([`${new Date().toISOString()} - AgentMajesty routed task ${task.id}: ${message}`])
         }
         persist()
@@ -483,37 +507,36 @@ const server = http.createServer((req, res) => {
 })
 
 const PORT = process.env.AGENT_SERVER_PORT || 4000
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Agent runtime stub listening on http://127.0.0.1:${PORT}`)
+const HOST = process.env.AGENT_SERVER_HOST || '0.0.0.0'
+server.listen(PORT, HOST, () => {
+  console.log(`Agent runtime listening on http://${HOST}:${PORT}`)
 })
 
-// simple incremental progress simulator for running agents
+// Deterministic task worker for processing running tasks in production-like mode
 setInterval(() => {
   let changed = false
-  agents.forEach(a => {
-    if (a.status === 'running'){
-      a.progress = Math.min(100, (a.progress || 0) + Math.floor(Math.random()*10)+1)
-      a.logs = (a.logs || []).concat([`${new Date().toISOString()} - progress ${a.progress}%`])
-      if (a.progress >= 100) {
-        // attempt to complete any queued task assigned to this agent
-        const pending = tasks.find(t => t.assignedAgentId === a.id && t.status !== 'completed')
-        if (pending) {
-          try {
-            executeTaskRecord(pending.id)
-          } catch (e) {
-            console.error('Failed to execute task:', e)
-            // fall back to marking agent idle
-            a.status = 'idle'
-            a.progress = 100
-          }
-        } else {
-          a.status = 'idle'
-        }
-        changed = true
-      } else {
-        changed = true
-      }
+  for (const [agentId, info] of Object.entries(runningTasks)) {
+    const agent = agents.find(a => a.id === agentId)
+    const task = tasks.find(t => t.id === info.taskId)
+    if (!agent || !task) {
+      delete runningTasks[agentId]
+      continue
     }
-  })
-  if (changed){ persist(); sendEvent({ agents, tasks }) }
-}, 5000)
+    info.remaining = Math.max(0, info.remaining - 1)
+    const progress = Math.min(100, Math.round(100 * (1 - info.remaining / info.total)))
+    agent.progress = progress
+    agent.logs = (agent.logs || []).concat([`${new Date().toISOString()} - progress ${agent.progress}%`])
+    task.logs = (task.logs || []).concat([`${new Date().toISOString()} - progress ${agent.progress}%`])
+    changed = true
+    if (info.remaining <= 0) {
+      try {
+        executeTaskRecord(task.id)
+      } catch (e) {
+        console.error('Failed to execute task:', e)
+        agent.status = 'idle'
+      }
+      delete runningTasks[agentId]
+    }
+  }
+  if (changed) { persist(); sendEvent({ agents, tasks }) }
+}, 1000)
