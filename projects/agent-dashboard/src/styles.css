@@ -1,0 +1,7 @@
+﻿body{font-family:Segoe UI, Roboto, Arial; margin:0}
+.app{display:flex;height:100vh}
+.sidebar{width:220px;background:#1f2937;color:#fff;padding:16px}
+.main{flex:1;display:flex;flex-direction:column}
+.timeline{background:#f3f4f6;padding:12px;border-bottom:1px solid #e5e7eb}
+.chat{flex:1;padding:16px}
+.logs{height:160px;border-top:1px solid #e5e7eb;padding:8px;background:#fff}

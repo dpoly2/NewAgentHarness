@@ -1,0 +1,13 @@
+﻿{
+  "name": "agent-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "start": "electron .",
+    "build": "vite build"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
