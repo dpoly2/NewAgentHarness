@@ -645,7 +645,7 @@ class XFTC_Public {
         // Send welcome email
         if ( class_exists( 'XFTC_Emails' ) ) {
             $emails = new XFTC_Emails();
-            $emails->send_welcome( $user_id );
+            $emails->send_parent_welcome( $user_id );
         }
 
         wp_send_json_success( [
