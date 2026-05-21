@@ -10,21 +10,41 @@ David Smith's personal AI agent system — built on Base44 Superagent.
 
 ```
 AgentHarness/
-├── agents/                        # Individual agent profiles and configs
-├── rules/                         # Site-specific agent rules
+├── agents/                          # Individual agent profiles and configs
+│   ├── roster.md                    # Master agent roster
+│   ├── agent_profiles.md            # Full agent capability profiles
+│   ├── grants_research_agent.md     # Weekly funding research agent
+│   ├── grant_writer_agent.md        # Grant application writer
+│   ├── wordpresspluginsagent.md     # WordPress plugin expert
+│   ├── web_dev_researcher.md        # Web dev research agent
+│   ├── yepc_capital_fundraising_agent.md
+│   ├── yepc_government_relations_agent.md
+│   ├── yepc_grant_writer_agent.md
+│   └── yepc_real_estate_research_agent.md
+├── rules/
+│   └── wordpress_xtremeforce.md     # XFTC WordPress site rules
 ├── projects/
-│   ├── xftc-redevelopment/        # XFTC custom plugin (Sprint 2 complete ✅)
-│   │   ├── plugin/
-│   │   │   └── xftc-membership/   # Full WordPress membership plugin
-│   │   │       ├── includes/      # Core PHP classes
-│   │   │       ├── admin/views/   # WP Admin panels
-│   │   │       ├── public/views/  # Parent/athlete portal views
-│   │   │       └── api/           # REST API endpoints
-│   │   ├── SPRINT-2.md            # Sprint 2 task tracking
+│   ├── xftc-redevelopment/          # XFTC custom plugin & theme (Sprint 2 ✅)
+│   │   ├── plugin/xftc-membership/  # Full WordPress membership plugin v2.0.0
+│   │   ├── theme/xftc-theme/        # Standalone XFTC theme v1.0.0
+│   │   ├── SPRINT-1.md
+│   │   ├── SPRINT-2.md
 │   │   ├── ARCHITECTURE.md
-│   │   └── PROPOSAL.md
-│   ├── wordpress-membership-plugin/
-│   └── yepc/                      # Youth Elite Performance Complex
+│   │   ├── PROPOSAL.md
+│   │   └── PROJECT.md
+│   ├── pbs-foundation/              # Phi Beta Sigma Collegiate Pathways Foundation
+│   │   ├── PROJECT.md
+│   │   ├── CHARTER.md
+│   │   └── BYLAWS.md
+│   ├── wordpress-membership-plugin/ # General WP plugin requirements
+│   │   ├── PROJECT.md
+│   │   └── requirements.md
+│   └── yepc/                        # Youth Elite Performance Complex
+│       ├── PROJECT.md
+│       └── outreach/
+│           ├── hutto-edc-initial-outreach.md
+│           ├── hutto-edc-followup-7day.md
+│           └── hutto-edc-followup-14day.md
 └── README.md
 ```
 
@@ -32,133 +52,90 @@ AgentHarness/
 
 ## Agent Lanes
 
-### Personal Productivity
+### 🧠 Personal Productivity
 Each email identity has a dedicated agent profile:
 
 | Agent | Account | Status |
 |-------|---------|--------|
 | `smithdaiiagent` | smithda.ii@gmail.com | ✅ Connected |
-| `communicationsdirgcr` | communicationsdirgcr@gmail.com | ✅ Connected |
-| `thesigmasignal` | thesigmasignal.1stvp1914@gmail.com | ✅ Connected |
-| `smithcapitalproperties` | david.smith@smithcapitalproperties.com | 🔄 Authorizing |
-| `xtremeforcetrackclub` | dsmith@xtremeforcetrackclub.org | ✅ Connected |
-| `allensmithagent` | Outlook (personal) | 🔲 Pending |
-| `nutrueapparel` | Nutrue Apparel custom domain | 🔲 Pending |
-| `psibetasigma1914` | Psi Beta Sigma 1914 | 🔲 Pending |
+| `communicationsdiragent` | communicationsdirgcr@gmail.com | ✅ Connected |
+| `sigmasignalagent` | thesigmasignal.1stvp1914@gmail.com | ✅ Connected |
+| `smithcapitalagent` | david.smith@smithcapitalproperties.com | ✅ Connected |
+| `xftcagent` | dsmith@xtremeforcetrackclub.org | ✅ Connected |
 
-### Web Development
-| Agent | Role |
-|-------|------|
-| `wordpressagent` | WordPress maintenance, themes, plugins |
-| `web_dev_researcher` | Site audits and prioritized fix reports |
-| `wordpresspluginsagent` | Custom plugin architecture & development |
+**Daily digest:** 8:00 AM Chicago time (automated)
 
-### Grant & Funding Research
-| Agent | Role |
-|-------|------|
-| `grants_research_agent` | Weekly funding opportunity sweep (Mon 8AM CT) |
-| `grant_writer_agent` | Application drafting — XFTC, Nutrue, Psi Beta Sigma |
-| `yepc_grant_writer` | Capital infrastructure grants for YEPC/Smith Capital |
-
-### YEPC Project Team (Smith Capital Properties)
-| Agent | Role |
-|-------|------|
-| `yepc_project_manager` | Site development coordination, milestone tracking |
-| `yepc_real_estate_research` | Zoning, Hutto Thoroughfare Plan, SH-130/FM 3349 tracking |
-| `yepc_capital_fundraising` | EDA, HUD CDBG, TxDOT, OZ 2.0 funding pipeline |
-| `yepc_government_relations` | Hutto City Council, Williamson County planning agendas |
+### 🌐 Web Development
+| Agent | Site | Status |
+|-------|------|--------|
+| WordPress Plugin Expert | staging.s2tdesigns.com | ✅ Active |
+| XFTC Dev Agent | xtremeforcetrackclub.org | ✅ Active |
 
 ---
 
-## Active Sites
+## Active Projects
 
-| Site | Status | Notes |
-|------|--------|-------|
-| xtremeforcetrackclub.org | ✅ Connected | REST API via dsmith app password |
-| psibetasigma1914.org | ⚠️ Blocked | .htaccess Authorization header fix needed |
-| nutrueapparel.com | ⚠️ Blocked | .htaccess Authorization header fix needed |
-| smithcapitalproperties.com | 🔲 Pending | Credentials needed |
-| staging.s2tdesigns.com | ✅ Active | XFTC plugin staging (agent_design) |
+### 1. XFTC Redevelopment — `projects/xftc-redevelopment/`
+Custom WordPress membership plugin + standalone theme for Xtreme Force Track Club.
 
----
+| Sprint | Status | Details |
+|--------|--------|---------|
+| Sprint 1 | ✅ Complete | Plugin scaffold, DB schema, user roles, CRUD |
+| Sprint 2 | ✅ Complete | Meets, Results, Travel, Payroll, Stripe placeholder |
+| Sprint 3 | 🔜 Pending | Stripe live keys, coach/staff portal, production deploy |
 
-## XFTC Membership Plugin — Sprint Status
+**Staging:** [staging.s2tdesigns.com](https://staging.s2tdesigns.com)
+**Production:** [xtremeforcetrackclub.org](https://xtremeforcetrackclub.org)
 
-### Sprint 1 ✅ Complete
-- Plugin scaffold, database schema (10 tables), custom user roles (5)
-- Member registration, season management, base CRUD
-- Deployed to staging.s2tdesigns.com
+### 2. Phi Beta Sigma Collegiate Pathways Foundation — `projects/pbs-foundation/`
+501(c)(3) foundation providing conference travel assistance for collegiate Phi Beta Sigma members.
 
-### Sprint 2 ✅ Complete — May 20, 2026
-| Module | Files | Status |
-|--------|-------|--------|
-| Meet Management | `class-xftc-meets.php`, admin + public views | ✅ |
-| Results & Records | `class-xftc-results.php`, admin + public views | ✅ |
-| Travel & Logistics | `class-xftc-travel.php`, admin view | ✅ |
-| Payroll System | `class-xftc-payroll.php`, admin view | ✅ |
-| Stripe Payments | `class-xftc-payments.php`, checkout + receipts | ✅ (awaiting keys) |
-| REST API | `class-xftc-rest-api.php` — 14 endpoints | ✅ |
+| Milestone | Status |
+|-----------|--------|
+| Charter drafted | ✅ Complete |
+| Bylaws drafted | ✅ Complete |
+| Board recruitment | 🔜 Pending |
+| 501(c)(3) filing | 🔜 Pending |
 
-**Remaining before full go-live:**
-- Enter Stripe API keys in WP Admin → Xtreme Force → Payments
-- Run `composer require stripe/stripe-php` on staging server
-- Wire admin dashboard widgets (Sprint 3)
+### 3. YEPC — `projects/yepc/`
+Youth Elite Performance Complex — 110-acre development site in Hutto, TX (CR 132 parcel).
 
-### Sprint 3 — Upcoming
-- Admin dashboard live widgets
-- Athlete portal tabs (stats, meet history, travel)
-- Email notifications (class-xftc-emails.php)
-- Reporting module
-- Final staging QA + production deploy to xtremeforcetrackclub.org
+| Milestone | Status |
+|-----------|--------|
+| Site analysis complete | ✅ Complete |
+| Hutto EDC outreach drafted | ✅ Complete |
+| Opportunity Zone 2.0 research | ✅ Complete (deadline: June 26, 2026) |
+| Capital fundraising plan | 🔜 In Progress |
 
 ---
 
 ## Automations
 
-| Automation | Schedule | Purpose |
-|------------|----------|---------|
-| Daily Email Digest | 8:00 AM CT daily | All connected inboxes summary |
-| XFTC Logger | Every 4 hours | Log new athlete signups & payments |
-| Grant Research Sweep | Every Monday 8:00 AM CT | Funding opportunities for all 4 orgs |
-| GitHub AgentHarness Sync | 2:00 AM CT nightly | Push agent configs to this repo |
-| Sprint 2 Completion Check | Every 4 hours | Notify David when Sprint 2 is testing-ready |
+| Automation | Schedule | Status |
+|-----------|----------|--------|
+| Daily Email Digest | 8:00 AM Chicago (Mon–Sun) | ✅ Active |
+| XFTC Signup/Payment Logger | Every 6 hours | ✅ Active |
+| Grant Research Sweep | Every Monday 8:00 AM Chicago | ✅ Active |
+| GitHub AgentHarness Sync | Nightly | ✅ Active |
+| Sprint 2 Completion Check | Recurring | ✅ Active |
 
 ---
 
-## Organizations Managed
+## Organizations
 
-| Organization | Type | Focus |
-|-------------|------|-------|
-| Xtreme Force Track Club | 501(c)(3) nonprofit | Youth track & field, ages 6–18, Austin/Pflugerville TX |
-| Smith Capital Properties | Real estate development | 110-acre YEPC site, Hutto CR 132 |
-| Psi Beta Sigma 1914 | Nonprofit | Scholarships, mentorship, travel foundation |
+| Org | Type | Focus |
+|-----|------|-------|
+| Xtreme Force Track Club | 501(c)(3) nonprofit | Youth athletics, ages 6–18, Austin/Pflugerville TX |
 | Nutrue Apparel | Minority-owned business | Apparel (LLC registration pending) |
+| Psi Beta Sigma 1914 | Nonprofit | Scholarships, mentorship, low-income family support |
+| Smith Capital Properties | Real estate development | YEPC — 110-acre Hutto CR 132 site |
 
 ---
 
-## Key Projects
+## Quick Links
 
-### Youth Elite Performance Complex (YEPC)
-- 110-acre site at CR 132, Hutto TX (Smith Capital Properties)
-- Aligned with Hutto Thoroughfare Plan, SH-130 widening (2027), FM 3349 upgrades
-- Opportunity Zone 2.0 nomination deadline: **June 26, 2026**
-- Funding targets: EDA, HUD CDBG, TxDOT, Williamson County EDC
-
-### Psi Beta Sigma Travel Foundation
-- 501(c)(3) foundation to subsidize collegiate conference travel
-- In formation — mission statement and board recruitment phase
-
----
-
-## Changelog
-
-| Date | Change |
-|------|--------|
-| May 20, 2026 | Sprint 2 complete — Meets, Results, Travel, Payroll, REST API (15 files) |
-| May 20, 2026 | Gmail delegated access setup — communicationsdirgcr, Sigma Signal authorized |
-| May 20, 2026 | YEPC agent team initialized (5 agents) |
-| May 20, 2026 | Grant Research + Grant Writer agents activated |
-| May 19, 2026 | Sprint 1 complete — plugin scaffold, DB schema, roles, member registration |
-| May 19, 2026 | AgentHarness repo initialized, nightly sync automation active |
-| May 19, 2026 | XFTC site audit — 34 pages unpublished, 23 SEO meta descriptions deployed |
-| May 19, 2026 | Multi-agent system initialized — 5 Gmail accounts, daily digest automation |
+- [XFTC Plugin README](projects/xftc-redevelopment/plugin/xftc-membership/README.md)
+- [XFTC Theme README](projects/xftc-redevelopment/theme/xftc-theme/README.md)
+- [PBS Foundation Charter](projects/pbs-foundation/CHARTER.md)
+- [YEPC Project](projects/yepc/PROJECT.md)
+- [Agent Roster](agents/roster.md)
