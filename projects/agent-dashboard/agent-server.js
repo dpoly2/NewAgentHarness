@@ -1,9 +1,37 @@
 const http = require('http')
 const fs = require('fs')
+const os = require('os')
 const path = require('path')
 
 const agentsFile = path.join(__dirname, 'data', 'agents.json')
+const tasksFile = path.join(__dirname, 'data', 'tasks.json')
+const profileFile = path.join(__dirname, 'data', 'profile.json')
+const contactsFile = path.join(__dirname, 'data', 'contacts.json')
+const mobileBridgeFile = path.join(__dirname, 'data', 'mobile_bridge.json')
 let agents = []
+let tasks = []
+let profile = {}
+let contacts = []
+let mobileBridge = {}
+function defaultMobileBridge() {
+  return {
+    enabled: true,
+    channel: 'iPhone Shortcuts',
+    trustedSender: '',
+    messages: []
+  }
+}
+function defaultProfile() {
+  return {
+    name: 'David',
+    role: 'Director of Communications',
+    priorities: 'Regional communications, The Sigma Signal, grants, real estate projects, and agent coordination',
+    communicationStyle: 'Concise, direct, action-oriented',
+    briefingCadence: 'Daily morning brief and task follow-up',
+    approvalRules: 'Ask before sending email, deleting files, publishing, committing, pushing, or spending money',
+    memory: []
+  }
+}
 try {
   let raw = fs.readFileSync(agentsFile, 'utf8')
   raw = raw.replace(/^\uFEFF/, '')
@@ -11,6 +39,42 @@ try {
 } catch (e) {
   console.error('Failed to load agents.json, starting with empty list', e)
   agents = []
+}
+try {
+  if (!fs.existsSync(tasksFile)) fs.writeFileSync(tasksFile, '[]', 'utf8')
+  let raw = fs.readFileSync(tasksFile, 'utf8')
+  raw = raw.replace(/^\uFEFF/, '')
+  tasks = JSON.parse(raw)
+} catch (e) {
+  console.error('Failed to load tasks.json, starting with empty list', e)
+  tasks = []
+}
+try {
+  if (!fs.existsSync(profileFile)) fs.writeFileSync(profileFile, JSON.stringify(defaultProfile(), null, 2), 'utf8')
+  let raw = fs.readFileSync(profileFile, 'utf8')
+  raw = raw.replace(/^\uFEFF/, '')
+  profile = JSON.parse(raw)
+} catch (e) {
+  console.error('Failed to load profile.json, starting with default profile', e)
+  profile = defaultProfile()
+}
+try {
+  if (!fs.existsSync(contactsFile)) fs.writeFileSync(contactsFile, '[]', 'utf8')
+  let raw = fs.readFileSync(contactsFile, 'utf8')
+  raw = raw.replace(/^\uFEFF/, '')
+  contacts = JSON.parse(raw)
+} catch (e) {
+  console.error('Failed to load contacts.json, starting with empty list', e)
+  contacts = []
+}
+try {
+  if (!fs.existsSync(mobileBridgeFile)) fs.writeFileSync(mobileBridgeFile, JSON.stringify(defaultMobileBridge(), null, 2), 'utf8')
+  let raw = fs.readFileSync(mobileBridgeFile, 'utf8')
+  raw = raw.replace(/^\uFEFF/, '')
+  mobileBridge = JSON.parse(raw)
+} catch (e) {
+  console.error('Failed to load mobile_bridge.json, starting with default config', e)
+  mobileBridge = defaultMobileBridge()
 }
 
 const clients = []
@@ -20,12 +84,208 @@ function sendEvent(data){
 }
 function persist(){
   try { fs.writeFileSync(agentsFile, JSON.stringify(agents, null, 2), 'utf8') } catch(e) { console.error('Failed to persist agents', e) }
+  try { fs.writeFileSync(tasksFile, JSON.stringify(tasks, null, 2), 'utf8') } catch(e) { console.error('Failed to persist tasks', e) }
+  try { fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2), 'utf8') } catch(e) { console.error('Failed to persist profile', e) }
+  try { fs.writeFileSync(contactsFile, JSON.stringify(contacts, null, 2), 'utf8') } catch(e) { console.error('Failed to persist contacts', e) }
+  try { fs.writeFileSync(mobileBridgeFile, JSON.stringify(mobileBridge, null, 2), 'utf8') } catch(e) { console.error('Failed to persist mobile bridge', e) }
+}
+function slugifyAgentName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+function createAgentRecord(input) {
+  const name = String(input.name || '').trim()
+  if (!name) throw new Error('Agent name is required')
+  const existing = agents.find(a => a.name.toLowerCase() === name.toLowerCase())
+  if (existing) return existing
+  const idBase = slugifyAgentName(name) || `agent-${agents.length + 1}`
+  let id = idBase
+  let suffix = 2
+  while (agents.some(a => a.id === id)) {
+    id = `${idBase}-${suffix}`
+    suffix += 1
+  }
+  const agent = {
+    id,
+    name,
+    status: 'idle',
+    progress: 0,
+    role: String(input.role || 'Specialized agent').trim(),
+    logs: [`${new Date().toISOString()} - Agent added manually.`]
+  }
+  agents.push(agent)
+  return agent
+}
+function createContactRecord(input) {
+  const name = String(input.name || '').trim()
+  const email = String(input.email || '').trim()
+  if (!name || !email) throw new Error('Contact name and email are required')
+  const existing = contacts.find(c => c.email.toLowerCase() === email.toLowerCase())
+  if (existing) {
+    Object.assign(existing, {
+      name,
+      group: String(input.group || existing.group || '').trim(),
+      notes: String(input.notes || existing.notes || '').trim(),
+      updatedAt: new Date().toISOString()
+    })
+    return existing
+  }
+  const now = new Date().toISOString()
+  const contact = {
+    id: `contact-${Date.now()}`,
+    name,
+    email,
+    group: String(input.group || '').trim(),
+    notes: String(input.notes || '').trim(),
+    createdAt: now,
+    updatedAt: now
+  }
+  contacts.push(contact)
+  return contact
+}
+function getLanAddress() {
+  const interfaces = os.networkInterfaces()
+  for (const addresses of Object.values(interfaces)) {
+    for (const address of addresses || []) {
+      if (address.family === 'IPv4' && !address.internal) return address.address
+    }
+  }
+  return '127.0.0.1'
+}
+function getMobileBridgeInfo() {
+  const port = process.env.AGENT_SERVER_PORT || 4000
+  const host = getLanAddress()
+  return {
+    localEndpoint: `http://127.0.0.1:${port}/mobile-message`,
+    lanEndpoint: `http://${host}:${port}/mobile-message`,
+    shortcutBody: JSON.stringify({ from: 'iPhone', text: 'Task for AgentMajesty' }, null, 2)
+  }
+}
+function receiveMobileMessage(input) {
+  const text = String(input.text || input.message || '').trim()
+  if (!text) throw new Error('Message text is required')
+  const from = String(input.from || 'iPhone').trim()
+  const now = new Date().toISOString()
+  const routed = routeTask(text)
+  const task = createTaskRecord(text, routed)
+  task.source = 'mobile'
+  task.mobileFrom = from
+  task.logs = (task.logs || []).concat([`${now} - Received from ${from} through ${mobileBridge.channel || 'mobile bridge'}.`])
+  tasks.unshift(task)
+  if (routed) {
+    routed.logs = (routed.logs || []).concat([`${now} - Mobile message routed as ${task.id}: ${text}`])
+  }
+  mobileBridge.messages = [{
+    id: `mobile-${Date.now()}`,
+    from,
+    text,
+    taskId: task.id,
+    receivedAt: now
+  }].concat(Array.isArray(mobileBridge.messages) ? mobileBridge.messages : []).slice(0, 50)
+  return task
+}
+function routeTask(message) {
+  const text = String(message || '').toLowerCase()
+  const candidates = agents.filter(a => a.name !== 'AgentMajesty')
+  const agentText = a => `${a.name || ''} ${a.role || ''}`
+  const rules = [
+    { terms: ['wordpress', 'plugin', 'website'], match: a => /wordpress|plugin|website/i.test(agentText(a)) },
+    { terms: ['grant', 'funding', 'proposal'], match: a => /grant|research|funding|proposal/i.test(agentText(a)) },
+    { terms: ['constant contact', 'newsletter', 'sigma signal', 'campaign', 'email'], match: a => /sigmasignal|constant|communication|email|newsletter|campaign/i.test(agentText(a)) },
+    { terms: ['real estate', 'parcel', 'property'], match: a => /realestate|real estate|property|parcel/i.test(agentText(a)) },
+    { terms: ['capital', 'fundraising', 'investor'], match: a => /capital|fundraising|investor/i.test(agentText(a)) },
+    { terms: ['government', 'relations', 'permit'], match: a => /government|relations|permit/i.test(agentText(a)) },
+    { terms: ['project', 'manage', 'timeline'], match: a => /projectmanager|project manager|manager|timeline/i.test(agentText(a)) }
+  ]
+  for (const rule of rules) {
+    if (rule.terms.some(term => text.includes(term))) {
+      const agent = candidates.find(rule.match)
+      if (agent) return agent
+    }
+  }
+  return candidates.find(a => a.status === 'idle') || candidates[0] || agents[0]
+}
+function createTaskRecord(message, routed) {
+  const now = new Date().toISOString()
+  const title = String(message || '').trim().slice(0, 80) || 'Untitled task'
+  const task = {
+    id: `task-${Date.now()}`,
+    title,
+    description: String(message || '').trim(),
+    assignedAgentId: routed ? routed.id : null,
+    assignedAgentName: routed ? routed.name : null,
+    status: routed ? 'queued' : 'needs-agent',
+    createdAt: now,
+    updatedAt: now,
+    logs: [
+      `${now} - Created by AgentMajesty.`,
+      routed ? `${now} - Assigned to ${routed.name}.` : `${now} - No matching specialized agent found.`
+    ],
+    result: null
+  }
+  // If routed to an agent, start the agent so offline mode processes the task
+  if (routed) {
+    if (!routed.progress || routed.progress >= 100) routed.progress = 0
+    routed.status = 'running'
+    routed.logs = (routed.logs || []).concat([`${now} - Assigned task ${task.id}: ${task.title}`])
+  }
+  return task
+}
+function executeTaskRecord(taskId) {
+  const task = tasks.find(t => t.id === taskId)
+  if (!task) throw new Error('Task not found')
+  const agent = agents.find(a => a.id === task.assignedAgentId)
+  const now = new Date().toISOString()
+  if (!agent) {
+    task.status = 'needs-agent'
+    task.updatedAt = now
+    task.logs = (task.logs || []).concat([`${now} - Execution blocked: assigned agent is missing.`])
+    return task
+  }
+  task.status = 'completed'
+  task.updatedAt = now
+  task.logs = (task.logs || []).concat([
+    `${now} - Execution started by ${agent.name}.`,
+    `${now} - ${agent.name} acknowledged the task.`,
+    `${now} - Execution completed.`
+  ])
+  task.result = `${agent.name} completed the routed task.`
+  agent.status = 'idle'
+  agent.progress = 100
+  agent.logs = (agent.logs || []).concat([
+    `${now} - Executed task ${task.id}: ${task.title}`,
+    `${now} - completed`
+  ])
+  return task
 }
 
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/agents'){
     res.writeHead(200, {'Content-Type':'application/json'})
     return res.end(JSON.stringify(agents))
+  }
+
+  if (req.method === 'GET' && req.url === '/tasks'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    return res.end(JSON.stringify(tasks))
+  }
+
+  if (req.method === 'GET' && req.url === '/profile'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    return res.end(JSON.stringify(profile))
+  }
+
+  if (req.method === 'GET' && req.url === '/contacts'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    return res.end(JSON.stringify(contacts))
+  }
+
+  if (req.method === 'GET' && req.url === '/mobile-bridge'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    return res.end(JSON.stringify({ config: mobileBridge, info: getMobileBridgeInfo() }))
   }
 
   if (req.method === 'GET' && req.url === '/events'){
@@ -70,7 +330,7 @@ const server = http.createServer((req, res) => {
         agents[idx] = agent
         persist()
         // notify SSE clients
-        sendEvent(agents)
+        sendEvent({ agents, tasks })
         res.writeHead(200, {'Content-Type':'application/json'})
         res.end(JSON.stringify(agents))
       } catch (e){
@@ -78,6 +338,142 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: 'invalid body' }))
       }
     })
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/agents'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        createAgentRecord(JSON.parse(body))
+        persist()
+        sendEvent({ agents, tasks })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify(agents))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: e.message || 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'PUT' && req.url === '/profile'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        profile = { ...profile, ...JSON.parse(body), updatedAt: new Date().toISOString() }
+        persist()
+        sendEvent({ profile, contacts })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify(profile))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/contacts'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        createContactRecord(JSON.parse(body))
+        persist()
+        sendEvent({ profile, contacts })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify(contacts))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: e.message || 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'PUT' && req.url === '/mobile-bridge'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        mobileBridge = { ...mobileBridge, ...JSON.parse(body), updatedAt: new Date().toISOString() }
+        persist()
+        sendEvent({ mobileBridge })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ config: mobileBridge, info: getMobileBridgeInfo() }))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/mobile-message'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const task = receiveMobileMessage(JSON.parse(body || '{}'))
+        persist()
+        sendEvent({ agents, tasks, mobileBridge })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ ok: true, taskId: task.id, assignedAgentName: task.assignedAgentName }))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: e.message || 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/agent-chat'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const { message } = JSON.parse(body)
+        const routed = routeTask(message)
+        const task = createTaskRecord(message, routed)
+        tasks.unshift(task)
+        if (routed) {
+          routed.logs = (routed.logs || []).concat([`${new Date().toISOString()} - AgentMajesty routed task ${task.id}: ${message}`])
+        }
+        persist()
+        sendEvent({ agents, tasks })
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({
+          agents,
+          tasks,
+          task,
+          reply: routed
+            ? `AgentMajesty created ${task.id} and assigned it to ${routed.name}.`
+            : 'AgentMajesty could not find a specialized agent yet. Add one from the sidebar.'
+        }))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'POST' && req.url.startsWith('/tasks/') && req.url.endsWith('/execute')){
+    try {
+      const id = decodeURIComponent(req.url.slice('/tasks/'.length, -'/execute'.length))
+      const task = executeTaskRecord(id)
+      persist()
+      sendEvent({ agents, tasks })
+      res.writeHead(200, {'Content-Type':'application/json'})
+      res.end(JSON.stringify({ agents, tasks, task }))
+    } catch (e){
+      res.writeHead(404, {'Content-Type':'application/json'})
+      res.end(JSON.stringify({ error: e.message || 'task not found' }))
+    }
     return
   }
 
@@ -98,9 +494,26 @@ setInterval(() => {
     if (a.status === 'running'){
       a.progress = Math.min(100, (a.progress || 0) + Math.floor(Math.random()*10)+1)
       a.logs = (a.logs || []).concat([`${new Date().toISOString()} - progress ${a.progress}%`])
-      if (a.progress >= 100) { a.status = 'idle'; changed = true }
-      changed = true
+      if (a.progress >= 100) {
+        // attempt to complete any queued task assigned to this agent
+        const pending = tasks.find(t => t.assignedAgentId === a.id && t.status !== 'completed')
+        if (pending) {
+          try {
+            executeTaskRecord(pending.id)
+          } catch (e) {
+            console.error('Failed to execute task:', e)
+            // fall back to marking agent idle
+            a.status = 'idle'
+            a.progress = 100
+          }
+        } else {
+          a.status = 'idle'
+        }
+        changed = true
+      } else {
+        changed = true
+      }
     }
   })
-  if (changed){ persist(); sendEvent(agents) }
+  if (changed){ persist(); sendEvent({ agents, tasks }) }
 }, 5000)
