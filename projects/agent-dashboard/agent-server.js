@@ -3,16 +3,93 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 
-const agentsFile = path.join(__dirname, 'data', 'agents.json')
-const tasksFile = path.join(__dirname, 'data', 'tasks.json')
-const profileFile = path.join(__dirname, 'data', 'profile.json')
-const contactsFile = path.join(__dirname, 'data', 'contacts.json')
-const mobileBridgeFile = path.join(__dirname, 'data', 'mobile_bridge.json')
+// Optional production deps: better-sqlite3 and winston
+let Database = null
+let logger = console
+try {
+  // lazy require to keep dev env simple
+  Database = require('better-sqlite3')
+} catch (e) {
+  // ok if not installed; will fallback to file storage
+}
+let winston = null
+let DailyRotateFile = null
+try {
+  winston = require('winston')
+  DailyRotateFile = require('winston-daily-rotate-file')
+} catch (e) {
+  // no-op
+}
+
+const DATA_DIR = path.join(__dirname, 'data')
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+
+const agentsFile = path.join(DATA_DIR, 'agents.json')
+const tasksFile = path.join(DATA_DIR, 'tasks.json')
+const profileFile = path.join(DATA_DIR, 'profile.json')
+const contactsFile = path.join(DATA_DIR, 'contacts.json')
+const mobileBridgeFile = path.join(DATA_DIR, 'mobile_bridge.json')
 let agents = []
 let tasks = []
 let profile = {}
 let contacts = []
 let mobileBridge = {}
+
+// Logging setup (env-driven)
+const LOG_DIR = process.env.LOG_DIR || path.join(__dirname, 'logs')
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true })
+if (winston && DailyRotateFile) {
+  logger = winston.createLogger({
+    level: process.env.LOG_LEVEL || 'info',
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`)
+    ),
+    transports: [
+      new winston.transports.Console(),
+      new DailyRotateFile({ dirname: LOG_DIR, filename: 'agent-dashboard-%DATE%.log', datePattern: 'YYYY-MM-DD', maxFiles: '14d' })
+    ]
+  })
+} else {
+  logger = console
+}
+
+// SQLite persistence (optional)
+const USE_SQLITE = String(process.env.USE_SQLITE || '').toLowerCase() === 'true'
+let db = null
+function initDb() {
+  if (!USE_SQLITE || !Database) return false
+  const dbPath = path.join(DATA_DIR, 'agents.db')
+  try {
+    db = new Database(dbPath)
+    db.pragma('journal_mode = WAL')
+    db.exec(`CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, data TEXT);
+             CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, data TEXT);
+             CREATE TABLE IF NOT EXISTS profile (k TEXT PRIMARY KEY, data TEXT);
+             CREATE TABLE IF NOT EXISTS contacts (id TEXT PRIMARY KEY, data TEXT);
+             CREATE TABLE IF NOT EXISTS mobile_bridge (k TEXT PRIMARY KEY, data TEXT);`)
+
+    // load existing rows
+    const arows = db.prepare('SELECT data FROM agents').all()
+    agents = arows.map(r => JSON.parse(r.data))
+    const trows = db.prepare('SELECT data FROM tasks').all()
+    tasks = trows.map(r => JSON.parse(r.data))
+    const prow = db.prepare('SELECT data FROM profile WHERE k = ?').get('profile')
+    profile = prow ? JSON.parse(prow.data) : {}
+    const crows = db.prepare('SELECT data FROM contacts').all()
+    contacts = crows.map(r => JSON.parse(r.data))
+    const mrow = db.prepare('SELECT data FROM mobile_bridge WHERE k = ?').get('mobile_bridge')
+    mobileBridge = mrow ? JSON.parse(mrow.data) : {}
+    logger.info('SQLite persistence initialized at ' + dbPath)
+    return true
+  } catch (e) {
+    logger.error('Failed to initialize SQLite persistence: ' + (e && e.message))
+    db = null
+    return false
+  }
+}
+
+initDb()
 function defaultMobileBridge() {
   return {
     enabled: true,
@@ -83,11 +160,40 @@ function sendEvent(data){
   clients.forEach(res => res.write(payload))
 }
 function persist(){
-  try { fs.writeFileSync(agentsFile, JSON.stringify(agents, null, 2), 'utf8') } catch(e) { console.error('Failed to persist agents', e) }
-  try { fs.writeFileSync(tasksFile, JSON.stringify(tasks, null, 2), 'utf8') } catch(e) { console.error('Failed to persist tasks', e) }
-  try { fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2), 'utf8') } catch(e) { console.error('Failed to persist profile', e) }
-  try { fs.writeFileSync(contactsFile, JSON.stringify(contacts, null, 2), 'utf8') } catch(e) { console.error('Failed to persist contacts', e) }
-  try { fs.writeFileSync(mobileBridgeFile, JSON.stringify(mobileBridge, null, 2), 'utf8') } catch(e) { console.error('Failed to persist mobile bridge', e) }
+  // Persist to SQLite if available and enabled
+  if (db) {
+    try {
+      const delAgents = db.prepare('DELETE FROM agents')
+      const delTasks = db.prepare('DELETE FROM tasks')
+      const delContacts = db.prepare('DELETE FROM contacts')
+      delAgents.run()
+      delTasks.run()
+      delContacts.run()
+      const insertAgent = db.prepare('INSERT INTO agents (id, data) VALUES (?, ?)')
+      const insertTask = db.prepare('INSERT INTO tasks (id, data) VALUES (?, ?)')
+      const insertContact = db.prepare('INSERT INTO contacts (id, data) VALUES (?, ?)')
+      const insertProfile = db.prepare('INSERT OR REPLACE INTO profile (k, data) VALUES (?, ?)')
+      const insertMobile = db.prepare('INSERT OR REPLACE INTO mobile_bridge (k, data) VALUES (?, ?)')
+      const tran = db.transaction(() => {
+        for (const a of agents) insertAgent.run(a.id, JSON.stringify(a))
+        for (const t of tasks) insertTask.run(t.id, JSON.stringify(t))
+        for (const c of contacts) insertContact.run(c.id, JSON.stringify(c))
+        insertProfile.run('profile', JSON.stringify(profile))
+        insertMobile.run('mobile_bridge', JSON.stringify(mobileBridge))
+      })
+      tran()
+      return
+    } catch (e) {
+      logger.error('Failed to persist to SQLite: ' + (e && e.message))
+      // fallthrough to file-based persist
+    }
+  }
+
+  try { fs.writeFileSync(agentsFile, JSON.stringify(agents, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist agents: ' + e) }
+  try { fs.writeFileSync(tasksFile, JSON.stringify(tasks, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist tasks: ' + e) }
+  try { fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist profile: ' + e) }
+  try { fs.writeFileSync(contactsFile, JSON.stringify(contacts, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist contacts: ' + e) }
+  try { fs.writeFileSync(mobileBridgeFile, JSON.stringify(mobileBridge, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist mobile bridge: ' + e) }
 }
 function slugifyAgentName(name) {
   return String(name || '')
