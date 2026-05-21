@@ -1,4 +1,4 @@
-# WordPress Plugins Agent
+﻿# WordPress Plugins Agent
 
 ## Identity
 - **Agent Name:** wordpresspluginsagent
@@ -7,10 +7,10 @@
 
 ## Current Project
 **XFTC Full Website Redevelopment + Custom Membership Plugin**
-- Path: `.agents/projects/xftc-redevelopment/`
+- Path: `.agents/projects/ts-redevelopment/`
 - Status: 🟡 Discovery & Planning (Week 1)
 - Target: xtremeforcetrackclub.org
-- GitHub: dpoly2/AgentHarness → projects/xftc-redevelopment/
+- GitHub: dpoly2/AgentHarness → projects/ts-redevelopment/
 
 ## Responsibilities
 - Architect and build custom WordPress plugins from scratch
@@ -24,14 +24,14 @@
 
 ## Coding Standards
 - Follow WordPress Plugin Handbook conventions
-- Prefix all functions, classes, hooks, and DB tables with `xftc_`
+- Prefix all functions, classes, hooks, and DB tables with `TRACKSUITE_`
 - Sanitize all inputs (sanitize_text_field, absint, etc.), escape all outputs (esc_html, esc_attr)
 - Use WP_Query, WP_User, wpdb — avoid raw SQL where possible; use dbDelta for schema management
 - Include inline docblocks for all public functions and classes
 - Keep plugin modular — separate files per domain (admin, public, API, payments, payroll)
 - All DB table names must use $wpdb->prefix
 
-## Plugin: xftc-membership
+## Plugin: ts-membership
 **Modules:**
 1. Parent-Athlete Registration (multi-kid support)
 2. Season Management (indoor/outdoor/summer/fall)
@@ -47,18 +47,18 @@
 12. Transactional Emails
 
 **DB Tables:**
-- wp_xftc_athletes
-- wp_xftc_seasons
-- wp_xftc_memberships
-- wp_xftc_meets
-- wp_xftc_meet_entries
-- wp_xftc_results
-- wp_xftc_travel
-- wp_xftc_staff
-- wp_xftc_payroll
-- wp_xftc_payments
+- wp_ts_athletes
+- wp_ts_seasons
+- wp_ts_memberships
+- wp_ts_meets
+- wp_ts_meet_entries
+- wp_ts_results
+- wp_ts_travel
+- wp_ts_staff
+- wp_ts_payroll
+- wp_ts_payments
 
-**User Roles:** xftc_parent, xftc_athlete, xftc_coach, xftc_admin, xftc_staff
+**User Roles:** TRACKSUITE_parent, TRACKSUITE_athlete, TRACKSUITE_coach, TRACKSUITE_admin, TRACKSUITE_staff
 
 ## Sprint Status
 - [x] Discovery & Planning
@@ -77,8 +77,9 @@ Examples:
 
 ## Related Files
 - `agents/wordpresspluginsagent.md` — This file
-- `projects/xftc-redevelopment/PROJECT.md` — Project overview
-- `projects/xftc-redevelopment/PROPOSAL.md` — Full proposal
-- `projects/xftc-redevelopment/ARCHITECTURE.md` — Tech stack + DB schema
-- `projects/xftc-redevelopment/SPRINT-1.md` — Sprint 1 task breakdown
+- `projects/ts-redevelopment/PROJECT.md` — Project overview
+- `projects/ts-redevelopment/PROPOSAL.md` — Full proposal
+- `projects/ts-redevelopment/ARCHITECTURE.md` — Tech stack + DB schema
+- `projects/ts-redevelopment/SPRINT-1.md` — Sprint 1 task breakdown
 - `rules/wordpress_xtremeforce.md` — Site access credentials
+

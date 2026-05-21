@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Single Post Template
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 ?>
 
 <section class="section">
@@ -20,11 +20,11 @@ xftc_partial( 'header' );
             </header>
             <?php if ( has_post_thumbnail() ) : ?>
                 <div style="border-radius:var(--radius-lg);overflow:hidden;margin-bottom:2rem;">
-                    <?php the_post_thumbnail( 'xftc-hero' ); ?>
+                    <?php the_post_thumbnail( 'ts-hero' ); ?>
                 </div>
             <?php endif; ?>
             <div class="entry-content"><?php the_content(); ?></div>
-            <footer style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--xftc-gray-200);">
+            <footer style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--ts-gray-200);">
                 <?php the_tags( '<p>Tags: ', ', ', '</p>' ); ?>
                 <?php wp_link_pages(); ?>
             </footer>
@@ -33,4 +33,5 @@ xftc_partial( 'header' );
     </div>
 </section>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

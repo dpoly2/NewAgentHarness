@@ -1,25 +1,25 @@
-<?php
+﻿<?php
 /**
- * Class XFTC_Meets
+ * Class TRACKSUITE_Meets
  *
  * Handles meet creation, management, athlete registration,
  * waiver tracking, and status workflows.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-class XFTC_Meets {
+class TRACKSUITE_Meets {
 
     private string $meets_table;
     private string $entries_table;
 
     public function __construct() {
         global $wpdb;
-        $this->meets_table   = $wpdb->prefix . 'xftc_meets';
-        $this->entries_table = $wpdb->prefix . 'xftc_meet_entries';
+        $this->meets_table   = $wpdb->prefix . 'TRACKSUITE_meets';
+        $this->entries_table = $wpdb->prefix . 'TRACKSUITE_meet_entries';
     }
 
     /** ─── MEET CRUD ─────────────────────────────────────────── */
@@ -138,7 +138,7 @@ class XFTC_Meets {
         return $wpdb->get_results( $wpdb->prepare(
             "SELECT e.*, a.first_name, a.last_name, a.team_level, a.gender
              FROM {$this->entries_table} e
-             JOIN {$wpdb->prefix}xftc_athletes a ON e.athlete_id = a.id
+             JOIN {$wpdb->prefix}TRACKSUITE_athletes a ON e.athlete_id = a.id
              WHERE e.meet_id = %d
              ORDER BY e.event_category, a.last_name",
             $meet_id
@@ -206,10 +206,11 @@ class XFTC_Meets {
         return $wpdb->get_results( $wpdb->prepare(
             "SELECT e.*, a.first_name, a.last_name, m.name AS meet_name
              FROM {$this->entries_table} e
-             JOIN {$wpdb->prefix}xftc_athletes a ON e.athlete_id = a.id
+             JOIN {$wpdb->prefix}TRACKSUITE_athletes a ON e.athlete_id = a.id
              JOIN {$this->meets_table} m ON e.meet_id = m.id
              ORDER BY e.registered_at DESC LIMIT %d",
             $limit
         ), ARRAY_A ) ?: [];
     }
 }
+

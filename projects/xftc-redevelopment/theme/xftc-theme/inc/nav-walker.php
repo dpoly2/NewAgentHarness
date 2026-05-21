@@ -1,12 +1,12 @@
-<?php
+﻿<?php
 /**
  * Custom Nav Walker — adds CTA class support via CSS class in menu item
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Nav_Walker extends Walker_Nav_Menu {
+class TRACKSUITE_Nav_Walker extends Walker_Nav_Menu {
 
     public function start_el( &$output, $data_object, $depth = 0, $args = null, $current_object_id = 0 ) {
         $item = $data_object;
@@ -58,7 +58,7 @@ class XFTC_Nav_Walker extends Walker_Nav_Menu {
 /**
  * Fallback nav — used when no menu is assigned
  */
-function xftc_fallback_nav(): void {
+function TRACKSUITE_fallback_nav(): void {
     $links = [
         'Home'     => '/',
         'About'    => '/about',
@@ -75,3 +75,4 @@ function xftc_fallback_nav(): void {
     }
     echo '</ul>';
 }
+

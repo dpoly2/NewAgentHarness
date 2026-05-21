@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 /**
  * Admin View — Payment History & Settings
  *
  * WP Admin → Xtreme Force → Payments
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  *
  * ─── STRIPE SETUP REQUIRED ───────────────────────────────────────────────────
@@ -16,28 +16,28 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Save settings on form submit
-if ( isset( $_POST['xftc_payments_nonce'] ) && wp_verify_nonce( $_POST['xftc_payments_nonce'], 'xftc_save_payment_settings' ) ) {
-    update_option( 'xftc_stripe_test_mode',              isset( $_POST['xftc_stripe_test_mode'] ) ? 1 : 0 );
-    update_option( 'xftc_stripe_test_publishable_key',   sanitize_text_field( $_POST['xftc_stripe_test_publishable_key'] ?? '' ) );
-    update_option( 'xftc_stripe_test_secret_key',        sanitize_text_field( $_POST['xftc_stripe_test_secret_key'] ?? '' ) );
-    update_option( 'xftc_stripe_live_publishable_key',   sanitize_text_field( $_POST['xftc_stripe_live_publishable_key'] ?? '' ) );
-    update_option( 'xftc_stripe_live_secret_key',        sanitize_text_field( $_POST['xftc_stripe_live_secret_key'] ?? '' ) );
-    update_option( 'xftc_stripe_webhook_secret',         sanitize_text_field( $_POST['xftc_stripe_webhook_secret'] ?? '' ) );
+if ( isset( $_POST['TRACKSUITE_payments_nonce'] ) && wp_verify_nonce( $_POST['TRACKSUITE_payments_nonce'], 'TRACKSUITE_save_payment_settings' ) ) {
+    update_option( 'TRACKSUITE_stripe_test_mode',              isset( $_POST['TRACKSUITE_stripe_test_mode'] ) ? 1 : 0 );
+    update_option( 'TRACKSUITE_stripe_test_publishable_key',   sanitize_text_field( $_POST['TRACKSUITE_stripe_test_publishable_key'] ?? '' ) );
+    update_option( 'TRACKSUITE_stripe_test_secret_key',        sanitize_text_field( $_POST['TRACKSUITE_stripe_test_secret_key'] ?? '' ) );
+    update_option( 'TRACKSUITE_stripe_live_publishable_key',   sanitize_text_field( $_POST['TRACKSUITE_stripe_live_publishable_key'] ?? '' ) );
+    update_option( 'TRACKSUITE_stripe_live_secret_key',        sanitize_text_field( $_POST['TRACKSUITE_stripe_live_secret_key'] ?? '' ) );
+    update_option( 'TRACKSUITE_stripe_webhook_secret',         sanitize_text_field( $_POST['TRACKSUITE_stripe_webhook_secret'] ?? '' ) );
 
     echo '<div class="notice notice-success"><p><strong>Payment settings saved.</strong></p></div>';
 }
 
 // Current values
-$test_mode          = get_option( 'xftc_stripe_test_mode', 1 );
-$test_pub_key       = get_option( 'xftc_stripe_test_publishable_key', '' );
-$test_sec_key       = get_option( 'xftc_stripe_test_secret_key', '' );
-$live_pub_key       = get_option( 'xftc_stripe_live_publishable_key', '' );
-$live_sec_key       = get_option( 'xftc_stripe_live_secret_key', '' );
-$webhook_secret     = get_option( 'xftc_stripe_webhook_secret', '' );
+$test_mode          = get_option( 'TRACKSUITE_stripe_test_mode', 1 );
+$test_pub_key       = get_option( 'TRACKSUITE_stripe_test_publishable_key', '' );
+$test_sec_key       = get_option( 'TRACKSUITE_stripe_test_secret_key', '' );
+$live_pub_key       = get_option( 'TRACKSUITE_stripe_live_publishable_key', '' );
+$live_sec_key       = get_option( 'TRACKSUITE_stripe_live_secret_key', '' );
+$webhook_secret     = get_option( 'TRACKSUITE_stripe_webhook_secret', '' );
 $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
 ?>
 
-<div class="wrap xftc-admin-payments">
+<div class="wrap ts-admin-payments">
     <h1>💳 Payments</h1>
 
     <!-- Status Banner -->
@@ -57,14 +57,14 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
     <!-- Stripe Settings Form -->
     <h2>Stripe API Configuration</h2>
     <form method="post" action="">
-        <?php wp_nonce_field( 'xftc_save_payment_settings', 'xftc_payments_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_save_payment_settings', 'TRACKSUITE_payments_nonce' ); ?>
 
         <table class="form-table">
             <tr>
                 <th scope="row">Mode</th>
                 <td>
                     <label>
-                        <input type="checkbox" name="xftc_stripe_test_mode" value="1" <?php checked( $test_mode, 1 ); ?>>
+                        <input type="checkbox" name="TRACKSUITE_stripe_test_mode" value="1" <?php checked( $test_mode, 1 ); ?>>
                         <strong>Test Mode</strong> — Use test keys (no real charges)
                     </label>
                     <p class="description">Uncheck this to switch to Live mode. Only disable test mode when you're ready to accept real payments.</p>
@@ -75,9 +75,9 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
         <h3>🧪 Test Keys <span style="font-weight:normal;font-size:13px;">(pk_test_... / sk_test_...)</span></h3>
         <table class="form-table">
             <tr>
-                <th scope="row"><label for="xftc_stripe_test_publishable_key">Test Publishable Key</label></th>
+                <th scope="row"><label for="TRACKSUITE_stripe_test_publishable_key">Test Publishable Key</label></th>
                 <td>
-                    <input type="text" id="xftc_stripe_test_publishable_key" name="xftc_stripe_test_publishable_key"
+                    <input type="text" id="TRACKSUITE_stripe_test_publishable_key" name="TRACKSUITE_stripe_test_publishable_key"
                         value="<?php echo esc_attr( $test_pub_key ); ?>"
                         placeholder="pk_test_..."
                         class="regular-text">
@@ -85,9 +85,9 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label for="xftc_stripe_test_secret_key">Test Secret Key</label></th>
+                <th scope="row"><label for="TRACKSUITE_stripe_test_secret_key">Test Secret Key</label></th>
                 <td>
-                    <input type="password" id="xftc_stripe_test_secret_key" name="xftc_stripe_test_secret_key"
+                    <input type="password" id="TRACKSUITE_stripe_test_secret_key" name="TRACKSUITE_stripe_test_secret_key"
                         value="<?php echo esc_attr( $test_sec_key ); ?>"
                         placeholder="sk_test_..."
                         class="regular-text">
@@ -99,18 +99,18 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
         <h3>🚀 Live Keys <span style="font-weight:normal;font-size:13px;">(pk_live_... / sk_live_...)</span></h3>
         <table class="form-table">
             <tr>
-                <th scope="row"><label for="xftc_stripe_live_publishable_key">Live Publishable Key</label></th>
+                <th scope="row"><label for="TRACKSUITE_stripe_live_publishable_key">Live Publishable Key</label></th>
                 <td>
-                    <input type="text" id="xftc_stripe_live_publishable_key" name="xftc_stripe_live_publishable_key"
+                    <input type="text" id="TRACKSUITE_stripe_live_publishable_key" name="TRACKSUITE_stripe_live_publishable_key"
                         value="<?php echo esc_attr( $live_pub_key ); ?>"
                         placeholder="pk_live_..."
                         class="regular-text">
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label for="xftc_stripe_live_secret_key">Live Secret Key</label></th>
+                <th scope="row"><label for="TRACKSUITE_stripe_live_secret_key">Live Secret Key</label></th>
                 <td>
-                    <input type="password" id="xftc_stripe_live_secret_key" name="xftc_stripe_live_secret_key"
+                    <input type="password" id="TRACKSUITE_stripe_live_secret_key" name="TRACKSUITE_stripe_live_secret_key"
                         value="<?php echo esc_attr( $live_sec_key ); ?>"
                         placeholder="sk_live_..."
                         class="regular-text">
@@ -129,9 +129,9 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label for="xftc_stripe_webhook_secret">Webhook Signing Secret</label></th>
+                <th scope="row"><label for="TRACKSUITE_stripe_webhook_secret">Webhook Signing Secret</label></th>
                 <td>
-                    <input type="password" id="xftc_stripe_webhook_secret" name="xftc_stripe_webhook_secret"
+                    <input type="password" id="TRACKSUITE_stripe_webhook_secret" name="TRACKSUITE_stripe_webhook_secret"
                         value="<?php echo esc_attr( $webhook_secret ); ?>"
                         placeholder="whsec_..."
                         class="regular-text">
@@ -163,9 +163,9 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
         </thead>
         <tbody>
             <?php
-            // TODO: Load from wp_xftc_payments when Stripe is active
+            // TODO: Load from wp_ts_payments when Stripe is active
             global $wpdb;
-            $payments = []; // $wpdb->get_results("SELECT * FROM {$wpdb->prefix}xftc_payments ORDER BY created_at DESC LIMIT 50");
+            $payments = []; // $wpdb->get_results("SELECT * FROM {$wpdb->prefix}TRACKSUITE_payments ORDER BY created_at DESC LIMIT 50");
 
             if ( empty( $payments ) ) : ?>
                 <tr>
@@ -183,7 +183,7 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
                         <td><?php echo esc_html( strtoupper( $payment->gateway ) ); ?></td>
                         <td><code><?php echo esc_html( $payment->transaction_id ); ?></code></td>
                         <td>
-                            <span class="xftc-status xftc-status-<?php echo esc_attr( $payment->status ); ?>">
+                            <span class="ts-status ts-status-<?php echo esc_attr( $payment->status ); ?>">
                                 <?php echo esc_html( ucfirst( $payment->status ) ); ?>
                             </span>
                         </td>
@@ -199,7 +199,7 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
     <p class="description">Use this to record cash or check payments received outside of Stripe.</p>
 
     <form method="post" action="">
-        <?php wp_nonce_field( 'xftc_manual_payment', 'xftc_manual_payment_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_manual_payment', 'TRACKSUITE_manual_payment_nonce' ); ?>
         <table class="form-table">
             <tr>
                 <th><label for="manual_user">Parent / User</label></th>
@@ -210,7 +210,7 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
                         'name'             => 'manual_user_id',
                         'id'               => 'manual_user',
                         'show_option_none' => '— Select Parent —',
-                        'role'             => 'xftc_parent',
+                        'role'             => 'TRACKSUITE_parent',
                     ]);
                     ?>
                 </td>
@@ -237,4 +237,5 @@ $is_configured      = ! empty( $test_mode ? $test_sec_key : $live_sec_key );
         <?php submit_button( 'Record Payment', 'secondary' ); ?>
     </form>
 
-</div><!-- .xftc-admin-payments -->
+</div><!-- .ts-admin-payments -->
+

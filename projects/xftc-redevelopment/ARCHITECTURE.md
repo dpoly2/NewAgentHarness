@@ -1,4 +1,4 @@
-# Technical Architecture — XFTC Redevelopment
+﻿# Technical Architecture — XFTC Redevelopment
 
 ## Stack Overview
 
@@ -6,7 +6,7 @@
 |-------|-----------|
 | CMS | WordPress (latest) |
 | Theme | Grace Themes Sports Club (customized child theme) |
-| Plugin | Custom PHP plugin — `xftc-membership` |
+| Plugin | Custom PHP plugin — `ts-membership` |
 | E-commerce | WooCommerce |
 | Payments | Stripe (primary), PayPal (secondary) |
 | Database | MySQL via wpdb + custom tables |
@@ -19,32 +19,32 @@
 ## Plugin Structure
 
 ```
-xftc-membership/
-├── xftc-membership.php          # Main plugin file — bootstrap, hooks
+ts-membership/
+├── ts-membership.php          # Main plugin file — bootstrap, hooks
 ├── includes/
-│   ├── class-xftc-activator.php     # Activation — create DB tables
-│   ├── class-xftc-deactivator.php   # Deactivation cleanup
-│   ├── class-xftc-roles.php         # Custom user roles & capabilities
-│   ├── class-xftc-members.php       # Member CRUD
-│   ├── class-xftc-seasons.php       # Season management
-│   ├── class-xftc-registration.php  # Registration flow
-│   ├── class-xftc-travel.php        # Travel/bus/hotel management
-│   ├── class-xftc-meets.php         # Meet creation & management
-│   ├── class-xftc-results.php       # Result input & performance stats
-│   ├── class-xftc-payments.php      # Stripe/PayPal integration
-│   ├── class-xftc-payroll.php       # Staff payroll system
-│   ├── class-xftc-reports.php       # Reporting engine
-│   └── class-xftc-emails.php        # Transactional email system
+│   ├── class-ts-activator.php     # Activation — create DB tables
+│   ├── class-ts-deactivator.php   # Deactivation cleanup
+│   ├── class-ts-roles.php         # Custom user roles & capabilities
+│   ├── class-ts-members.php       # Member CRUD
+│   ├── class-ts-seasons.php       # Season management
+│   ├── class-ts-registration.php  # Registration flow
+│   ├── class-ts-travel.php        # Travel/bus/hotel management
+│   ├── class-ts-meets.php         # Meet creation & management
+│   ├── class-ts-results.php       # Result input & performance stats
+│   ├── class-ts-payments.php      # Stripe/PayPal integration
+│   ├── class-ts-payroll.php       # Staff payroll system
+│   ├── class-ts-reports.php       # Reporting engine
+│   └── class-ts-emails.php        # Transactional email system
 ├── admin/
-│   ├── class-xftc-admin.php         # Admin menu & dashboard
+│   ├── class-ts-admin.php         # Admin menu & dashboard
 │   ├── views/                        # Admin page templates
 │   └── assets/                       # Admin CSS/JS
 ├── public/
-│   ├── class-xftc-public.php        # Shortcodes, front-end hooks
+│   ├── class-ts-public.php        # Shortcodes, front-end hooks
 │   ├── views/                        # Front-end templates
 │   └── assets/                       # Public CSS/JS (Chart.js, etc.)
 ├── api/
-│   └── class-xftc-rest-api.php      # Custom REST endpoints
+│   └── class-ts-rest-api.php      # Custom REST endpoints
 └── languages/                        # i18n files
 ```
 
@@ -52,9 +52,9 @@ xftc-membership/
 
 ## Database Schema
 
-### wp_xftc_athletes
+### wp_ts_athletes
 ```sql
-CREATE TABLE wp_xftc_athletes (
+CREATE TABLE wp_ts_athletes (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   parent_id     BIGINT UNSIGNED NOT NULL,          -- FK: wp_users.ID
   first_name    VARCHAR(100) NOT NULL,
@@ -70,9 +70,9 @@ CREATE TABLE wp_xftc_athletes (
 );
 ```
 
-### wp_xftc_seasons
+### wp_ts_seasons
 ```sql
-CREATE TABLE wp_xftc_seasons (
+CREATE TABLE wp_ts_seasons (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name          VARCHAR(100) NOT NULL,             -- e.g. "2026 Outdoor"
   type          ENUM('indoor','outdoor','summer','fall'),
@@ -87,9 +87,9 @@ CREATE TABLE wp_xftc_seasons (
 );
 ```
 
-### wp_xftc_memberships
+### wp_ts_memberships
 ```sql
-CREATE TABLE wp_xftc_memberships (
+CREATE TABLE wp_ts_memberships (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   athlete_id    BIGINT UNSIGNED NOT NULL,
   season_id     BIGINT UNSIGNED NOT NULL,
@@ -103,9 +103,9 @@ CREATE TABLE wp_xftc_memberships (
 );
 ```
 
-### wp_xftc_meets
+### wp_ts_meets
 ```sql
-CREATE TABLE wp_xftc_meets (
+CREATE TABLE wp_ts_meets (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name          VARCHAR(200) NOT NULL,
   meet_date     DATE,
@@ -119,9 +119,9 @@ CREATE TABLE wp_xftc_meets (
 );
 ```
 
-### wp_xftc_meet_entries
+### wp_ts_meet_entries
 ```sql
-CREATE TABLE wp_xftc_meet_entries (
+CREATE TABLE wp_ts_meet_entries (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   meet_id       BIGINT UNSIGNED NOT NULL,
   athlete_id    BIGINT UNSIGNED NOT NULL,
@@ -132,9 +132,9 @@ CREATE TABLE wp_xftc_meet_entries (
 );
 ```
 
-### wp_xftc_results
+### wp_ts_results
 ```sql
-CREATE TABLE wp_xftc_results (
+CREATE TABLE wp_ts_results (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   meet_id       BIGINT UNSIGNED NOT NULL,
   athlete_id    BIGINT UNSIGNED NOT NULL,
@@ -149,9 +149,9 @@ CREATE TABLE wp_xftc_results (
 );
 ```
 
-### wp_xftc_travel
+### wp_ts_travel
 ```sql
-CREATE TABLE wp_xftc_travel (
+CREATE TABLE wp_ts_travel (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   meet_id       BIGINT UNSIGNED NOT NULL,
   athlete_id    BIGINT UNSIGNED NOT NULL,
@@ -165,9 +165,9 @@ CREATE TABLE wp_xftc_travel (
 );
 ```
 
-### wp_xftc_staff
+### wp_ts_staff
 ```sql
-CREATE TABLE wp_xftc_staff (
+CREATE TABLE wp_ts_staff (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id       BIGINT UNSIGNED NOT NULL,          -- FK: wp_users.ID
   role          VARCHAR(100),
@@ -178,9 +178,9 @@ CREATE TABLE wp_xftc_staff (
 );
 ```
 
-### wp_xftc_payroll
+### wp_ts_payroll
 ```sql
-CREATE TABLE wp_xftc_payroll (
+CREATE TABLE wp_ts_payroll (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   staff_id      BIGINT UNSIGNED NOT NULL,
   period_start  DATE,
@@ -196,9 +196,9 @@ CREATE TABLE wp_xftc_payroll (
 );
 ```
 
-### wp_xftc_payments
+### wp_ts_payments
 ```sql
-CREATE TABLE wp_xftc_payments (
+CREATE TABLE wp_ts_payments (
   id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id         BIGINT UNSIGNED NOT NULL,
   reference_type  ENUM('membership','travel','uniform','other'),
@@ -238,11 +238,11 @@ CREATE TABLE wp_xftc_payments (
 
 | WP Role | Slug | Capabilities |
 |---------|------|-------------|
-| Parent | xftc_parent | Register athletes, view own data, pay fees, register for meets/travel |
-| Athlete | xftc_athlete | View own stats, history, upcoming meets |
-| Coach | xftc_coach | Create meets, register athletes, enter results |
-| Admin | xftc_admin | Full access |
-| Staff | xftc_staff | Update hours, view pay history |
+| Parent | TRACKSUITE_parent | Register athletes, view own data, pay fees, register for meets/travel |
+| Athlete | TRACKSUITE_athlete | View own stats, history, upcoming meets |
+| Coach | TRACKSUITE_coach | Create meets, register athletes, enter results |
+| Admin | TRACKSUITE_admin | Full access |
+| Staff | TRACKSUITE_staff | Update hours, view pay history |
 
 ---
 
@@ -252,3 +252,4 @@ CREATE TABLE wp_xftc_payments (
 - WordPress 6.4+
 - SSL certificate (enforced)
 - Minimum 2GB RAM recommended for WooCommerce + custom plugin
+

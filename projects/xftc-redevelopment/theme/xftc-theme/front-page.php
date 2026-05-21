@@ -1,15 +1,15 @@
-<?php
+﻿<?php
 /**
  * Front Page Template
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 
-$hero_title    = get_theme_mod( 'xftc_hero_title',    'Train Hard. Run <em>Fast</em>. Win.' );
-$hero_subtitle = get_theme_mod( 'xftc_hero_subtitle', 'Xtreme Force Track Club — developing champion athletes and future leaders in Austin &amp; Pflugerville, TX.' );
-$hero_cta_text = get_theme_mod( 'xftc_hero_cta_text', 'Register for 2026' );
-$hero_cta_url  = get_theme_mod( 'xftc_hero_cta_url',  home_url( '/register' ) );
-$stats         = xftc_get_hero_stats();
+$hero_title    = get_theme_mod( 'TRACKSUITE_hero_title',    'Train Hard. Run <em>Fast</em>. Win.' );
+$hero_subtitle = get_theme_mod( 'TRACKSUITE_hero_subtitle', 'Xtreme Force Track Club — developing champion athletes and future leaders in Austin &amp; Pflugerville, TX.' );
+$hero_cta_text = get_theme_mod( 'TRACKSUITE_hero_cta_text', 'Register for 2026' );
+$hero_cta_url  = get_theme_mod( 'TRACKSUITE_hero_cta_url',  home_url( '/register' ) );
+$stats         = TRACKSUITE_get_hero_stats();
 ?>
 
 <!-- ═══ HERO ═══ -->
@@ -53,7 +53,7 @@ $stats         = xftc_get_hero_stats();
             <h2 class="section-header__title">Upcoming Meets</h2>
             <div class="section-header__divider"></div>
         </div>
-        <?php echo do_shortcode( '[xftc_meets limit="4" view="cards"]' ); ?>
+        <?php echo do_shortcode( '[TRACKSUITE_meets limit="4" view="cards"]' ); ?>
         <div class="text-center mt-3">
             <a href="<?php echo esc_url( home_url( '/schedule' ) ); ?>" class="btn btn--blue">Full Schedule →</a>
         </div>
@@ -65,10 +65,10 @@ $stats         = xftc_get_hero_stats();
     <div class="container">
         <div class="section-header">
             <p class="section-header__eyebrow">Performance</p>
-            <h2 class="section-header__title" style="color:var(--xftc-white)">Latest Results</h2>
+            <h2 class="section-header__title" style="color:var(--ts-white)">Latest Results</h2>
             <div class="section-header__divider"></div>
         </div>
-        <?php echo do_shortcode( '[xftc_results limit="5" highlight_pb="true"]' ); ?>
+        <?php echo do_shortcode( '[TRACKSUITE_results limit="5" highlight_pb="true"]' ); ?>
         <div class="text-center mt-3">
             <a href="<?php echo esc_url( home_url( '/results' ) ); ?>" class="btn btn--primary">All Results →</a>
         </div>
@@ -83,7 +83,7 @@ $stats         = xftc_get_hero_stats();
             <h2 class="section-header__title">Meet Our Athletes</h2>
             <div class="section-header__divider"></div>
         </div>
-        <?php echo do_shortcode( '[xftc_roster limit="8" view="cards" show_stats="true"]' ); ?>
+        <?php echo do_shortcode( '[TRACKSUITE_roster limit="8" view="cards" show_stats="true"]' ); ?>
         <div class="text-center mt-3">
             <a href="<?php echo esc_url( home_url( '/roster' ) ); ?>" class="btn btn--blue">Full Roster →</a>
         </div>
@@ -94,10 +94,10 @@ $stats         = xftc_get_hero_stats();
 <section class="section section--dark" style="padding-block:2rem;">
     <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
         <div>
-            <h2 style="font-family:var(--font-heading);font-size:2rem;color:var(--xftc-white);letter-spacing:.04em;">
-                Ready to Join <span style="color:var(--xftc-gold)">Xtreme Force?</span>
+            <h2 style="font-family:var(--font-heading);font-size:2rem;color:var(--ts-white);letter-spacing:.04em;">
+                Ready to Join <span style="color:var(--ts-gold)">Xtreme Force?</span>
             </h2>
-            <p style="color:var(--xftc-gray-300);font-size:.95rem;">
+            <p style="color:var(--ts-gray-300);font-size:.95rem;">
                 Open registration — ages 6–18. Competitive and development divisions available.
             </p>
         </div>
@@ -124,7 +124,7 @@ if ( ! empty( $recent_posts ) ) :
             <article class="card">
                 <?php if ( has_post_thumbnail() ) : ?>
                 <div class="card__image">
-                    <a href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'xftc-card' ); ?></a>
+                    <a href="<?php the_permalink(); ?>"><?php the_post_thumbnail( 'ts-card' ); ?></a>
                 </div>
                 <?php endif; ?>
                 <div class="card__body">
@@ -140,4 +140,5 @@ if ( ! empty( $recent_posts ) ) :
 </section>
 <?php endif; ?>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

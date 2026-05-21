@@ -1,4 +1,4 @@
-# Sprint 1 — Foundation & Core Plugin (Weeks 3–6)
+﻿# Sprint 1 — Foundation & Core Plugin (Weeks 3–6)
 
 ## Sprint Goal
 Deliver a working plugin scaffold with activated DB tables, custom user roles, parent-athlete registration, season creation, and basic admin dashboard.
@@ -6,21 +6,21 @@ Deliver a working plugin scaffold with activated DB tables, custom user roles, p
 ## Tasks
 
 ### 1. Plugin Scaffold
-- [ ] Create `xftc-membership.php` main plugin file with header, constants, autoloader
+- [ ] Create `ts-membership.php` main plugin file with header, constants, autoloader
 - [ ] Set up folder structure per ARCHITECTURE.md
 - [ ] Register activation/deactivation hooks
 - [ ] Create all DB tables on activation (wpdb->query with dbDelta)
 
 ### 2. Custom User Roles
-- [ ] Register 5 custom roles: xftc_parent, xftc_athlete, xftc_coach, xftc_admin, xftc_staff
+- [ ] Register 5 custom roles: TRACKSUITE_parent, TRACKSUITE_athlete, TRACKSUITE_coach, TRACKSUITE_admin, TRACKSUITE_staff
 - [ ] Assign capability sets per role
 - [ ] Add role management to WP Admin → Users
 
 ### 3. Parent Registration Flow
-- [ ] Custom registration page (shortcode: [xftc_register])
-- [ ] Parent creates account → WP user created (xftc_parent role)
+- [ ] Custom registration page (shortcode: [TRACKSUITE_register])
+- [ ] Parent creates account → WP user created (TRACKSUITE_parent role)
 - [ ] Parent can add multiple athlete sub-profiles
-- [ ] Athlete profiles saved to wp_xftc_athletes table
+- [ ] Athlete profiles saved to wp_ts_athletes table
 
 ### 4. Season Management (Admin)
 - [ ] Admin screen: create/edit seasons
@@ -37,7 +37,7 @@ Deliver a working plugin scaffold with activated DB tables, custom user roles, p
 - [ ] Athlete profile confirmation email
 
 ### 7. GitHub Push
-- [ ] All Sprint 1 code pushed to dpoly2/AgentHarness under projects/xftc-redevelopment/plugin/
+- [ ] All Sprint 1 code pushed to dpoly2/AgentHarness under projects/ts-redevelopment/plugin/
 
 ## Definition of Done
 - Plugin installs and activates without errors on xtremeforcetrackclub.org
@@ -48,3 +48,4 @@ Deliver a working plugin scaffold with activated DB tables, custom user roles, p
 
 ## Assignee
 wordpresspluginsagent
+

@@ -1,13 +1,13 @@
-<?php
+﻿<?php
 /**
  * Transactional email system for XFTC Membership.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Emails {
+class TRACKSUITE_Emails {
 
     /** @var string Club name from options. */
     private $club_name;
@@ -16,8 +16,8 @@ class XFTC_Emails {
     private $admin_email;
 
     public function __construct() {
-        $this->club_name   = get_option( 'xftc_club_name', 'Xtreme Force Track Club' );
-        $this->admin_email = get_option( 'xftc_admin_email', get_option( 'admin_email' ) );
+        $this->club_name   = get_option( 'TRACKSUITE_club_name', 'Xtreme Force Track Club' );
+        $this->admin_email = get_option( 'TRACKSUITE_admin_email', get_option( 'admin_email' ) );
     }
 
     /**
@@ -30,7 +30,7 @@ class XFTC_Emails {
         $first_name = get_user_meta( $user_id, 'first_name', true );
         $login_url  = wp_login_url( home_url( '/member-portal/' ) );
 
-        $subject = sprintf( __( 'Welcome to %s!', 'xftc-membership' ), $this->club_name );
+        $subject = sprintf( __( 'Welcome to %s!', 'ts-membership' ), $this->club_name );
 
         $message = $this->get_header( $subject );
         $message .= '<p>Hi ' . esc_html( $first_name ) . ',</p>';
@@ -44,13 +44,13 @@ class XFTC_Emails {
         $this->send( $user->user_email, $subject, $message );
 
         // Notify admin
-        $admin_subject = sprintf( __( 'New Parent Registration — %s', 'xftc-membership' ), $first_name . ' ' . get_user_meta( $user_id, 'last_name', true ) );
+        $admin_subject = sprintf( __( 'New Parent Registration — %s', 'ts-membership' ), $first_name . ' ' . get_user_meta( $user_id, 'last_name', true ) );
         $admin_message = $this->get_header( $admin_subject );
         $admin_message .= '<p>A new parent account was just registered:</p>';
         $admin_message .= '<ul>';
         $admin_message .= '<li><strong>Name:</strong> ' . esc_html( $first_name . ' ' . get_user_meta( $user_id, 'last_name', true ) ) . '</li>';
         $admin_message .= '<li><strong>Email:</strong> ' . esc_html( $user->user_email ) . '</li>';
-        $admin_message .= '<li><strong>Phone:</strong> ' . esc_html( get_user_meta( $user_id, 'xftc_phone', true ) ) . '</li>';
+        $admin_message .= '<li><strong>Phone:</strong> ' . esc_html( get_user_meta( $user_id, 'TRACKSUITE_phone', true ) ) . '</li>';
         $admin_message .= '</ul>';
         $admin_message .= $this->get_footer();
 
@@ -68,7 +68,7 @@ class XFTC_Emails {
         $user       = get_userdata( $user_id );
         $first_name = get_user_meta( $user_id, 'first_name', true );
 
-        $subject = sprintf( __( 'Payment Receipt — %s', 'xftc-membership' ), $this->club_name );
+        $subject = sprintf( __( 'Payment Receipt — %s', 'ts-membership' ), $this->club_name );
         $message = $this->get_header( $subject );
         $message .= '<p>Hi ' . esc_html( $first_name ) . ',</p>';
         $message .= '<p>We received your payment of <strong>$' . number_format( $amount, 2 ) . '</strong>. Thank you!</p>';
@@ -98,7 +98,7 @@ class XFTC_Emails {
         $first_name = get_user_meta( $user_id, 'first_name', true );
         $portal_url = home_url( '/member-portal/' );
 
-        $subject = sprintf( __( '%s Season Registration is Now Open!', 'xftc-membership' ), esc_html( $season_name ) );
+        $subject = sprintf( __( '%s Season Registration is Now Open!', 'ts-membership' ), esc_html( $season_name ) );
         $message = $this->get_header( $subject );
         $message .= '<p>Hi ' . esc_html( $first_name ) . ',</p>';
         $message .= '<p>Registration for the <strong>' . esc_html( $season_name ) . '</strong> season is now open!</p>';
@@ -144,3 +144,4 @@ class XFTC_Emails {
         </div></div></body></html>';
     }
 }
+

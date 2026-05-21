@@ -1,4 +1,4 @@
-# XFTC Redevelopment Project
+﻿# XFTC Redevelopment Project
 
 **Last Updated:** May 20, 2026
 **Status:** Sprint 2 Complete ✅ | Sprint 3 In Planning 🔜
@@ -18,12 +18,12 @@ Full redevelopment of the Xtreme Force Track Club web presence using a custom Wo
 
 | Component | Version | Status |
 |-----------|---------|--------|
-| `xftc-membership` plugin | v2.0.0 | ✅ Sprint 2 Complete |
-| `xftc-theme` | v1.0.0 | ✅ Deployed to staging |
+| `ts-membership` plugin | v2.0.0 | ✅ Sprint 2 Complete |
+| `ts-theme` | v1.0.0 | ✅ Deployed to staging |
 
 → See individual READMEs:
-- [Plugin README](plugin/xftc-membership/README.md)
-- [Theme README](theme/xftc-theme/README.md)
+- [Plugin README](plugin/ts-membership/README.md)
+- [Theme README](theme/ts-theme/README.md)
 
 ---
 
@@ -72,3 +72,4 @@ Full redevelopment of the Xtreme Force Track Club web presence using a custom Wo
 | [SPRINT-1.md](SPRINT-1.md) | Sprint 1 task log |
 | [SPRINT-2.md](SPRINT-2.md) | Sprint 2 task log |
 | [PROJECT.md](PROJECT.md) | Ongoing project notes |
+

@@ -1,32 +1,32 @@
-<?php defined( 'ABSPATH' ) || exit; ?>
-<div class="wrap xftc-admin-wrap">
-    <h1 class="xftc-page-title">
+﻿<?php defined( 'ABSPATH' ) || exit; ?>
+<div class="wrap ts-admin-wrap">
+    <h1 class="ts-page-title">
         <span class="dashicons dashicons-admin-users"></span>
-        <?php esc_html_e( 'Athletes', 'xftc-membership' ); ?>
+        <?php esc_html_e( 'Athletes', 'ts-membership' ); ?>
     </h1>
 
     <form method="get">
-        <input type="hidden" name="page" value="xftc-members">
+        <input type="hidden" name="page" value="ts-members">
         <p class="search-box">
-            <input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search athletes...', 'xftc-membership' ); ?>">
-            <button type="submit" class="button"><?php esc_html_e( 'Search', 'xftc-membership' ); ?></button>
+            <input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search athletes...', 'ts-membership' ); ?>">
+            <button type="submit" class="button"><?php esc_html_e( 'Search', 'ts-membership' ); ?></button>
         </p>
     </form>
 
     <?php if ( empty( $list ) ) : ?>
-        <p><?php esc_html_e( 'No athletes found.', 'xftc-membership' ); ?></p>
+        <p><?php esc_html_e( 'No athletes found.', 'ts-membership' ); ?></p>
     <?php else : ?>
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th><?php esc_html_e( 'ID', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Name', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'DOB', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Gender', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Team Level', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'School', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Emergency Contact', 'xftc-membership' ); ?></th>
-                <th><?php esc_html_e( 'Registered', 'xftc-membership' ); ?></th>
+                <th><?php esc_html_e( 'ID', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Name', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'DOB', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Gender', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Team Level', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'School', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Emergency Contact', 'ts-membership' ); ?></th>
+                <th><?php esc_html_e( 'Registered', 'ts-membership' ); ?></th>
             </tr>
         </thead>
         <tbody>
@@ -46,3 +46,4 @@
     </table>
     <?php endif; ?>
 </div>
+

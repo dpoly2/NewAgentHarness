@@ -1,16 +1,16 @@
-{
+﻿{
     "$schema": "https://schemas.wp.org/trunk/theme.json",
     "version": 2,
     "settings": {
         "color": {
             "palette": [
-                { "slug": "xftc-gold",       "color": "#F5A623", "name": "XFTC Gold" },
-                { "slug": "xftc-gold-dark",  "color": "#D4880A", "name": "XFTC Gold Dark" },
-                { "slug": "xftc-black",      "color": "#111111", "name": "XFTC Black" },
-                { "slug": "xftc-dark",       "color": "#1A1A2E", "name": "XFTC Dark" },
-                { "slug": "xftc-blue",       "color": "#0F3460", "name": "XFTC Blue" },
-                { "slug": "xftc-white",      "color": "#FFFFFF", "name": "XFTC White" },
-                { "slug": "xftc-gray",       "color": "#F8F9FA", "name": "XFTC Gray" }
+                { "slug": "ts-gold",       "color": "#F5A623", "name": "XFTC Gold" },
+                { "slug": "ts-gold-dark",  "color": "#D4880A", "name": "XFTC Gold Dark" },
+                { "slug": "ts-black",      "color": "#111111", "name": "XFTC Black" },
+                { "slug": "ts-dark",       "color": "#1A1A2E", "name": "XFTC Dark" },
+                { "slug": "ts-blue",       "color": "#0F3460", "name": "XFTC Blue" },
+                { "slug": "ts-white",      "color": "#FFFFFF", "name": "XFTC White" },
+                { "slug": "ts-gray",       "color": "#F8F9FA", "name": "XFTC Gray" }
             ]
         },
         "typography": {
@@ -72,3 +72,4 @@
         }
     }
 }
+

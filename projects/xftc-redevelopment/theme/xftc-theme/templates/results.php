@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Template Name: Results & Records
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 ?>
 
 <div class="portal-header">
@@ -25,20 +25,21 @@ xftc_partial( 'header' );
 
         <!-- Results tab -->
         <div class="tab-panel" id="tab-results">
-            <?php echo do_shortcode( '[xftc_results view="table" show_filters="true" highlight_pb="true" highlight_cr="true"]' ); ?>
+            <?php echo do_shortcode( '[TRACKSUITE_results view="table" show_filters="true" highlight_pb="true" highlight_cr="true"]' ); ?>
         </div>
 
         <!-- Records tab -->
         <div class="tab-panel" id="tab-records" style="display:none;">
-            <?php echo do_shortcode( '[xftc_club_records]' ); ?>
+            <?php echo do_shortcode( '[TRACKSUITE_club_records]' ); ?>
         </div>
 
         <!-- Leaderboard tab -->
         <div class="tab-panel" id="tab-leaderboard" style="display:none;">
-            <?php echo do_shortcode( '[xftc_leaderboard season="current" limit="20"]' ); ?>
+            <?php echo do_shortcode( '[TRACKSUITE_leaderboard season="current" limit="20"]' ); ?>
         </div>
 
     </div>
 </section>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

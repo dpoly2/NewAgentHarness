@@ -1,13 +1,13 @@
-<?php
+﻿<?php
 /**
  * Admin panel — registers WP Admin menus, pages, and assets.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Admin {
+class TRACKSUITE_Admin {
 
     public function init() {
         add_action( 'admin_menu',            [ $this, 'register_menus' ] );
@@ -20,10 +20,10 @@ class XFTC_Admin {
     public function register_menus() {
         // Top-level menu
         add_menu_page(
-            __( 'Xtreme Force', 'xftc-membership' ),
-            __( 'Xtreme Force', 'xftc-membership' ),
-            'xftc_manage_members',
-            'xftc-dashboard',
+            __( 'Xtreme Force', 'ts-membership' ),
+            __( 'Xtreme Force', 'ts-membership' ),
+            'TRACKSUITE_manage_members',
+            'ts-dashboard',
             [ $this, 'page_dashboard' ],
             'dashicons-groups',
             30
@@ -31,81 +31,81 @@ class XFTC_Admin {
 
         // Dashboard (same as top-level)
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Dashboard', 'xftc-membership' ),
-            __( 'Dashboard', 'xftc-membership' ),
-            'xftc_manage_members',
-            'xftc-dashboard',
+            'ts-dashboard',
+            __( 'Dashboard', 'ts-membership' ),
+            __( 'Dashboard', 'ts-membership' ),
+            'TRACKSUITE_manage_members',
+            'ts-dashboard',
             [ $this, 'page_dashboard' ]
         );
 
         // Members
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Members', 'xftc-membership' ),
-            __( 'Members', 'xftc-membership' ),
-            'xftc_manage_members',
-            'xftc-members',
+            'ts-dashboard',
+            __( 'Members', 'ts-membership' ),
+            __( 'Members', 'ts-membership' ),
+            'TRACKSUITE_manage_members',
+            'ts-members',
             [ $this, 'page_members' ]
         );
 
         // Seasons
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Seasons', 'xftc-membership' ),
-            __( 'Seasons', 'xftc-membership' ),
-            'xftc_manage_seasons',
-            'xftc-seasons',
+            'ts-dashboard',
+            __( 'Seasons', 'ts-membership' ),
+            __( 'Seasons', 'ts-membership' ),
+            'TRACKSUITE_manage_seasons',
+            'ts-seasons',
             [ $this, 'page_seasons' ]
         );
 
         // Meets
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Meets', 'xftc-membership' ),
-            __( 'Meets', 'xftc-membership' ),
-            'xftc_manage_meets',
-            'xftc-meets',
+            'ts-dashboard',
+            __( 'Meets', 'ts-membership' ),
+            __( 'Meets', 'ts-membership' ),
+            'TRACKSUITE_manage_meets',
+            'ts-meets',
             [ $this, 'page_meets' ]
         );
 
         // Travel
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Travel', 'xftc-membership' ),
-            __( 'Travel', 'xftc-membership' ),
-            'xftc_manage_travel',
-            'xftc-travel',
+            'ts-dashboard',
+            __( 'Travel', 'ts-membership' ),
+            __( 'Travel', 'ts-membership' ),
+            'TRACKSUITE_manage_travel',
+            'ts-travel',
             [ $this, 'page_travel' ]
         );
 
         // Payroll
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Payroll', 'xftc-membership' ),
-            __( 'Payroll', 'xftc-membership' ),
-            'xftc_manage_payroll',
-            'xftc-payroll',
+            'ts-dashboard',
+            __( 'Payroll', 'ts-membership' ),
+            __( 'Payroll', 'ts-membership' ),
+            'TRACKSUITE_manage_payroll',
+            'ts-payroll',
             [ $this, 'page_payroll' ]
         );
 
         // Reports
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Reports', 'xftc-membership' ),
-            __( 'Reports', 'xftc-membership' ),
-            'xftc_view_reports',
-            'xftc-reports',
+            'ts-dashboard',
+            __( 'Reports', 'ts-membership' ),
+            __( 'Reports', 'ts-membership' ),
+            'TRACKSUITE_view_reports',
+            'ts-reports',
             [ $this, 'page_reports' ]
         );
 
         // Settings
         add_submenu_page(
-            'xftc-dashboard',
-            __( 'Settings', 'xftc-membership' ),
-            __( 'Settings', 'xftc-membership' ),
-            'xftc_manage_settings',
-            'xftc-settings',
+            'ts-dashboard',
+            __( 'Settings', 'ts-membership' ),
+            __( 'Settings', 'ts-membership' ),
+            'TRACKSUITE_manage_settings',
+            'ts-settings',
             [ $this, 'page_settings' ]
         );
     }
@@ -116,76 +116,77 @@ class XFTC_Admin {
      * @param string $hook Current admin page hook.
      */
     public function enqueue_assets( string $hook ) {
-        if ( strpos( $hook, 'xftc-' ) === false ) {
+        if ( strpos( $hook, 'ts-' ) === false ) {
             return;
         }
         wp_enqueue_style(
-            'xftc-admin',
-            XFTC_PLUGIN_URL . 'admin/assets/admin.css',
+            'ts-admin',
+            TRACKSUITE_PLUGIN_URL . 'admin/assets/admin.css',
             [],
-            XFTC_VERSION
+            TRACKSUITE_VERSION
         );
         wp_enqueue_script(
-            'xftc-admin',
-            XFTC_PLUGIN_URL . 'admin/assets/admin.js',
+            'ts-admin',
+            TRACKSUITE_PLUGIN_URL . 'admin/assets/admin.js',
             [ 'jquery' ],
-            XFTC_VERSION,
+            TRACKSUITE_VERSION,
             true
         );
-        wp_localize_script( 'xftc-admin', 'xftcAdmin', [
+        wp_localize_script( 'ts-admin', 'xftcAdmin', [
             'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-            'nonce'   => wp_create_nonce( 'xftc_admin_nonce' ),
+            'nonce'   => wp_create_nonce( 'TRACKSUITE_admin_nonce' ),
         ] );
     }
 
     // ── Page Renderers ────────────────────────────────────────────────────────
 
     public function page_dashboard() {
-        $members  = new XFTC_Members();
-        $seasons  = new XFTC_Seasons();
+        $members  = new TRACKSUITE_Members();
+        $seasons  = new TRACKSUITE_Seasons();
         $total    = $members->count();
         $active   = $seasons->get_active();
-        include XFTC_PLUGIN_DIR . 'admin/views/dashboard.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/dashboard.php';
     }
 
     public function page_members() {
-        $members = new XFTC_Members();
+        $members = new TRACKSUITE_Members();
         $search  = sanitize_text_field( $_GET['s'] ?? '' );
         $list    = $members->get_all( [ 'search' => $search, 'limit' => 50 ] );
-        include XFTC_PLUGIN_DIR . 'admin/views/members.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/members.php';
     }
 
     public function page_seasons() {
-        $seasons = new XFTC_Seasons();
+        $seasons = new TRACKSUITE_Seasons();
         $list    = $seasons->get_all();
-        include XFTC_PLUGIN_DIR . 'admin/views/seasons.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/seasons.php';
     }
 
     public function page_meets() {
-        include XFTC_PLUGIN_DIR . 'admin/views/meets.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/meets.php';
     }
 
     public function page_travel() {
-        include XFTC_PLUGIN_DIR . 'admin/views/travel.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/travel.php';
     }
 
     public function page_payroll() {
-        include XFTC_PLUGIN_DIR . 'admin/views/payroll.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/payroll.php';
     }
 
     public function page_reports() {
-        include XFTC_PLUGIN_DIR . 'admin/views/reports.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/reports.php';
     }
 
     public function page_settings() {
-        if ( isset( $_POST['xftc_save_settings'] ) && check_admin_referer( 'xftc_settings_nonce' ) ) {
-            update_option( 'xftc_club_name',         sanitize_text_field( $_POST['xftc_club_name'] ?? '' ) );
-            update_option( 'xftc_admin_email',       sanitize_email( $_POST['xftc_admin_email'] ?? '' ) );
-            update_option( 'xftc_stripe_mode',       sanitize_text_field( $_POST['xftc_stripe_mode'] ?? 'test' ) );
-            update_option( 'xftc_stripe_public_key', sanitize_text_field( $_POST['xftc_stripe_public_key'] ?? '' ) );
-            update_option( 'xftc_stripe_secret_key', sanitize_text_field( $_POST['xftc_stripe_secret_key'] ?? '' ) );
-            add_settings_error( 'xftc_settings', 'saved', __( 'Settings saved.', 'xftc-membership' ), 'success' );
+        if ( isset( $_POST['TRACKSUITE_save_settings'] ) && check_admin_referer( 'TRACKSUITE_settings_nonce' ) ) {
+            update_option( 'TRACKSUITE_club_name',         sanitize_text_field( $_POST['TRACKSUITE_club_name'] ?? '' ) );
+            update_option( 'TRACKSUITE_admin_email',       sanitize_email( $_POST['TRACKSUITE_admin_email'] ?? '' ) );
+            update_option( 'TRACKSUITE_stripe_mode',       sanitize_text_field( $_POST['TRACKSUITE_stripe_mode'] ?? 'test' ) );
+            update_option( 'TRACKSUITE_stripe_public_key', sanitize_text_field( $_POST['TRACKSUITE_stripe_public_key'] ?? '' ) );
+            update_option( 'TRACKSUITE_stripe_secret_key', sanitize_text_field( $_POST['TRACKSUITE_stripe_secret_key'] ?? '' ) );
+            add_settings_error( 'TRACKSUITE_settings', 'saved', __( 'Settings saved.', 'ts-membership' ), 'success' );
         }
-        include XFTC_PLUGIN_DIR . 'admin/views/settings.php';
+        include TRACKSUITE_PLUGIN_DIR . 'admin/views/settings.php';
     }
 }
+

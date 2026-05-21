@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * Template Name: Athlete Roster
- * @package XFTC_Theme
+ * @package TRACKSUITE_Theme
  */
-xftc_partial( 'header' );
+TRACKSUITE_partial( 'header' );
 ?>
 
 <div class="portal-header">
@@ -24,9 +24,10 @@ xftc_partial( 'header' );
             <button class="schedule-filter-btn" data-filter="senior">Senior (15–18)</button>
         </div>
 
-        <?php echo do_shortcode( '[xftc_roster view="cards" show_stats="true" show_events="true"]' ); ?>
+        <?php echo do_shortcode( '[TRACKSUITE_roster view="cards" show_stats="true" show_events="true"]' ); ?>
 
     </div>
 </section>
 
-<?php xftc_partial( 'footer' ); ?>
+<?php TRACKSUITE_partial( 'footer' ); ?>
+

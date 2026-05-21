@@ -1,17 +1,17 @@
-<?php
+﻿<?php
 /**
  * Admin View — Meet Management
  * WP Admin → Xtreme Force → Meets
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  * @since   0.2.0
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$meets_mgr = new XFTC_Meets();
+$meets_mgr = new TRACKSUITE_Meets();
 
 // Handle form actions
-if ( isset( $_POST['xftc_meets_nonce'] ) && wp_verify_nonce( $_POST['xftc_meets_nonce'], 'xftc_save_meet' ) ) {
+if ( isset( $_POST['TRACKSUITE_meets_nonce'] ) && wp_verify_nonce( $_POST['TRACKSUITE_meets_nonce'], 'TRACKSUITE_save_meet' ) ) {
     $action = sanitize_key( $_POST['action_type'] ?? 'create' );
     if ( $action === 'create' ) {
         $meets_mgr->create_meet( $_POST );
@@ -22,7 +22,7 @@ if ( isset( $_POST['xftc_meets_nonce'] ) && wp_verify_nonce( $_POST['xftc_meets_
     }
 }
 if ( isset( $_GET['status_update'] ) && isset( $_GET['meet_id'] ) ) {
-    if ( check_admin_referer( 'xftc_meet_status' ) ) {
+    if ( check_admin_referer( 'TRACKSUITE_meet_status' ) ) {
         $meets_mgr->update_status( (int) $_GET['meet_id'], sanitize_key( $_GET['status_update'] ) );
     }
 }
@@ -34,9 +34,9 @@ $meets     = $meets_mgr->get_all_meets();
 $edit_meet = ! empty( $_GET['edit_id'] ) ? $meets_mgr->get_meet( (int) $_GET['edit_id'] ) : null;
 ?>
 
-<div class="wrap xftc-admin-meets">
+<div class="wrap ts-admin-meets">
     <h1>🏟️ Meet Management
-        <a href="#xftc-meet-form" class="page-title-action">+ Add Meet</a>
+        <a href="#ts-meet-form" class="page-title-action">+ Add Meet</a>
     </h1>
 
     <!-- Meet List -->
@@ -57,24 +57,24 @@ $edit_meet = ! empty( $_GET['edit_id'] ) ? $meets_mgr->get_meet( (int) $_GET['ed
                 <td><?php echo esc_html( $m['location'] ); ?></td>
                 <td><?php echo esc_html( ucfirst( $m['type'] ) ); ?></td>
                 <td><?php echo esc_html( implode( ', ', (array) $m['categories'] ) ); ?></td>
-                <td><span class="xftc-status xftc-status-<?php echo esc_attr( $m['status'] ); ?>"><?php echo esc_html( ucfirst( $m['status'] ) ); ?></span></td>
+                <td><span class="ts-status ts-status-<?php echo esc_attr( $m['status'] ); ?>"><?php echo esc_html( ucfirst( $m['status'] ) ); ?></span></td>
                 <td>
-                    <a href="?page=xftc-meets&edit_id=<?php echo $m['id']; ?>">Edit</a> |
-                    <a href="?page=xftc-meets&meet_id=<?php echo $m['id']; ?>&status_update=active&<?php echo wp_create_nonce( 'xftc_meet_status' ); ?>">Activate</a> |
-                    <a href="?page=xftc-meets&meet_id=<?php echo $m['id']; ?>&status_update=completed&<?php echo wp_create_nonce( 'xftc_meet_status' ); ?>">Complete</a> |
-                    <a href="?page=xftc-meets&export_roster=<?php echo $m['id']; ?>">Export Roster</a>
+                    <a href="?page=ts-meets&edit_id=<?php echo $m['id']; ?>">Edit</a> |
+                    <a href="?page=ts-meets&meet_id=<?php echo $m['id']; ?>&status_update=active&<?php echo wp_create_nonce( 'TRACKSUITE_meet_status' ); ?>">Activate</a> |
+                    <a href="?page=ts-meets&meet_id=<?php echo $m['id']; ?>&status_update=completed&<?php echo wp_create_nonce( 'TRACKSUITE_meet_status' ); ?>">Complete</a> |
+                    <a href="?page=ts-meets&export_roster=<?php echo $m['id']; ?>">Export Roster</a>
                 </td>
             </tr>
         <?php endforeach; endif; ?>
         </tbody>
     </table>
 
-    <hr id="xftc-meet-form">
+    <hr id="ts-meet-form">
 
     <!-- Create / Edit Form -->
     <h2><?php echo $edit_meet ? 'Edit Meet' : 'Add New Meet'; ?></h2>
     <form method="post">
-        <?php wp_nonce_field( 'xftc_save_meet', 'xftc_meets_nonce' ); ?>
+        <?php wp_nonce_field( 'TRACKSUITE_save_meet', 'TRACKSUITE_meets_nonce' ); ?>
         <input type="hidden" name="action_type" value="<?php echo $edit_meet ? 'update' : 'create'; ?>">
         <?php if ( $edit_meet ) : ?>
             <input type="hidden" name="meet_id" value="<?php echo $edit_meet['id']; ?>">
@@ -125,3 +125,4 @@ $edit_meet = ! empty( $_GET['edit_id'] ) ? $meets_mgr->get_meet( (int) $_GET['ed
         <?php submit_button( $edit_meet ? 'Update Meet' : 'Create Meet' ); ?>
     </form>
 </div>
+

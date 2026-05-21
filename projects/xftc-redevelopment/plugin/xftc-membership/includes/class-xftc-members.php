@@ -1,20 +1,20 @@
-<?php
+﻿<?php
 /**
  * Handles all athlete member CRUD operations.
  *
- * @package XFTC_Membership
+ * @package TRACKSUITE_Membership
  */
 
 defined( 'ABSPATH' ) || exit;
 
-class XFTC_Members {
+class TRACKSUITE_Members {
 
     /** @var string DB table name */
     private $table;
 
     public function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'xftc_athletes';
+        $this->table = $wpdb->prefix . 'TRACKSUITE_athletes';
     }
 
     /**
@@ -37,7 +37,7 @@ class XFTC_Members {
         global $wpdb;
 
         if ( empty( $data['parent_id'] ) || empty( $data['first_name'] ) || empty( $data['last_name'] ) ) {
-            return new WP_Error( 'missing_fields', __( 'parent_id, first_name, and last_name are required.', 'xftc-membership' ) );
+            return new WP_Error( 'missing_fields', __( 'parent_id, first_name, and last_name are required.', 'ts-membership' ) );
         }
 
         $insert = [
@@ -167,3 +167,4 @@ class XFTC_Members {
         return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$this->table}" );
     }
 }
+
