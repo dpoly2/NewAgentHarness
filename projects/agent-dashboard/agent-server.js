@@ -1418,39 +1418,45 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && req.url === '/ai-config/test'){
-    ;(async () => {
-      if (!aiConfig.enabled || !aiConfig.baseUrl || !aiConfig.model) {
-        res.writeHead(200, {'Content-Type':'application/json'})
-        return res.end(JSON.stringify({ ok: false, message: 'AI backend is disabled or not configured.' }))
-      }
-      try {
-        const testRes = await fetch(`${aiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(aiConfig.apiKey ? { 'Authorization': `Bearer ${aiConfig.apiKey}` } : {})
-          },
-          body: JSON.stringify({
-            model: aiConfig.model,
-            messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
-            max_tokens: 10
-          }),
-          signal: AbortSignal.timeout(15000)
-        })
-        if (!testRes.ok) {
-          const text = await testRes.text()
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      ;(async () => {
+        let testCfg = aiConfig
+        try { const parsed = JSON.parse(body || '{}'); if (parsed.baseUrl) testCfg = { ...aiConfig, ...parsed } } catch (e) {}
+        if (!testCfg.baseUrl || !testCfg.model) {
           res.writeHead(200, {'Content-Type':'application/json'})
-          return res.end(JSON.stringify({ ok: false, message: `AI API returned HTTP ${testRes.status}: ${String(text).slice(0, 200)}` }))
+          return res.end(JSON.stringify({ ok: false, message: 'Base URL and model are required.' }))
         }
-        const data = await testRes.json()
-        const reply = data.choices?.[0]?.message?.content || '(no response)'
-        res.writeHead(200, {'Content-Type':'application/json'})
-        res.end(JSON.stringify({ ok: true, message: `Connection successful. Model replied: "${reply.trim()}"` }))
-      } catch (e) {
-        res.writeHead(200, {'Content-Type':'application/json'})
-        res.end(JSON.stringify({ ok: false, message: `Connection failed: ${e.message}` }))
-      }
-    })()
+        try {
+          const testRes = await fetch(`${testCfg.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(testCfg.apiKey && !testCfg.apiKey.startsWith('****') ? { 'Authorization': `Bearer ${testCfg.apiKey}` } : {})
+            },
+            body: JSON.stringify({
+              model: testCfg.model,
+              messages: [{ role: 'user', content: 'Reply with the single word: ready' }],
+              max_tokens: 10
+            }),
+            signal: AbortSignal.timeout(15000)
+          })
+          if (!testRes.ok) {
+            const text = await testRes.text()
+            res.writeHead(200, {'Content-Type':'application/json'})
+            return res.end(JSON.stringify({ ok: false, message: `AI API returned HTTP ${testRes.status}: ${String(text).slice(0, 200)}` }))
+          }
+          const data = await testRes.json()
+          const reply = data.choices?.[0]?.message?.content || '(no response)'
+          res.writeHead(200, {'Content-Type':'application/json'})
+          res.end(JSON.stringify({ ok: true, message: `Connection successful. Model replied: "${reply.trim()}"` }))
+        } catch (e) {
+          res.writeHead(200, {'Content-Type':'application/json'})
+          res.end(JSON.stringify({ ok: false, message: `Connection failed: ${e.message}` }))
+        }
+      })()
+    })
     return
   }
 

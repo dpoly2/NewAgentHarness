@@ -51,6 +51,7 @@ export default function App(){
   })
   const [aiTestResult, setAiTestResult] = useState(null)
   const chatRef = useRef(null)
+  const aiDraftInitialized = useRef(false)
   const [chatMessages, setChatMessages] = useState([
     { from: 'AgentMajesty', text: 'I am AgentMajesty. Give me a task, ask for status, or use a suggested prompt and I will coordinate the queue.' }
   ])
@@ -127,7 +128,10 @@ export default function App(){
           const aiData = await window.electron.invoke('read-ai-config')
           if (mounted && aiData?.config) {
             setAiConfig(aiData.config)
-            setAiConfigDraft(d => ({ ...d, ...aiData.config }))
+            if (!aiDraftInitialized.current) {
+              aiDraftInitialized.current = true
+              setAiConfigDraft(d => ({ ...d, ...aiData.config }))
+            }
           }
         }
       } catch (e) {

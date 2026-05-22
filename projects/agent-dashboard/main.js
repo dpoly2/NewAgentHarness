@@ -599,11 +599,85 @@ async function runPublicResearchAdapter(task, agent) {
 }
 
 async function runAdaptersForTask(task, agent, projects, connectors) {
-  return [
+  const contextAdapters = [
     runProjectFileAdapter(task, projects),
     await runPublicResearchAdapter(task, agent),
     runConnectorAdapter(task, connectors)
   ]
+  contextAdapters.push(await runLlmAdapter(task, agent, contextAdapters))
+  return contextAdapters
+}
+
+async function runLlmAdapter(task, agent, contextAdapters) {
+  const aiConfig = readAiConfigFile()
+  if (!aiConfig.enabled || !aiConfig.baseUrl || !aiConfig.model) {
+    return {
+      name: 'llm-adapter', status: 'skipped',
+      summary: 'AI backend not configured. Go to the AI Settings tab to enable it.',
+      data: {},
+      nextActions: ['Open the AI Settings tab and configure a provider (Ollama, OpenAI, or GitHub Models).']
+    }
+  }
+  const fs = require('fs')
+  const AGENTS_DIR = path.join(__dirname, '..', '..', 'agents')
+  let agentProfiles = {}
+  try {
+    if (fs.existsSync(AGENTS_DIR)) {
+      for (const file of fs.readdirSync(AGENTS_DIR).filter(f => f.endsWith('.md'))) {
+        try { agentProfiles[path.basename(file, '.md').toLowerCase()] = fs.readFileSync(path.join(AGENTS_DIR, file), 'utf8') } catch (e) {}
+      }
+    }
+  } catch (e) {}
+  const name = String(agent.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+  let profileMd = null
+  for (const [key, text] of Object.entries(agentProfiles)) {
+    const cleanKey = key.replace(/[^a-z0-9]/g, '')
+    if (cleanKey === name || name.includes(cleanKey) || cleanKey.includes(name)) { profileMd = text; break }
+  }
+  let profile = {}
+  try { profile = readJsonFile('profile.json', {}) } catch (e) {}
+  let systemPrompt = profileMd || `You are ${agent.name}, a specialized AI agent.\nRole: ${agent.role || 'Specialized agent'}.`
+  systemPrompt += `\n\n---\nOperator context:\n- Name: ${profile.name || 'David'}, ${profile.role || 'Director of Communications'}\n- Priorities: ${profile.priorities || 'not set'}\n- Communication style: ${profile.communicationStyle || 'Concise, direct, action-oriented'}\n- Approval rules: ${profile.approvalRules || 'Ask before external actions'}\n`
+  const recentMemory = Array.isArray(profile.memory) ? profile.memory.slice(0, 5) : []
+  if (recentMemory.length) systemPrompt += `- Recent memory: ${recentMemory.map(m => m.text).join('; ')}\n`
+  systemPrompt += '\nBe concise and direct. Return structured, actionable output. Never act on external systems without explicit operator approval.'
+  let userMessage = `Task: ${task.description || task.title}\n`
+  for (const result of (contextAdapters || [])) {
+    if (result.status === 'skipped' || result.status === 'needs-configuration') continue
+    if (result.name === 'public-research-adapter' && result.data?.sources?.length) {
+      userMessage += `\nResearch context (${result.data.sources.length} public sources):\n`
+      for (const s of result.data.sources.slice(0, 5)) userMessage += `- ${s.title}: ${String(s.snippet || '').slice(0, 200)}\n  Source: ${s.url}\n`
+    }
+    if (result.name === 'project-file-adapter' && result.data?.projectName) {
+      userMessage += `\nProject context: ${result.data.projectName} (${result.data.filesConsidered} files)\n`
+    }
+  }
+  userMessage += '\nPlease complete this task. Be direct and actionable.'
+  try {
+    const res = await fetch(`${aiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(aiConfig.apiKey ? { 'Authorization': `Bearer ${aiConfig.apiKey}` } : {}) },
+      body: JSON.stringify({ model: aiConfig.model, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }], max_tokens: 1500, temperature: 0.7 }),
+      signal: AbortSignal.timeout(60000)
+    })
+    if (!res.ok) { const text = await res.text(); throw new Error(`HTTP ${res.status}: ${String(text).slice(0, 200)}`) }
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content || ''
+    return {
+      name: 'llm-adapter', status: 'completed',
+      summary: `${agent.name} generated a response via ${aiConfig.provider || 'AI'} (${aiConfig.model}).`,
+      data: { provider: aiConfig.provider, model: aiConfig.model, response: content, usedProfileMarkdown: Boolean(profileMd), tokensUsed: data.usage?.total_tokens || null },
+      nextActions: ['Review the AI response. Approve any follow-up action before executing externally.']
+    }
+  } catch (e) {
+    console.error('LLM adapter error:', e.message)
+    return {
+      name: 'llm-adapter', status: 'error',
+      summary: `AI request failed: ${e.message}`,
+      data: { error: e.message },
+      nextActions: ['Check AI Settings — verify the base URL, model name, and API key are correct.']
+    }
+  }
 }
 
 function messagePartsToText(parts) {
@@ -880,7 +954,9 @@ async function executeTaskRecord(taskId, agents, tasks, issues, projects = [], c
     `${now} - Execution completed.`
   ])
   task.responseData = buildTaskResponse(task, agent, linkedIssues, learning, issues, adapterResults)
-  task.result = task.responseData.summary
+  const llmResult = adapterResults.find(r => r.name === 'llm-adapter')
+  const aiResponse = llmResult && llmResult.status === 'completed' ? llmResult.data?.response : null
+  task.result = aiResponse || task.responseData.summary
   agent.status = 'idle'
   agent.progress = 100
   agent.logs = (agent.logs || []).concat([
@@ -1535,12 +1611,16 @@ ipcMain.handle('save-ai-config', async (event, update) => {
 
 ipcMain.handle('test-ai-config', async (event, testConfig) => {
   try {
-    const res = await fetch(`${AGENT_RUNTIME_URL}/ai-config/test`, { method: 'POST' })
+    const res = await fetch(`${AGENT_RUNTIME_URL}/ai-config/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testConfig || {})
+    })
     if (res.ok) return await res.json()
   } catch (e) { /* fallback to local test */ }
   const cfg = testConfig || readAiConfigFile()
-  if (!cfg.enabled || !cfg.baseUrl || !cfg.model) {
-    return { ok: false, message: 'AI backend is disabled or not configured.' }
+  if (!cfg.baseUrl || !cfg.model) {
+    return { ok: false, message: 'Base URL and model are required to test the connection.' }
   }
   try {
     const testRes = await fetch(`${cfg.baseUrl.replace(/\/$/, '')}/chat/completions`, {
