@@ -1,4 +1,9 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+
+function statusLabel(s) {
+  const map = { queued: 'Queued', running: 'Running', completed: 'Done', 'completed-with-issues': 'Has Issues', 'needs-agent': 'Needs Agent', idle: 'Idle', error: 'Error', ready: 'Ready' }
+  return map[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : '—')
+}
 
 export default function App(){
   const [agents, setAgents] = useState([])
@@ -45,6 +50,7 @@ export default function App(){
     provider: 'ollama', baseUrl: 'http://localhost:11434/v1', apiKey: '', model: 'llama3.2', enabled: false
   })
   const [aiTestResult, setAiTestResult] = useState(null)
+  const chatRef = useRef(null)
   const [chatMessages, setChatMessages] = useState([
     { from: 'AgentMajesty', text: 'I am AgentMajesty. Give me a task, ask for status, or use a suggested prompt and I will coordinate the queue.' }
   ])
@@ -141,6 +147,10 @@ export default function App(){
     }
     return () => { mounted = false; clearInterval(t) }
   }, [])
+
+  useEffect(() => {
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
+  }, [chatMessages])
 
   const selAgent = (Array.isArray(agents) ? agents.find(a => a.id === selected) : null) || (Array.isArray(agents) ? agents[0] : null)
   const selAgentIssues = selAgent ? openIssues.filter(issue => issue.agentId === selAgent.id) : []
@@ -580,13 +590,19 @@ export default function App(){
   return (
     <div className="app">
       <aside className="sidebar">
-        <h2>Agents</h2>
+        <div className="sidebar-brand">
+          <strong>Agent Harness</strong>
+          <small>v1</small>
+        </div>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 8px' }}>Agents</h2>
         <ul>
           {agents.map(a => (
-            <li key={a.id} onClick={() => setSelected(a.id)} style={{ cursor: 'pointer', padding: 6, background: a.id === selected ? '#374151' : 'transparent' }}>
-              <strong>{a.name}</strong>
-              <br />
-              <small>{a.status} — {a.progress}%</small>
+            <li key={a.id} onClick={() => setSelected(a.id)} className={`agent-item${a.id === selected ? ' selected' : ''}`}>
+              <div className="agent-item-row">
+                <span className={`status-dot dot-${a.status || 'idle'}`}></span>
+                <strong style={{ fontSize: 13 }}>{a.name}</strong>
+              </div>
+              <small className="agent-item-meta">{a.role || statusLabel(a.status)} · {a.progress ?? 0}%</small>
               {openIssues.filter(issue => issue.agentId === a.id).length > 0 && (
                 <span className="sidebar-alert">{openIssues.filter(issue => issue.agentId === a.id).length} issue(s)</span>
               )}
@@ -595,18 +611,20 @@ export default function App(){
         </ul>
         <button className="full-button" onClick={() => { if (window.electron && window.electron.getAgents) { const m = window.electron.getAgents(); if (m && typeof m.then === 'function') { m.then(d => setAgents(d||[])) } else { setAgents(m||[]) } } }}>Refresh</button>
 
-        <form className="add-agent" onSubmit={addAgent}>
-          <h3>Add agent</h3>
-          <label>
-            Name
-            <input value={newAgentName} onChange={e => setNewAgentName(e.target.value)} placeholder="newagent" />
-          </label>
-          <label>
-            Specialty
-            <input value={newAgentRole} onChange={e => setNewAgentRole(e.target.value)} placeholder="What they handle" />
-          </label>
-          <button className="full-button" disabled={busy || !newAgentName.trim()}>Add</button>
-        </form>
+        <details className="add-agent">
+          <summary>Add agent</summary>
+          <form onSubmit={addAgent} style={{ marginTop: 10 }}>
+            <label>
+              Name
+              <input value={newAgentName} onChange={e => setNewAgentName(e.target.value)} placeholder="newagent" />
+            </label>
+            <label>
+              Specialty
+              <input value={newAgentRole} onChange={e => setNewAgentRole(e.target.value)} placeholder="What they handle" />
+            </label>
+            <button className="full-button" disabled={busy || !newAgentName.trim()}>Add</button>
+          </form>
+        </details>
 
         {activeTab === 'profile' && <section className="chief-panel">
           <h3>Chief of Staff</h3>
@@ -812,7 +830,15 @@ export default function App(){
       </aside>
 
       <main className="main">
-        <header className="timeline">Progress timeline</header>
+        <header className="timeline">
+          {agents.filter(a => a.status === 'running').length > 0
+            ? <span>🟢 {agents.filter(a => a.status === 'running').length} agent{agents.filter(a => a.status === 'running').length !== 1 ? 's' : ''} running</span>
+            : queuedTasks.length > 0
+            ? <span>⏳ {queuedTasks.length} task{queuedTasks.length !== 1 ? 's' : ''} queued</span>
+            : completedTasks.length > 0
+            ? <span>✅ {completedTasks.length} completed · {openIssues.length} issue{openIssues.length !== 1 ? 's' : ''} open</span>
+            : <span style={{ color: '#9ca3af' }}>Ready — no active tasks</span>}
+        </header>
         <nav className="tab-bar">
           {[
             ['command', 'Command'],
@@ -831,7 +857,7 @@ export default function App(){
           <div><strong>{completedTasks.length}</strong><span>Completed</span></div>
           <div><strong>{openIssues.length}</strong><span>Open issues</span></div>
           <div><strong>{readyConnectors.length}</strong><span>Connectors</span></div>
-          <div><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>AI</span></div>
+          <div className={aiConfig?.enabled ? 'ai-active-strip' : ''}><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>{aiConfig?.enabled ? `AI · ${aiConfig.provider}` : 'AI off'}</span></div>
         </section>
         {activeTab === 'command' && <section className="chat">
           <div className="agent-layout">
@@ -883,7 +909,7 @@ export default function App(){
                 ))}
               </div>
               {learningQuestion && <div className="learning-banner">Learning mode active. Answer naturally, and I will save what matters.</div>}
-              <div className="chat-stream">
+              <div className="chat-stream" ref={chatRef}>
                 {chatMessages.map((m, i) => (
                   <div key={i} className={`message ${m.from === 'You' ? 'user-message' : 'agent-message'}`}>
                     <strong>{m.from}</strong>
@@ -899,9 +925,9 @@ export default function App(){
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={handleChatKeyDown}
-                  placeholder="Tell AgentMajesty what needs to get done"
+                  placeholder="Tell AgentMajesty what needs to get done (Enter to send)"
                 />
-                <button disabled={busy || !chatInput.trim()}>Route</button>
+                <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
               </form>
             </div>
           </div>
@@ -913,7 +939,7 @@ export default function App(){
             {selectedTask && <small>Selected: {selectedTask.id}</small>}
           </div>
           {tasks.length === 0 ? (
-            <p className="empty-state">No routed tasks yet.</p>
+            <p className="empty-state">No tasks yet — tell AgentMajesty what needs to get done above. ↑</p>
           ) : (
             <div className="task-list">
               {tasks.map(task => (
@@ -923,7 +949,7 @@ export default function App(){
                       <strong>{task.title}</strong>
                       <div><small>{task.id} · {task.assignedAgentName || 'Unassigned'}</small></div>
                     </div>
-                    <span className={`status-pill status-${task.status}`}>{task.status}</span>
+                    <span className={`status-pill status-${task.status}`}>{statusLabel(task.status)}</span>
                   </div>
                   <p>{task.description}</p>
                   {task.responseData?.summary && <small className="task-summary">{task.responseData.summary}</small>}
@@ -980,7 +1006,10 @@ export default function App(){
                     ))}
                   </div>
                 )}
-                <pre>{JSON.stringify(selectedTask.responseData?.data || { assignedAgentName: selectedTask.assignedAgentName, logs: selectedTask.logs?.slice(-3) || [] }, null, 2)}</pre>
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ fontSize: 12, cursor: 'pointer', color: '#9ca3af' }}>Raw data</summary>
+                  <pre>{JSON.stringify(selectedTask.responseData?.data || { assignedAgentName: selectedTask.assignedAgentName, logs: selectedTask.logs?.slice(-3) || [] }, null, 2)}</pre>
+                </details>
               </>
             )}
           </article>
