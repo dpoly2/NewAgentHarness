@@ -1,164 +1,184 @@
-# The Elevation ATX — Brand Identity & Concept Bible
-**Agent Owner:** Rowdy Crown Promoter/Concept Agent
-**Last Updated:** 2026-05-20
+# The Elevation — Concept Bible
+**Format:** Invite-Only Upscale Private Experience Series
+**Owner:** David Smith / Smith Capital Properties
+**Market:** Austin / Pflugerville / Round Rock TX — Black Professionals & Upscale Social Community
+**Last Updated:** 2026-05-21
+
+---
+
+## The Concept
+
+The Elevation is not a nightclub. It is not a bar. It is not a party.
+
+**The Elevation is an experience you earn access to.**
+
+An invite-only private social series for Black professionals, entrepreneurs, and tastemakers in the Austin metro. Upscale atmosphere, curated guest list, hors d'oeuvres, and premium drink service. $150 per person. You don't find The Elevation — The Elevation finds you.
+
+The exclusivity IS the product. No walk-ins. No public ticket sales. No general admission. Every guest is either directly invited or referred by a current member.
+
+---
+
+## Event Format
+
+| Element | Details |
+|---------|---------|
+| **Ticket Price** | $150 per person |
+| **Capacity** | 100–150 guests per event |
+| **Duration** | 4–5 hours (8 PM – 1 AM) |
+| **Dress Code** | Upscale cocktail / business formal — strictly enforced |
+| **Included** | Passed hors d'oeuvres + 3-drink ticket book |
+| **Vibe** | Dim lighting, live DJ or jazz quartet, signature cocktail menu |
+| **Frequency** | Monthly to start → bi-weekly at scale |
+
+---
+
+## Financial Model — Per Event
+
+### Revenue
+| Item | Rate | Units | Total |
+|------|------|-------|-------|
+| Tickets | $150 | 100 guests | $15,000 |
+| Ticket upgrades (VIP table) | +$100 | 10 guests | $1,000 |
+| Merchandise (Drop 001 at door) | avg $50 | 20 sales | $1,000 |
+| **Gross Revenue** | | | **$17,000** |
+
+### Costs
+| Item | Cost |
+|------|------|
+| Venue rental (private space, 4–5 hrs) | $2,500–$4,000 |
+| Hors d'oeuvres catering ($20–25/person) | $2,000–$2,500 |
+| Bar / drink tickets ($8–12/drink × 3 tickets × 100 guests) | $2,400–$3,600 |
+| Bartender + waitstaff (3–4 people) | $600–$800 |
+| DJ or live music | $500–$1,000 |
+| Decor / florals / lighting | $500–$800 |
+| Event coordinator | $300–$500 |
+| Misc (security, printing, etc.) | $300–$500 |
+| **Total Costs** | **$9,100–$13,700** |
+
+### Net Profit Per Event
+| Scenario | Revenue | Costs | **Net** |
+|----------|---------|-------|---------|
+| Conservative (100 guests) | $15,000 | $13,700 | **$1,300** |
+| Base (100 guests + merch) | $17,000 | $12,000 | **$5,000** |
+| Strong (150 guests + VIP + merch) | $24,500 | $14,500 | **$10,000** |
+
+**4 events at base model = $20,000 net** — enough to fund the LLC, TABC application, pitch deck, and first month of operational costs for the permanent location.
+
+---
+
+## Venue Strategy
+
+### Phase 1 — Pop-Up Series (Now → Q4 2026)
+Use existing upscale Austin venues as the host space. No lease required.
+
+**Target venues in Austin/Pflugerville/Round Rock:**
+| Venue Type | Target | Est. Rental |
+|------------|--------|-------------|
+| Private rooftop bar | Downtown Austin | $2,500–$4,000/night |
+| Private dining room (upscale restaurant) | Austin | $1,500–$2,500 |
+| Hotel ballroom / private suite | Marriott Pflugerville | $2,000–$3,500 |
+| Art gallery / loft space | East Austin | $1,500–$2,500 |
+
+**First event target:** Marriott Pflugerville or a private rooftop in downtown Austin.
+
+### Phase 2 — Permanent Home (2027)
+The Elevation event series becomes the proof of concept and customer base for the permanent location at 15119 N IH-35, Pflugerville.
+
+---
+
+## The Guest Experience — Flow
+
+```
+8:00 PM — Doors open (invite only, ID + name check at door)
+8:00–9:00 PM — Arrival cocktail hour, passed hors d'oeuvres, networking
+9:00–10:30 PM — DJ set / live music, open bar (drink tickets)
+10:30–11:00 PM — Feature moment (guest speaker, performer, or brand reveal)
+11:00 PM–1:00 AM — Open floor, DJ continues, late hors d'oeuvres passed
+1:00 AM — Close
+```
+
+---
+
+## The Invite System
+
+This is what makes The Elevation different from every other event in Austin.
+
+**Tier 1 — Founding Members (First 3 events)**
+- Personally invited by David Smith
+- Target: 50 Sigma brothers, Black professionals, entrepreneurs, community leaders
+- They set the tone and the culture of the room
+
+**Tier 2 — Member Referrals**
+- Each Founding Member can invite 2 guests per event
+- Those guests, if approved, become eligible to invite in future events
+- No open sales. Ever.
+
+**Tier 3 — Waitlist**
+- Public-facing waitlist at theElevationATX.com (coming)
+- Applicants screened by vibe, profession, and referral source
+- Creates organic demand and press buzz
+
+**The Rule:** You cannot buy your way in. You can only be invited in.
 
 ---
 
 ## Brand Identity
 
-### Name
-**The Elevation ATX**
-- "Rowdy" — energy, unapologetic boldness, Western edge
-- "Crown" — excellence, royalty, Black pride, elevation
-- "ATX" — rooted in Austin, speaks to the local identity
-
-### Tagline Options (to A/B test in launch marketing)
-1. *"Where the Range Meets Royalty."*
-2. *"Dress Up. Show Out. Crown Up."*
-3. *"Black Excellence. Western Soul."*
-4. *"The Only Club Worth the Drive."*
-
-### Brand Colors
-- **Deep Midnight Navy** `#0D1B2A` — primary background, sophistication
-- **Burnished Gold** `#C9A84C` — accent, crown motif, luxury signals
-- **Warm Cream** `#F5ECD7` — text, menu typography
-- **Crimson** `#8B0000` — accent pop, VIP designation
-
-### Typography Direction
-- Headlines: Bold serif (think: Playfair Display or a custom Western-influenced serif)
-- Body: Clean sans-serif (Inter or Neue Haas Grotesk)
-- Accent: Handwritten script for cocktail menu, event posters
-
-### Logo Concept
-A crown integrated with a cowboy hat silhouette. Crown sits atop or within the hat brim. Wordmark below in bold serif. Two versions: full color (gold on navy) and monochrome (for embroidery on uniforms, hats).
-
----
-
-## Interior Design Direction
-
-### Main Floor
-- Dark reclaimed wood floors — wide plank
-- Exposed brick or dark plaster walls — no white/beige
-- Leather banquette seating along perimeter — cognac leather, brass nail trim
-- Edison bulb pendants over bar + table clusters
-- Neon signage: "ROWDY CROWN" in warm gold neon, wall-mounted
-- Cowboy hat wall — curated vintage hats, lit from behind
-- DJ booth: elevated, center-rear, custom facade with logo
-
-### Bar
-- 40+ seat custom bar — live edge wood top, brass rail
-- Backlit bourbon/whiskey/cognac wall — 3 tiers, 80+ bottles
-- Craft cocktail station — visible to guests (theater effect)
-- Dedicated bottle service staging area with LED bottle glorifiers
-
-### VIP Section
-- Elevated platform — 3 steps up from main floor
-- Velvet rope + staff-controlled access
-- 6–8 custom booths — deep leather, table LEDs
-- Dedicated bottle service waitstaff
-- Reserved name placard system
-
-### Crown Suite (Private Room)
-- Capacity: 40 seated / 60 standing
-- Private full bar
-- 85" display for presentations, slideshows, sports
-- Soundproofed — can run separate music or presenter audio
-- Direct private entrance option
-
-### Stage
-- Flexible performance stage — 20' × 16' minimum
-- Professional lighting rig (LED wash, spots, moving heads)
-- In-house PA system — venue-quality
-- Backstage green room for artists
-
----
-
-## Programming Strategy
-
-### Weekly Calendar
-| Day | Event | Cover | Target |
-|-----|-------|-------|--------|
-| Thursday | **Industry Night** — R&B DJ, $5 drinks until midnight | Free / $10 | Hospitality workers, 21–35 |
-| Friday | **The Main Event** — DJ, bottle service, full dress code | $25–$35 | Core demographic 25–45 |
-| Saturday | **Crown Night** — Live act + DJ, VIP priority | $35–$50 | Premium crowd |
-| Sunday | **Brunch & Bourbon** — Live acoustic, brunch menu, daytime to evening | $15 | Professionals, couples |
-
-### Monthly Signature Events
-- **1st Friday: The Crown Affair** — Black-tie optional, premium dress code, elevated cocktail menu
-- **3rd Saturday: Country Soul Night** — Texas country meets R&B/Hip-Hop — live band
-- **Quarterly: Brand Activation Night** — Cognac/tequila brand partner takes over programming
-- **Annual: Rowdy Crown Anniversary** — Major ticketed event, celebrity DJ or artist
-
-### Booking Strategy
-- Resident DJs: 3–4 on rotation (contract, not employees)
-- Live acts: Monthly booking of regional/emerging artists (R&B, Afrobeats, Country Soul)
-- Comedy nights: Quarterly — partner with Austin's Black comedy circuit
-- Open mic: Monthly on Thursdays — low cost, community building
+- **Name:** The Elevation
+- **Tagline:** *By invitation only.*
+- **Colors:** Black, crimson, gold
+- **Logo:** Gold serif crown wordmark — EST. 2026
+- **Dress code:** Upscale cocktail / business formal — no exceptions
+- **Music:** R&B, neo-soul, Afrobeats, jazz — curated for sophistication
+- **Photography:** Professional photographer at every event — content is a product
 
 ---
 
 ## Marketing Strategy
 
-### Pre-Launch (3 months before opening)
-- Tease campaign: "Something's Coming to IH-35" — no name, just the crown logo
-- Email waitlist: "Get on the Crown List" — first 500 get founding member status
-- Instagram/TikTok: Behind-the-scenes buildout content — construction, design, cocktail R&D
-- Influencer seeding: Austin Black lifestyle creators — invite to hard hat tour
+### Pre-Launch (Now — First Event)
+- Instagram + TikTok: teaser content only — no event details, just the brand
+- Hook: *"You can't buy a ticket. You have to be invited."*
+- Build waitlist at theElevationATX.com before first event
+- Direct outreach: 50 personal invites via DM and text
 
-### Launch
-- Soft launch (invite only, 200 people): Media, influencers, community leaders
-- Grand opening weekend: 3-night event, live artist, press coverage
-- PR push: Austin American-Statesman, Austin Chronicle, local Black media
+### Content Pillars
+1. **Behind the scenes** — building The Elevation in real time
+2. **The standard** — what it takes to get an invite (aspirational)
+3. **The experience** — recaps, photos, and video from events
+4. **The vision** — the permanent location, the brand story, the mission
 
-### Ongoing
-- Instagram: @rowdycrownatx — 3x/week minimum, Reels priority
-- TikTok: Behind bar content, event hype, cocktail tutorials
-- Email list: Weekly "Crown Dispatch" — events, specials, member news
-- Partnership with Black Austin blogs, podcasts, event pages
+### TikTok / Reels Hook (Revised)
+*"There's no ticket link. There's no public sale. If you have to ask how to get in — you're not in yet."*
 
-### Membership — The Crown Club
-- **$500/year founding member** (first 100 only)
-- Benefits: No cover ever, priority reservations, 10% bar tab discount, annual member event
-- **$250/year standard**
-- Benefits: Reduced cover, early event access
+That creates curiosity. Curiosity creates demand. Demand creates exclusivity.
 
 ---
 
-## Staffing Plan (Target at Open)
+## Revenue Roadmap
 
-| Role | Count | Notes |
-|------|-------|-------|
-| General Manager | 1 | Experienced nightclub/hospitality GM |
-| Bar Manager | 1 | Craft cocktail experience required |
-| Bartenders | 4–6 | Weekend surge capacity |
-| Barbacks | 2–3 | |
-| Door/Security Manager | 1 | TABC trained |
-| Security Staff | 4–6 | Licensed, uniformed |
-| VIP Host/Bottle Service | 3–4 | Sales-focused |
-| Event Coordinator | 1 | Manages private bookings |
-| Social Media/Marketing | 1 | Content creation, community mgmt |
-| Kitchen (if food served) | 3–5 | TBD based on food program scope |
+| Month | Event | Guests | Net Revenue |
+|-------|-------|--------|-------------|
+| July 2026 | Event 1 — Founding Members | 75 | $3,500 |
+| August 2026 | Event 2 | 100 | $5,000 |
+| September 2026 | Event 3 | 125 | $7,500 |
+| October 2026 | Event 4 | 150 | $10,000 |
+| **Total** | | | **$26,000** |
+
+By October 2026 — The Elevation LLC is funded, the brand is established, and you walk into the 15119 N IH-35 negotiation with proof of concept, an active customer base, and cash reserves.
 
 ---
 
-## Promoter/Concept Agent — Weekly Tasks
+## Immediate Next Steps
 
-1. Monitor Austin nightlife events and competitor programming
-2. Track trending cocktail and entertainment concepts nationally
-3. Research and vet potential DJ/artist bookings
-4. Update programming calendar with new ideas and seasonal adjustments
-5. Draft social media content calendar for the month ahead
-6. Identify brand partnership opportunities and outreach targets
+- [ ] File The Elevation LLC ($300)
+- [ ] Secure Event 1 venue — Marriott Pflugerville or Austin rooftop
+- [ ] Build theElevationATX.com waitlist page (simple one-pager)
+- [ ] Send 50 personal Founding Member invites
+- [ ] Launch Drop 001 on Hoodswag to fund LLC filing
+- [ ] Post TikTok teaser: *"You can't buy a ticket."*
+- [ ] Book caterer and DJ for Event 1
 
 ---
 
-## Copilot Prompt (Offline Use)
-
-```
-@workspace I am the Rowdy Crown Promoter and Concept Agent for the The Elevation ATX 
-nightclub project. Read projects/rowdy-crown/CONCEPT.md and projects/rowdy-crown/PROJECT.md.
-My job is to develop the brand identity, event programming, marketing strategy, and 
-club concept for an upscale Black-owned Western-themed nightclub in Pflugerville, TX.
-This week: [INSERT TASK — e.g., draft a social media launch strategy / develop the 
-monthly event calendar / research DJ booking rates in Austin].
-```
+*The Elevation — Invite-Only Experience Series | May 21, 2026*
