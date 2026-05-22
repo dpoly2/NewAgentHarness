@@ -1648,6 +1648,103 @@ ipcMain.handle('test-ai-config', async (event, testConfig) => {
   }
 })
 
+ipcMain.handle('start-majesty-chat', async (event, { message, history = [] }) => {
+  const wins = BrowserWindow.getAllWindows()
+  const win = wins[0]
+  const sendChunk = (data) => {
+    try { if (win) win.webContents.send('majesty-chunk', data) } catch (e) {}
+  }
+
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/majesty/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history })
+    })
+    if (res.ok) {
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            sendChunk(data)
+          } catch (e) {}
+        }
+      }
+      return { ok: true }
+    }
+  } catch (e) {
+    console.warn('Majesty chat server not available, falling back to local:', e.message)
+  }
+
+  try {
+    const aiConfig = readAiConfigFile()
+    if (!aiConfig.enabled || !aiConfig.baseUrl || !aiConfig.model) {
+      sendChunk({ type: 'chunk', content: 'AI is currently disabled. Go to **AI Settings** to connect a model.' })
+      sendChunk({ type: 'done' })
+      return { ok: false }
+    }
+    const fs = require('fs')
+    const profile = readJsonFile('profile.json', {})
+    const agents = readAgentsFile()
+    const agentList = agents.filter(a => a.name !== 'AgentMajesty').map(a => `- ${a.name}: ${a.role || 'agent'}`).join('\n') || '- No agents yet'
+    const systemPrompt = `You are AgentMajesty, a chief of staff for ${profile.name || 'the operator'}. Agents available:
+${agentList}
+Be concise and direct.`
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...history.slice(-8).filter(m => m.text).map(m => ({ role: m.from === 'You' ? 'user' : 'assistant', content: m.text })),
+      { role: 'user', content: message || '' }
+    ]
+    const res = await fetch(`${aiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(aiConfig.apiKey ? { 'Authorization': `Bearer ${aiConfig.apiKey}` } : {}) },
+      body: JSON.stringify({ model: aiConfig.model, messages, stream: true, max_tokens: 1500, temperature: 0.7 }),
+      signal: AbortSignal.timeout(60000)
+    })
+    if (!res.ok) {
+      sendChunk({ type: 'chunk', content: `AI API error (HTTP ${res.status}). Check AI Settings.` })
+      sendChunk({ type: 'done' })
+      return { ok: false }
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        const dataStr = line.slice(6).trim()
+        if (dataStr === '[DONE]') continue
+        try {
+          const data = JSON.parse(dataStr)
+          const delta = data.choices?.[0]?.delta?.content || ''
+          if (delta) sendChunk({ type: 'chunk', content: delta })
+        } catch (e) {}
+      }
+    }
+    sendChunk({ type: 'done' })
+    return { ok: true }
+  } catch (e) {
+    console.error('Majesty chat fallback error:', e.message)
+    sendChunk({ type: 'chunk', content: `Error: ${e.message}` })
+    sendChunk({ type: 'done' })
+    return { ok: false }
+  }
+})
+
 // Relay renderer console messages to the main process stdout for debugging
 app.on('web-contents-created', (event, contents) => {
   contents.on('console-message', (event) => {

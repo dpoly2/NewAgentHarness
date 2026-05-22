@@ -775,6 +775,36 @@ async function runPublicResearchAdapter(task, agent) {
   }
 }
 
+function buildMajestySystemPrompt() {
+  reloadRuntimeData()
+  const agentList = agents.filter(a => a.name !== 'AgentMajesty').map(a => `- ${a.name}: ${a.role || 'Specialized agent'}`).join('\n') || '- No specialized agents configured yet'
+  const queuedCount = tasks.filter(t => t.status === 'queued' || t.status === 'running').length
+  const completedCount = tasks.filter(t => t.status === 'completed' || t.status === 'completed-with-issues').length
+  const openIssueCount = issues.filter(i => i.status !== 'resolved').length
+  const memoryLines = Array.isArray(profile.memory) ? profile.memory.slice(0, 5).map(m => `  - ${m.text}`).join('\n') : ''
+  return `You are AgentMajesty, an intelligent chief of staff for ${profile.name || 'the operator'} (${profile.role || 'Director of Communications'}).
+
+Personality: Confident, warm, and strategically sharp. You think like a trusted advisor - direct, never verbose, always useful. Like a brilliant EA who anticipates needs.
+
+Available specialized agents:
+${agentList}
+
+Current status: ${queuedCount} queued tasks, ${completedCount} completed, ${openIssueCount} open issues.
+
+Operator profile:
+- Priorities: ${profile.priorities || 'not specified'}
+- Communication style: ${profile.communicationStyle || 'concise and direct'}
+- Approval rules: ${profile.approvalRules || 'ask before external actions'}
+${memoryLines ? `- Memory:\n${memoryLines}` : ''}
+
+Instructions:
+- Respond conversationally and concisely. Avoid excessive bullet points.
+- When you want to create and assign a task to an agent, append this JSON block on a new line at the very END of your response ONLY (not inline):
+[TASK:{"title":"Brief title","description":"Full task description","agentHint":"agent name or specialty keyword"}]
+- Only create a task when the operator explicitly asks you to do something that requires agent work. For questions, analysis, or conversation - do NOT include the JSON block.
+- Never include [TASK:...] in the middle of a response, only at the very end if needed.`
+}
+
 function loadAgentProfiles() {
   const profiles = {}
   try {
@@ -1455,6 +1485,143 @@ const server = http.createServer(async (req, res) => {
           res.writeHead(200, {'Content-Type':'application/json'})
           res.end(JSON.stringify({ ok: false, message: `Connection failed: ${e.message}` }))
         }
+      })()
+    })
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/majesty/chat') {
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      ;(async () => {
+        const { message, history = [] } = (() => { try { return JSON.parse(body || '{}') } catch (e) { return {} } })()
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive'
+        })
+        const sendSSE = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`) } catch (e) {} }
+
+        if (!aiConfig.enabled || !aiConfig.baseUrl || !aiConfig.model) {
+          const routedAgent = routeTask(message || '', agents)
+          const isTaskRequest = /\b(create|assign|add|do|run|execute|help me|please|can you|make|write|draft|find|research|check|send|update|build|fix|generate)\b/i.test(message || '') && !/(status|queue|what do you know|who is|what can|help$|^hi$|^hello$)/i.test(message || '')
+          if (routedAgent && isTaskRequest) {
+            const task = createTaskRecord(message, routedAgent)
+            tasks.unshift(task)
+            persist()
+            sendEvent({ agents, tasks, issues })
+            const reply = `I've created task **${task.id}** and assigned it to **${routedAgent.name}**. Go to the Tasks tab to execute it when ready.`
+            sendSSE({ type: 'chunk', content: reply })
+            sendSSE({ type: 'done', taskId: task.id, agentName: routedAgent.name })
+          } else {
+            const queuedTasks = tasks.filter(t => t.status === 'queued' || t.status === 'running')
+            const completedTasks = tasks.filter(t => t.status === 'completed' || t.status === 'completed-with-issues')
+            const openIssues = issues.filter(i => i.status !== 'resolved')
+            const m = String(message || '').toLowerCase()
+            let reply = ''
+            if (['status', 'queue', 'task status'].includes(m)) {
+              reply = `Queue: ${queuedTasks.length} queued, ${completedTasks.length} completed, ${agents.length} agents, ${connectors.filter(c => c.status === 'ready').length} connectors ready.`
+            } else if (m.includes('what do you know') || m.includes('who am i')) {
+              reply = `I know you as **${profile.name || 'David'}**, ${profile.role || 'Director of Communications'}. Priorities: ${profile.priorities || 'not set'}. Style: ${profile.communicationStyle || 'not set'}.`
+            } else {
+              reply = `I'm ready to help. AI is currently disabled - go to **AI Settings** to connect a model and unlock full capabilities. I can still route tasks to agents without AI.`
+            }
+            sendSSE({ type: 'chunk', content: reply })
+            sendSSE({ type: 'done' })
+          }
+          return res.end()
+        }
+
+        const systemPrompt = buildMajestySystemPrompt()
+        const messages = [
+          { role: 'system', content: systemPrompt },
+          ...history.slice(-8).filter(m => m.text).map(m => ({
+            role: m.from === 'You' ? 'user' : 'assistant',
+            content: m.text
+          })),
+          { role: 'user', content: message || '' }
+        ]
+
+        let fullContent = ''
+        try {
+          const llmRes = await fetch(`${aiConfig.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(aiConfig.apiKey ? { 'Authorization': `Bearer ${aiConfig.apiKey}` } : {})
+            },
+            body: JSON.stringify({
+              model: aiConfig.model,
+              messages,
+              stream: true,
+              max_tokens: 1500,
+              temperature: 0.7
+            }),
+            signal: AbortSignal.timeout(60000)
+          })
+
+          if (!llmRes.ok) {
+            const errText = await llmRes.text()
+            sendSSE({ type: 'chunk', content: `I ran into an issue with the AI backend (HTTP ${llmRes.status}). Check AI Settings.` })
+            sendSSE({ type: 'done' })
+            return res.end()
+          }
+
+          const reader = llmRes.body.getReader()
+          const decoder = new TextDecoder()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunk = decoder.decode(value, { stream: true })
+            for (const line of chunk.split('\n')) {
+              if (!line.startsWith('data: ')) continue
+              const dataStr = line.slice(6).trim()
+              if (dataStr === '[DONE]') continue
+              try {
+                const data = JSON.parse(dataStr)
+                const delta = data.choices?.[0]?.delta?.content || ''
+                if (delta) {
+                  fullContent += delta
+                  sendSSE({ type: 'chunk', content: delta })
+                }
+              } catch (e) {}
+            }
+          }
+        } catch (e) {
+          logger.error('Majesty chat LLM error: ' + e.message)
+          sendSSE({ type: 'chunk', content: `I couldn't reach the AI backend: ${e.message}` })
+          sendSSE({ type: 'done' })
+          return res.end()
+        }
+
+        const taskMatch = fullContent.match(/\[TASK:(\{[^}]+\})\]/)
+        if (taskMatch) {
+          try {
+            const taskSpec = JSON.parse(taskMatch[1])
+            const hint = String(taskSpec.agentHint || '').toLowerCase()
+            const routedAgent = agents.find(a => a.name !== 'AgentMajesty' && (
+              String(a.name || '').toLowerCase().includes(hint) ||
+              String(a.role || '').toLowerCase().includes(hint) ||
+              hint.includes(String(a.name || '').toLowerCase().replace(/\s+/g, ''))
+            )) || agents.find(a => a.name !== 'AgentMajesty')
+            if (routedAgent) {
+              const task = createTaskRecord(taskSpec.description || taskSpec.title || message, routedAgent)
+              task.title = taskSpec.title || task.title
+              tasks.unshift(task)
+              persist()
+              sendEvent({ agents, tasks, issues })
+              sendSSE({ type: 'done', taskId: task.id, agentName: routedAgent.name })
+            } else {
+              sendSSE({ type: 'done' })
+            }
+          } catch (e) {
+            sendSSE({ type: 'done' })
+          }
+        } else {
+          sendSSE({ type: 'done' })
+        }
+        res.end()
       })()
     })
     return

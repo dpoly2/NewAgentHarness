@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { marked } from 'marked'
+
+marked.setOptions({ breaks: true, gfm: true })
+function renderMarkdown(text) {
+  try { return marked(String(text || '')) } catch (e) { return String(text || '') }
+}
 
 function statusLabel(s) {
   const map = { queued: 'Queued', running: 'Running', completed: 'Done', 'completed-with-issues': 'Has Issues', 'needs-agent': 'Needs Agent', idle: 'Idle', error: 'Error', ready: 'Ready' }
@@ -50,10 +56,11 @@ export default function App(){
     provider: 'ollama', baseUrl: 'http://localhost:11434/v1', apiKey: '', model: 'llama3.2', enabled: false
   })
   const [aiTestResult, setAiTestResult] = useState(null)
+  const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef(null)
   const aiDraftInitialized = useRef(false)
   const [chatMessages, setChatMessages] = useState([
-    { from: 'AgentMajesty', text: 'I am AgentMajesty. Give me a task, ask for status, or use a suggested prompt and I will coordinate the queue.' }
+    { id: 0, from: 'AgentMajesty', text: "I'm AgentMajesty - your chief of staff. Tell me what needs to get done, ask for a status, or pick a prompt below." }
   ])
 
   const queuedTasks = tasks.filter(task => task.status === 'queued' || task.status === 'running')
@@ -236,81 +243,103 @@ export default function App(){
   }
 
   async function submitChatMessage(message) {
-    if (!message || !window.electron || !window.electron.invoke) return
-    setChatMessages(items => items.concat([{ from: 'You', text: message }]))
+    if (!message || busy || !window.electron || !window.electron.invoke) return
+    const userMsg = { id: Date.now(), from: 'You', text: message }
+    setChatMessages(prev => [...prev, userMsg])
+
+    const normalized = message.toLowerCase()
+    if (normalized.includes('teach majesty') || normalized.includes('learn how i think') || normalized.includes('learn me')) {
+      const next = learningQuestions.find(q => !profile?.memory?.some(item => item.topic === q.id)) || learningQuestions[0]
+      setLearningQuestion(next)
+      setChatMessages(prev => [...prev, { id: Date.now() + 1, from: 'AgentMajesty', text: next.question }])
+      return
+    }
+
     if (learningQuestion) {
       try {
-        const updated = await window.electron.invoke('remember-note', {
-          note: `${learningQuestion.id}: ${message}`
-        })
+        const updated = await window.electron.invoke('remember-note', { note: `${learningQuestion.id}: ${message}` })
         const memory = Array.isArray(updated.memory) ? updated.memory : []
         memory[0] = { ...(memory[0] || {}), topic: learningQuestion.id, question: learningQuestion.question }
         const saved = await window.electron.invoke('update-profile', { ...updated, memory })
-        setProfile(saved)
-        setProfileDraft(saved)
+        setProfile(saved); setProfileDraft(saved)
         const next = learningQuestions.find(q => !memory.some(item => item.topic === q.id))
         setLearningQuestion(next || null)
-        setChatMessages(items => items.concat([{
-          from: 'AgentMajesty',
-          text: next
-            ? `Saved. ${next.question}`
-            : 'Saved. I have a stronger read on how you think now. You can keep teaching me during project chat by saying “remember that…”'
-        }]))
+        setChatMessages(prev => [...prev, {
+          id: Date.now(), from: 'AgentMajesty',
+          text: next ? `Saved. ${next.question}` : 'Saved. I have a stronger read on how you think now.'
+        }])
       } catch (e) {
-        setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'I could not save that learning answer yet.' }]))
+        setChatMessages(prev => [...prev, { id: Date.now(), from: 'AgentMajesty', text: 'I could not save that learning answer yet.' }])
       }
       return
     }
-    const localReply = answerLocalMajestyPrompt(message)
-    if (localReply) {
-      setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: localReply }]))
-      return
-    }
+
     const rememberMatch = message.match(/^remember(?: that)?:?\s+(.+)/i)
     if (rememberMatch) {
       try {
         const updated = await window.electron.invoke('remember-note', { note: rememberMatch[1] })
-        setProfile(updated)
-        setProfileDraft(updated)
-        setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'Noted. I saved that to your Chief of Staff memory.' }]))
+        setProfile(updated); setProfileDraft(updated)
+        setChatMessages(prev => [...prev, { id: Date.now(), from: 'AgentMajesty', text: 'Noted. Saved to memory.' }])
       } catch (e) {
-        setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'I could not save that memory yet.' }]))
+        setChatMessages(prev => [...prev, { id: Date.now(), from: 'AgentMajesty', text: "I couldn't save that memory yet." }])
       }
       return
     }
+
     const preferenceMatch = message.match(/\b(i prefer|i like|i don't like|always ask me|do not|don't|my priority is|i usually)\b.+/i)
     if (preferenceMatch && !message.endsWith('?')) {
       try {
         const updated = await window.electron.invoke('remember-note', { note: message })
-        setProfile(updated)
-        setProfileDraft(updated)
-        setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'I noticed that preference and saved it to memory.' }]))
+        setProfile(updated); setProfileDraft(updated)
+        setChatMessages(prev => [...prev, { id: Date.now(), from: 'AgentMajesty', text: 'Preference noted and saved.' }])
       } catch (e) {
-        setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'I noticed that preference, but could not save it yet.' }]))
+        setChatMessages(prev => [...prev, { id: Date.now(), from: 'AgentMajesty', text: "Noted that preference, but couldn't save it yet." }])
       }
       return
     }
+
+    setBusy(true)
+    const streamId = Date.now() + 1
+    setChatMessages(prev => [...prev, { id: streamId, from: 'AgentMajesty', text: '', streaming: true }])
+    setIsTyping(true)
+
     try {
-      setBusy(true)
-      const result = await window.electron.invoke('agent-chat', { message })
-      setAgents(result.agents || [])
-      setTasks(result.tasks || [])
-      if (result.issues) setIssues(result.issues || [])
-      const routed = result.task ? (result.agents || []).find(a => a.id === result.task.assignedAgentId) : null
-      if (routed) setSelected(routed.id)
-      if (result.task) setSelectedTaskId(result.task.id)
-      const reply = result.task
-        ? `${result.reply}\nNext step: review the task card or execute it here.`
-        : (result.reply || 'Task received.')
-      setChatMessages(items => items.concat([{
-        from: 'AgentMajesty',
-        text: reply,
-        taskId: result.task ? result.task.id : null
-      }]))
+      let fullText = ''
+      let finalTaskId = null
+
+      if (window.electron?.on) {
+        window.electron.on('majesty-chunk', (data) => {
+          if (data.type === 'chunk') {
+            fullText += data.content
+            const displayText = fullText.replace(/\[TASK:\{[^}]*\}\]/g, '').trimEnd()
+            setChatMessages(prev => prev.map(m => m.id === streamId ? { ...m, text: displayText } : m))
+          } else if (data.type === 'done') {
+            finalTaskId = data.taskId || null
+            const displayText = fullText.replace(/\[TASK:\{[^}]*\}\]/g, '').trim()
+            setChatMessages(prev => prev.map(m =>
+              m.id === streamId ? { ...m, text: displayText, streaming: false, taskId: finalTaskId } : m
+            ))
+            if (data.taskId) {
+              window.electron.invoke('read-tasks').then(t => { if (t) setTasks(t) })
+              window.electron.invoke('read-agents').then(d => { if (d) setAgents(Array.isArray(d) ? d : d.agents || []) })
+            }
+          }
+        })
+      }
+
+      await window.electron.invoke('start-majesty-chat', {
+        message,
+        history: chatMessages.slice(-10).map(m => ({ from: m.from, text: m.text }))
+      })
+
     } catch (e) {
-      console.error('agent chat failed', e)
-      setChatMessages(items => items.concat([{ from: 'AgentMajesty', text: 'I could not route that task yet.' }]))
+      console.error('Majesty chat error', e)
+      setChatMessages(prev => prev.map(m =>
+        m.id === streamId ? { ...m, text: 'Something went wrong. Please try again.', streaming: false } : m
+      ))
     } finally {
+      window.electron?.offAll?.('majesty-chunk')
+      setIsTyping(false)
       setBusy(false)
     }
   }
@@ -896,23 +925,60 @@ export default function App(){
               ))}
             </div>
             {learningQuestion && <div className="learning-banner">Learning mode active. Answer naturally, and I will save what matters.</div>}
+            {chatMessages.length === 1 && (
+              <div className="welcome-cards">
+                {[
+                  { icon: '📋', label: 'Create a task', prompt: 'Create a task to research grant opportunities for YEPC' },
+                  { icon: '🔍', label: 'Check status', prompt: 'Status' },
+                  { icon: '🧠', label: 'Teach Majesty', prompt: 'Teach Majesty' },
+                  { icon: '📰', label: 'Newsletter health', prompt: 'Check newsletter campaign health' },
+                ].map(({ icon, label, prompt }) => (
+                  <button key={label} className="welcome-card" disabled={busy} onClick={() => { setChatInput(''); submitChatMessage(prompt) }}>
+                    <span className="welcome-card-icon">{icon}</span>
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="chat-stream" ref={chatRef}>
-              {chatMessages.map((m, i) => (
-                <div key={i} className={`message ${m.from === 'You' ? 'user-message' : 'agent-message'}`}>
-                  <strong>{m.from}</strong>
-                  <span>{m.text}</span>
-                  {m.taskId && tasks.find(task => task.id === m.taskId && task.status === 'queued') && (
-                    <button className="inline-action" disabled={busy} onClick={() => executeTask(m.taskId)}>Execute task</button>
-                  )}
-                </div>
+              {chatMessages.map((m) => (
+                m.from === 'You' ? (
+                  <div key={m.id ?? m.text} className="msg-row msg-row-user">
+                    <div className="bubble bubble-user">{m.text}</div>
+                  </div>
+                ) : (
+                  <div key={m.id ?? m.text} className="msg-row msg-row-agent">
+                    <div className="agent-avatar">M</div>
+                    <div className="bubble bubble-agent">
+                      {m.text === '' && m.streaming ? (
+                        <div className="typing-dots"><span/><span/><span/></div>
+                      ) : (
+                        <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }} />
+                      )}
+                      {m.streaming && m.text && <span className="streaming-cursor">▋</span>}
+                      {m.taskId && tasks.find(t => t.id === m.taskId && t.status === 'queued') && (
+                        <button className="inline-action" style={{ marginTop: 8 }} disabled={busy} onClick={() => { executeTask(m.taskId); setActiveTab('tasks') }}>
+                          ▶ Execute task
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
               ))}
+              {isTyping && chatMessages[chatMessages.length - 1]?.streaming === false && (
+                <div className="msg-row msg-row-agent">
+                  <div className="agent-avatar">M</div>
+                  <div className="bubble bubble-agent"><div className="typing-dots"><span/><span/><span/></div></div>
+                </div>
+              )}
             </div>
             <form className="chat-input" onSubmit={sendChat}>
               <textarea
                 value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
+                onChange={e => { setChatInput(e.target.value); e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 160) + 'px' }}
                 onKeyDown={handleChatKeyDown}
-                placeholder="Tell AgentMajesty what needs to get done (Enter to send)"
+                placeholder="Message AgentMajesty…"
+                style={{ minHeight: 44, maxHeight: 160, resize: 'none', overflowY: 'auto' }}
               />
               <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
             </form>

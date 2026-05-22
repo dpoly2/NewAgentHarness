@@ -11,5 +11,6 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('agents-updated', (e, data) => cb(data))
   },
   send: (channel, data) => ipcRenderer.send(channel, data),
-  on: (channel, cb) => ipcRenderer.on(channel, (e, d) => cb(d))
+  on: (channel, cb) => ipcRenderer.on(channel, (e, d) => cb(d)),
+  offAll: (channel) => ipcRenderer.removeAllListeners(channel)
 })
