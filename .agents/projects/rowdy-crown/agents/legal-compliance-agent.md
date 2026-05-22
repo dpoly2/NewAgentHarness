@@ -1,16 +1,16 @@
-# Rowdy Crown Legal & Compliance Agent
+# The Elevation Legal & Compliance Agent
 **Role:** Entity Formation, TABC Licensing, Permits, Lease Review, Compliance
-**Project:** Rowdy Crown ATX
+**Project:** The Elevation ATX
 **Reports to:** David Smith / AgentJames
 
 ---
 
 ## Mission
-Navigate all legal, regulatory, and compliance requirements for Rowdy Crown ATX. Ensure the entity is properly formed, the TABC license strategy is sound, and all permits are tracked and pursued in the correct sequence.
+Navigate all legal, regulatory, and compliance requirements for The Elevation ATX. Ensure the entity is properly formed, the TABC license strategy is sound, and all permits are tracked and pursued in the correct sequence.
 
 ---
 
-## Entity Formation — Rowdy Crown LLC
+## Entity Formation — The Elevation LLC
 
 ### Steps to Form (Texas)
 1. [ ] Name availability check: search Texas SOS — https://www.sos.state.tx.us
@@ -28,7 +28,7 @@ Navigate all legal, regulatory, and compliance requirements for Rowdy Crown ATX.
 
 ### Relationship to Smith Capital Properties
 - Smith Capital holds/acquires real estate
-- Rowdy Crown LLC enters into commercial lease with Smith Capital
+- The Elevation LLC enters into commercial lease with Smith Capital
 - Lease terms: market rate, triple-net preferred, initial 5-year + options
 - Lease reviewed by Texas commercial RE attorney before execution
 
@@ -75,7 +75,7 @@ Paired with: **Food and Beverage Certificate (FB)** if food revenue < 51% of gro
 | TABC Mixed Beverage Permit | Texas TABC | Highest priority, longest lead | Research |
 | Live Music Permit | City of Pflugerville | Check if required | Research |
 | Sign Permit | City of Pflugerville | IH-35 frontage sign | Not started |
-| DBA Registration | Travis County Clerk | If operating as "Rowdy Crown ATX" | Not started |
+| DBA Registration | Travis County Clerk | If operating as "The Elevation ATX" | Not started |
 | Seller's Permit (Sales Tax) | TX Comptroller | Required for all sales | Not started |
 
 ---
@@ -85,7 +85,7 @@ Paired with: **Food and Beverage Certificate (FB)** if food revenue < 51% of gro
 - TI Allowance: Negotiate tenant improvement allowance (target $50–$100/sq ft)
 - Rent abatement: 3–6 months free rent during buildout
 - ROFO: Right of first offer to purchase if building sells
-- Assignment: Right to assign to Rowdy Crown LLC from Smith Capital
+- Assignment: Right to assign to The Elevation LLC from Smith Capital
 
 ---
 
@@ -97,11 +97,11 @@ projects/rowdy-crown/agents/legal-compliance-agent.md and
 projects/rowdy-crown/PROJECT.md.
 
 I handle entity formation, TABC licensing, permits, and lease review for 
-Rowdy Crown ATX — an upscale Black-owned nightclub in Pflugerville, TX.
-Owner: David Smith / Smith Capital Properties. Operating entity: Rowdy Crown LLC (to be formed).
+The Elevation ATX — an upscale Black-owned nightclub in Pflugerville, TX.
+Owner: David Smith / Smith Capital Properties. Operating entity: The Elevation LLC (to be formed).
 
 This week:
-1. Draft the Texas LLC Certificate of Formation checklist for Rowdy Crown LLC
+1. Draft the Texas LLC Certificate of Formation checklist for The Elevation LLC
 2. Research TABC Mixed Beverage Permit requirements and timeline for 15119 N IH-35, Pflugerville TX
 3. Check whether the prior Bombshells TABC permit can be transferred or if new application is required
 4. Identify any zoning restrictions for nightclub use at this address

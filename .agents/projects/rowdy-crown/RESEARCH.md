@@ -1,5 +1,5 @@
-# Rowdy Crown ATX — Research Report
-**Agent:** Rowdy Crown Research Agent
+# The Elevation ATX — Research Report
+**Agent:** The Elevation Research Agent
 **Date:** 2026-05-20
 **Status:** Initial Research Complete — Phase 0
 
@@ -68,7 +68,7 @@ Bombshells operated under a **Mixed Beverage Permit (MB)** at this address. This
 | Victory East | Sports bar/lounge | East Austin | Not a nightclub, no dress code, casual |
 | 6th Street clubs | College bars / generic nightlife | Downtown | Wrong demo, wrong aesthetic, no Black cultural identity |
 | Cedar Street Courtyard | Outdoor lounge | Downtown | Different concept, no dedicated Black programming |
-| **Rowdy Crown ATX** | **Upscale Black-owned nightclub** | **IH-35/Pflugerville** | **No direct competition — first mover** |
+| **The Elevation ATX** | **Upscale Black-owned nightclub** | **IH-35/Pflugerville** | **No direct competition — first mover** |
 
 **Conclusion:** There is no upscale, Black-owned, full-service nightclub with a stage, VIP infrastructure, and intentional Black cultural programming anywhere in the Austin/Pflugerville/Round Rock MSA corridor north of downtown. **Rowdy Crown is a first-mover play.**
 
@@ -128,7 +128,7 @@ May also need:
 **TABC is the longest lead item. File as early as possible — ideally the day the lease/purchase is executed.**
 
 ### Key Requirements
-- Entity must be Texas-registered (Rowdy Crown LLC — file immediately)
+- Entity must be Texas-registered (The Elevation LLC — file immediately)
 - Applicant must pass background check — no felony convictions for principals
 - Location cannot be within 300 ft of a church or school (measure from property line — Bombshells was already compliant)
 - Prior MB permit at this address is favorable for approval
@@ -173,4 +173,4 @@ Fixed-rate for commercial real estate. Works in tandem with a conventional lende
 
 ---
 
-*Research Agent — Rowdy Crown ATX | May 2026*
+*Research Agent — The Elevation ATX | May 2026*

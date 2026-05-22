@@ -1,15 +1,15 @@
-# Rowdy Crown ATX — Legal & Compliance Tracker
+# The Elevation ATX — Legal & Compliance Tracker
 **Agent:** Rowdy Crown Legal & Compliance Agent
 **Date:** 2026-05-20
 **Status:** Pre-formation Phase
 
 ---
 
-## Entity Formation — Rowdy Crown LLC
+## Entity Formation — The Elevation LLC
 
 ### Status: NOT YET FORMED — File Immediately
 
-**Why file now:** TABC requires a Texas-registered entity. The sooner Rowdy Crown LLC is formed, the sooner the 120-day TABC clock can start.
+**Why file now:** TABC requires a Texas-registered entity. The sooner The Elevation LLC is formed, the sooner the 120-day TABC clock can start.
 
 ### Formation Steps — Texas LLC
 
@@ -32,7 +32,7 @@
 - **Profit distribution:** Quarterly distributions after debt service + 3-month reserve
 - **Buy-sell:** Right of first refusal if any member wants to exit
 - **Non-compete:** 3-year, 50-mile radius for any departing member with >5% stake
-- **Assignment clause:** Allows Smith Capital to sublease to Rowdy Crown LLC from real estate entity
+- **Assignment clause:** Allows Smith Capital to sublease to The Elevation LLC from real estate entity
 
 ---
 
@@ -45,9 +45,9 @@ David Smith (Individual)
         │         │
         │         └── Acquires / Holds 15119 N IH-35 real estate
         │                   │
-        │                   └── Commercial Lease (NNN, 5+5 yrs) ──► Rowdy Crown LLC
+        │                   └── Commercial Lease (NNN, 5+5 yrs) ──► The Elevation LLC
         │                                                                  │
-        └── Rowdy Crown LLC (NEW — Texas LLC)                             │
+        └── The Elevation LLC (NEW — Texas LLC)                             │
                   │                                                        │
                   ├── TABC Mixed Beverage Permit (held here)              │
                   ├── All operating licenses                               │
@@ -57,10 +57,10 @@ David Smith (Individual)
 ```
 
 **Why this structure:**
-- Real estate equity stays with Smith Capital — Rowdy Crown LLC can fail without losing the property
+- Real estate equity stays with Smith Capital — The Elevation LLC can fail without losing the property
 - TABC license is portable within the LLC structure
 - Investors buy into the operating business only — not the real estate
-- Tax: depreciation on building stays with Smith Capital; operating income/loss in Rowdy Crown LLC (pass-through for members)
+- Tax: depreciation on building stays with Smith Capital; operating income/loss in The Elevation LLC (pass-through for members)
 
 ---
 
@@ -80,7 +80,7 @@ David Smith (Individual)
 
 | Day | Action |
 |-----|--------|
-| Day 0 | Lease/purchase executed, Rowdy Crown LLC formed |
+| Day 0 | Lease/purchase executed, The Elevation LLC formed |
 | Day 1–7 | Pre-application TABC site visit scheduled |
 | Day 14 | TABC application submitted with all docs |
 | Day 14 | Public notice posted on premises (required 60 days) |
@@ -92,8 +92,8 @@ David Smith (Individual)
 ### TABC Application Document Checklist
 - [ ] Completed TABC application (online at tabc.texas.gov)
 - [ ] $5,300 application fee
-- [ ] Rowdy Crown LLC Certificate of Formation (Texas SOS)
-- [ ] Rowdy Crown LLC Operating Agreement
+- [ ] The Elevation LLC Certificate of Formation (Texas SOS)
+- [ ] The Elevation LLC Operating Agreement
 - [ ] EIN confirmation letter
 - [ ] Signed lease or purchase agreement for 15119 N IH-35
 - [ ] Floor plan of premises (detailed)
@@ -144,7 +144,7 @@ When approaching RCI Hospitality (or the new property owner after their divestit
 | TI Allowance | $50–$100/sq ft | $25/sq ft min |
 | Rent abatement | 6 months free (buildout period) | 3 months |
 | ROFO | Right of first offer to purchase | Right of first refusal |
-| Assignment | Right to assign to Rowdy Crown LLC | Standard |
+| Assignment | Right to assign to The Elevation LLC | Standard |
 
 ### Purchase vs. Lease Analysis
 | Scenario | Pros | Cons |
@@ -172,4 +172,4 @@ When approaching RCI Hospitality (or the new property owner after their divestit
 
 ---
 
-*Legal & Compliance Agent — Rowdy Crown ATX | May 2026*
+*Legal & Compliance Agent — The Elevation ATX | May 2026*

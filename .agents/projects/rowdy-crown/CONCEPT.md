@@ -1,4 +1,4 @@
-# Rowdy Crown ATX — Brand Identity & Concept Bible
+# The Elevation ATX — Brand Identity & Concept Bible
 **Agent Owner:** Rowdy Crown Promoter/Concept Agent
 **Last Updated:** 2026-05-20
 
@@ -7,7 +7,7 @@
 ## Brand Identity
 
 ### Name
-**Rowdy Crown ATX**
+**The Elevation ATX**
 - "Rowdy" — energy, unapologetic boldness, Western edge
 - "Crown" — excellence, royalty, Black pride, elevation
 - "ATX" — rooted in Austin, speaks to the local identity
@@ -155,7 +155,7 @@ A crown integrated with a cowboy hat silhouette. Crown sits atop or within the h
 ## Copilot Prompt (Offline Use)
 
 ```
-@workspace I am the Rowdy Crown Promoter and Concept Agent for the Rowdy Crown ATX 
+@workspace I am the Rowdy Crown Promoter and Concept Agent for the The Elevation ATX 
 nightclub project. Read projects/rowdy-crown/CONCEPT.md and projects/rowdy-crown/PROJECT.md.
 My job is to develop the brand identity, event programming, marketing strategy, and 
 club concept for an upscale Black-owned Western-themed nightclub in Pflugerville, TX.

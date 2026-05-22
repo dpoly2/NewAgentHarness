@@ -1,9 +1,9 @@
-# Rowdy Crown — Project Master File
+# The Elevation ATX — Project Master File
 **Concept:** Upscale Black-Owned Nightclub & Entertainment Venue
-**Working Title:** Rowdy Crown ATX
+**Working Title:** The Elevation ATX
 **Owner:** David Smith / Smith Capital Properties
 **Land Acquisition Entity:** Smith Capital Properties
-**Operating Entity:** Rowdy Crown LLC (to be formed)
+**Operating Entity:** The Elevation LLC (to be formed)
 **Target Location:** 15119 N IH-35 Service Rd, Pflugerville, TX 78660 (former Bombshells)
 **Status:** Phase 0 → Phase 1 — Research Complete, Site Approach Pending
 **Last Updated:** 2026-05-21
@@ -12,7 +12,7 @@
 
 ## The Vision
 
-Rowdy Crown ATX is an upscale, Black-owned entertainment destination positioned at the intersection of Western culture and Black excellence. Think: Cowboy chic meets rooftop lounge meets live music venue. Not a hood spot. Not a generic sports bar. A **destination** — the kind of place people drive 45 minutes to get to and post about when they leave.
+The Elevation ATX is an upscale, Black-owned entertainment destination positioned at the intersection of Western culture and Black excellence. Think: Cowboy chic meets rooftop lounge meets live music venue. Not a hood spot. Not a generic sports bar. A **destination** — the kind of place people drive 45 minutes to get to and post about when they leave.
 
 The concept takes direct inspiration from the "Rowdy Cowboy" aesthetic — reimagined through a luxury Black cultural lens. Think: brass fixtures, dark wood, moody lighting, live acts, signature cocktails with Southern names, a dress code, and a reputation that precedes itself.
 
@@ -47,9 +47,9 @@ David Smith
         │
         ├── Smith Capital Properties (existing)
         │         └── Acquires 15119 N IH-35 (SBA 504 + equity)
-        │                   └── NNN Lease ──► Rowdy Crown LLC
+        │                   └── NNN Lease ──► The Elevation LLC
         │
-        └── Rowdy Crown LLC (NEW — file immediately)
+        └── The Elevation LLC (NEW — file immediately)
                   ├── Holds TABC Mixed Beverage Permit
                   ├── All operating licenses + permits
                   ├── Staff employment (W-2 / 1099)
@@ -67,7 +67,7 @@ David Smith
 | Bar & bottle service | Premium pricing — VIP bottle packages $300–$1,500 |
 | Private event rentals | Full buyouts $5K–$25K/night |
 | Live music/DJ bookings | Ticket revenue + door split |
-| Membership/VIP club | Annual "Rowdy Crown Member" — early access, reserved seating |
+| Membership/VIP club | Annual "Elevation Member" — early access, reserved seating |
 | Brand partnerships | Cognac, bourbon, tequila brand activations ($50–100K/yr) |
 | Merch | Hats, tees, branded barware |
 
@@ -115,7 +115,7 @@ David Smith
 
 - [x] Phase 0: Concept finalized, proposal complete ✅ May 2026
 - [x] Phase 0: Research complete (site, market, TABC, SBA, financials) ✅ May 21, 2026
-- [ ] Phase 1: Rowdy Crown LLC filed with Texas SOS — **DO THIS NOW** ($300)
+- [ ] Phase 1: The Elevation LLC filed with Texas SOS — **DO THIS NOW** ($300)
 - [ ] Phase 1: Engage commercial RE broker to contact RCI about building
 - [ ] Phase 1: Pull full property record from Travis CAD
 - [ ] Phase 2: Funding package assembled — pitch deck, business plan finalized

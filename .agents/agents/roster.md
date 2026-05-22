@@ -52,7 +52,7 @@
 
 ---
 
-## Rowdy Crown ATX Agents
+## The Elevation ATX Agents
 
 | Agent Name                      | Specialty                                                | Status  |
 |---------------------------------|----------------------------------------------------------|---------|
@@ -89,7 +89,7 @@
 - Stripe API keys needed (publishable + secret) → enter in WP Admin → Xtreme Force → Payments
 - Composer needed on staging to install Stripe PHP SDK
 
-### Rowdy Crown ATX
+### The Elevation ATX
 | Deliverable | Status |
 |------------|--------|
 | Project master file | ✅ Complete |
@@ -100,7 +100,7 @@
 | Legal & compliance tracker | ✅ Complete — May 21 |
 | Funding tracker | ✅ Complete — May 21 |
 | Agent team (5 agents) | ✅ Active |
-| Rowdy Crown LLC — entity formation | ⬜ Not started — file next |
+| The Elevation LLC — entity formation | ⬜ Not started — file next |
 | Site acquisition approach (RCI Hospitality) | ⬜ Not started |
 | Pitch deck | ⬜ Not started |
 
@@ -128,7 +128,7 @@
 
 ### Needs Action from David
 - [ ] **Stripe API keys** — enter in WP Admin → Xtreme Force → Payments (unblocks Sprint 3 payments)
-- [ ] **Rowdy Crown LLC** — file Texas LLC Certificate of Formation ($300, sos.state.tx.us)
+- [ ] **The Elevation LLC** — file Texas LLC Certificate of Formation ($300, sos.state.tx.us)
 - [ ] **RCI Hospitality approach** — engage commercial RE broker to contact RCI about 15119 N IH-35
 - [ ] **May 25** — Hutto EDC follow-up email (reminder is set)
 - [ ] **OZ 2.0 nomination** — decision needed before June 26, 2026 deadline
@@ -146,6 +146,6 @@
 
 ## Notes
 - XFTC 501(c)(3) is the anchor nonprofit for YEPC capital grant strategy
-- Rowdy Crown LLC should be formed BEFORE TABC application — TABC requires TX registered entity
+- The Elevation LLC should be formed BEFORE TABC application — TABC requires TX registered entity
 - AgentHarness GitHub repo: https://github.com/dpoly2/AgentHarness
 - Nightly GitHub sync automation keeps all project files current

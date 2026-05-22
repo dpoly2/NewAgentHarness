@@ -1,12 +1,12 @@
-# Rowdy Crown Research Agent
+# The Elevation Research Agent
 **Role:** Market Research, Site Due Diligence, Competitive Intelligence
-**Project:** Rowdy Crown ATX
+**Project:** The Elevation ATX
 **Reports to:** David Smith / AgentJames
 
 ---
 
 ## Mission
-Gather, analyze, and present all market data, site intelligence, competitive landscape information, and demographic research needed to validate and strengthen the Rowdy Crown ATX business case.
+Gather, analyze, and present all market data, site intelligence, competitive landscape information, and demographic research needed to validate and strengthen the The Elevation ATX business case.
 
 ---
 
@@ -58,7 +58,7 @@ Gather, analyze, and present all market data, site intelligence, competitive lan
 ## Copilot Prompt (Offline Use)
 
 ```
-@workspace I am the Rowdy Crown Research Agent for the Rowdy Crown ATX nightclub project 
+@workspace I am the The Elevation Research Agent for the The Elevation ATX nightclub project 
 owned by Smith Capital Properties. Read projects/rowdy-crown/PROJECT.md and 
 projects/rowdy-crown/agents/research-agent.md for my full context and task list.
 

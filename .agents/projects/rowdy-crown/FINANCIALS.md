@@ -1,5 +1,5 @@
-# Rowdy Crown ATX — Financial Model
-**Agent:** Rowdy Crown Business Plan Agent
+# The Elevation ATX — Financial Model
+**Agent:** The Elevation Business Plan Agent
 **Date:** 2026-05-20
 **Status:** Year 1 Model Complete | 5-Year Projections Draft
 
@@ -176,5 +176,5 @@
 
 ---
 
-*Business Plan Agent — Rowdy Crown ATX | May 2026*
+*Business Plan Agent — The Elevation ATX | May 2026*
 *Model to be stress-tested and updated as site due diligence is completed.*

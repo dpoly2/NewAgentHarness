@@ -1,4 +1,4 @@
-# Rowdy Crown ATX — Executive Proposal
+# The Elevation ATX — Executive Proposal
 **Prepared by:** Smith Capital Properties
 **Date:** May 2026
 **Confidential**
@@ -7,9 +7,9 @@
 
 ## Executive Summary
 
-Rowdy Crown ATX is a proposed upscale nightclub and entertainment venue to be developed at 15119 N IH-35 Service Rd, Pflugerville, TX 78660 — the former Bombshells Restaurant & Bar location. The concept merges Western culture with Black excellence to create a one-of-a-kind entertainment destination serving the fastest-growing Black middle-class corridor in Central Texas.
+The Elevation ATX is a proposed upscale nightclub and entertainment venue to be developed at 15119 N IH-35 Service Rd, Pflugerville, TX 78660 — the former Bombshells Restaurant & Bar location. The concept merges Western culture with Black excellence to create a one-of-a-kind entertainment destination serving the fastest-growing Black middle-class corridor in Central Texas.
 
-Smith Capital Properties will acquire or control the real estate asset. A separate operating entity, Rowdy Crown LLC, will manage day-to-day operations, events, and hospitality. The project requires an estimated $1.35M–$2.9M in total capitalization and projects $2.5M–$4.5M in annual gross revenue at stabilized operations.
+Smith Capital Properties will acquire or control the real estate asset. A separate operating entity, The Elevation LLC, will manage day-to-day operations, events, and hospitality. The project requires an estimated $1.35M–$2.9M in total capitalization and projects $2.5M–$4.5M in annual gross revenue at stabilized operations.
 
 There is currently **no comparable upscale Black-owned nightlife destination** in the Austin/Pflugerville/Round Rock MSA. Rowdy Crown fills that void with a premium, curated experience.
 
@@ -33,7 +33,7 @@ There is currently **no comparable upscale Black-owned nightlife destination** i
 
 ## The Concept
 
-**Rowdy Crown ATX** — Where the Range Meets the Rooftop.
+**The Elevation ATX** — Where the Range Meets the Rooftop.
 
 An upscale Western-themed nightclub and entertainment venue rooted in Black culture and excellence. Not a theme night. Not a one-off event. A **permanent institution** — a place Austin's Black professional community calls its own.
 
@@ -121,11 +121,11 @@ An upscale Western-themed nightclub and entertainment venue rooted in Black cult
 
 **Smith Capital Properties** — Real estate acquisition and ownership
 ↓ leases to
-**Rowdy Crown LLC** — Operating company (Texas LLC)
+**The Elevation LLC** — Operating company (Texas LLC)
 - Member-managed initially
 - Operating agreement to include investor buy-in provisions
-- TABC license held by Rowdy Crown LLC
-- All staff employed by Rowdy Crown LLC
+- TABC license held by The Elevation LLC
+- All staff employed by The Elevation LLC
 
 ---
 
@@ -146,7 +146,7 @@ An upscale Western-themed nightclub and entertainment venue rooted in Black cult
 |-----------|------------|
 | Concept finalized | May 2026 |
 | Site due diligence complete | June 2026 |
-| Entity formation (Rowdy Crown LLC) | June 2026 |
+| Entity formation (The Elevation LLC) | June 2026 |
 | Funding package / pitch deck ready | July 2026 |
 | Site acquisition / lease executed | Aug–Sep 2026 |
 | Renovation design + permits | Sep–Nov 2026 |
