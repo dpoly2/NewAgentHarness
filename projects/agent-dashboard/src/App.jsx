@@ -846,6 +846,7 @@ export default function App(){
         <nav className="tab-bar">
           {[
             ['command', 'Command'],
+            ['tasks', 'Tasks'],
             ['projects', 'Projects'],
             ['connectors', 'Connectors'],
             ['profile', 'Profile'],
@@ -863,87 +864,68 @@ export default function App(){
           <div><strong>{readyConnectors.length}</strong><span>Connectors</span></div>
           <div className={aiConfig?.enabled ? 'ai-active-strip' : ''}><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>{aiConfig?.enabled ? `AI · ${aiConfig.provider}` : 'AI off'}</span></div>
         </section>
-        {activeTab === 'command' && <section className="chat">
-          <div className="agent-layout">
-            <div className="agent-detail">
-              <h3>{selAgent ? selAgent.name : 'No agent selected'}</h3>
-              <p>Status: {selAgent ? selAgent.status : '—'}</p>
-              {selAgent && selAgent.role && <p>Specialty: {selAgent.role}</p>}
-              {selAgent && <p>Open issues: {selAgentIssues.length}</p>}
-
-              <div className="button-row">
-                <button disabled={!selAgent || busy || (selAgent && selAgent.status === 'running')} onClick={() => commandAgent(selAgent.id, 'start')}>
-                  {busy ? 'Working...' : 'Start'}
-                </button>
-                <button disabled={!selAgent || busy || (selAgent && selAgent.status !== 'running')} onClick={() => commandAgent(selAgent.id, 'stop')}>
-                  {busy ? 'Working...' : 'Stop'}
-                </button>
-                <button disabled={!selAgent || busy} onClick={() => commandAgent(selAgent.id, 'ping')}>
-                  {busy ? 'Working...' : 'Ping'}
-                </button>
+        {activeTab === 'command' && <section className="command-chat">
+          {selAgent && (
+            <div className="agent-status-bar">
+              <span className={`status-dot dot-${selAgent.status || 'idle'}`}></span>
+              <strong>{selAgent.name}</strong>
+              {selAgent.role && <span className="agent-role-badge">{selAgent.role}</span>}
+              <span className={`status-pill status-${selAgent.status}`} style={{ fontSize: 11 }}>{statusLabel(selAgent.status)}</span>
+              <div className="progress-mini">
+                <div className="progress-inner" style={{ width: `${Math.max(0, Math.min(100, selAgent.progress || 0))}%` }} />
               </div>
-
-              <div className="progress-outer" aria-hidden={!selAgent}>
-                <div className="progress-inner" style={{ width: `${selAgent ? Math.max(0, Math.min(100, selAgent.progress || 0)) : 0}%` }} />
-              </div>
-              {selAgent && <div><small>{selAgent.progress ?? 0}% complete</small></div> }
-              <h4>Recent logs</h4>
-              <div className="log-box">
-                {(selAgent && selAgent.logs) ? selAgent.logs.slice(-10).map((l, i) => (<div key={i}><small>{l}</small></div>)) : <small>No logs</small>}
-              </div>
-              <h4>Agent learning</h4>
-              <div className="learning-list">
-                {selAgentLearning.length
-                  ? selAgentLearning.map(item => <small key={item.id || item.createdAt}>{item.text || item.summary}</small>)
-                  : <small>No learning notes for this agent yet.</small>}
+              <small style={{ color: '#6b7280', fontSize: 11 }}>{selAgent.progress ?? 0}%</small>
+              <div className="agent-bar-actions">
+                <button disabled={!selAgent || busy || selAgent.status === 'running'} onClick={() => commandAgent(selAgent.id, 'start')}>{busy ? '…' : 'Start'}</button>
+                <button disabled={!selAgent || busy || selAgent.status !== 'running'} onClick={() => commandAgent(selAgent.id, 'stop')}>{busy ? '…' : 'Stop'}</button>
+                <button disabled={!selAgent || busy} onClick={() => commandAgent(selAgent.id, 'ping')}>{busy ? '…' : 'Ping'}</button>
               </div>
             </div>
-
-            <div className="majesty-chat">
-              <div className="majesty-header">
-                <div>
-                  <h3>AgentMajesty</h3>
-                  <small>{queuedTasks.length} queued · {completedTasks.length} completed</small>
+          )}
+          <div className="majesty-full">
+            <div className="majesty-header">
+              <div>
+                <h3>AgentMajesty</h3>
+                <small>{queuedTasks.length} queued · {completedTasks.length} completed · <button style={{ background: 'none', border: 'none', padding: 0, color: '#2563eb', cursor: 'pointer', fontSize: 12 }} onClick={() => setActiveTab('tasks')}>view tasks →</button></small>
+              </div>
+              <span className={busy ? 'majesty-state busy-state' : 'majesty-state'}>{busy ? 'Working…' : 'Ready'}</span>
+            </div>
+            <div className="prompt-chips">
+              {quickPrompts.map(prompt => (
+                <button key={prompt} disabled={busy} onClick={() => useQuickPrompt(prompt)}>{prompt}</button>
+              ))}
+            </div>
+            {learningQuestion && <div className="learning-banner">Learning mode active. Answer naturally, and I will save what matters.</div>}
+            <div className="chat-stream" ref={chatRef}>
+              {chatMessages.map((m, i) => (
+                <div key={i} className={`message ${m.from === 'You' ? 'user-message' : 'agent-message'}`}>
+                  <strong>{m.from}</strong>
+                  <span>{m.text}</span>
+                  {m.taskId && tasks.find(task => task.id === m.taskId && task.status === 'queued') && (
+                    <button className="inline-action" disabled={busy} onClick={() => executeTask(m.taskId)}>Execute task</button>
+                  )}
                 </div>
-                <span className={busy ? 'majesty-state busy-state' : 'majesty-state'}>{busy ? 'Working' : 'Ready'}</span>
-              </div>
-              <div className="prompt-chips">
-                {quickPrompts.map(prompt => (
-                  <button key={prompt} disabled={busy} onClick={() => useQuickPrompt(prompt)}>{prompt}</button>
-                ))}
-              </div>
-              {learningQuestion && <div className="learning-banner">Learning mode active. Answer naturally, and I will save what matters.</div>}
-              <div className="chat-stream" ref={chatRef}>
-                {chatMessages.map((m, i) => (
-                  <div key={i} className={`message ${m.from === 'You' ? 'user-message' : 'agent-message'}`}>
-                    <strong>{m.from}</strong>
-                    <span>{m.text}</span>
-                    {m.taskId && tasks.find(task => task.id === m.taskId && task.status === 'queued') && (
-                      <button className="inline-action" disabled={busy} onClick={() => executeTask(m.taskId)}>Execute task</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <form className="chat-input" onSubmit={sendChat}>
-                <textarea
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={handleChatKeyDown}
-                  placeholder="Tell AgentMajesty what needs to get done (Enter to send)"
-                />
-                <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
-              </form>
+              ))}
             </div>
+            <form className="chat-input" onSubmit={sendChat}>
+              <textarea
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={handleChatKeyDown}
+                placeholder="Tell AgentMajesty what needs to get done (Enter to send)"
+              />
+              <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
+            </form>
           </div>
         </section>}
 
-        {activeTab === 'command' && <section className="task-queue">
+        {activeTab === 'tasks' && <section className="task-queue">
           <div className="section-heading">
             <h3>Task queue</h3>
             {selectedTask && <small>Selected: {selectedTask.id}</small>}
           </div>
           {tasks.length === 0 ? (
-            <p className="empty-state">No tasks yet — tell AgentMajesty what needs to get done above. ↑</p>
+            <p className="empty-state">No tasks yet — go to the Command tab and tell AgentMajesty what needs to get done.</p>
           ) : (
             <div className="task-list">
               {tasks.map(task => (
@@ -972,7 +954,7 @@ export default function App(){
           )}
         </section>}
 
-        {activeTab === 'command' && <section className="response-grid">
+        {activeTab === 'tasks' && <section className="response-grid">
           <article className="response-panel">
             <div className="section-heading">
               <h3>Response data</h3>

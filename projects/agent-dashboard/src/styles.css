@@ -22,7 +22,7 @@ button:disabled{cursor:not-allowed;opacity:.6}
 .dot-error{background:#dc2626}
 .sidebar input,.sidebar textarea,.sidebar select{box-sizing:border-box;width:100%;border:1px solid #374151;border-radius:6px;padding:8px;background:#1f2937;color:#fff}
 .sidebar textarea{min-height:58px;resize:vertical}
-.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
 .timeline{background:#f3f4f6;padding:10px 16px;border-bottom:1px solid #e5e7eb;font-size:13px;color:#374151;min-height:36px;display:flex;align-items:center;gap:8px}
 .tab-bar{display:flex;gap:6px;align-items:center;padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fff;overflow:auto}
 .tab-bar button{border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;padding:7px 14px;white-space:nowrap;transition:background .1s,color .1s}
@@ -35,6 +35,15 @@ button:disabled{cursor:not-allowed;opacity:.6}
 .status-strip strong{font-size:20px}
 .status-strip span{color:#6b7280;font-size:12px}
 .chat{padding:16px;overflow:auto}
+.command-chat{display:flex;flex-direction:column;flex:1;min-height:0;padding:16px;overflow:auto;gap:12px}
+.agent-status-bar{display:flex;align-items:center;gap:10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;flex-shrink:0}
+.agent-role-badge{background:#eef2ff;color:#3730a3;border-radius:999px;font-size:11px;padding:3px 8px;white-space:nowrap}
+.agent-bar-actions{display:flex;gap:6px;margin-left:auto}
+.agent-bar-actions button{border:1px solid #d1d5db;border-radius:6px;background:#fff;padding:5px 10px;font-size:12px;transition:background .1s}
+.agent-bar-actions button:hover:not(:disabled){background:#f3f4f6}
+.progress-mini{width:80px;height:5px;background:#e5e7eb;border-radius:3px;overflow:hidden;flex-shrink:0}
+.majesty-full{display:flex;flex-direction:column;flex:1;min-height:0}
+.chat-stream{flex:1;min-height:300px;max-height:none;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;padding:10px;scroll-behavior:smooth}
 .logs{height:160px;border-top:1px solid #e5e7eb;padding:8px;background:#fff;overflow:auto}
 .progress-outer{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:8px}
 .progress-inner{height:100%;background:#10b981;transition:width 160ms ease}
