@@ -5,8 +5,8 @@
 **Land Acquisition Entity:** Smith Capital Properties
 **Operating Entity:** Rowdy Crown LLC (to be formed)
 **Target Location:** 15119 N IH-35 Service Rd, Pflugerville, TX 78660 (former Bombshells)
-**Status:** Phase 0 — Concept Development
-**Created:** 2026-05-20
+**Status:** Phase 0 → Phase 1 — Research Complete, Site Approach Pending
+**Last Updated:** 2026-05-21
 
 ---
 
@@ -28,36 +28,34 @@ The concept takes direct inspiration from the "Rowdy Cowboy" aesthetic — reima
 | Factor | Detail |
 |--------|--------|
 | **Address** | 15119 N IH-35 Service Rd, Pflugerville, TX 78660 |
-| **Former Use** | Bombshells Restaurant & Bar (CLOSED) |
-| **Building** | Large freestanding commercial — bar/restaurant infrastructure already in place |
+| **Former Use** | Bombshells Restaurant & Bar (RCI Hospitality Holdings, Nasdaq: RICK) |
+| **Why Available** | RCI announced formal divestiture Nov 2024 — motivated seller, building actively for sale |
+| **Assessed Value** | ~$2,729,932 (2025) — negotiate $1.8–2.0M |
+| **Building** | Purpose-built restaurant/bar — kitchen, bar, HVAC, entertainment infrastructure intact |
 | **Visibility** | IH-35 frontage — massive drive-by traffic, easy signage |
-| **Parking** | Large lot — critical for nightclub operations |
-| **Demographics** | Pflugerville/Wells Branch corridor — fastest growing Black middle-class suburb in Central Texas |
-| **Competition** | Zero upscale Black-owned nightclubs in this corridor |
-| **Infrastructure** | Kitchen, bar, HVAC, electrical likely partially intact from prior use |
+| **Parking** | Large dedicated lot — critical for nightclub operations |
+| **Demographics** | Pflugerville ~18% Black, median HHI $82–90K — Black professional corridor |
+| **Competition** | Zero upscale Black-owned nightclubs in the IH-35/Pflugerville/Round Rock corridor |
+| **Nearby Anchors** | Cheddars, Texas Roadhouse, HEB — proven retail traffic area |
 
 ---
 
 ## Entity Structure
 
 ```
-Smith Capital Properties
+David Smith
         │
-        ├── Acquires / Controls Real Estate (land + building)
+        ├── Smith Capital Properties (existing)
+        │         └── Acquires 15119 N IH-35 (SBA 504 + equity)
+        │                   └── NNN Lease ──► Rowdy Crown LLC
         │
-        └── Leases to ──► Rowdy Crown LLC
-                              │
-                              ├── Operations (bar, events, entertainment)
-                              ├── Branding & Marketing
-                              ├── Staff & Payroll
-                              └── Revenue + P&L
+        └── Rowdy Crown LLC (NEW — file immediately)
+                  ├── Holds TABC Mixed Beverage Permit
+                  ├── All operating licenses + permits
+                  ├── Staff employment (W-2 / 1099)
+                  ├── Revenue & P&L
+                  └── Up to 20% angel investor equity
 ```
-
-**Why this structure:**
-- Separates real estate risk from operating risk
-- Smith Capital builds equity in the asset
-- Rowdy Crown LLC is the operating vehicle — can bring in investors or partners at this level without touching the real estate
-- Tax advantages: depreciation on property stays with Smith Capital
 
 ---
 
@@ -70,95 +68,94 @@ Smith Capital Properties
 | Private event rentals | Full buyouts $5K–$25K/night |
 | Live music/DJ bookings | Ticket revenue + door split |
 | Membership/VIP club | Annual "Rowdy Crown Member" — early access, reserved seating |
-| Brand partnerships | Cognac, bourbon, tequila brand activations |
+| Brand partnerships | Cognac, bourbon, tequila brand activations ($50–100K/yr) |
 | Merch | Hats, tees, branded barware |
+
+---
+
+## Financial Summary
+
+| Year | Revenue | EBITDA | Net Income |
+|------|---------|--------|-----------|
+| Year 1 (2027) | $2,155,000 | $396,505 | $171,505 |
+| Year 2 (2028) | $3,100,000 | $682,000 | $427,000 |
+| Year 3 (2029) | $3,750,000 | $900,000 | $615,000 |
+| Year 5 (2031) | $4,800,000 | $1,248,000 | $888,000 |
+
+**Break-even:** 111 guests/night (very achievable at 400+ capacity)
+**Full model:** See FINANCIALS.md
+
+---
+
+## Capital Requirements
+
+| Source | Amount | Type |
+|--------|--------|------|
+| SBA 7(a) Loan | $1,200,000 | Debt |
+| Smith Capital Equity | $400,000 | Owner Equity |
+| CDFI Loan (LiftFund/PeopleFund) | $300,000 | Debt |
+| Angel Round (20% stake) | $250,000 | Equity |
+| Grants | $100,000 | Non-dilutive |
+| **Total** | **$2,250,000** | |
 
 ---
 
 ## Concept Pillars
 
-1. **Upscale Western Aesthetic** — Dark leather, brass, reclaimed wood, neon accents, cowboy hat wall art, moody lighting. Dress code enforced.
-2. **Black Cultural Centerpiece** — Programming rooted in Black music, culture, and excellence. Not a theme — an identity.
+1. **Upscale Western Aesthetic** — Dark leather, brass, reclaimed wood, moody lighting. Dress code enforced.
+2. **Black Cultural Centerpiece** — Programming rooted in Black music, culture, and excellence.
 3. **Live Entertainment** — Weekly live acts: R&B, Hip-Hop, Country Soul, Afrobeats. House DJ every night.
-4. **Craft Cocktail Program** — Signature drinks: "The Lasso," "Midnight Rider," "Bougie Boot," "Spurs Up." Local spirits featured.
-5. **VIP Architecture** — Tiered experience from general admission → reserved tables → VIP booths → Crown Suite (private room).
-6. **Event Destination** — Birthday takeovers, corporate happy hours, brand activations, milestone events.
-
----
-
-## Capital Requirements (Preliminary Estimates)
-
-| Item | Estimated Cost |
-|------|---------------|
-| Building acquisition or lease negotiation | $500K–$1.2M purchase / $12K–$18K/mo lease |
-| Renovation & buildout | $400K–$800K |
-| FF&E (furniture, fixtures, equipment) | $150K–$300K |
-| Liquor license (Texas TABC) | $25K–$50K + timeline |
-| Working capital (6 months) | $200K–$400K |
-| Marketing & brand launch | $50K–$100K |
-| Legal, permits, insurance | $30K–$60K |
-| **Total Estimated Need** | **$1.35M–$2.9M** |
-
----
-
-## Funding Strategy
-
-### Debt
-- SBA 7(a) loan — up to $5M, covers acquisition + renovation
-- SBA 504 loan — fixed-rate for commercial real estate
-- CDFI loans — Community Development Financial Institutions serving minority entrepreneurs
-
-### Equity
-- Angel investors / Black investor networks (BLCK VC, NAACP fund)
-- Crowdfunding — Mainvest or Wefunder (hospitality-focused)
-- Strategic partners (liquor brands, entertainment companies)
-
-### Grants
-- NAACP Black Business Grant programs
-- Texas Leverage Fund (TLF)
-- Austin/Pflugerville EDC minority business development programs
-- Shuttered Venue Operators Grant (if eligible based on prior venue status)
+4. **Craft Cocktail Program** — Signature drinks with Southern names. Local spirits featured.
+5. **VIP Architecture** — General admission → reserved tables → VIP booths → Crown Suite.
+6. **Event Destination** — Birthday takeovers, corporate events, brand activations.
 
 ---
 
 ## Key Milestones
 
-- [ ] Phase 0: Concept finalized, proposal complete
-- [ ] Phase 1: Site due diligence — building inspection, zoning, TABC eligibility
-- [ ] Phase 2: Entity formation — Rowdy Crown LLC filed in Texas
-- [ ] Phase 3: Funding package assembled — pitch deck, pro forma, business plan
-- [ ] Phase 4: Site acquisition or lease executed by Smith Capital Properties
+- [x] Phase 0: Concept finalized, proposal complete ✅ May 2026
+- [x] Phase 0: Research complete (site, market, TABC, SBA, financials) ✅ May 21, 2026
+- [ ] Phase 1: Rowdy Crown LLC filed with Texas SOS — **DO THIS NOW** ($300)
+- [ ] Phase 1: Engage commercial RE broker to contact RCI about building
+- [ ] Phase 1: Pull full property record from Travis CAD
+- [ ] Phase 2: Funding package assembled — pitch deck, business plan finalized
+- [ ] Phase 3: Site acquisition or lease executed (Smith Capital)
+- [ ] Phase 4: TABC application filed — Day 1 after site secured
 - [ ] Phase 5: Renovation design + permits
-- [ ] Phase 6: TABC license application filed
-- [ ] Phase 7: Staff hiring + training
-- [ ] Phase 8: Soft launch / grand opening
+- [ ] Phase 6: Staff hiring + training
+- [ ] Phase 7: Soft launch / Grand Opening (Target: March 2027)
 
 ---
 
 ## Agent Team
 
-| Agent | Role |
-|-------|------|
-| **Rowdy Crown Research Agent** | Market research, competitor analysis, demographic data, site due diligence |
-| **Rowdy Crown Promoter/Concept Agent** | Brand identity, event programming, marketing strategy, social media |
-| **Rowdy Crown Business Plan Agent** | Financial modeling, pro forma, investor pitch deck, business plan |
-| **Rowdy Crown Funding Agent** | Grant research, SBA loan guidance, investor outreach, CDFI identification |
-| **Rowdy Crown Legal/Compliance Agent** | Entity formation, TABC licensing, permits, lease review |
-| **AgentJames** | Project coordination, milestone tracking, GitHub sync |
+| Agent | Role | File |
+|-------|------|------|
+| **Research Agent** | Market research, site due diligence, competitive intel | agents/research-agent.md |
+| **Promoter/Concept Agent** | Brand identity, event programming, marketing | agents/promoter-agent.md |
+| **Business Plan Agent** | Financial model, pro forma, pitch deck | agents/business-plan-agent.md |
+| **Funding Agent** | Grants, SBA, CDFIs, angel investors | agents/funding-agent.md |
+| **Legal/Compliance Agent** | LLC formation, TABC, permits, lease | agents/legal-compliance-agent.md |
+| **AgentJames** | Coordination, GitHub sync, milestone tracking | — |
 
 ---
 
-## Files in This Project
-- `PROJECT.md` — this file (master)
-- `PROPOSAL.md` — full investor/stakeholder proposal
-- `CONCEPT.md` — brand identity, interior design direction, programming
-- `FINANCIALS.md` — pro forma, capital stack, revenue projections
-- `FUNDING.md` — grant and funding source tracker
-- `LEGAL.md` — entity structure, TABC notes, permit checklist
-- `agents/` — individual agent profile files
+## Project Files
+
+| File | Status |
+|------|--------|
+| `PROJECT.md` | ✅ Current |
+| `PROPOSAL.md` | ✅ Complete |
+| `CONCEPT.md` | ✅ Complete |
+| `RESEARCH.md` | ✅ Complete — May 21, 2026 |
+| `FINANCIALS.md` | ✅ Complete — May 21, 2026 |
+| `LEGAL.md` | ✅ Complete — May 21, 2026 |
+| `FUNDING.md` | ✅ Complete — May 21, 2026 |
+| `agents/` | ✅ 5 agents active |
+| Pitch Deck | ⬜ Not started — needs LLC formed first |
 
 ---
 
 ## Related Projects
-- [YEPC](../yepc/PROJECT.md) — Smith Capital's other major development
+- [YEPC](../yepc/PROJECT.md) — Smith Capital's other major development (Hutto CR 132)
 - [AgentHarness](https://github.com/dpoly2/AgentHarness) — version control home
