@@ -14,6 +14,9 @@ function statusLabel(s) {
 export default function App(){
   const [agents, setAgents] = useState([])
   const [tasks, setTasks] = useState([])
+  const [todos, setTodos] = useState([])
+  const [todoFilter, setTodoFilter] = useState('active')
+  const [newTodo, setNewTodo] = useState({ title: '', description: '', priority: 'medium', dueDate: '', tags: '' })
   const [issues, setIssues] = useState([])
   const [profile, setProfile] = useState(null)
   const [contacts, setContacts] = useState([])
@@ -66,6 +69,7 @@ export default function App(){
   const queuedTasks = tasks.filter(task => task.status === 'queued' || task.status === 'running')
   const completedTasks = tasks.filter(task => task.status === 'completed' || task.status === 'completed-with-issues')
   const openIssues = issues.filter(issue => issue.status !== 'resolved')
+  const pendingTodos = todos.filter(t => t.status !== 'done')
   const selectedTask = tasks.find(task => task.id === selectedTaskId) || tasks[0] || null
   const readyConnectors = connectors.filter(connector => connector.status === 'ready')
   const latestProject = projects[0] || null
@@ -114,6 +118,8 @@ export default function App(){
             setTasks(taskData || [])
             if ((taskData || []).length) setSelectedTaskId(current => current || taskData[0].id)
           }
+          const todoData = await window.electron.invoke('read-todos')
+          if (mounted) setTodos(todoData || [])
           const issueData = await window.electron.invoke('read-issues')
           if (mounted) setIssues(issueData || [])
           const profileData = await window.electron.invoke('read-profile')
@@ -399,6 +405,36 @@ export default function App(){
     } finally {
       setBusy(false)
     }
+  }
+
+  async function addTodo(event) {
+    event.preventDefault()
+    if (!newTodo.title.trim() || !window.electron || !window.electron.invoke) return
+    try {
+      setBusy(true)
+      const tags = newTodo.tags ? newTodo.tags.split(',').map(t => t.trim()).filter(Boolean) : []
+      const updated = await window.electron.invoke('add-todo', { ...newTodo, tags })
+      setTodos(updated || [])
+      setNewTodo({ title: '', description: '', priority: 'medium', dueDate: '', tags: '' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function updateTodoStatus(id, status) {
+    if (!window.electron || !window.electron.invoke) return
+    try {
+      const updated = await window.electron.invoke('update-todo', { id, patch: { status } })
+      setTodos(updated || [])
+    } catch (e) { console.error('update-todo failed', e) }
+  }
+
+  async function deleteTodo(id) {
+    if (!window.electron || !window.electron.invoke) return
+    try {
+      const updated = await window.electron.invoke('delete-todo', { id })
+      setTodos(updated || [])
+    } catch (e) { console.error('delete-todo failed', e) }
   }
 
   async function addContact(event) {
@@ -875,6 +911,7 @@ export default function App(){
         <nav className="tab-bar">
           {[
             ['command', 'Command'],
+            ['todos', 'Todos'],
             ['tasks', 'Tasks'],
             ['projects', 'Projects'],
             ['connectors', 'Connectors'],
@@ -882,15 +919,18 @@ export default function App(){
             ['ai', 'AI Settings'],
             ['raw', 'Raw']
           ].map(([id, label]) => (
-            <button key={id} className={activeTab === id ? 'active-tab' : ''} onClick={() => setActiveTab(id)}>{label}</button>
+            <button key={id} className={activeTab === id ? 'active-tab' : ''} onClick={() => setActiveTab(id)}>
+              {label}
+              {id === 'todos' && pendingTodos.length > 0 && <span className="tab-badge">{pendingTodos.length}</span>}
+            </button>
           ))}
         </nav>
         <section className="status-strip">
           <div><strong>{agents.filter(agent => agent.status === 'running').length}</strong><span>Running</span></div>
           <div><strong>{queuedTasks.length}</strong><span>Queued</span></div>
           <div><strong>{completedTasks.length}</strong><span>Completed</span></div>
-          <div><strong>{openIssues.length}</strong><span>Open issues</span></div>
-          <div><strong>{readyConnectors.length}</strong><span>Connectors</span></div>
+          <div className={pendingTodos.length > 0 ? 'strip-alert' : ''}><strong>{pendingTodos.length}</strong><span>Todos</span></div>
+          <div><strong>{openIssues.length}</strong><span>Issues</span></div>
           <div className={aiConfig?.enabled ? 'ai-active-strip' : ''}><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>{aiConfig?.enabled ? `AI · ${aiConfig.provider}` : 'AI off'}</span></div>
         </section>
         {activeTab === 'command' && <section className="command-chat">
@@ -983,6 +1023,108 @@ export default function App(){
               <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
             </form>
           </div>
+        </section>}
+
+        {activeTab === 'todos' && <section className="todos-view">
+          <div className="todos-header">
+            <div>
+              <h3>Todos &amp; Pending Items</h3>
+              <small>{pendingTodos.length} outstanding · {todos.filter(t => t.status === 'done').length} done</small>
+            </div>
+            <div className="todo-filter-bar">
+              {[['active', 'Active'], ['all', 'All'], ['pending', 'Pending'], ['in_progress', 'In Progress'], ['blocked', 'Blocked'], ['done', 'Done']].map(([key, label]) => (
+                <button key={key} className={todoFilter === key ? 'todo-filter-btn active' : 'todo-filter-btn'} onClick={() => setTodoFilter(key)}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          <form className="todo-add-form" onSubmit={addTodo}>
+            <input
+              className="todo-title-input"
+              value={newTodo.title}
+              onChange={e => setNewTodo({ ...newTodo, title: e.target.value })}
+              placeholder="Add a todo or outstanding item…"
+            />
+            <select value={newTodo.priority} onChange={e => setNewTodo({ ...newTodo, priority: e.target.value })}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+            <input
+              type="date"
+              value={newTodo.dueDate}
+              onChange={e => setNewTodo({ ...newTodo, dueDate: e.target.value })}
+              title="Due date (optional)"
+            />
+            <button className="todo-add-btn" disabled={busy || !newTodo.title.trim()}>Add</button>
+          </form>
+
+          {newTodo.title && (
+            <div className="todo-detail-row">
+              <input
+                value={newTodo.description}
+                onChange={e => setNewTodo({ ...newTodo, description: e.target.value })}
+                placeholder="Description (optional)"
+              />
+              <input
+                value={newTodo.tags}
+                onChange={e => setNewTodo({ ...newTodo, tags: e.target.value })}
+                placeholder="Tags (comma separated)"
+              />
+            </div>
+          )}
+
+          {todos.length === 0 ? (
+            <p className="empty-state">No todos yet — add one above or ask AgentMajesty to create outstanding items for you.</p>
+          ) : (
+            <div className="todo-list">
+              {todos
+                .filter(t => {
+                  if (todoFilter === 'active') return t.status !== 'done'
+                  if (todoFilter === 'all') return true
+                  return t.status === todoFilter
+                })
+                .sort((a, b) => {
+                  const pri = { urgent: 0, high: 1, medium: 2, low: 3 }
+                  return (pri[a.priority] ?? 2) - (pri[b.priority] ?? 2) || new Date(b.createdAt) - new Date(a.createdAt)
+                })
+                .map(todo => (
+                  <div key={todo.id} className={`todo-item todo-status-${todo.status} todo-pri-${todo.priority}`}>
+                    <button
+                      className={`todo-check ${todo.status === 'done' ? 'checked' : ''}`}
+                      title={todo.status === 'done' ? 'Mark pending' : 'Mark done'}
+                      onClick={() => updateTodoStatus(todo.id, todo.status === 'done' ? 'pending' : 'done')}
+                    >
+                      {todo.status === 'done' ? '✓' : ''}
+                    </button>
+                    <div className="todo-body">
+                      <div className="todo-title-row">
+                        <strong className={todo.status === 'done' ? 'todo-done-text' : ''}>{todo.title}</strong>
+                        <span className={`todo-priority-badge pri-${todo.priority}`}>{todo.priority}</span>
+                        {todo.dueDate && <span className={`todo-due ${new Date(todo.dueDate) < new Date() && todo.status !== 'done' ? 'overdue' : ''}`}>📅 {todo.dueDate}</span>}
+                      </div>
+                      {todo.description && <p className="todo-desc">{todo.description}</p>}
+                      {todo.tags?.length > 0 && (
+                        <div className="todo-tags">{todo.tags.map(tag => <span key={tag} className="todo-tag">{tag}</span>)}</div>
+                      )}
+                    </div>
+                    <div className="todo-actions">
+                      {todo.status !== 'in_progress' && todo.status !== 'done' && (
+                        <button className="todo-action-btn" onClick={() => updateTodoStatus(todo.id, 'in_progress')} title="Start">▶</button>
+                      )}
+                      {todo.status === 'in_progress' && (
+                        <button className="todo-action-btn" onClick={() => updateTodoStatus(todo.id, 'pending')} title="Pause">⏸</button>
+                      )}
+                      {todo.status !== 'blocked' && todo.status !== 'done' && (
+                        <button className="todo-action-btn" onClick={() => updateTodoStatus(todo.id, 'blocked')} title="Block">🚫</button>
+                      )}
+                      <button className="todo-action-btn todo-delete-btn" onClick={() => deleteTodo(todo.id)} title="Delete">✕</button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
         </section>}
 
         {activeTab === 'tasks' && <section className="task-queue">

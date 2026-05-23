@@ -43,6 +43,14 @@ function writeTasksFile(tasks) {
   writeJsonFile('tasks.json', tasks)
 }
 
+function readTodosFile() {
+  return readJsonFile('todos.json', [])
+}
+
+function writeTodosFile(todos) {
+  writeJsonFile('todos.json', todos)
+}
+
 function readIssuesFile() {
   return readJsonFile('issues.json', [])
 }
@@ -1177,6 +1185,88 @@ ipcMain.handle('read-issues', async () => {
     return readIssuesFile()
   } catch (e) {
     console.error('read-issues fallback error', e)
+    return []
+  }
+})
+
+ipcMain.handle('read-todos', async () => {
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/todos`, { cache: 'no-store' })
+    if (res.ok) return await res.json()
+  } catch (e) { /* fallback */ }
+  try {
+    return readTodosFile()
+  } catch (e) {
+    return []
+  }
+})
+
+ipcMain.handle('add-todo', async (event, input) => {
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/todos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input)
+    })
+    if (res.ok) { const d = await res.json(); return d.todos || [] }
+  } catch (e) { /* fallback */ }
+  try {
+    const todos = readTodosFile()
+    const now = new Date().toISOString()
+    const todo = {
+      id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: String(input.title || '').trim(),
+      description: String(input.description || '').trim(),
+      status: input.status || 'pending',
+      priority: input.priority || 'medium',
+      dueDate: String(input.dueDate || '').trim(),
+      tags: Array.isArray(input.tags) ? input.tags : [],
+      createdAt: now,
+      updatedAt: now
+    }
+    todos.push(todo)
+    writeTodosFile(todos)
+    return todos
+  } catch (e) {
+    console.error('add-todo fallback error', e)
+    return []
+  }
+})
+
+ipcMain.handle('update-todo', async (event, { id, patch }) => {
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/todos/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch)
+    })
+    if (res.ok) { const d = await res.json(); return d.todos || [] }
+  } catch (e) { /* fallback */ }
+  try {
+    const todos = readTodosFile()
+    const todo = todos.find(t => t.id === id)
+    if (!todo) return todos
+    Object.assign(todo, patch, { updatedAt: new Date().toISOString() })
+    writeTodosFile(todos)
+    return todos
+  } catch (e) {
+    console.error('update-todo fallback error', e)
+    return []
+  }
+})
+
+ipcMain.handle('delete-todo', async (event, { id }) => {
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/todos/${encodeURIComponent(id)}`, { method: 'DELETE' })
+    if (res.ok) { const d = await res.json(); return d.todos || [] }
+  } catch (e) { /* fallback */ }
+  try {
+    let todos = readTodosFile()
+    todos = todos.filter(t => t.id !== id)
+    writeTodosFile(todos)
+    return todos
+  } catch (e) {
+    console.error('delete-todo fallback error', e)
     return []
   }
 })

@@ -33,6 +33,7 @@ const issuesFile = path.join(DATA_DIR, 'issues.json')
 const connectorsFile = path.join(DATA_DIR, 'connectors.json')
 const projectsFile = path.join(DATA_DIR, 'projects.json')
 const aiConfigFile = path.join(DATA_DIR, 'ai_config.json')
+const todosFile = path.join(DATA_DIR, 'todos.json')
 
 const AI_PROVIDER_PRESETS = {
   ollama: { baseUrl: 'http://localhost:11434/v1', model: 'llama3.2' },
@@ -50,6 +51,7 @@ const AGENTS_PROFILES_DIR = path.join(__dirname, '..', '..', 'agents')
 
 let agents = []
 let tasks = []
+let todos = []
 let profile = {}
 let contacts = []
 let mobileBridge = {}
@@ -87,6 +89,7 @@ function initDb() {
     db.pragma('journal_mode = WAL')
     db.exec(`CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, data TEXT);
              CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, data TEXT);
+             CREATE TABLE IF NOT EXISTS todos (id TEXT PRIMARY KEY, data TEXT);
              CREATE TABLE IF NOT EXISTS profile (k TEXT PRIMARY KEY, data TEXT);
              CREATE TABLE IF NOT EXISTS contacts (id TEXT PRIMARY KEY, data TEXT);
              CREATE TABLE IF NOT EXISTS mobile_bridge (k TEXT PRIMARY KEY, data TEXT);
@@ -111,6 +114,8 @@ function initDb() {
     connectors = connRows.map(r => JSON.parse(r.data))
     const projectRows = db.prepare('SELECT data FROM projects').all()
     projects = projectRows.map(r => JSON.parse(r.data))
+    const todoRows = db.prepare('SELECT data FROM todos').all()
+    todos = todoRows.map(r => JSON.parse(r.data))
     logger.info('SQLite persistence initialized at ' + dbPath)
     return true
   } catch (e) {
@@ -211,6 +216,15 @@ try {
   console.error('Failed to load projects.json, starting with empty list', e)
   projects = []
 }
+try {
+  if (!fs.existsSync(todosFile)) fs.writeFileSync(todosFile, '[]', 'utf8')
+  let raw = fs.readFileSync(todosFile, 'utf8')
+  raw = raw.replace(/^\uFEFF/, '')
+  todos = JSON.parse(raw)
+} catch (e) {
+  console.error('Failed to load todos.json, starting with empty list', e)
+  todos = []
+}
 
 const clients = []
 function sendEvent(data){
@@ -227,18 +241,21 @@ function persist(){
       const delIssues = db.prepare('DELETE FROM issues')
       const delConnectors = db.prepare('DELETE FROM connectors')
       const delProjects = db.prepare('DELETE FROM projects')
+      const delTodos = db.prepare('DELETE FROM todos')
       delAgents.run()
       delTasks.run()
       delContacts.run()
       delIssues.run()
       delConnectors.run()
       delProjects.run()
+      delTodos.run()
       const insertAgent = db.prepare('INSERT INTO agents (id, data) VALUES (?, ?)')
       const insertTask = db.prepare('INSERT INTO tasks (id, data) VALUES (?, ?)')
       const insertContact = db.prepare('INSERT INTO contacts (id, data) VALUES (?, ?)')
       const insertIssue = db.prepare('INSERT INTO issues (id, data) VALUES (?, ?)')
       const insertConnector = db.prepare('INSERT INTO connectors (id, data) VALUES (?, ?)')
       const insertProject = db.prepare('INSERT INTO projects (id, data) VALUES (?, ?)')
+      const insertTodo = db.prepare('INSERT INTO todos (id, data) VALUES (?, ?)')
       const insertProfile = db.prepare('INSERT OR REPLACE INTO profile (k, data) VALUES (?, ?)')
       const insertMobile = db.prepare('INSERT OR REPLACE INTO mobile_bridge (k, data) VALUES (?, ?)')
       const tran = db.transaction(() => {
@@ -248,6 +265,7 @@ function persist(){
         for (const i of issues) insertIssue.run(i.id, JSON.stringify(i))
         for (const c of connectors) insertConnector.run(c.id, JSON.stringify(c))
         for (const p of projects) insertProject.run(p.id, JSON.stringify(p))
+        for (const td of todos) insertTodo.run(td.id, JSON.stringify(td))
         insertProfile.run('profile', JSON.stringify(profile))
         insertMobile.run('mobile_bridge', JSON.stringify(mobileBridge))
       })
@@ -267,6 +285,7 @@ function persist(){
   try { fs.writeFileSync(issuesFile, JSON.stringify(issues, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist issues: ' + e) }
   try { fs.writeFileSync(connectorsFile, JSON.stringify(connectors, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist connectors: ' + e) }
   try { fs.writeFileSync(projectsFile, JSON.stringify(projects, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist projects: ' + e) }
+  try { fs.writeFileSync(todosFile, JSON.stringify(todos, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist todos: ' + e) }
 }
 function persistAiConfig() {
   try { fs.writeFileSync(aiConfigFile, JSON.stringify(aiConfig, null, 2), 'utf8') } catch(e) { logger.error('Failed to persist ai_config: ' + e) }
@@ -334,6 +353,24 @@ function maskSecret(value) {
   if (text.startsWith('****')) return text
   if (text.length <= 4) return '****'
   return `****${text.slice(-4)}`
+}
+function createTodoRecord(input) {
+  const title = String(input.title || '').trim()
+  if (!title) throw new Error('Todo title is required')
+  const now = new Date().toISOString()
+  const todo = {
+    id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title,
+    description: String(input.description || '').trim(),
+    status: ['pending', 'in_progress', 'done', 'blocked'].includes(input.status) ? input.status : 'pending',
+    priority: ['low', 'medium', 'high', 'urgent'].includes(input.priority) ? input.priority : 'medium',
+    dueDate: String(input.dueDate || '').trim(),
+    tags: Array.isArray(input.tags) ? input.tags.map(t => String(t).trim()).filter(Boolean) : [],
+    createdAt: now,
+    updatedAt: now
+  }
+  todos.push(todo)
+  return todo
 }
 function sanitizeConnectorForClient(connector) {
   const safe = { ...connector, config: { ...(connector.config || {}) } }
@@ -1417,6 +1454,69 @@ const server = http.createServer(async (req, res) => {
     } catch (e){
       res.writeHead(404, {'Content-Type':'application/json'})
       res.end(JSON.stringify({ error: e.message || 'issue not found' }))
+    }
+    return
+  }
+
+  if (req.method === 'GET' && req.url === '/todos'){
+    res.writeHead(200, {'Content-Type':'application/json'})
+    return res.end(JSON.stringify(todos))
+  }
+
+  if (req.method === 'POST' && req.url === '/todos'){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const todo = createTodoRecord(JSON.parse(body || '{}'))
+        persist()
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ todos, todo }))
+      } catch (e){
+        res.writeHead(400, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: e.message || 'invalid body' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'PATCH' && req.url.startsWith('/todos/')){
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const id = decodeURIComponent(req.url.slice('/todos/'.length))
+        const todo = todos.find(t => t.id === id)
+        if (!todo) throw new Error('Todo not found')
+        const patch = JSON.parse(body || '{}')
+        const allowed = ['title', 'description', 'status', 'priority', 'dueDate', 'tags']
+        for (const key of allowed) {
+          if (patch[key] !== undefined) todo[key] = patch[key]
+        }
+        todo.updatedAt = new Date().toISOString()
+        persist()
+        res.writeHead(200, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ todos, todo }))
+      } catch (e){
+        res.writeHead(404, {'Content-Type':'application/json'})
+        res.end(JSON.stringify({ error: e.message || 'todo not found' }))
+      }
+    })
+    return
+  }
+
+  if (req.method === 'DELETE' && req.url.startsWith('/todos/')){
+    try {
+      const id = decodeURIComponent(req.url.slice('/todos/'.length))
+      const idx = todos.findIndex(t => t.id === id)
+      if (idx === -1) throw new Error('Todo not found')
+      todos.splice(idx, 1)
+      persist()
+      res.writeHead(200, {'Content-Type':'application/json'})
+      res.end(JSON.stringify({ todos }))
+    } catch (e){
+      res.writeHead(404, {'Content-Type':'application/json'})
+      res.end(JSON.stringify({ error: e.message || 'todo not found' }))
     }
     return
   }
