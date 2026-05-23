@@ -48,6 +48,51 @@ try {
 } catch (e) { /* use defaults */ }
 
 const AGENTS_PROFILES_DIR = path.join(__dirname, '..', '..', 'agents')
+const TEAM_DEFINITIONS = [
+  {
+    id: 'yepc', label: 'YEPC', icon: '🏟️',
+    description: 'Youth Elite Performance Complex development project',
+    agents: [
+      { id: 'yepcrprojectmanageragent', name: 'yepcrprojectmanageragent', role: 'Master project tracker, milestone management', profileFile: 'web_dev_researcher' },
+      { id: 'yepcrealestateresearchagent', name: 'yepcrealestateresearchagent', role: 'Zoning, permitting, EDC incentives, TxDOT/CAMPO', profileFile: 'yepc_real_estate_research_agent' },
+      { id: 'yepccapitalfundraisingagent', name: 'yepccapitalfundraisingagent', role: 'Investor decks, naming rights, sponsorships, lending', profileFile: 'yepc_capital_fundraising_agent' },
+      { id: 'yepcgovernmentrelationsagent', name: 'yepcgovernmentrelationsagent', role: 'City/county meetings, TxDOT, CAMPO monitoring', profileFile: 'yepc_government_relations_agent' },
+      { id: 'yepcgrantwriteragent', name: 'yepcgrantwriteragent', role: 'Capital project grant applications (EDA, HUD, etc.)', profileFile: 'yepc_grant_writer_agent' }
+    ]
+  },
+  {
+    id: 'research', label: 'Research & Funding', icon: '🔬',
+    description: 'Grant discovery, funding research, and application writing',
+    agents: [
+      { id: 'grantsresearchagent', name: 'grantsresearchagent', role: 'Grant discovery, funding opportunities, revenue ideas', profileFile: 'grants_research_agent' },
+      { id: 'grantwriteragent', name: 'grantwriteragent', role: 'Program-level grant application writing', profileFile: 'grant_writer_agent' }
+    ]
+  },
+  {
+    id: 'web', label: 'Web Development', icon: '💻',
+    description: 'WordPress, plugin development, and web research',
+    agents: [
+      { id: 'wordpressagent', name: 'wordpressagent', role: 'WordPress fixing, building, themes', profileFile: null },
+      { id: 'wordpresspluginsagent', name: 'wordpresspluginsagent', role: 'Custom plugin development', profileFile: 'wordpresspluginsagent' },
+      { id: 'webdevresearcher', name: 'webdevresearcher', role: 'Site audits and strategy reports', profileFile: null }
+    ]
+  },
+  {
+    id: 'personal', label: 'Personal', icon: '👤',
+    description: 'Personal productivity and email management',
+    agents: [
+      { id: 'allensmithagent', name: 'allensmithagent', role: 'Personal email management (Outlook)', profileFile: null },
+      { id: 'smithdaiiagent', name: 'smithdaiiagent', role: 'Personal daily use email (Gmail)', profileFile: null },
+      { id: 'communicationsdirgcr', name: 'communicationsdirgcr', role: 'Communications Director GCR', profileFile: null },
+      { id: 'thesigmasignal', name: 'thesigmasignal', role: 'The Sigma Signal newsletter', profileFile: null },
+      { id: 'sigmasignalconstantcontactmonitor', name: 'sigmasignalconstantcontactmonitor', role: 'Sigma Signal campaign monitor', profileFile: 'sigmasignalconstantcontactmonitor' },
+      { id: 'nutrueapparel', name: 'nutrueapparel', role: 'Nutrue Apparel brand communications', profileFile: null },
+      { id: 'smithcapitalproperties', name: 'smithcapitalproperties', role: 'Smith Capital Properties communications', profileFile: null },
+      { id: 'psibetasigma1914', name: 'psibetasigma1914', role: 'Psi Beta Sigma 1914 chapter communications', profileFile: null },
+      { id: 'xtremeforcetrackclub', name: 'xtremeforcetrackclub', role: 'Xtreme Force Track Club communications', profileFile: null }
+    ]
+  }
+]
 
 let agents = []
 let tasks = []
@@ -225,6 +270,8 @@ try {
   console.error('Failed to load todos.json, starting with empty list', e)
   todos = []
 }
+
+syncAgentsFromProfiles()
 
 const clients = []
 function sendEvent(data){
@@ -832,7 +879,7 @@ async function runPublicResearchAdapter(task, agent) {
 
 function buildMajestySystemPrompt() {
   reloadRuntimeData()
-  const agentList = agents.filter(a => a.name !== 'AgentMajesty').map(a => `- ${a.name}: ${a.role || 'Specialized agent'}`).join('\n') || '- No specialized agents configured yet'
+  const agentList = agents.filter(a => a.name !== 'AgentMajesty').map(a => `- ${a.name} [${a.teamLabel || a.team || 'General'}]: ${a.role || 'Specialized agent'}`).join('\n') || '- No specialized agents configured yet'
   const queuedCount = tasks.filter(t => t.status === 'queued' || t.status === 'running').length
   const completedCount = tasks.filter(t => t.status === 'completed' || t.status === 'completed-with-issues').length
   const openIssueCount = issues.filter(i => i.status !== 'resolved').length
@@ -885,7 +932,54 @@ function loadAgentProfiles() {
   return profiles
 }
 
+function syncAgentsFromProfiles() {
+  const agentProfiles = loadAgentProfiles()
+  let changed = false
+  for (const team of TEAM_DEFINITIONS) {
+    for (const def of team.agents) {
+      const existing = agents.find(a => a.id === def.id || a.name.toLowerCase() === def.name.toLowerCase())
+      if (existing) {
+        if (existing.team !== team.id || existing.teamLabel !== team.label) {
+          existing.team = team.id
+          existing.teamLabel = team.label
+          if (!existing.profileFile && def.profileFile) existing.profileFile = def.profileFile
+          changed = true
+        }
+      } else {
+        const now = new Date().toISOString()
+        agents.push({
+          id: def.id,
+          name: def.name,
+          status: 'idle',
+          progress: 0,
+          role: def.role,
+          team: team.id,
+          teamLabel: team.label,
+          profileFile: def.profileFile || null,
+          profileLoaded: def.profileFile ? Boolean(agentProfiles[def.profileFile]) : false,
+          logs: [`${now} - Agent registered from roster.`]
+        })
+        changed = true
+      }
+    }
+  }
+  const majesty = agents.find(a => a.name === 'AgentMajesty')
+  if (majesty && !majesty.team) {
+    majesty.team = 'coordinator'
+    majesty.teamLabel = 'Command'
+    changed = true
+  }
+  if (changed) persist()
+  return changed
+}
+
 function getAgentSystemPrompt(agent, agentProfiles) {
+  if (agent.profileFile) {
+    const pfKey = String(agent.profileFile).replace(/\.md$/, '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    for (const [key, text] of Object.entries(agentProfiles)) {
+      if (key.replace(/[^a-z0-9]/g, '') === pfKey) return text
+    }
+  }
   const name = String(agent.name || '').toLowerCase().replace(/[^a-z0-9]/g, '')
   for (const [key, text] of Object.entries(agentProfiles)) {
     const cleanKey = key.replace(/[^a-z0-9]/g, '')
@@ -1289,6 +1383,12 @@ const server = http.createServer(async (req, res) => {
       }
     })
     return
+  }
+
+  if (req.method === 'POST' && req.url === '/agents/sync') {
+    syncAgentsFromProfiles()
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    return res.end(JSON.stringify({ agents }))
   }
 
   if (req.method === 'PUT' && req.url === '/profile'){

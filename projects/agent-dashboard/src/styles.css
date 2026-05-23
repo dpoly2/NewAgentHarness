@@ -207,6 +207,63 @@ button:disabled{cursor:not-allowed;opacity:.6}
 .ai-help li{margin-bottom:6px}
 .ai-help code{background:#f3f4f6;padding:2px 5px;border-radius:4px;font-size:12px}
 .ai-help a{color:#2563eb}
+/* Team groups in sidebar */
+.team-groups { margin-bottom: 12px; }
+.team-group { margin-bottom: 4px; border-radius: 6px; overflow: hidden; }
+.team-group.team-selected > .team-group-header { background: #374151; }
+.team-group-header { display: flex; align-items: center; gap: 6px; padding: 8px 10px; cursor: pointer; border-radius: 6px; transition: background .12s; color: #d1d5db; }
+.team-group-header:hover { background: #2d3748; }
+.team-icon { font-size: 14px; flex-shrink: 0; }
+.team-name { flex: 1; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.team-count { background: #374151; color: #9ca3af; border-radius: 999px; font-size: 10px; padding: 1px 6px; }
+.team-running { background: #065f46; color: #6ee7b7; border-radius: 999px; font-size: 10px; padding: 1px 6px; }
+.team-chevron { color: #6b7280; font-size: 12px; }
+.team-agent-list { list-style: none; margin: 0 0 4px; padding: 0 0 0 12px; }
+.team-agent-list .agent-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 4px; cursor: pointer; transition: background .1s; color: #d1d5db; font-size: 12px; }
+.team-agent-list .agent-item:hover { background: #2d3748; }
+.team-agent-list .agent-item.selected { background: #374151; color: #f9fafb; }
+.agent-item-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-alert-dot { color: #fbbf24; font-size: 11px; font-weight: 700; }
+.profile-badge { color: #34d399; font-size: 10px; }
+
+/* Team context strip in Command tab */
+.team-context-strip { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; flex-shrink: 0; }
+.team-context-icon { font-size: 16px; }
+.team-context-strip strong { font-size: 13px; }
+.team-context-stats { color: #6b7280; font-size: 12px; flex: 1; }
+.team-context-link { background: none; border: none; color: #2563eb; font-size: 12px; cursor: pointer; padding: 0; }
+
+/* Teams tab */
+.teams-view { padding: 16px; display: flex; flex-direction: column; gap: 20px; overflow: auto; flex: 1; }
+.teams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.team-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; cursor: pointer; transition: box-shadow .12s, border-color .12s; }
+.team-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.1); border-color: #d1d5db; }
+.team-card.team-card-active { border-color: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+.team-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.team-card-icon { font-size: 20px; }
+.team-card-header strong { font-size: 14px; }
+.team-card-stats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.team-card-stats span { font-size: 12px; color: #6b7280; }
+.running-badge { background: #dcfce7; color: #166534; border-radius: 999px; padding: 1px 6px; font-size: 11px; font-weight: 600; }
+.task-badge { background: #dbeafe; color: #1d4ed8; border-radius: 999px; padding: 1px 6px; font-size: 11px; }
+.team-card-desc { font-size: 12px; color: #9ca3af; margin: 0; }
+
+/* Team detail */
+.team-detail { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; }
+.team-member-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 12px; }
+.team-member-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+.status-bg-running { background: #f5f3ff; border-color: #ddd6fe; }
+.status-bg-error { background: #fef2f2; border-color: #fecaca; }
+.team-member-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.team-member-header strong { font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-member-role { font-size: 11px; color: #6b7280; margin: 0 0 8px; line-height: 1.4; }
+.team-member-progress { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.team-member-progress .progress-outer { flex: 1; }
+.team-member-progress span { font-size: 11px; color: #6b7280; }
+.team-member-actions { display: flex; gap: 4px; }
+.team-member-actions button { flex: 1; border: 1px solid #d1d5db; border-radius: 4px; background: #fff; padding: 3px 6px; font-size: 11px; transition: background .1s; }
+.team-member-actions button:hover:not(:disabled) { background: #f3f4f6; }
+
 @media (max-width: 900px){
   .app{height:auto;min-height:100vh;flex-direction:column}
   .sidebar{width:auto}

@@ -11,7 +11,17 @@ function statusLabel(s) {
   return map[s] || (s ? s.charAt(0).toUpperCase() + s.slice(1) : '—')
 }
 
+const TEAM_ORDER = ['yepc', 'research', 'web', 'personal']
+const TEAM_META = {
+  yepc: { label: 'YEPC', icon: '🏟️', description: 'Youth Elite Performance Complex' },
+  research: { label: 'Research & Funding', icon: '🔬', description: 'Grant discovery and application writing' },
+  web: { label: 'Web Development', icon: '💻', description: 'WordPress, plugins, web research' },
+  personal: { label: 'Personal', icon: '👤', description: 'Personal productivity and email' },
+  coordinator: { label: 'Command', icon: '⭐', description: 'Central coordination' }
+}
+
 export default function App(){
+
   const [agents, setAgents] = useState([])
   const [tasks, setTasks] = useState([])
   const [todos, setTodos] = useState([])
@@ -23,6 +33,9 @@ export default function App(){
   const [connectors, setConnectors] = useState([])
   const [projects, setProjects] = useState([])
   const [selected, setSelected] = useState(null)
+  const [selectedTeam, setSelectedTeam] = useState('yepc')
+  const [expandedTeams, setExpandedTeams] = useState(['yepc'])
+  const [teamDetailView, setTeamDetailView] = useState('yepc')
   const [selectedTaskId, setSelectedTaskId] = useState(null)
   const [activeTab, setActiveTab] = useState('command')
   const [busy, setBusy] = useState(false)
@@ -74,6 +87,14 @@ export default function App(){
   const readyConnectors = connectors.filter(connector => connector.status === 'ready')
   const latestProject = projects[0] || null
   const recentMemory = Array.isArray(profile?.memory) ? profile.memory.slice(0, 3) : []
+  const teamGroups = TEAM_ORDER.map(tid => {
+    const teamAgents = agents.filter(a => a.team === tid)
+    const running = teamAgents.filter(a => a.status === 'running').length
+    const teamTasks = tasks.filter(t => teamAgents.some(a => a.id === t.assignedAgentId))
+    return { id: tid, ...TEAM_META[tid], agents: teamAgents, running, tasks: teamTasks }
+  }).filter(group => group.agents.length > 0)
+  const selectedTeamGroup = teamGroups.find(team => team.id === selectedTeam) || null
+  const activeTeamDetail = teamGroups.find(team => team.id === teamDetailView) || null
   const quickPrompts = [
     'Teach Majesty',
     'Check newsletter campaign health',
@@ -110,7 +131,10 @@ export default function App(){
           const data = (maybe && typeof maybe.then === 'function') ? await maybe : maybe
           if (!mounted) return
           setAgents(data || [])
-          if (data && data.length) setSelected(current => current || data[0].id)
+          if (data && data.length) {
+            const firstTeamAgent = data.find(agent => agent.team && agent.team !== 'coordinator') || data.find(agent => agent.name !== 'AgentMajesty') || data[0]
+            setSelected(current => current || firstTeamAgent?.id)
+          }
         }
         if (window.electron && window.electron.invoke) {
           const taskData = await window.electron.invoke('read-tasks')
@@ -169,6 +193,25 @@ export default function App(){
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight
   }, [chatMessages])
 
+  useEffect(() => {
+    if (!teamGroups.length) return
+    if (!teamGroups.some(team => team.id === selectedTeam)) setSelectedTeam(teamGroups[0].id)
+    if (!teamGroups.some(team => team.id === teamDetailView)) setTeamDetailView(teamGroups[0].id)
+  }, [selectedTeam, teamDetailView, teamGroups])
+
+  useEffect(() => {
+    const current = agents.find(agent => agent.id === selected)
+    if (current?.team && current.team !== selectedTeam) setSelectedTeam(current.team)
+  }, [agents, selected, selectedTeam])
+
+  useEffect(() => {
+    const current = agents.find(agent => agent.id === selected)
+    if (current) return
+    const preferredTeam = teamGroups.find(team => team.id === selectedTeam && team.agents.length) || teamGroups[0]
+    const fallbackAgent = preferredTeam?.agents[0] || agents.find(agent => agent.name !== 'AgentMajesty') || agents[0]
+    if (fallbackAgent && fallbackAgent.id !== selected) setSelected(fallbackAgent.id)
+  }, [agents, selected, selectedTeam, teamGroups])
+
   const selAgent = (Array.isArray(agents) ? agents.find(a => a.id === selected) : null) || (Array.isArray(agents) ? agents[0] : null)
   const selAgentIssues = selAgent ? openIssues.filter(issue => issue.agentId === selAgent.id) : []
   const selAgentLearning = Array.isArray(selAgent?.learning) ? selAgent.learning.slice(0, 5) : []
@@ -206,6 +249,17 @@ export default function App(){
       setNewAgentRole('')
     } catch (e) {
       console.error('add agent failed', e)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function syncRoster() {
+    if (!window.electron || !window.electron.invoke) return
+    try {
+      setBusy(true)
+      const result = await window.electron.invoke('sync-agents')
+      setAgents(result.agents || result || [])
     } finally {
       setBusy(false)
     }
@@ -673,22 +727,42 @@ export default function App(){
           <strong>Agent Harness</strong>
           <small>v1</small>
         </div>
-        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 8px' }}>Agents</h2>
-        <ul>
-          {agents.map(a => (
-            <li key={a.id} onClick={() => setSelected(a.id)} className={`agent-item${a.id === selected ? ' selected' : ''}`}>
-              <div className="agent-item-row">
-                <span className={`status-dot dot-${a.status || 'idle'}`}></span>
-                <strong style={{ fontSize: 13 }}>{a.name}</strong>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 8px' }}>Project Teams</h2>
+        <div className="team-groups">
+          {teamGroups.map(team => (
+            <div key={team.id} className={`team-group${selectedTeam === team.id ? ' team-selected' : ''}`}>
+              <div className="team-group-header" onClick={() => {
+                setSelectedTeam(team.id)
+                setExpandedTeams(prev => prev.includes(team.id) ? prev.filter(id => id !== team.id) : [...prev, team.id])
+              }}>
+                <span className="team-icon">{team.icon}</span>
+                <span className="team-name">{team.label}</span>
+                <span className="team-count">{team.agents.length}</span>
+                {team.running > 0 && <span className="team-running">{team.running} ▶</span>}
+                <span className="team-chevron">{expandedTeams.includes(team.id) ? '▾' : '▸'}</span>
               </div>
-              <small className="agent-item-meta">{a.role || statusLabel(a.status)} · {a.progress ?? 0}%</small>
-              {openIssues.filter(issue => issue.agentId === a.id).length > 0 && (
-                <span className="sidebar-alert">{openIssues.filter(issue => issue.agentId === a.id).length} issue(s)</span>
+              {expandedTeams.includes(team.id) && (
+                <ul className="team-agent-list">
+                  {team.agents.map(a => (
+                    <li
+                      key={a.id}
+                      onClick={() => { setSelectedTeam(team.id); setSelected(a.id) }}
+                      className={`agent-item${a.id === selected ? ' selected' : ''}`}
+                    >
+                      <span className={`status-dot dot-${a.status || 'idle'}`}></span>
+                      <span className="agent-item-name">{a.name}</span>
+                      {openIssues.filter(issue => issue.agentId === a.id).length > 0 && (
+                        <span className="sidebar-alert-dot" title="Has issues">!</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
         <button className="full-button" onClick={() => { if (window.electron && window.electron.getAgents) { const m = window.electron.getAgents(); if (m && typeof m.then === 'function') { m.then(d => setAgents(d||[])) } else { setAgents(m||[]) } } }}>Refresh</button>
+        <button className="full-button subtle-button" style={{ marginTop: 6 }} onClick={syncRoster} disabled={busy}>Sync Roster</button>
 
         <details className="add-agent">
           <summary>Add agent</summary>
@@ -921,6 +995,7 @@ export default function App(){
         <nav className="tab-bar">
           {[
             ['command', 'Command'],
+            ['teams', 'Teams'],
             ['todos', 'Todos'],
             ['tasks', 'Tasks'],
             ['projects', 'Projects'],
@@ -944,6 +1019,14 @@ export default function App(){
           <div className={aiConfig?.enabled ? 'ai-active-strip' : ''}><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>{aiConfig?.enabled ? `AI · ${aiConfig.provider}` : 'AI off'}</span></div>
         </section>
         {activeTab === 'command' && <section className="command-chat">
+          {selectedTeamGroup && (
+            <div className="team-context-strip">
+              <span className="team-context-icon">{selectedTeamGroup.icon}</span>
+              <strong>{selectedTeamGroup.label}</strong>
+              <span className="team-context-stats">{selectedTeamGroup.agents.length} agents · {selectedTeamGroup.running} running · {selectedTeamGroup.tasks.filter(task => task.status !== 'completed').length} tasks</span>
+              <button className="team-context-link" onClick={() => setActiveTab('teams')}>Team view →</button>
+            </div>
+          )}
           {selAgent && (
             <div className="agent-status-bar">
               <span className={`status-dot dot-${selAgent.status || 'idle'}`}></span>
@@ -1041,6 +1124,84 @@ export default function App(){
               <button disabled={busy || !chatInput.trim()} style={{ background: '#2563eb', color: '#fff', border: 0, borderRadius: 6, padding: '8px 14px', fontWeight: 500, alignSelf: 'stretch' }}>Send</button>
             </form>
           </div>
+        </section>}
+
+        {activeTab === 'teams' && <section className="teams-view">
+          <div className="teams-grid">
+            {teamGroups.map(team => {
+              const activeTaskCount = team.tasks.filter(task => task.status === 'queued' || task.status === 'running').length
+              return (
+                <div
+                  key={team.id}
+                  className={`team-card${teamDetailView === team.id ? ' team-card-active' : ''}`}
+                  onClick={() => setTeamDetailView(team.id)}
+                >
+                  <div className="team-card-header">
+                    <span className="team-card-icon">{team.icon}</span>
+                    <strong>{team.label}</strong>
+                  </div>
+                  <div className="team-card-stats">
+                    <span>{team.agents.length} agents</span>
+                    {team.running > 0 && <span className="running-badge">{team.running} running</span>}
+                    {activeTaskCount > 0 && <span className="task-badge">{activeTaskCount} queued</span>}
+                  </div>
+                  <p className="team-card-desc">{team.description}</p>
+                </div>
+              )
+            })}
+          </div>
+
+          {activeTeamDetail && (
+            <div className="team-detail">
+              <div className="section-heading">
+                <h3>{activeTeamDetail.icon} {activeTeamDetail.label} — Team Detail</h3>
+                <small>{activeTeamDetail.agents.length} members · {activeTeamDetail.running} running</small>
+              </div>
+              <div className="team-member-grid">
+                {activeTeamDetail.agents.map(a => (
+                  <div key={a.id} className={`team-member-card status-bg-${a.status || 'idle'}`}>
+                    <div className="team-member-header">
+                      <span className={`status-dot dot-${a.status || 'idle'}`}></span>
+                      <strong>{a.name}</strong>
+                      {a.profileFile && <span className="profile-badge" title="Profile loaded">✓</span>}
+                    </div>
+                    <p className="team-member-role">{a.role}</p>
+                    <div className="team-member-progress">
+                      <div className="progress-outer"><div className="progress-inner" style={{ width: `${a.progress || 0}%` }} /></div>
+                      <span>{a.progress || 0}%</span>
+                    </div>
+                    <div className="team-member-actions">
+                      <button disabled={busy || a.status === 'running'} onClick={() => commandAgent(a.id, 'start')}>Start</button>
+                      <button disabled={busy || a.status !== 'running'} onClick={() => commandAgent(a.id, 'stop')}>Stop</button>
+                      <button disabled={busy} onClick={() => commandAgent(a.id, 'ping')}>Ping</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {activeTeamDetail.tasks.length > 0 && (
+                <div style={{ marginTop: 20 }}>
+                  <div className="section-heading">
+                    <h4>Tasks</h4>
+                    <small>{activeTeamDetail.tasks.filter(task => task.status !== 'completed').length} active</small>
+                  </div>
+                  <div className="task-list">
+                    {activeTeamDetail.tasks.slice(0, 8).map(task => (
+                      <article key={task.id} className="task-card" onClick={() => { setSelectedTaskId(task.id); setActiveTab('tasks') }}>
+                        <div className="task-head">
+                          <div>
+                            <strong>{task.title}</strong>
+                            <small>{task.id} · {task.assignedAgentName || 'Unassigned'}</small>
+                          </div>
+                          <span className={`status-pill status-${task.status}`}>{statusLabel(task.status)}</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </section>}
 
         {activeTab === 'todos' && <section className="todos-view">

@@ -1068,6 +1068,14 @@ ipcMain.handle('read-agents', async () => {
   }
 })
 
+ipcMain.handle('sync-agents', async () => {
+  try {
+    const res = await fetch(`${AGENT_RUNTIME_URL}/agents/sync`, { method: 'POST' })
+    if (res.ok) return await res.json()
+  } catch (e) { /* fallback */ }
+  return { agents: readAgentsFile() }
+})
+
 // Agent commands now call the runtime HTTP API, fallback to local file update
 ipcMain.handle('agent-command', async (event, { id, action }) => {
   try {
