@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sigma Signal Monitor</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">The Sigma Signal</p>
+          <h1>Request Monitor</h1>
+        </div>
+        <button id="refresh" type="button">Refresh</button>
+      </header>
+
+      <section class="status-grid" aria-label="monitor status">
+        <article class="status-panel">
+          <span class="label">Health</span>
+          <strong id="health">...</strong>
+        </article>
+        <article class="status-panel">
+          <span class="label">Open Requests</span>
+          <strong id="open-count">0</strong>
+        </article>
+        <article class="status-panel">
+          <span class="label">Next Issue</span>
+          <strong id="next-issue">...</strong>
+        </article>
+        <article class="status-panel">
+          <span class="label">Inbox</span>
+          <strong id="watch-address">...</strong>
+        </article>
+      </section>
+
+      <section class="workbench">
+        <div class="panel requests-panel">
+          <div class="panel-head">
+            <h2>Requests</h2>
+            <span id="last-check">No check yet</span>
+          </div>
+          <div id="requests" class="request-list"></div>
+        </div>
+
+        <aside class="panel cadence-panel">
+          <h2>Cadence</h2>
+          <dl>
+            <div>
+              <dt>Newsletter rhythm</dt>
+              <dd id="cadence">Every two weeks</dd>
+            </div>
+            <div>
+              <dt>Next send window</dt>
+              <dd id="send-window">...</dd>
+            </div>
+            <div>
+              <dt>Monitor mode</dt>
+              <dd id="mode">...</dd>
+            </div>
+            <div>
+              <dt>Setup</dt>
+              <dd id="setup">...</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>

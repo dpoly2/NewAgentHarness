@@ -1,3 +1,4 @@
+﻿# Local Development Setup — Full Guide
 ﻿# Local Development Setup — AgentHarness Offline Mode
 **Date:** 2026-05-20
 **Goal:** Run all active projects locally using GitHub Copilot CLI + VS Code so development continues independently of Base44 credits.
@@ -53,6 +54,13 @@ git --version
 # Should return: git version 2.x.x
 ```
 
+
+**Verify:**
+```bash
+git --version
+# Should return: git version 2.x.x
+```
+
 ### 1.2 — Configure Git Identity
 
 ```bash
@@ -99,6 +107,44 @@ ls projects/
 ## Part 2 — VS Code Setup
 
 ### 2.1 — Install VS Code
+
+Download from https://code.visualstudio.com
+- Windows: run the installer, check "Add to PATH" during setup
+- Mac: drag to Applications, then run:
+
+```bash
+# Add VS Code to terminal PATH (Mac only)
+# Open VS Code → Cmd+Shift+P → type "shell command" → click "Install 'code' command in PATH"
+```
+
+### 2.2 — Open the Project
+
+```bash
+# From terminal, inside the cloned repo:
+code .
+```
+
+VS Code opens with your entire AgentHarness folder in the sidebar.
+
+### 2.3 — Install Essential Extensions
+
+Open the Extensions panel (`Ctrl+Shift+X` / `Cmd+Shift+X`) and install these:
+
+| Extension | Publisher | Why |
+|-----------|-----------|-----|
+| **GitHub Copilot** | GitHub | AI code completion as you type |
+| **GitHub Copilot Chat** | GitHub | Chat interface — your offline agent |
+| **PHP Intelephense** | Ben Mewburn | PHP intelligence, autocomplete, error detection |
+| **WordPress Snippets** | wpprofit | WP-specific function snippets |
+| **GitLens** | GitKraken | Visual git history, blame, branch management |
+| **Prettier** | Prettier | Code formatting |
+| **Auto Rename Tag** | Jun Han | Renames HTML/PHP closing tags automatically |
+| **Path Intellisense** | Christian Kohler | Autocompletes file paths in PHP includes |
+| **Thunder Client** | Thunder Client | Built-in REST API tester (replaces Postman) |
+| **Markdown All in One** | Yu Zhang | Preview and edit your .md project files |
+
+**Install all at once via terminal:**
+```bash
 
 Download from https://code.visualstudio.com
 - Windows: run the installer, check "Add to PATH" during setup
@@ -214,6 +260,27 @@ Download from https://localwp.com (free, no account required)
 
 ### 3.3 — Find Your Site's File Path
 
+
+Download from https://localwp.com (free, no account required)
+- Available for Mac, Windows, Linux
+- Install and launch
+
+### 3.2 — Create Your Dev Site
+
+1. Click **"+ Create a new site"**
+2. Site name: `tracksuite-dev` (or `xftc-dev`)
+3. Click **"Custom"** environment:
+   - PHP: **8.1** or **8.2**
+   - Web server: **Nginx** (preferred) or Apache
+   - Database: MySQL 8.0
+4. Set WordPress username/password:
+   - Username: `admin`
+   - Password: `admin` (local only — doesn't matter)
+   - Email: your email
+5. Click **"Add Site"** — LocalWP installs WordPress automatically
+
+### 3.3 — Find Your Site's File Path
+
 In LocalWP, click your site → click **"Go to site folder"**
 
 The path will be something like:
@@ -228,10 +295,25 @@ A symlink means edits in VS Code instantly appear in LocalWP — no manual copyi
 
 **Mac/Linux:**
 ```bash
-# Mac/Linux — symlink so edits are live:
-ln -s /path/to/AgentHarness/projects/ts-redevelopment/plugin/ts-membership \
-  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/plugins/ts-membership
+# Replace the path with YOUR actual Local Sites path
+ln -s ~/Documents/AgentHarness/projects/xftc-redevelopment/plugin/xftc-membership \
+  ~/Local\ Sites/tracksuite-dev/app/public/wp-content/plugins/xftc-membership
 
+# Verify it worked:
+ls ~/Local\ Sites/tracksuite-dev/app/public/wp-content/plugins/
+# Should show: xftc-membership (with an arrow → indicating symlink)
+```
+
+**Windows (run PowerShell as Administrator):**
+```powershell
+New-Item -ItemType SymbolicLink `
+  -Path "C:\Users\David\Local Sites\tracksuite-dev\app\public\wp-content\plugins\xftc-membership" `
+  -Target "C:\Users\David\Documents\AgentHarness\projects\xftc-redevelopment\plugin\xftc-membership"
+```
+
+### 3.5 — Symlink the Theme
+
+```bash
 # Windows (run as Admin):
 mklink /D "C:\Users\YOU\Local Sites\tracksuite-dev\app\public\wp-content\plugins\ts-membership" \
   "C:\path\to\AgentHarness\projects\ts-redevelopment\plugin\ts-membership"
@@ -267,6 +349,16 @@ New-Item -ItemType SymbolicLink `
 ```
 
 ### 3.6 — Activate Plugin + Theme in WordPress
+
+1. In LocalWP, click **"WP Admin"** button (opens browser to local WP Admin)
+2. Go to **Plugins → Installed Plugins** → activate **xftc-membership**
+3. Go to **Appearance → Themes** → activate **xftc-theme**
+4. Go to **Settings → Permalinks** → click **Save Changes** (flushes rewrite rules)
+
+### 3.7 — Install Composer (for Stripe PHP SDK)
+
+Composer is PHP's package manager — needed to install Stripe.
+
 
 1. In LocalWP, click **"WP Admin"** button (opens browser to local WP Admin)
 2. Go to **Plugins → Installed Plugins** → activate **xftc-membership**
@@ -380,34 +472,90 @@ These prefixes focus Copilot on specific scopes:
 | `#file:filename.php` | Reference a specific file in your question |
 | `#selection` | Ask about highlighted code |
 
-Use these in Copilot Chat to continue work exactly where we left off. Replace any <placeholders> before running.
+### 5.3 — Master Prompt Templates (Copy-Paste Ready)
 
-### Local Dev Setup (Copilot Chat Template)
-
+**XFTC Plugin — Continue Sprint 3:**
 ```
-@workspace
-You are my Local Development Assistant. Goal: set up a reproducible, offline LocalWP development site for this repository and verify the site runs in VS Code + LocalWP + Git.
-Context:
-- Repo path: D:\Projects\agentharness
-- Editor: VS Code (with GitHub Copilot Chat installed)
-- Local WP app: Local by Flywheel (Local)
+@workspace I'm continuing development on the XFTC membership WordPress plugin.
+Read projects/xftc-redevelopment/SPRINT-2.md — specifically the "Sprint 3 carry-forward" 
+section at the bottom. The plugin files are in projects/xftc-redevelopment/plugin/xftc-membership/.
+Sprint 3 priorities:
+1. Wire admin dashboard widgets in admin/views/dashboard.php
+2. Build Coach/Staff front-end portal so they don't need WP Admin
+3. Integrate Stripe once I add the API keys to plugin settings
 
-Tasks (perform or provide exact Windows commands):
-1) Confirm repository files exist at the path above.
-2) Create a Local site named "agentharness-local" that maps to the project's public webroot (if the repo has a WordPress public folder, use it; otherwise create a new WP site and explain where to copy plugin/theme files).
-   - Provide precise Local UI steps and the equivalent powershell/winget/Local CLI commands (if available).
-3) Symlink plugin and theme directories from the repo into the Local site's wp-content (Windows mklink /D example required).
-4) Ensure runtime tools are present (PHP, Composer, Node). If missing, provide winget commands to install them.
-5) Run dependency installs for the project (composer install / npm ci) with commands and expected outputs.
-6) Start the Local site, open WP Admin, activate the theme and plugin, and flush permalinks. Provide exact steps and commands.
-7) Run basic verification: request the home page, check WP admin reachable, list active plugins and theme, and report any PHP errors (how to find logs).
-8) If any manual steps are required (GUI sign-in, database import), output a concise checklist and the exact files/paths to use.
-
-End by listing the commands run, files changed (or created), and a suggested git commit message to record the setup (e.g., "chore: add local dev site and symlinks").
+Start with task 1 — show me the dashboard widget code.
 ```
 
----
+**TrackSuite — Phase 1 De-brandification:**
+```
+@workspace I'm starting Phase 1 of the TrackSuite productization project.
+Read projects/xftc-plugin-product/PHASE-1.md for the full task list.
+The plugin source is in projects/xftc-redevelopment/plugin/xftc-membership/.
 
+Step 1: Search every PHP file in the plugin for occurrences of "xftc_", "XFTC_", 
+"Xtreme Force", and hardcoded colors (#1a1a2e, #f5a623).
+Give me a complete list: filename, line number, current value, what it should be replaced with.
+```
+
+**Rowdy Crown — Research Agent:**
+```
+@workspace I am the Rowdy Crown Research Agent. Read projects/rowdy-crown/PROJECT.md 
+and projects/rowdy-crown/agents/research-agent.md.
+
+The target site is 15119 N IH-35 Service Rd, Pflugerville, TX 78660 (former Bombshells).
+Smith Capital Properties (owner: David Smith) is evaluating acquisition.
+
+This week:
+1. What do I need to research to determine if this site is viable for a nightclub?
+2. What are the TABC Mixed Beverage Permit requirements for Texas?
+3. What Austin/Pflugerville demographic data should I pull to validate the market?
+
+Give me a structured research plan with specific data sources and URLs.
+```
+
+**Rowdy Crown — Business Plan Agent:**
+```
+@workspace I am the Rowdy Crown Business Plan Agent. Read 
+projects/rowdy-crown/agents/business-plan-agent.md and projects/rowdy-crown/PROPOSAL.md.
+
+Build a detailed Year 1 monthly revenue model for Rowdy Crown ATX using these assumptions:
+- Open March 2027
+- Thursday: 150 guests avg, $15 cover, $35 avg bar spend
+- Friday: 350 guests avg, $30 cover, $50 avg bar spend  
+- Saturday: 400 guests avg, $40 cover, $55 avg bar spend (+ bottle service)
+- Sunday brunch: 100 guests, $15 cover, $30 avg spend
+- Private events: 2/month avg, $8,000 avg
+
+Show Month 1–12 revenue by stream in a markdown table.
+```
+
+**Funding Research:**
+```
+@workspace I am the Rowdy Crown Funding Agent. Read projects/rowdy-crown/FUNDING.md.
+
+Search for currently open grant opportunities for:
+- Minority-owned business / Black-owned business
+- Entertainment venue / hospitality / restaurant-bar
+- Texas-based or national programs
+
+For each grant found: name, org, amount, eligibility, deadline, application URL.
+Update FUNDING.md with any new entries not already listed.
+```
+
+**Phi Beta Sigma Foundation — 501(c)(3) Filing:**
+```
+@workspace I am working on the Phi Beta Sigma Collegiate Pathways Foundation.
+Read projects/pbs-foundation/CHARTER.md and projects/pbs-foundation/BYLAWS.md.
+
+Help me prepare for IRS Form 1023-EZ submission:
+1. What are the eligibility requirements for Form 1023-EZ vs full 1023?
+2. What documents do I need to have ready before submitting?
+3. Walk me through the key sections of Form 1023-EZ I need to complete based on our charter.
+```
+
+**YEPC — Hutto EDC Follow-up:**
+```
 ### Project-specific Quick Prompts
 ### 5.3 — Master Prompt Templates (Copy-Paste Ready)
 
@@ -515,6 +663,14 @@ The contact is at the Hutto Economic Development Corporation regarding the
 ## Part 6 — Daily Git Workflow
 
 ### Every Time You Sit Down to Work
+
+```bash
+# 1. Navigate to the repo
+cd ~/Documents/AgentHarness
+
+# 2. Pull latest (in case anything was auto-committed by Base44)
+git pull origin main
+
 
 ```bash
 # 1. Navigate to the repo
@@ -651,15 +807,14 @@ git push origin main
 
 ---
 
-## Summary of Everything Built So Far
-| Project | Status | Next Step |
-|---------|--------|-----------|
-| XFTC Membership Plugin v2.0.0 | ✅ Sprint 2 verified | Stripe keys + Sprint 3 |
-| XFTC Standalone Theme v1.0.0 | ✅ Complete | Production deploy |
-| TrackSuite Product Roadmap | ✅ Planned | Phase 1 execution |
-| Phi Beta Sigma Foundation | ✅ Charter + Bylaws done | 501(c)(3) filing |
-| YEPC / CR 132 Site | ✅ Research + outreach done | Hutto EDC follow-up May 25 |
-| AgentHarness GitHub Repo | ✅ Synced | Daily auto-sync active |
+## Quick Reference Card
+
+```
+Daily startup:
+  cd ~/Documents/AgentHarness && git pull && code .
+
+Copilot Chat shortcut:
+  Cmd+Shift+I (Mac) / Ctrl+Shift+I (Windows)
 
 ## Quick Reference Card
 

@@ -13,6 +13,7 @@
 | smithdaiiagent         | Gmail              | Personal (Smith Daily)          | Pending    |
 | communicationsdirgcr   | Gmail              | Communications / Dir GCR        | Pending    |
 | thesigmasignal         | Gmail              | The Sigma Signal                | Pending    |
+| sigmasignalconstantcontactmonitor | Constant Contact | The Sigma Signal campaign monitor | Pending |
 | nutrueapparel          | Custom Domain      | Nutrue Apparel                  | Pending    |
 | smithcapitalproperties | Gmail              | Smith Capital Properties        | Pending    |
 | psibetasigma1914       | Custom (→ Gmail?)  | Psi Beta Sigma 1914             | Pending    |
@@ -58,11 +59,14 @@
 | Daily Email Digest                | Every day at 8:00 AM CT    | Active  |
 | XFTC Signup & Payment Logger      | Every 4 hours              | Active  |
 | Weekly Monday Grant Digest        | Every Monday at 8:00 AM CT | Active  |
+| Sigma Signal Constant Contact Monitor | Daily + post-campaign | Pending |
 
 ---
 
 ## Open Items / Pending Info
 - [ ] Psi Beta Sigma chapter city/location (for local grant targeting)
+- [ ] Sigma Signal Constant Contact credentials / OAuth connection
+- [ ] Sigma Signal monitor alert destination
 - [ ] Nutrue Apparel LLC registration (unlocks more grant pools)
 - [ ] Smith Capital / YEPC: Confirm CR 132 parcel Opportunity Zone status
 - [ ] Smith Capital / YEPC: Confirm parcel ownership / acquisition status
