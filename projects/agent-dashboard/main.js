@@ -937,6 +937,21 @@ function buildTaskResponse(task, agent, linkedIssues, learning, issues, adapterR
   }
 }
 
+function parseAndCreateTodosLocal(text, sourceTag) {
+  const created = []
+  const regex = /\[TODO:(\{[^[\]]*\})\]/g
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      const spec = JSON.parse(match[1])
+      if (!spec.title) continue
+      if (sourceTag) spec.tags = [...(Array.isArray(spec.tags) ? spec.tags : []), sourceTag].filter(Boolean)
+      created.push({ spec, id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })
+    } catch (e) { /* skip */ }
+  }
+  return created
+}
+
 async function executeTaskRecord(taskId, agents, tasks, issues, projects = [], connectors = []) {
   const task = tasks.find(t => t.id === taskId)
   if (!task) throw new Error('Task not found')
@@ -965,6 +980,15 @@ async function executeTaskRecord(taskId, agents, tasks, issues, projects = [], c
   const llmResult = adapterResults.find(r => r.name === 'llm-adapter')
   const aiResponse = llmResult && llmResult.status === 'completed' ? llmResult.data?.response : null
   task.result = aiResponse || task.responseData.summary
+
+  // Auto-create todos from [TODO:{...}] markers in AI response
+  const agentTag = agent.name.toLowerCase().replace(/\s+/g, '-')
+  const createdTodoIds = aiResponse ? parseAndCreateTodosLocal(aiResponse, agentTag) : []
+  if (createdTodoIds.length) {
+    task.logs = (task.logs || []).concat([`${now} - Created ${createdTodoIds.length} todo(s) from agent response.`])
+    task.createdTodoIds = createdTodoIds
+  }
+
   agent.status = 'idle'
   agent.progress = 100
   agent.logs = (agent.logs || []).concat([
@@ -1395,11 +1419,21 @@ ipcMain.handle('execute-task', async (event, { id }) => {
     writeAgentsFile(agents)
     writeTasksFile(tasks)
     writeIssuesFile(issues)
+    // Persist any todos created during execution
+    let todos = readTodosFile()
+    if (task.createdTodoIds?.length) {
+      for (const item of task.createdTodoIds) {
+        const now = new Date().toISOString()
+        todos.push({ id: item.id, title: item.spec.title, description: item.spec.description || '', status: 'pending', priority: item.spec.priority || 'medium', dueDate: item.spec.dueDate || '', tags: item.spec.tags || [], createdAt: now, updatedAt: now })
+      }
+      writeTodosFile(todos)
+      task.createdTodoIds = task.createdTodoIds.map(item => item.id)
+    }
     broadcastDashboard(agents, tasks, issues)
-    return { agents, tasks, issues, task }
+    return { agents, tasks, todos, issues, task }
   } catch (e) {
     console.error('execute-task fallback error', e)
-    return { agents: [], tasks: [], error: e.message || 'Task execution failed' }
+    return { agents: [], tasks: [], todos: [], error: e.message || 'Task execution failed' }
   }
 })
 

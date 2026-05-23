@@ -372,6 +372,24 @@ function createTodoRecord(input) {
   todos.push(todo)
   return todo
 }
+
+// Parse all [TODO:{...}] markers from any LLM response and create todo records.
+// Returns array of created todo IDs.
+function parseAndCreateTodos(text, sourceTag) {
+  const created = []
+  const regex = /\[TODO:(\{[^[\]]*\})\]/g
+  let match
+  while ((match = regex.exec(text)) !== null) {
+    try {
+      const spec = JSON.parse(match[1])
+      if (!spec.title) continue
+      if (sourceTag) spec.tags = [...(Array.isArray(spec.tags) ? spec.tags : []), sourceTag].filter(Boolean)
+      const todo = createTodoRecord(spec)
+      created.push(todo.id)
+    } catch (e) { /* skip malformed */ }
+  }
+  return created
+}
 function sanitizeConnectorForClient(connector) {
   const safe = { ...connector, config: { ...(connector.config || {}) } }
   for (const key of ['password', 'apiKey', 'apiSecret', 'clientSecret', 'accessToken', 'refreshToken']) {
@@ -818,6 +836,8 @@ function buildMajestySystemPrompt() {
   const queuedCount = tasks.filter(t => t.status === 'queued' || t.status === 'running').length
   const completedCount = tasks.filter(t => t.status === 'completed' || t.status === 'completed-with-issues').length
   const openIssueCount = issues.filter(i => i.status !== 'resolved').length
+  const pendingTodos = todos.filter(t => t.status !== 'done')
+  const todoList = pendingTodos.slice(0, 8).map(t => `- [${t.priority}] ${t.title}${t.dueDate ? ` (due ${t.dueDate})` : ''}`).join('\n') || '- No pending todos'
   const memoryLines = Array.isArray(profile.memory) ? profile.memory.slice(0, 5).map(m => `  - ${m.text}`).join('\n') : ''
   return `You are AgentMajesty, an intelligent chief of staff for ${profile.name || 'the operator'} (${profile.role || 'Director of Communications'}).
 
@@ -826,7 +846,10 @@ Personality: Confident, warm, and strategically sharp. You think like a trusted 
 Available specialized agents:
 ${agentList}
 
-Current status: ${queuedCount} queued tasks, ${completedCount} completed, ${openIssueCount} open issues.
+Current status: ${queuedCount} queued tasks, ${completedCount} completed, ${openIssueCount} open issues, ${pendingTodos.length} pending todos.
+
+Pending todos:
+${todoList}
 
 Operator profile:
 - Priorities: ${profile.priorities || 'not specified'}
@@ -836,10 +859,15 @@ ${memoryLines ? `- Memory:\n${memoryLines}` : ''}
 
 Instructions:
 - Respond conversationally and concisely. Avoid excessive bullet points.
-- When you want to create and assign a task to an agent, append this JSON block on a new line at the very END of your response ONLY (not inline):
+- When you want to create and assign a task to an agent, append this JSON block on a new line at the very END of your response ONLY:
 [TASK:{"title":"Brief title","description":"Full task description","agentHint":"agent name or specialty keyword"}]
-- Only create a task when the operator explicitly asks you to do something that requires agent work. For questions, analysis, or conversation - do NOT include the JSON block.
-- Never include [TASK:...] in the middle of a response, only at the very end if needed.`
+- When you identify one or more pending items, action items, or follow-ups during a conversation, append one or more TODO blocks on new lines at the END of your response:
+[TODO:{"title":"Short action item","description":"Detail","priority":"high","dueDate":"YYYY-MM-DD","tags":["tag"]}]
+- Priority must be one of: low, medium, high, urgent. dueDate and tags are optional.
+- You can add multiple [TODO:...] blocks if there are several action items.
+- Only create todos for concrete actionable items, not vague notes. Never include them mid-response.
+- Only create a [TASK:...] when the operator explicitly asks you to do something requiring agent execution.
+- Never include [TASK:...] or [TODO:...] in the middle of a response, only at the very end if needed.`
 }
 
 function loadAgentProfiles() {
@@ -889,6 +917,9 @@ async function runLlmAdapter(task, agent, contextAdapters) {
   const recentMemory = Array.isArray(profile.memory) ? profile.memory.slice(0, 5) : []
   if (recentMemory.length) systemPrompt += `- Recent memory: ${recentMemory.map(m => m.text).join('; ')}\n`
   systemPrompt += `\nBe concise and direct. Return structured, actionable output. Never act on external systems without explicit operator approval.`
+  systemPrompt += `\n\nIf your work reveals specific follow-up items or action items that should be tracked, append one or more TODO blocks on new lines at the VERY END of your response ONLY:`
+  systemPrompt += `\n[TODO:{"title":"Short action item","description":"Detail","priority":"medium","tags":["${agent.name.toLowerCase().replace(/\s+/g,'-')}"]}]`
+  systemPrompt += `\nPriority: low, medium, high, or urgent. Only add todos for concrete actionable items. Do NOT add todos mid-response.`
 
   let userMessage = `Task: ${task.description || task.title}\n`
   for (const result of contextAdapters) {
@@ -1078,6 +1109,15 @@ async function executeTaskRecord(taskId) {
   const llmResult = adapterResults.find(r => r.name === 'llm-adapter')
   const aiResponse = llmResult && llmResult.status === 'completed' ? llmResult.data?.response : null
   task.result = aiResponse || task.responseData.summary
+
+  // Auto-create todos from any [TODO:{...}] markers in the AI response
+  const createdTodoIds = aiResponse ? parseAndCreateTodos(aiResponse, agent.name.toLowerCase().replace(/\s+/g, '-')) : []
+  if (createdTodoIds.length) {
+    persist()
+    task.logs = (task.logs || []).concat([`${now} - Created ${createdTodoIds.length} todo(s) from agent response.`])
+    task.createdTodoIds = createdTodoIds
+  }
+
   agent.status = 'idle'
   agent.progress = 100
   agent.logs = (agent.logs || []).concat([
@@ -1413,7 +1453,7 @@ const server = http.createServer(async (req, res) => {
       persist()
       sendEvent({ agents, tasks, issues })
       res.writeHead(200, {'Content-Type':'application/json'})
-      res.end(JSON.stringify({ agents, tasks, issues, task }))
+      res.end(JSON.stringify({ agents, tasks, todos, issues, task }))
     } catch (e){
       res.writeHead(404, {'Content-Type':'application/json'})
       res.end(JSON.stringify({ error: e.message || 'task not found' }))
@@ -1696,6 +1736,8 @@ const server = http.createServer(async (req, res) => {
         }
 
         const taskMatch = fullContent.match(/\[TASK:(\{[^}]+\})\]/)
+        // Parse any [TODO:{...}] markers and create todo records
+        const createdTodoIds = parseAndCreateTodos(fullContent, 'majesty')
         if (taskMatch) {
           try {
             const taskSpec = JSON.parse(taskMatch[1])
@@ -1711,15 +1753,18 @@ const server = http.createServer(async (req, res) => {
               tasks.unshift(task)
               persist()
               sendEvent({ agents, tasks, issues })
-              sendSSE({ type: 'done', taskId: task.id, agentName: routedAgent.name })
+              sendSSE({ type: 'done', taskId: task.id, agentName: routedAgent.name, todoIds: createdTodoIds })
             } else {
-              sendSSE({ type: 'done' })
+              if (createdTodoIds.length) persist()
+              sendSSE({ type: 'done', todoIds: createdTodoIds })
             }
           } catch (e) {
-            sendSSE({ type: 'done' })
+            if (createdTodoIds.length) persist()
+            sendSSE({ type: 'done', todoIds: createdTodoIds })
           }
         } else {
-          sendSSE({ type: 'done' })
+          if (createdTodoIds.length) persist()
+          sendSSE({ type: 'done', todoIds: createdTodoIds })
         }
         res.end()
       })()

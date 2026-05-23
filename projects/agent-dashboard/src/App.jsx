@@ -317,17 +317,22 @@ export default function App(){
         window.electron.on('majesty-chunk', (data) => {
           if (data.type === 'chunk') {
             fullText += data.content
-            const displayText = fullText.replace(/\[TASK:\{[^}]*\}\]/g, '').trimEnd()
+            // Strip both [TASK:{...}] and [TODO:{...}] markers from displayed text
+            const displayText = fullText.replace(/\[TASK:\{[^\]]*\}\]/g, '').replace(/\[TODO:\{[^\]]*\}\]/g, '').trimEnd()
             setChatMessages(prev => prev.map(m => m.id === streamId ? { ...m, text: displayText } : m))
           } else if (data.type === 'done') {
             finalTaskId = data.taskId || null
-            const displayText = fullText.replace(/\[TASK:\{[^}]*\}\]/g, '').trim()
+            const todoIds = data.todoIds || []
+            const displayText = fullText.replace(/\[TASK:\{[^\]]*\}\]/g, '').replace(/\[TODO:\{[^\]]*\}\]/g, '').trim()
             setChatMessages(prev => prev.map(m =>
-              m.id === streamId ? { ...m, text: displayText, streaming: false, taskId: finalTaskId } : m
+              m.id === streamId ? { ...m, text: displayText, streaming: false, taskId: finalTaskId, newTodoIds: todoIds } : m
             ))
             if (data.taskId) {
               window.electron.invoke('read-tasks').then(t => { if (t) setTasks(t) })
               window.electron.invoke('read-agents').then(d => { if (d) setAgents(Array.isArray(d) ? d : d.agents || []) })
+            }
+            if (todoIds.length) {
+              window.electron.invoke('read-todos').then(t => { if (t) setTodos(t) })
             }
           }
         })
@@ -378,12 +383,17 @@ export default function App(){
       setAgents(result.agents || [])
       setTasks(result.tasks || [])
       if (result.issues) setIssues(result.issues || [])
+      if (result.todos) setTodos(result.todos)
+      else window.electron.invoke('read-todos').then(t => { if (t) setTodos(t) })
       const task = result.task
       if (task && task.assignedAgentId) setSelected(task.assignedAgentId)
       if (task) setSelectedTaskId(task.id)
+      const todoNote = task?.createdTodoIds?.length
+        ? ` Added ${task.createdTodoIds.length} todo(s) — check the Todos tab.`
+        : ''
       setChatMessages(items => items.concat([{
         from: 'AgentMajesty',
-        text: task ? `${task.id} is ${task.status}. ${task.result || ''}`.trim() : (result.error || 'Task execution finished.'),
+        text: (task ? `${task.id} is ${task.status}. ${task.result || ''}`.trim() : (result.error || 'Task execution finished.')) + todoNote,
         taskId: task ? task.id : null
       }]))
     } catch (e) {
@@ -1000,6 +1010,14 @@ export default function App(){
                         <button className="inline-action" style={{ marginTop: 8 }} disabled={busy} onClick={() => { executeTask(m.taskId); setActiveTab('tasks') }}>
                           ▶ Execute task
                         </button>
+                      )}
+                      {m.newTodoIds?.length > 0 && (
+                        <div className="todo-created-notice">
+                          ✅ {m.newTodoIds.length} todo{m.newTodoIds.length !== 1 ? 's' : ''} added —{' '}
+                          <button style={{ background: 'none', border: 'none', padding: 0, color: '#7c3aed', cursor: 'pointer', fontSize: 12, fontWeight: 500 }} onClick={() => setActiveTab('todos')}>
+                            view todos →
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

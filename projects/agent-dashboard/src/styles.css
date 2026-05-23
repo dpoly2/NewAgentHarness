@@ -258,3 +258,4 @@ button:disabled{cursor:not-allowed;opacity:.6}
 .todo-action-btn{border:1px solid #e5e7eb;border-radius:6px;background:#fff;padding:4px 8px;font-size:13px;color:#374151;transition:background .1s}
 .todo-action-btn:hover{background:#f3f4f6}
 .todo-delete-btn:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
+.todo-created-notice{margin-top:8px;padding:6px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;font-size:12px;color:#5b21b6}
