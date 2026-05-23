@@ -78,17 +78,17 @@ Deliver full meet lifecycle management, athlete results tracking, travel/logisti
 - [x] `POST /xftc/v1/payments/webhook` — Stripe webhook receiver
 
 ### 7. Admin Dashboard Updates
-- [ ] Dashboard widgets: Upcoming meets, Recent payments, Payroll due, New registrations
-- [ ] Sub-menu pages: Meets, Results, Travel, Payroll (wire up existing stubs)
+- [x] Dashboard widgets: Upcoming meets, Recent payments, Payroll due, New registrations
+- [x] Sub-menu pages: Meets, Results, Travel, Payroll (wire up existing stubs)
 
 ### 8. Parent Portal Updates
-- [ ] My Athletes → per athlete: stats tab, meet history tab, travel bookings tab
+- [x] My Athletes → per athlete: stats tab, meet history tab, travel bookings tab
 - [x] Checkout flow: select season/athlete → Stripe Checkout → confirmation page
 - [x] Order history / receipts section
 
 ### 9. GitHub Push
 - [x] All Sprint 2 source files pushed to `dpoly2/AgentHarness`
-- [ ] Sprint 2 tagged: `v0.2.0`
+- [x] Sprint 2 tagged: `v0.2.0` — May 23, 2026
 
 ---
 

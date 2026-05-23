@@ -380,3 +380,156 @@
     .xftc-roster-grid   { grid-template-columns: repeat(2, 1fr); }
     .xftc-portal-athlete-card { flex-direction: column; text-align: center; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   PORTAL TABS — v2.0.0 additions
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Card header layout */
+.xftc-portal-athlete-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    overflow: hidden;
+}
+.xftc-portal-athlete-card__header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--xftc-gray-100);
+}
+.xftc-portal-athlete-card__status {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+}
+.xftc-portal-athlete-card__kpis {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-top: .35rem;
+}
+.xftc-kpi {
+    font-size: .75rem;
+    color: var(--xftc-gray-600);
+    background: var(--xftc-white);
+    padding: 2px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--xftc-gray-200);
+}
+.xftc-kpi strong { color: var(--xftc-dark); }
+.xftc-kpi--record { border-color: var(--xftc-gold); background: rgba(245,166,35,.08); }
+
+/* Tab nav */
+.xftc-tabs__nav {
+    display: flex;
+    border-bottom: 2px solid var(--xftc-gray-200);
+    background: var(--xftc-white);
+    padding: 0 1rem;
+    overflow-x: auto;
+}
+.xftc-tab-btn {
+    background: none;
+    border: none;
+    padding: .8rem 1.1rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--xftc-gray-600);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+}
+.xftc-tab-btn:hover { color: var(--xftc-dark); }
+.xftc-tab-btn--active {
+    color: var(--xftc-blue);
+    border-bottom-color: var(--xftc-gold);
+}
+
+/* Tab panels */
+.xftc-tab-panel {
+    display: none;
+    padding: 1.25rem 1.5rem;
+    background: var(--xftc-white);
+}
+.xftc-tab-panel--active { display: block; }
+.xftc-tab-section-title {
+    font-size: .82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--xftc-gray-600);
+    margin: 1rem 0 .6rem;
+}
+.xftc-tab-section-title:first-child { margin-top: 0; }
+
+/* Tab actions */
+.xftc-tab-actions { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--xftc-gray-200); }
+
+/* Compact table variant */
+.xftc-table--compact th { padding: .55rem .8rem; font-size: .7rem; }
+.xftc-table--compact td { padding: .5rem .8rem; font-size: .82rem; }
+
+/* Membership summary strip */
+.xftc-membership-summary {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    background: var(--xftc-gray-100);
+    padding: 1rem 1.25rem;
+    border-radius: var(--xftc-radius);
+    margin-bottom: 1rem;
+    align-items: center;
+}
+.xftc-membership-summary__item { display: flex; flex-direction: column; gap: 3px; }
+.xftc-membership-summary__item .label { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: #999; }
+.xftc-text--green { color: var(--xftc-success); }
+.xftc-text--red   { color: var(--xftc-danger); }
+
+/* Pay now CTA */
+.xftc-pay-now { margin-bottom: 1rem; }
+
+/* Chart wrap */
+.xftc-chart-wrap {
+    background: var(--xftc-gray-100);
+    padding: 1rem;
+    border-radius: var(--xftc-radius);
+    margin-bottom: 1.25rem;
+}
+
+/* Portal actions (add athlete) */
+.xftc-portal-actions { margin-top: 1rem; text-align: center; }
+
+/* Badge colours for public side */
+.xftc-badge--green  { background: #d4edda; color: #155724; }
+.xftc-badge--red    { background: #f8d7da; color: #721c24; }
+.xftc-badge--orange { background: #fff3cd; color: #856404; }
+.xftc-badge--blue   { background: #cce5ff; color: #004085; }
+.xftc-badge--purple { background: #e2d9f3; color: #5a189a; }
+.xftc-badge--teal   { background: #d1ecf1; color: #0c5460; }
+
+/* Form error */
+.xftc-form-error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: .75rem 1rem;
+    border-radius: var(--xftc-radius);
+    font-size: .85rem;
+    margin-bottom: 1rem;
+    border-left: 3px solid #dc3545;
+}
+.xftc-input--error { border-color: #dc3545 !important; }
+
+/* Success state */
+.xftc-success {
+    text-align: center;
+    padding: 2rem;
+    background: #d4edda;
+    border-radius: var(--xftc-radius-lg);
+    color: #155724;
+}
+.xftc-success h3 { color: #155724; margin-bottom: .5rem; }
