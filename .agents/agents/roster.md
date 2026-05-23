@@ -14,7 +14,8 @@
 | 4 | PBS Foundation | pbs-project-lead | 5 specialists | 🟡 Filing Pending |
 | 5 | Nutrue Apparel | nutrue-project-lead | 5 specialists | 🟡 POD Setup |
 | 6 | Smith Capital Properties | smithcap-project-lead | 4 specialists | 🟡 Active |
-| 7 | Personal Productivity | productivity-coordinator | 8 email agents | 🟢 Active |
+| 7 | S2T Designs Agency | s2t-project-lead | 5 specialists + 4 helpers | 🟢 Active |
+| 8 | Personal Productivity | productivity-coordinator | 8 email agents | 🟢 Active |
 
 ---
 
@@ -162,7 +163,7 @@
 | nutrue-grant-helper | nutrue-finance-agent | Minority-owned business grants, MBDA programs, Texas Enterprise Fund eligibility |
 
 ### Files
-- `.agents/projects/nutrue/` *(to be created)*
+- `.agents/projects/nutrue/`
 
 ---
 
@@ -175,28 +176,64 @@
 
 | Agent | Role | Responsibilities |
 |-------|------|-----------------|
-| smithcap-acquisitions-agent | Acquisitions & Deal Analysis | Property search, comp analysis, underwriting, LOI drafting, due diligence coordination |
-| smithcap-finance-agent | Finance & Capital Markets | SBA 504/7(a) prep, CDFI sourcing, private equity outreach, debt structuring |
-| smithcap-legal-agent | Legal & Entity Structure | LLC formation (per property), operating agreements, title review, contract review |
-| smithcap-communications-agent | Investor & Stakeholder Comms | Investor updates, partner emails, deal memos, pitch summaries |
+| smithcap-acquisitions-agent | Acquisitions & Due Diligence | Property search, underwriting, LOI drafting, comps, LoopNet/CoStar monitoring |
+| smithcap-finance-agent | Finance & Capital Markets | SBA 504/7(a), CDFI pre-qualification, pro forma, debt service modeling |
+| smithcap-legal-agent | Legal & Entity Structure | LLC formation queue, operating agreements, title review, contract redlines |
+| smithcap-communications-agent | Investor Relations & Comms | Deal memos, investor updates, pitch summaries, LinkedIn content, partner emails |
 
 ### Helper Agents (sub-tasks)
 | Agent | Assigned By | Task Type |
 |-------|-------------|-----------|
-| smithcap-market-research-helper | smithcap-acquisitions-agent | Pflugerville/Hutto/Round Rock market data, cap rate research, demographic trends |
-| smithcap-zoning-helper | smithcap-acquisitions-agent | Zoning code lookups, variance research, entitlement process mapping |
-| smithcap-loan-prep-helper | smithcap-finance-agent | SBA pre-qualification documents, personal financial statement, business plan narrative |
-| smithcap-deal-memo-helper | smithcap-communications-agent | Deal summary templates, one-pager formatting, investor Q&A prep |
+| smithcap-market-research-helper | smithcap-acquisitions-agent | Market data, cap rate comps, Williamson County demographic analysis |
+| smithcap-zoning-helper | smithcap-acquisitions-agent | Zoning lookups, rezoning feasibility, entitlement process mapping |
+| smithcap-loan-prep-helper | smithcap-finance-agent | SBA document checklist, PFS template, business plan narrative, lender identification |
+| smithcap-deal-memo-helper | smithcap-communications-agent | Deal summary one-pagers, LOI drafts, investor Q&A prep |
 
 ### Files
-- `.agents/projects/smithcap/` *(to be created)*
+- `.agents/projects/smithcap/`
 
 ---
 
-## PROJECT 7 — PERSONAL PRODUCTIVITY
+## PROJECT 7 — S2T DESIGNS (Web & Graphic Design Agency)
 
-### Coordinator
-**productivity-coordinator** — Daily digest orchestration, inbox triage routing, calendar management
+### Lead
+**s2t-project-lead** — Client intake, platform assessment, proposal writing, milestone tracking, cross-agent coordination
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| s2t-webdev-agent | Platform-Agnostic Web Developer | WordPress, Wix, Squarespace, Webflow, Weebly, Shopify — builds sites on the best platform for each client; bridges to wordpresspluginsagent for complex WP plugin builds |
+| s2t-brand-designer-agent | Brand & Graphic Designer | Logos, brand kits, social media graphics, print materials, apparel graphics, event design |
+| s2t-seo-agent | SEO & Performance | On-page SEO, Core Web Vitals, Google Analytics/Search Console, speed optimization, local SEO |
+| s2t-maintenance-agent | Website Maintenance | Monthly WP plugin updates, security scans, backups, uptime monitoring, content edits |
+| s2t-comms-agent | Client Communications | Proposals, onboarding emails, milestone updates, handoff docs, agency marketing copy |
+
+### Helper Agents (sub-tasks)
+| Agent | Assigned By | Task Type |
+|-------|-------------|-----------|
+| s2t-devops-helper | s2t-webdev-agent | DNS setup, SSL, staging→production deployment, hosting config |
+| s2t-platform-assessment-helper | s2t-project-lead | Platform scoring matrix, recommendation memos, client fit analysis |
+| s2t-content-helper | s2t-webdev-agent | Website copy, page content, meta descriptions, alt text, blog posts |
+| s2t-client-intake-helper | s2t-project-lead | Intake questionnaire, client brief organization, discovery call prep |
+
+### Bridge
+- **wordpresspluginsagent** — Shared with XFTC project; invoked by s2t-webdev-agent for any client requiring custom PHP plugin architecture
+
+### Staging Environment
+- URL: https://staging.s2tdesigns.com (also used for XFTC development)
+- Admin: https://staging.s2tdesigns.com/wp-admin
+- Credentials: agent_design / yK#jR7ScYjbk#@M#8A#356dp
+
+### Files
+- `.agents/projects/s2tdesigns/`
+
+---
+
+## PROJECT 8 — PERSONAL PRODUCTIVITY
+
+### Lead
+**productivity-coordinator** — Daily email digest, inbox triage, calendar management, cross-account task routing
 
 ### Email Agents
 
@@ -227,7 +264,8 @@
 | grants-research-agent | Weekly funding sweep, all orgs | XFTC, YEPC, PBS, Nutrue |
 | grant-writer-agent | Program-level grant applications | XFTC, PBS, Nutrue |
 | github-sync-agent | AgentHarness version control, nightly push | All projects |
-| web-dev-researcher | WordPress audits, site strategy | XFTC, Nutrue, PBS |
+| wordpresspluginsagent | Custom WordPress plugin dev (XFTC-built, agency-shared) | XFTC, S2T Designs clients |
+| web-dev-researcher | WordPress audits, site strategy | XFTC, Nutrue, PBS, S2T clients |
 
 ---
 
@@ -254,6 +292,8 @@
 | 🟡 | TX SOS + IRS EIN filing — PBS Foundation | PBS | June 2026 |
 | 🟡 | Nutrue Apparel LLC registration | Nutrue | June 2026 |
 | 🟡 | RCI Hospitality approach — commercial RE broker for 15119 N IH-35 | Elevation | June 2026 |
+| 🟡 | S2T Designs — build agency portfolio site on staging | S2T Designs | July 2026 |
+| 🟡 | S2T Designs — finalize brand kit (logo, colors, typography) | S2T Designs | July 2026 |
 | 🟢 | Nutrue Apparel email SMTP/IMAP credentials | Productivity | When available |
 | 🟢 | Outlook connection for allensmithagent | Productivity | When available |
 | 🟢 | Psi Beta Sigma 1914 email credentials | Productivity | When available |
