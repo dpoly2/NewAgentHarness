@@ -9,7 +9,11 @@
       "2026-05-21T03:32:56.399Z - started",
       "2026-05-21T03:33:46.249Z - stopped",
       "2026-05-21T03:37:06.443Z - started"
-    ]
+    ],
+    "team": "web",
+    "teamLabel": "Web Development",
+    "profileFile": "wordpresspluginsagent",
+    "role": "Custom plugin development"
   },
   {
     "id": "agent-2",
@@ -40,7 +44,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": "sigmasignalconstantcontactmonitor",
+    "role": "Sigma Signal campaign monitor"
   },
   {
     "id": "agent-4",
@@ -50,7 +58,10 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "web",
+    "teamLabel": "Web Development",
+    "role": "WordPress fixing, building, themes"
   },
   {
     "id": "agent-5",
@@ -60,7 +71,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "research",
+    "teamLabel": "Research & Funding",
+    "profileFile": "grants_research_agent",
+    "role": "Grant discovery, funding opportunities, revenue ideas"
   },
   {
     "id": "agent-6",
@@ -70,7 +85,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "research",
+    "teamLabel": "Research & Funding",
+    "profileFile": "grant_writer_agent",
+    "role": "Program-level grant application writing"
   },
   {
     "id": "agent-7",
@@ -80,7 +99,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "yepc",
+    "teamLabel": "YEPC",
+    "profileFile": "web_dev_researcher",
+    "role": "Master project tracker, milestone management"
   },
   {
     "id": "agent-8",
@@ -90,7 +113,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "yepc",
+    "teamLabel": "YEPC",
+    "profileFile": "yepc_real_estate_research_agent",
+    "role": "Zoning, permitting, EDC incentives, TxDOT/CAMPO"
   },
   {
     "id": "agent-9",
@@ -100,7 +127,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "yepc",
+    "teamLabel": "YEPC",
+    "profileFile": "yepc_capital_fundraising_agent",
+    "role": "Investor decks, naming rights, sponsorships, lending"
   },
   {
     "id": "agent-10",
@@ -110,7 +141,11 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
-    ]
+    ],
+    "team": "yepc",
+    "teamLabel": "YEPC",
+    "profileFile": "yepc_government_relations_agent",
+    "role": "City/county meetings, TxDOT, CAMPO monitoring"
   },
   {
     "id": "agent-11",
@@ -120,6 +155,127 @@
     "logs": [
       "Agent profile created.",
       "Awaiting Constant Contact credentials."
+    ],
+    "team": "yepc",
+    "teamLabel": "YEPC",
+    "profileFile": "yepc_grant_writer_agent",
+    "role": "Capital project grant applications (EDA, HUD, etc.)"
+  },
+  {
+    "id": "webdevresearcher",
+    "name": "webdevresearcher",
+    "status": "idle",
+    "progress": 0,
+    "role": "Site audits and strategy reports",
+    "team": "web",
+    "teamLabel": "Web Development",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.697Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "allensmithagent",
+    "name": "allensmithagent",
+    "status": "idle",
+    "progress": 0,
+    "role": "Personal email management (Outlook)",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "smithdaiiagent",
+    "name": "smithdaiiagent",
+    "status": "idle",
+    "progress": 0,
+    "role": "Personal daily use email (Gmail)",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "communicationsdirgcr",
+    "name": "communicationsdirgcr",
+    "status": "idle",
+    "progress": 0,
+    "role": "Communications Director GCR",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "thesigmasignal",
+    "name": "thesigmasignal",
+    "status": "idle",
+    "progress": 0,
+    "role": "The Sigma Signal newsletter",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "nutrueapparel",
+    "name": "nutrueapparel",
+    "status": "idle",
+    "progress": 0,
+    "role": "Nutrue Apparel brand communications",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "smithcapitalproperties",
+    "name": "smithcapitalproperties",
+    "status": "idle",
+    "progress": 0,
+    "role": "Smith Capital Properties communications",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "psibetasigma1914",
+    "name": "psibetasigma1914",
+    "status": "idle",
+    "progress": 0,
+    "role": "Psi Beta Sigma 1914 chapter communications",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
+    ]
+  },
+  {
+    "id": "xtremeforcetrackclub",
+    "name": "xtremeforcetrackclub",
+    "status": "idle",
+    "progress": 0,
+    "role": "Xtreme Force Track Club communications",
+    "team": "personal",
+    "teamLabel": "Personal",
+    "profileFile": null,
+    "logs": [
+      "2026-05-23T02:16:46.762Z - Agent registered from roster."
     ]
   }
 ]
