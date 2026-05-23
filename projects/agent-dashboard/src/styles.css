@@ -316,3 +316,117 @@ button:disabled{cursor:not-allowed;opacity:.6}
 .todo-action-btn:hover{background:#f3f4f6}
 .todo-delete-btn:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca}
 .todo-created-notice{margin-top:8px;padding:6px 10px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;font-size:12px;color:#5b21b6}
+
+/* --- Roster / Projects view --------------------------------------- */
+.sidebar-status-badge{font-size:13px;flex-shrink:0}
+.sidebar-open-items-alert{margin-top:8px;padding:7px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:12px;color:#dc2626;cursor:pointer;display:flex;gap:6px;align-items:center}
+.sidebar-open-items-alert:hover{background:#fee2e2}
+
+/* Open items strip at top of Projects tab */
+.open-items-strip{display:flex;gap:8px;padding:10px 16px;background:#fef2f2;border-bottom:2px solid #fca5a5;overflow-x:auto;align-items:center;flex-shrink:0}
+.open-items-label{font-size:12px;font-weight:700;color:#dc2626;white-space:nowrap;flex-shrink:0}
+.open-item-card{background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;min-width:200px;flex-shrink:0;cursor:pointer}
+.open-item-card strong{display:block;font-size:12px;color:#111827;margin-bottom:2px}
+.open-item-card span{font-size:11px;color:#6b7280}
+.open-item-red{border-left:4px solid #dc2626}
+
+/* Project card grid */
+.projects-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px}
+.projects-header h3{margin:0;font-size:16px}
+.projects-header small{color:#6b7280;font-size:12px}
+.roster-project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;padding:8px 16px 16px}
+.roster-project-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px;cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.roster-project-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:#93c5fd}
+.roster-project-card-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.roster-project-card-header strong{flex:1;font-size:14px}
+.roster-project-card-body .roster-lead{margin:0 0 6px;font-size:12px;color:#374151}
+.roster-project-card-body .roster-lead em{color:#1d4ed8;font-style:normal;font-weight:500}
+.roster-counts{display:flex;gap:10px}
+.roster-counts span{font-size:11px;background:#f3f4f6;color:#6b7280;border-radius:999px;padding:2px 8px}
+
+/* Status badges */
+.roster-status-badge{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-yellow{background:#fef9c3;color:#a16207}
+.badge-red{background:#fee2e2;color:#dc2626}
+.badge-gray{background:#f3f4f6;color:#6b7280}
+
+/* Project detail 2-column layout */
+.project-detail-layout{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.project-detail-back{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.project-detail-title{font-size:15px;font-weight:600;flex:1}
+.back-btn{background:none;border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:12px;color:#374151;cursor:pointer}
+.back-btn:hover{background:#f3f4f6}
+.project-detail-cols{display:flex;flex:1;min-height:0;gap:0}
+
+/* Agent tree (left column) */
+.project-agent-tree{width:300px;min-width:240px;flex-shrink:0;padding:14px;overflow-y:auto;border-right:1px solid #e5e7eb;background:#fafafa}
+.agent-tree-section{margin-bottom:16px}
+.agent-tree-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;margin:0 0 6px}
+.lead-agent-card{display:flex;gap:10px;background:#eff6ff;border:2px solid #bfdbfe;border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s}
+.lead-agent-card:hover{border-color:#3b82f6}
+.lead-agent-icon{width:32px;height:32px;background:#2563eb;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.lead-agent-info strong{display:block;font-size:13px;color:#1d4ed8}
+.lead-agent-info p{margin:2px 0 0;font-size:11px;color:#4b5563}
+.specialist-grid{display:flex;flex-direction:column;gap:6px}
+.specialist-card{background:#fff;border:1px solid #e5e7eb;border-left:3px solid #14b8a6;border-radius:6px;padding:8px 10px;cursor:pointer;transition:border-color .15s}
+.specialist-card:hover{border-color:#14b8a6;border-left-color:#14b8a6}
+.specialist-card strong{display:block;font-size:12px;color:#111827}
+.specialist-card p{margin:2px 0 0;font-size:11px;color:#6b7280}
+.email-status{font-size:10px;color:#6b7280;margin-top:3px;display:block}
+.helpers-row{display:flex;flex-wrap:wrap;gap:6px}
+.helper-badge{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:999px;padding:3px 10px;font-size:11px;color:#374151;cursor:pointer;transition:background .12s}
+.helper-badge:hover{background:#e5e7eb}
+
+/* Project docs (right column) */
+.project-docs-panel{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.project-docs-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-wrap:wrap}
+.doc-tab{border:1px solid #e5e7eb;border-radius:6px;background:#fff;color:#374151;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+.doc-tab:hover{background:#f3f4f6}
+.active-doc-tab{background:#111827;color:#fff;border-color:#111827}
+.project-doc-body{flex:1;overflow-y:auto;padding:16px}
+.project-doc-body .markdown-body{max-width:none}
+
+/* Shared agents */
+.shared-agents-section{padding:16px;border-top:1px solid #e5e7eb;margin-top:8px}
+.shared-agents-section h4{margin:0 0 10px;font-size:14px;color:#111827}
+.shared-agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.shared-agent-card{background:#faf5ff;border:1px solid #e9d5ff;border-left:3px solid #a855f7;border-radius:8px;padding:10px 12px}
+.shared-agent-card strong{display:block;font-size:13px;color:#6d28d9}
+.shared-agent-card p{margin:3px 0 6px;font-size:11px;color:#4b5563}
+.shared-agent-tags{display:flex;flex-wrap:wrap;gap:4px}
+.shared-agent-tag{background:#ede9fe;color:#5b21b6;border-radius:999px;font-size:10px;padding:2px 6px}
+
+/* All open items table */
+.all-open-items{padding:16px;border-top:1px solid #e5e7eb}
+.all-open-items h4{margin:0 0 10px;font-size:14px}
+.open-items-table{display:flex;flex-direction:column;gap:4px}
+.open-items-row{display:grid;grid-template-columns:30px 1fr 120px 100px;gap:8px;align-items:center;padding:8px 10px;border-radius:6px;font-size:12px}
+.open-item-pri-red{background:#fef2f2;border-left:3px solid #dc2626}
+.open-item-pri-yellow{background:#fefce8;border-left:3px solid #eab308}
+.open-item-pri-green{background:#f0fdf4;border-left:3px solid #22c55e}
+.open-item-pri{font-size:14px}
+.open-item-text{color:#111827;font-weight:500}
+.open-item-proj{color:#6b7280}
+.open-item-dl{color:#6b7280;font-size:11px}
+
+/* Automations */
+.automations-section{padding:16px;border-top:1px solid #e5e7eb}
+.automations-section h4{margin:0 0 10px;font-size:14px}
+.automations-list{display:flex;flex-direction:column;gap:6px}
+.automation-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f9fafb;border-radius:6px;font-size:12px}
+.auto-status{font-size:14px}
+.automation-row strong{flex:1}
+.auto-schedule{color:#6b7280}
+.auto-note{color:#9ca3af;font-style:italic}
+.auto-active{}
+.auto-paused{opacity:.7}
+
+/* Agent profile modal */
+.agent-profile-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center}
+.agent-profile-modal{background:#fff;border-radius:12px;width:min(760px,90vw);height:min(600px,85vh);display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.agent-profile-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb}
+.agent-profile-header h3{margin:0;font-size:16px}
+.agent-profile-close{background:none;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;font-size:14px;cursor:pointer;color:#374151}
+.agent-profile-close:hover{background:#f3f4f6}
+.agent-profile-body{flex:1;overflow-y:auto;padding:16px 20px}

@@ -55,6 +55,12 @@ const TEAM_AGENT_DEFAULTS = {
 export default function App(){
 
   const [agents, setAgents] = useState([])
+  const [rosterData, setRosterData] = useState(null)
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState(null)
+  const [projectDocs, setProjectDocs] = useState([])
+  const [activeProjectDoc, setActiveProjectDoc] = useState(null)
+  const [projectDocContent, setProjectDocContent] = useState('')
+  const [agentProfile, setAgentProfile] = useState(null) // { name, content, filePath }
   const [tasks, setTasks] = useState([])
   const [todos, setTodos] = useState([])
   const [todoFilter, setTodoFilter] = useState('active')
@@ -210,6 +216,11 @@ export default function App(){
               setAiConfigDraft(d => ({ ...d, ...aiData.config }))
             }
           }
+          // Load roster data (once, not on every poll)
+          if (!rosterData) {
+            const roster = await window.electron.invoke('read-roster')
+            if (mounted && roster) setRosterData(roster)
+          }
         }
       } catch (e) {
         console.error('Failed to load agents', e)
@@ -300,8 +311,49 @@ export default function App(){
       setBusy(true)
       const result = await window.electron.invoke('sync-agents')
       setAgents(result.agents || result || [])
+      // Also refresh roster data
+      const roster = await window.electron.invoke('read-roster')
+      if (roster) setRosterData(roster)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function openProject(slug) {
+    setSelectedProjectSlug(slug)
+    setProjectDocs([])
+    setActiveProjectDoc(null)
+    setProjectDocContent('')
+    if (!window.electron || !window.electron.invoke) return
+    const proj = rosterData?.projects?.find(p => p.slug === slug)
+    if (!proj) return
+    const docs = await window.electron.invoke('list-project-docs', { docsPath: proj.projectDocsPath })
+    setProjectDocs(docs || [])
+    if (docs && docs.length > 0) loadProjectDoc(docs[0].path)
+  }
+
+  async function loadProjectDoc(filePath) {
+    setActiveProjectDoc(filePath)
+    setProjectDocContent('')
+    if (!window.electron || !window.electron.invoke) return
+    const content = await window.electron.invoke('read-agent-file', { filePath })
+    setProjectDocContent(content || '*(No content)*')
+  }
+
+  async function openAgentProfile(agentName, agentDocsPath) {
+    setAgentProfile({ name: agentName, content: null, filePath: null })
+    if (!window.electron || !window.electron.invoke) return
+    // Try to find the agent's .md file in the project agent docs
+    const files = await window.electron.invoke('list-project-docs', { docsPath: agentDocsPath })
+    const match = (files || []).find(f =>
+      f.filename.replace('.md', '').toLowerCase().includes(agentName.replace(/-/g, '').toLowerCase().slice(0, 10)) ||
+      f.filename.replace('.md', '') === agentName
+    ) || (files || [])[0]
+    if (match) {
+      const content = await window.electron.invoke('read-agent-file', { filePath: match.path })
+      setAgentProfile({ name: agentName, content: content || '*(Profile not found)*', filePath: match.path })
+    } else {
+      setAgentProfile({ name: agentName, content: '*(No profile file found for this agent)*', filePath: null })
     }
   }
 
@@ -767,41 +819,63 @@ export default function App(){
           <strong>Agent Harness</strong>
           <small>v1</small>
         </div>
-        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 8px' }}>Project Teams</h2>
-        <div className="team-groups">
-          {teamGroups.map(team => (
-            <div key={team.id} className={`team-group${selectedTeam === team.id ? ' team-selected' : ''}`}>
-              <div className="team-group-header" onClick={() => {
-                setSelectedTeam(team.id)
-                setExpandedTeams(prev => prev.includes(team.id) ? prev.filter(id => id !== team.id) : [...prev, team.id])
-              }}>
-                <span className="team-icon">{team.icon}</span>
-                <span className="team-name">{team.label}</span>
-                <span className="team-count">{team.agents.length}</span>
-                {team.running > 0 && <span className="team-running">{team.running} ▶</span>}
-                <span className="team-chevron">{expandedTeams.includes(team.id) ? '▾' : '▸'}</span>
-              </div>
-              {expandedTeams.includes(team.id) && (
-                <ul className="team-agent-list">
-                  {team.agents.map(a => (
-                    <li
-                      key={a.id}
-                      onClick={() => { setSelectedTeam(team.id); setSelected(a.id) }}
-                      className={`agent-item${a.id === selected ? ' selected' : ''}`}
-                    >
-                      <span className={`status-dot dot-${a.status || 'idle'}`}></span>
-                      <span className="agent-item-name">{a.name}</span>
-                      {openIssues.filter(issue => issue.agentId === a.id).length > 0 && (
-                        <span className="sidebar-alert-dot" title="Has issues">!</span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
+
+        {/* Roster-driven project list */}
+        {rosterData?.projects?.length > 0 ? (
+          <>
+            <h2 style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 6px' }}>Projects</h2>
+            <div className="team-groups">
+              {rosterData.projects.map(proj => (
+                <div key={proj.slug} className={`team-group${selectedProjectSlug === proj.slug ? ' team-selected' : ''}`}>
+                  <div className="team-group-header" onClick={() => { setActiveTab('teams'); openProject(proj.slug) }}>
+                    <span className="team-icon">{proj.icon}</span>
+                    <span className="team-name" style={{ flex: 1 }}>{proj.name}</span>
+                    <span className={`sidebar-status-badge status-emoji-${proj.status === '🟢' ? 'green' : proj.status === '🔴' ? 'red' : proj.status === '🟡' ? 'yellow' : 'gray'}`}>{proj.status}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <button className="full-button" onClick={() => { if (window.electron && window.electron.getAgents) { const m = window.electron.getAgents(); if (m && typeof m.then === 'function') { m.then(d => setAgents(d||[])) } else { setAgents(m||[]) } } }}>Refresh</button>
+            {rosterData.openItems?.filter(i => i.priority === '🔴').length > 0 && (
+              <div className="sidebar-open-items-alert" onClick={() => setActiveTab('teams')}>
+                <span>🚨</span>
+                <span>{rosterData.openItems.filter(i => i.priority === '🔴').length} items need action</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <h2 style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '.06em', color: '#6b7280', margin: '0 0 6px' }}>Project Teams</h2>
+            <div className="team-groups">
+              {teamGroups.map(team => (
+                <div key={team.id} className={`team-group${selectedTeam === team.id ? ' team-selected' : ''}`}>
+                  <div className="team-group-header" onClick={() => {
+                    setSelectedTeam(team.id)
+                    setExpandedTeams(prev => prev.includes(team.id) ? prev.filter(id => id !== team.id) : [...prev, team.id])
+                  }}>
+                    <span className="team-icon">{team.icon}</span>
+                    <span className="team-name">{team.label}</span>
+                    <span className="team-count">{team.agents.length}</span>
+                    {team.running > 0 && <span className="team-running">{team.running} ▶</span>}
+                    <span className="team-chevron">{expandedTeams.includes(team.id) ? '▾' : '▸'}</span>
+                  </div>
+                  {expandedTeams.includes(team.id) && (
+                    <ul className="team-agent-list">
+                      {team.agents.map(a => (
+                        <li key={a.id} onClick={() => { setSelectedTeam(team.id); setSelected(a.id) }}
+                          className={`agent-item${a.id === selected ? ' selected' : ''}`}>
+                          <span className={`status-dot dot-${a.status || 'idle'}`}></span>
+                          <span className="agent-item-name">{a.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <button className="full-button" style={{ marginTop: 10 }} onClick={() => { if (window.electron && window.electron.getAgents) { const m = window.electron.getAgents(); if (m && typeof m.then === 'function') { m.then(d => setAgents(d||[])) } else { setAgents(m||[]) } } }}>Refresh</button>
         <button className="full-button subtle-button" style={{ marginTop: 6 }} onClick={syncRoster} disabled={busy}>Sync Roster</button>
 
         <details className="add-agent">
@@ -1035,10 +1109,10 @@ export default function App(){
         <nav className="tab-bar">
           {[
             ['command', 'Command'],
-            ['teams', 'Teams'],
+            ['teams', 'Projects'],
             ['todos', 'Todos'],
             ['tasks', 'Tasks'],
-            ['projects', 'Projects'],
+            ['projects', 'Import'],
             ['connectors', 'Connectors'],
             ['profile', 'Profile'],
             ['ai', 'AI Settings'],
@@ -1047,6 +1121,9 @@ export default function App(){
             <button key={id} className={activeTab === id ? 'active-tab' : ''} onClick={() => setActiveTab(id)}>
               {label}
               {id === 'todos' && pendingTodos.length > 0 && <span className="tab-badge">{pendingTodos.length}</span>}
+              {id === 'teams' && (rosterData?.openItems || []).filter(i => i.priority === '🔴').length > 0 && (
+                <span className="tab-badge" style={{ background: '#dc2626' }}>{(rosterData.openItems).filter(i => i.priority === '🔴').length}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -1055,7 +1132,7 @@ export default function App(){
           <div><strong>{queuedTasks.length}</strong><span>Queued</span></div>
           <div><strong>{completedTasks.length}</strong><span>Completed</span></div>
           <div className={pendingTodos.length > 0 ? 'strip-alert' : ''}><strong>{pendingTodos.length}</strong><span>Todos</span></div>
-          <div><strong>{openIssues.length}</strong><span>Issues</span></div>
+          <div className={(rosterData?.openItems || []).filter(i => i.priority === '🔴').length > 0 ? 'strip-alert' : ''}><strong>{(rosterData?.openItems || []).filter(i => i.priority === '🔴').length || openIssues.length}</strong><span>{(rosterData?.openItems || []).length > 0 ? 'Action Needed' : 'Issues'}</span></div>
           <div className={aiConfig?.enabled ? 'ai-active-strip' : ''}><strong>{aiConfig?.enabled ? '✓' : '—'}</strong><span>{aiConfig?.enabled ? `AI · ${aiConfig.provider}` : 'AI off'}</span></div>
         </section>
         {activeTab === 'command' && <section className="command-chat">
@@ -1166,81 +1243,226 @@ export default function App(){
           </div>
         </section>}
 
-        {activeTab === 'teams' && <section className="teams-view">
-          <div className="teams-grid">
-            {teamGroups.map(team => {
-              const activeTaskCount = team.tasks.filter(task => task.status === 'queued' || task.status === 'running').length
-              return (
-                <div
-                  key={team.id}
-                  className={`team-card${teamDetailView === team.id ? ' team-card-active' : ''}`}
-                  onClick={() => setTeamDetailView(team.id)}
-                >
-                  <div className="team-card-header">
-                    <span className="team-card-icon">{team.icon}</span>
-                    <strong>{team.label}</strong>
-                  </div>
-                  <div className="team-card-stats">
-                    <span>{team.agents.length} agents</span>
-                    {team.running > 0 && <span className="running-badge">{team.running} running</span>}
-                    {activeTaskCount > 0 && <span className="task-badge">{activeTaskCount} queued</span>}
-                  </div>
-                  <p className="team-card-desc">{team.description}</p>
-                </div>
-              )
-            })}
-          </div>
+        {activeTab === 'teams' && <section className="teams-view" style={{ overflowY: 'auto' }}>
 
-          {activeTeamDetail && (
-            <div className="team-detail">
-              <div className="section-heading">
-                <h3>{activeTeamDetail.icon} {activeTeamDetail.label} — Team Detail</h3>
-                <small>{activeTeamDetail.agents.length} members · {activeTeamDetail.running} running</small>
+          {/* Agent Profile Modal */}
+          {agentProfile && (
+            <div className="agent-profile-overlay" onClick={() => setAgentProfile(null)}>
+              <div className="agent-profile-modal" onClick={e => e.stopPropagation()}>
+                <div className="agent-profile-header">
+                  <h3>🤖 {agentProfile.name}</h3>
+                  <button className="agent-profile-close" onClick={() => setAgentProfile(null)}>✕</button>
+                </div>
+                <div className="agent-profile-body">
+                  {agentProfile.content === null ? (
+                    <div className="typing-dots"><span/><span/><span/></div>
+                  ) : (
+                    <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(agentProfile.content) }} />
+                  )}
+                </div>
               </div>
-              <div className="team-member-grid">
-                {activeTeamDetail.agents.map(a => (
-                  <div key={a.id} className={`team-member-card status-bg-${a.status || 'idle'}`}>
-                    <div className="team-member-header">
-                      <span className={`status-dot dot-${a.status || 'idle'}`}></span>
-                      <strong>{a.name}</strong>
-                      {a.profileFile && <span className="profile-badge" title="Profile loaded">✓</span>}
+            </div>
+          )}
+
+          {/* Roster-driven Projects view */}
+          {rosterData ? (
+            <>
+              {/* Open Items Alert Strip */}
+              {rosterData.openItems?.filter(i => i.priority === '🔴').length > 0 && (
+                <div className="open-items-strip">
+                  <span className="open-items-label">🚨 Action Required</span>
+                  {rosterData.openItems.filter(i => i.priority === '🔴').map((item, idx) => (
+                    <div key={idx} className="open-item-card open-item-red">
+                      <strong>{item.item}</strong>
+                      <span>{item.project} · {item.deadline}</span>
                     </div>
-                    <p className="team-member-role">{a.role}</p>
-                    <div className="team-member-progress">
-                      <div className="progress-outer"><div className="progress-inner" style={{ width: `${a.progress || 0}%` }} /></div>
-                      <span>{a.progress || 0}%</span>
+                  ))}
+                </div>
+              )}
+
+              {/* If a project is selected → show 2-col detail view */}
+              {selectedProjectSlug ? (() => {
+                const proj = rosterData.projects.find(p => p.slug === selectedProjectSlug)
+                if (!proj) return null
+                return (
+                  <div className="project-detail-layout">
+                    <div className="project-detail-back">
+                      <button className="back-btn" onClick={() => setSelectedProjectSlug(null)}>← All Projects</button>
+                      <span className="project-detail-title">{proj.icon} {proj.name}</span>
+                      <span className={`roster-status-badge badge-${proj.status === '🟢' ? 'green' : proj.status === '🔴' ? 'red' : proj.status === '🟡' ? 'yellow' : 'gray'}`}>{proj.status} {proj.statusLabel}</span>
                     </div>
-                    <div className="team-member-actions">
-                      <button disabled={busy || a.status === 'running'} onClick={() => commandAgent(a.id, 'start')}>Start</button>
-                      <button disabled={busy || a.status !== 'running'} onClick={() => commandAgent(a.id, 'stop')}>Stop</button>
-                      <button disabled={busy} onClick={() => commandAgent(a.id, 'ping')}>Ping</button>
+                    <div className="project-detail-cols">
+                      {/* Left: Agent Tree */}
+                      <div className="project-agent-tree">
+                        <div className="agent-tree-section">
+                          <h4 className="agent-tree-label">Lead Agent</h4>
+                          <div className="lead-agent-card" onClick={() => openAgentProfile(proj.leadAgentName, proj.agentDocsPath)}>
+                            <div className="lead-agent-icon">★</div>
+                            <div className="lead-agent-info">
+                              <strong>{proj.leadAgentName}</strong>
+                              <p>{proj.leadRole}</p>
+                            </div>
+                          </div>
+                        </div>
+                        {proj.specialists.length > 0 && (
+                          <div className="agent-tree-section">
+                            <h4 className="agent-tree-label">Specialists · {proj.specialists.length}</h4>
+                            <div className="specialist-grid">
+                              {proj.specialists.map((spec, i) => (
+                                <div key={i} className="specialist-card" onClick={() => openAgentProfile(spec.name, proj.agentDocsPath)}>
+                                  <strong>{spec.name}</strong>
+                                  <p>{spec.role}</p>
+                                  {spec.status && <span className="email-status">{spec.status}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {proj.helpers.length > 0 && (
+                          <div className="agent-tree-section">
+                            <h4 className="agent-tree-label">Helpers · {proj.helpers.length}</h4>
+                            <div className="helpers-row">
+                              {proj.helpers.map((h, i) => (
+                                <span key={i} className="helper-badge" title={`Assigned by ${h.assignedBy}: ${h.taskType}`}
+                                  onClick={() => openAgentProfile(h.name, proj.agentDocsPath)}>
+                                  {h.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {/* Right: Project Docs */}
+                      <div className="project-docs-panel">
+                        {projectDocs.length > 0 ? (
+                          <>
+                            <div className="project-docs-tabs">
+                              {projectDocs.map(doc => (
+                                <button key={doc.path}
+                                  className={activeProjectDoc === doc.path ? 'doc-tab active-doc-tab' : 'doc-tab'}
+                                  onClick={() => loadProjectDoc(doc.path)}>
+                                  {doc.filename}
+                                </button>
+                              ))}
+                            </div>
+                            <div className="project-doc-body">
+                              {projectDocContent ? (
+                                <div className="markdown-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(projectDocContent) }} />
+                              ) : (
+                                <div className="typing-dots"><span/><span/><span/></div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="empty-state">No project docs found at {proj.projectDocsPath}</div>
+                        )}
+                      </div>
                     </div>
+                  </div>
+                )
+              })() : (
+                /* Project Cards Grid */
+                <>
+                  <div className="projects-header">
+                    <div>
+                      <h3>Projects</h3>
+                      <small>{rosterData.projects.length} projects · Last updated {rosterData.lastUpdated}</small>
+                    </div>
+                    <button className="inline-action" onClick={syncRoster} disabled={busy}>↻ Refresh</button>
+                  </div>
+                  <div className="roster-project-grid">
+                    {rosterData.projects.map(proj => (
+                      <div key={proj.slug} className="roster-project-card" onClick={() => openProject(proj.slug)}>
+                        <div className="roster-project-card-header">
+                          <span className="team-card-icon">{proj.icon}</span>
+                          <strong>{proj.name}</strong>
+                          <span className={`roster-status-badge badge-${proj.status === '🟢' ? 'green' : proj.status === '🔴' ? 'red' : proj.status === '🟡' ? 'yellow' : 'gray'}`}>{proj.status} {proj.statusLabel}</span>
+                        </div>
+                        <div className="roster-project-card-body">
+                          <p className="roster-lead">Lead: <em>{proj.leadAgentName}</em></p>
+                          <div className="roster-counts">
+                            <span>{proj.specialists.length} specialists</span>
+                            <span>{proj.helpers.length} helpers</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Shared Agents */}
+                  {rosterData.sharedAgents?.length > 0 && (
+                    <div className="shared-agents-section">
+                      <h4>🤖 Shared / Cross-Project Agents</h4>
+                      <div className="shared-agents-grid">
+                        {rosterData.sharedAgents.map((a, i) => (
+                          <div key={i} className="shared-agent-card">
+                            <strong>{a.agentName}</strong>
+                            <p>{a.specialty}</p>
+                            <div className="shared-agent-tags">
+                              {a.projectsServed.map((p, j) => <span key={j} className="shared-agent-tag">{p}</span>)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All Open Items */}
+                  {rosterData.openItems?.length > 0 && (
+                    <div className="all-open-items">
+                      <h4>🚨 Open Items — Needs Attention</h4>
+                      <div className="open-items-table">
+                        {rosterData.openItems.map((item, idx) => (
+                          <div key={idx} className={`open-items-row open-item-pri-${item.priority === '🔴' ? 'red' : item.priority === '🟡' ? 'yellow' : 'green'}`}>
+                            <span className="open-item-pri">{item.priority}</span>
+                            <span className="open-item-text">{item.item}</span>
+                            <span className="open-item-proj">{item.project}</span>
+                            <span className="open-item-dl">{item.deadline}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Automations */}
+                  {rosterData.automations?.length > 0 && (
+                    <div className="automations-section">
+                      <h4>⚙️ Active Automations</h4>
+                      <div className="automations-list">
+                        {rosterData.automations.map((a, i) => (
+                          <div key={i} className="automation-row">
+                            <span className={`auto-status ${a.status === 'active' ? 'auto-active' : 'auto-paused'}`}>{a.statusEmoji}</span>
+                            <strong>{a.name}</strong>
+                            <span className="auto-schedule">{a.schedule}</span>
+                            {a.statusNote && <span className="auto-note">{a.statusNote}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          ) : (
+            /* Fallback: old team cards while roster loads */
+            <>
+              <div className="teams-grid">
+                {teamGroups.map(team => (
+                  <div key={team.id} className={`team-card${teamDetailView === team.id ? ' team-card-active' : ''}`}
+                    onClick={() => setTeamDetailView(team.id)}>
+                    <div className="team-card-header">
+                      <span className="team-card-icon">{team.icon}</span>
+                      <strong>{team.label}</strong>
+                    </div>
+                    <div className="team-card-stats">
+                      <span>{team.agents.length} agents</span>
+                    </div>
+                    <p className="team-card-desc">{team.description}</p>
                   </div>
                 ))}
               </div>
-
-              {activeTeamDetail.tasks.length > 0 && (
-                <div style={{ marginTop: 20 }}>
-                  <div className="section-heading">
-                    <h4>Tasks</h4>
-                    <small>{activeTeamDetail.tasks.filter(task => task.status !== 'completed').length} active</small>
-                  </div>
-                  <div className="task-list">
-                    {activeTeamDetail.tasks.slice(0, 8).map(task => (
-                      <article key={task.id} className="task-card" onClick={() => { setSelectedTaskId(task.id); setActiveTab('tasks') }}>
-                        <div className="task-head">
-                          <div>
-                            <strong>{task.title}</strong>
-                            <small>{task.id} · {task.assignedAgentName || 'Unassigned'}</small>
-                          </div>
-                          <span className={`status-pill status-${task.status}`}>{statusLabel(task.status)}</span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              <p className="empty-state" style={{ marginTop: 20 }}>Loading roster data… click Sync Roster if this persists.</p>
+            </>
           )}
         </section>}
 

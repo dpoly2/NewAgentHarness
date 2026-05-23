@@ -1969,6 +1969,171 @@ app.on('web-contents-created', (event, contents) => {
   })
 })
 
+// ─── Roster / Agent-profile helpers ────────────────────────────────────────
+
+const AGENTS_ROOT = path.join(__dirname, '..', '..')  // repo root
+
+function parseRosterMarkdown(content) {
+  const lines = content.split('\n')
+  let lastUpdated = '', coordinator = ''
+  for (const line of lines) {
+    const lu = line.match(/\*\*Last Updated:\*\*\s*(.+)/)
+    if (lu) lastUpdated = lu[1].trim()
+    const co = line.match(/\*\*Coordinator:\*\*\s*(.+)/)
+    if (co) coordinator = co[1].trim()
+  }
+
+  const SLUG_MAP = {
+    'XFTC Website & Plugin': 'xftc',
+    'YEPC — Hutto CR 132': 'yepc',
+    'The Elevation ATX': 'elevation',
+    'PBS Foundation': 'pbs-foundation',
+    'Nutrue Apparel': 'nutrue',
+    'Smith Capital Properties': 'smithcap',
+    'S2T Designs Agency': 's2tdesigns',
+    'Personal Productivity': 'personal'
+  }
+  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤' }
+  const DOCS_PATH_MAP = {
+    xftc: '.agents/projects/xftc-redevelopment/',
+    elevation: '.agents/projects/rowdy-crown/'
+  }
+
+  const projects = []
+  // Parse PROJECT INDEX table
+  const indexSection = content.match(/## 🗂️ PROJECT INDEX([\s\S]*?)---/)
+  if (indexSection) {
+    const rows = indexSection[1].split('\n').filter(l => /^\|\s*\d/.test(l))
+    for (const row of rows) {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length < 4) continue
+      const id = parseInt(cols[0])
+      const name = cols[1]
+      const leadAgentName = cols[2]
+      const statusRaw = cols[4] || cols[3] || ''
+      const statusEmoji = statusRaw.match(/[🟢🟡🔴⬜]/)?.[0] || '⬜'
+      const statusLabel = statusRaw.replace(/[🟢🟡🔴⬜\s]/g, '').trim()
+      const slug = SLUG_MAP[name] || name.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+      projects.push({
+        id, name, slug,
+        icon: ICON_MAP[slug] || '📁',
+        leadAgentName,
+        leadRole: '',
+        status: statusEmoji,
+        statusLabel,
+        specialists: [],
+        helpers: [],
+        agentDocsPath: `.agents/agents/projects/${slug}/`,
+        projectDocsPath: DOCS_PATH_MAP[slug] || `.agents/projects/${slug}/`
+      })
+    }
+  }
+
+  // Parse per-project details
+  for (const proj of projects) {
+    const re = new RegExp(`## PROJECT ${proj.id} —[\\s\\S]*?(?=\\n---\\n|\\n## PROJECT \\d|\\n## 🤖)`)
+    const m = content.match(re)
+    if (!m) continue
+    const block = m[0]
+
+    const leadLine = block.match(/\*\*[^*]+\*\*\s*—\s*(.+)/)
+    if (leadLine) proj.leadRole = leadLine[1].trim()
+
+    const specBlock = block.match(/### Specialist Agents([\s\S]*?)(?=###|$)/)
+    if (specBlock) {
+      specBlock[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 2) proj.specialists.push({ name: cols[0], role: cols[1], responsibilities: cols[2] || '', type: 'specialist' })
+      })
+    }
+
+    const helperBlock = block.match(/### Helper Agents[\s\S]*?(?=###|$)/)
+    if (helperBlock) {
+      helperBlock[0].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 3) proj.helpers.push({ name: cols[0], assignedBy: cols[1], taskType: cols[2], type: 'helper' })
+      })
+    }
+
+    // Personal Productivity uses "Email Agents" table
+    const emailBlock = block.match(/### Email Agents([\s\S]*?)(?=###|$)/)
+    if (emailBlock) {
+      emailBlock[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 2) proj.specialists.push({ name: cols[0], role: cols[1], status: cols[2] || '', type: 'specialist' })
+      })
+    }
+  }
+
+  const sharedAgents = []
+  const sharedMatch = content.match(/## 🤖 SHARED[\s\S]*?(?=\n---\n|\n## ⚙️)/)
+  if (sharedMatch) {
+    sharedMatch[0].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 3) sharedAgents.push({ agentName: cols[0], specialty: cols[1], projectsServed: cols[2].split(',').map(p => p.trim()) })
+    })
+  }
+
+  const automations = []
+  const autoMatch = content.match(/## ⚙️ ACTIVE AUTOMATIONS([\s\S]*?)(?=\n---\n|\n## 🚨)/)
+  if (autoMatch) {
+    autoMatch[1].split('\n').filter(l => /^\|\s*[A-Za-z]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 3) {
+        const statusEmoji = cols[2].includes('✅') ? '✅' : '⬜'
+        automations.push({ name: cols[0], schedule: cols[1], statusEmoji, status: statusEmoji === '✅' ? 'active' : 'paused', statusNote: cols[2].replace('✅','').replace('⬜','').trim() })
+      }
+    })
+  }
+
+  const openItems = []
+  const openMatch = content.match(/## 🚨 OPEN ITEMS[\s\S]*$/)
+  if (openMatch) {
+    openMatch[0].split('\n').filter(l => /^\|[^|]*[🔴🟡🟢]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 4) openItems.push({ priority: cols[0], item: cols[1], project: cols[2], deadline: cols[3] })
+    })
+  }
+
+  return { lastUpdated, coordinator, projects, sharedAgents, automations, openItems }
+}
+
+ipcMain.handle('read-roster', async () => {
+  try {
+    const fs = require('fs')
+    const rosterPath = path.join(AGENTS_ROOT, '.agents', 'agents', 'roster.md')
+    if (!fs.existsSync(rosterPath)) return null
+    const content = fs.readFileSync(rosterPath, 'utf8').replace(/^\uFEFF/, '')
+    return parseRosterMarkdown(content)
+  } catch (e) {
+    console.error('read-roster error', e)
+    return null
+  }
+})
+
+ipcMain.handle('read-agent-file', async (event, { filePath }) => {
+  try {
+    const fs = require('fs')
+    const p = path.join(AGENTS_ROOT, filePath)
+    if (!fs.existsSync(p)) return null
+    return fs.readFileSync(p, 'utf8').replace(/^\uFEFF/, '')
+  } catch (e) { return null }
+})
+
+ipcMain.handle('list-project-docs', async (event, { docsPath }) => {
+  try {
+    const fs = require('fs')
+    const p = path.join(AGENTS_ROOT, docsPath)
+    if (!fs.existsSync(p)) return []
+    return fs.readdirSync(p)
+      .filter(f => f.endsWith('.md') && !f.startsWith('.'))
+      .map(f => ({ filename: f, path: docsPath + f }))
+      .sort((a, b) => a.filename === 'PROJECT.md' ? -1 : b.filename === 'PROJECT.md' ? 1 : a.filename.localeCompare(b.filename))
+  } catch (e) { return [] }
+})
+
+// ─── App lifecycle ──────────────────────────────────────────────────────────
+
 app.whenReady().then(() => {
   syncAgentsFromProfilesLocal()
   createWindow()
