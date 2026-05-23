@@ -2000,8 +2000,8 @@ function parseRosterMarkdown(content) {
   }
 
   const projects = []
-  // Parse PROJECT INDEX table
-  const indexSection = content.match(/## 🗂️ PROJECT INDEX([\s\S]*?)---/)
+  // Parse PROJECT INDEX table — use text-based match; anchor --- as standalone line (not table separator)
+  const indexSection = content.match(/## [^\n]*PROJECT INDEX([\s\S]*?)\r?\n---\r?\n/)
   if (indexSection) {
     const rows = indexSection[1].split('\n').filter(l => /^\|\s*\d/.test(l))
     for (const row of rows) {
@@ -2031,7 +2031,7 @@ function parseRosterMarkdown(content) {
 
   // Parse per-project details
   for (const proj of projects) {
-    const re = new RegExp(`## PROJECT ${proj.id} —[\\s\\S]*?(?=\\n---\\n|\\n## PROJECT \\d|\\n## 🤖)`)
+    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## )`)
     const m = content.match(re)
     if (!m) continue
     const block = m[0]
@@ -2066,16 +2066,16 @@ function parseRosterMarkdown(content) {
   }
 
   const sharedAgents = []
-  const sharedMatch = content.match(/## 🤖 SHARED[\s\S]*?(?=\n---\n|\n## ⚙️)/)
+  const sharedMatch = content.match(/## [^\n]*SHARED[^\n]*\n([\s\S]*?)(?=\r?\n---\r?\n|\n## )/)
   if (sharedMatch) {
-    sharedMatch[0].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+    sharedMatch[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
       const cols = row.split('|').map(c => c.trim()).filter(Boolean)
       if (cols.length >= 3) sharedAgents.push({ agentName: cols[0], specialty: cols[1], projectsServed: cols[2].split(',').map(p => p.trim()) })
     })
   }
 
   const automations = []
-  const autoMatch = content.match(/## ⚙️ ACTIVE AUTOMATIONS([\s\S]*?)(?=\n---\n|\n## 🚨)/)
+  const autoMatch = content.match(/## [^\n]*ACTIVE AUTOMATIONS([\s\S]*?)(?=\r?\n---\r?\n|\n## [^\n]*OPEN ITEMS)/)
   if (autoMatch) {
     autoMatch[1].split('\n').filter(l => /^\|\s*[A-Za-z]/.test(l)).forEach(row => {
       const cols = row.split('|').map(c => c.trim()).filter(Boolean)
@@ -2087,7 +2087,7 @@ function parseRosterMarkdown(content) {
   }
 
   const openItems = []
-  const openMatch = content.match(/## 🚨 OPEN ITEMS[\s\S]*$/)
+  const openMatch = content.match(/## [^\n]*OPEN ITEMS[\s\S]*$/)
   if (openMatch) {
     openMatch[0].split('\n').filter(l => /^\|[^|]*[🔴🟡🟢]/.test(l)).forEach(row => {
       const cols = row.split('|').map(c => c.trim()).filter(Boolean)

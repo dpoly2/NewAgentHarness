@@ -216,11 +216,6 @@ export default function App(){
               setAiConfigDraft(d => ({ ...d, ...aiData.config }))
             }
           }
-          // Load roster data (once, not on every poll)
-          if (!rosterData) {
-            const roster = await window.electron.invoke('read-roster')
-            if (mounted && roster) setRosterData(roster)
-          }
         }
       } catch (e) {
         console.error('Failed to load agents', e)
@@ -238,6 +233,14 @@ export default function App(){
       window.electron.on('connectors-updated', (data) => { if (mounted) setConnectors(data || []) })
     }
     return () => { mounted = false; clearInterval(t) }
+  }, [])
+
+  // Load roster once on startup — separate from the agent poll to avoid stale closure
+  useEffect(() => {
+    if (!window.electron?.invoke) return
+    window.electron.invoke('read-roster').then(roster => {
+      if (roster && roster.projects?.length) setRosterData(roster)
+    }).catch(e => console.error('roster load error', e))
   }, [])
 
   useEffect(() => {
