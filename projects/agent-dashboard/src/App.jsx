@@ -20,6 +20,38 @@ const TEAM_META = {
   coordinator: { label: 'Command', icon: '⭐', description: 'Central coordination' }
 }
 
+// Canonical team membership — UI uses this so teams always show
+// regardless of whether backend has patched the team field onto agents
+const TEAM_ROSTER = {
+  yepc: ['yepcrprojectmanageragent', 'yepcrealestateresearchagent', 'yepccapitalfundraisingagent', 'yepcgovernmentrelationsagent', 'yepcgrantwriteragent'],
+  research: ['grantsresearchagent', 'grantwriteragent'],
+  web: ['wordpressagent', 'wordpresspluginsagent', 'webdevresearcher'],
+  personal: ['allensmithagent', 'smithdaiiagent', 'communicationsdirgcr', 'thesigmasignal', 'sigmasignalconstantcontactmonitor', 'nutrueapparel', 'smithcapitalproperties', 'psibetasigma1914', 'xtremeforcetrackclub']
+}
+
+// Default role descriptions for agents that may not exist in agents.json yet
+const TEAM_AGENT_DEFAULTS = {
+  yepcrprojectmanageragent:     { name: 'yepcrprojectmanageragent',     role: 'Master project tracker, milestone management' },
+  yepcrealestateresearchagent:  { name: 'yepcrealestateresearchagent',  role: 'Zoning, permitting, EDC incentives' },
+  yepccapitalfundraisingagent:  { name: 'yepccapitalfundraisingagent',  role: 'Investor decks, naming rights, sponsorships' },
+  yepcgovernmentrelationsagent: { name: 'yepcgovernmentrelationsagent', role: 'City/county meetings, TxDOT, CAMPO monitoring' },
+  yepcgrantwriteragent:         { name: 'yepcgrantwriteragent',         role: 'Capital project grant applications' },
+  grantsresearchagent:          { name: 'grantsresearchagent',          role: 'Grant discovery, funding opportunities' },
+  grantwriteragent:             { name: 'grantwriteragent',             role: 'Program-level grant application writing' },
+  wordpressagent:               { name: 'wordpressagent',               role: 'WordPress fixing, building, themes' },
+  wordpresspluginsagent:        { name: 'wordpresspluginsagent',        role: 'Custom plugin development' },
+  webdevresearcher:             { name: 'webdevresearcher',             role: 'Site audits and strategy reports' },
+  allensmithagent:              { name: 'allensmithagent',              role: 'Personal email management (Outlook)' },
+  smithdaiiagent:               { name: 'smithdaiiagent',               role: 'Personal daily use email (Gmail)' },
+  communicationsdirgcr:         { name: 'communicationsdirgcr',         role: 'Communications Director GCR' },
+  thesigmasignal:               { name: 'thesigmasignal',               role: 'The Sigma Signal newsletter' },
+  sigmasignalconstantcontactmonitor: { name: 'sigmasignalconstantcontactmonitor', role: 'Sigma Signal campaign monitor' },
+  nutrueapparel:                { name: 'nutrueapparel',                role: 'Nutrue Apparel brand communications' },
+  smithcapitalproperties:       { name: 'smithcapitalproperties',       role: 'Smith Capital Properties communications' },
+  psibetasigma1914:             { name: 'psibetasigma1914',             role: 'Psi Beta Sigma 1914 chapter communications' },
+  xtremeforcetrackclub:         { name: 'xtremeforcetrackclub',         role: 'Xtreme Force Track Club communications' },
+}
+
 export default function App(){
 
   const [agents, setAgents] = useState([])
@@ -88,7 +120,15 @@ export default function App(){
   const latestProject = projects[0] || null
   const recentMemory = Array.isArray(profile?.memory) ? profile.memory.slice(0, 3) : []
   const teamGroups = TEAM_ORDER.map(tid => {
-    const teamAgents = agents.filter(a => a.team === tid)
+    const rosterIds = TEAM_ROSTER[tid] || []
+    // Build agent entries: merge live agent data with defaults for any missing roster members
+    const teamAgents = rosterIds.map(agentId => {
+      const live = agents.find(a => a.id === agentId || a.name?.toLowerCase() === agentId.toLowerCase())
+      if (live) return { ...live, team: tid, teamLabel: TEAM_META[tid]?.label }
+      const def = TEAM_AGENT_DEFAULTS[agentId]
+      if (def) return { id: agentId, ...def, status: 'idle', progress: 0, team: tid, teamLabel: TEAM_META[tid]?.label }
+      return null
+    }).filter(Boolean)
     const running = teamAgents.filter(a => a.status === 'running').length
     const teamTasks = tasks.filter(t => teamAgents.some(a => a.id === t.assignedAgentId))
     return { id: tid, ...TEAM_META[tid], agents: teamAgents, running, tasks: teamTasks }
