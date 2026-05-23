@@ -455,4 +455,240 @@ class XFTC_Results {
             $meet_id
         ));
     }
-}
+    /* ════════════════════════════════════════════════════════════════════════
+       AJAX: Save single result (admin)
+       ════════════════════════════════════════════════════════════════════════ */
+    public static function ajax_save_result() {
+        check_ajax_referer( 'xftc_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error(['message' => 'Permission denied.']);
+
+        $ev = sanitize_text_field( $_POST['event_category'] ?? '' );
+        if ( $ev === 'Custom' ) $ev = sanitize_text_field( $_POST['custom_event'] ?? 'Custom' );
+        if ( empty($ev) || empty($_POST['meet_id']) || empty($_POST['athlete_id']) || empty($_POST['result_value']) ) {
+            wp_send_json_error(['message' => 'Missing required fields.']);
+        }
+
+        $results = new self();
+        $id = $results->create([
+            'meet_id'        => intval( $_POST['meet_id'] ),
+            'athlete_id'     => intval( $_POST['athlete_id'] ),
+            'event_category' => $ev,
+            'result_value'   => sanitize_text_field( $_POST['result_value'] ),
+            'placement'      => intval( $_POST['placement'] ?? 0 ),
+        ]);
+
+        if ( ! $id ) wp_send_json_error(['message' => 'Database error saving result.']);
+
+        $saved = self::get_instance()->get( $id );
+        wp_send_json_success([
+            'id'     => $id,
+            'event'  => $ev,
+            'result' => $saved->result_value ?? '',
+            'is_pb'  => (bool) ($saved->is_personal_best ?? 0),
+            'is_cr'  => (bool) ($saved->is_club_record ?? 0),
+        ]);
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       AJAX: Save roster bulk results
+       ════════════════════════════════════════════════════════════════════════ */
+    public static function ajax_save_roster_results() {
+        check_ajax_referer( 'xftc_admin_nonce', 'nonce' );
+        if ( ! current_user_can( 'edit_posts' ) ) wp_send_json_error(['message' => 'Permission denied.']);
+
+        $meet_id  = intval( $_POST['meet_id'] ?? 0 );
+        $event    = sanitize_text_field( $_POST['event_category'] ?? '' );
+        $raw      = sanitize_text_field( $_POST['results'] ?? '[]' );
+        $batch    = json_decode( stripslashes($raw), true );
+
+        if ( ! $meet_id || ! $event || empty($batch) ) {
+            wp_send_json_error(['message' => 'Missing data.']);
+        }
+
+        $results = new self();
+        $saved   = 0; $pbs = 0; $crs = 0;
+
+        foreach ( $batch as $row ) {
+            $athlete_id = intval( $row['athlete_id'] ?? 0 );
+            $result_val = sanitize_text_field( $row['result_value'] ?? '' );
+            if ( ! $athlete_id || $result_val === '' ) continue;
+
+            $id = $results->create([
+                'meet_id'        => $meet_id,
+                'athlete_id'     => $athlete_id,
+                'event_category' => $event,
+                'result_value'   => $result_val,
+                'placement'      => intval( $row['placement'] ?? 0 ),
+            ]);
+            if ( $id ) {
+                $saved++;
+                $rec = $results->get($id);
+                if ($rec->is_personal_best) $pbs++;
+                if ($rec->is_club_record)   $crs++;
+            }
+        }
+
+        wp_send_json_success(['saved' => $saved, 'pbs' => $pbs, 'crs' => $crs]);
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       AJAX: Get athletes for a meet (roster entry)
+       ════════════════════════════════════════════════════════════════════════ */
+    public static function ajax_get_meet_athletes() {
+        check_ajax_referer( 'xftc_admin_nonce', 'nonce' );
+        global $wpdb;
+        $meet_id  = intval( $_POST['meet_id'] ?? 0 );
+        $division = sanitize_text_field( $_POST['division'] ?? '' );
+
+        $met = $wpdb->prefix . 'xftc_meet_entries';
+        $at  = $wpdb->prefix . 'xftc_athletes';
+
+        $athletes = $wpdb->get_results( $wpdb->prepare(
+            "SELECT DISTINCT a.id, a.first_name, a.last_name, a.dob
+             FROM {$met} me
+             LEFT JOIN {$at} a ON me.athlete_id = a.id
+             WHERE me.meet_id = %d
+             ORDER BY a.last_name, a.first_name",
+            $meet_id
+        ));
+
+        $out = array_map(function($a) {
+            $age = self::calc_age($a->dob);
+            $div = $age ? self::age_to_division($age) : 'Open';
+            return ['id' => $a->id, 'name' => $a->last_name.', '.$a->first_name, 'division' => $div, 'dob' => $a->dob];
+        }, $athletes);
+
+        wp_send_json_success($out);
+    }
+
+    /* ════════════════════════════════════════════════════════════════════════
+       CSV IMPORT — file upload or paste
+       ════════════════════════════════════════════════════════════════════════ */
+    public static function process_csv_import( $post, $files ) {
+        global $wpdb;
+        $meet_id        = intval( $post['meet_id'] ?? 0 );
+        $mode           = sanitize_text_field( $post['import_mode'] ?? 'file' );
+        $skip_dupes     = ! empty( $post['skip_duplicates'] );
+        $auto_pb        = ! empty( $post['auto_detect_pb'] );
+        $has_header     = ! empty( $post['has_header'] );
+
+        if ( ! $meet_id ) return '<strong>Error:</strong> Please select a meet.';
+
+        // Get CSV content
+        $csv_text = '';
+        if ( $mode === 'file' ) {
+            if ( empty($files['csv_file']['tmp_name']) ) return '<strong>Error:</strong> No file uploaded.';
+            if ( $files['csv_file']['size'] > 2 * 1024 * 1024 ) return '<strong>Error:</strong> File exceeds 2MB limit.';
+            $csv_text = file_get_contents( $files['csv_file']['tmp_name'] );
+        } else {
+            $csv_text = stripslashes( $post['csv_paste'] ?? '' );
+        }
+
+        if ( empty(trim($csv_text)) ) return '<strong>Error:</strong> No data provided.';
+
+        $lines   = array_filter( array_map( 'trim', explode("\n", $csv_text) ) );
+        if ( $has_header ) array_shift($lines);
+
+        $at  = $wpdb->prefix . 'xftc_athletes';
+        $rt  = $wpdb->prefix . 'xftc_results';
+
+        $imported = 0; $skipped = 0; $errors = []; $pbs = 0; $crs = 0;
+
+        foreach ( $lines as $line_no => $line ) {
+            // Support comma or tab delimiters
+            $delim  = strpos($line, "\t") !== false ? "\t" : ',';
+            $cols   = array_map('trim', str_getcsv($line, $delim));
+
+            // Auto-detect format
+            if ( isset($cols[0]) && is_numeric($cols[0]) && count($cols) >= 4 ) {
+                // Format B: athlete_id, event, result, place, wind
+                $athlete_id     = intval($cols[0]);
+                $event_category = sanitize_text_field($cols[1]);
+                $result_value   = sanitize_text_field($cols[2]);
+                $placement      = intval($cols[3] ?? 0);
+            } elseif ( count($cols) >= 4 ) {
+                // Format A / HY-TEK style: last, first, event, result, place, wind
+                $last  = sanitize_text_field($cols[0]);
+                $first = sanitize_text_field($cols[1] ?? '');
+                $event_category = sanitize_text_field($cols[2]);
+                $result_value   = sanitize_text_field($cols[3]);
+                $placement      = intval($cols[4] ?? 0);
+
+                // Look up athlete by name
+                $athlete_id = (int) $wpdb->get_var( $wpdb->prepare(
+                    "SELECT id FROM {$at} WHERE last_name=%s AND first_name=%s LIMIT 1",
+                    $last, $first
+                ));
+                if ( ! $athlete_id ) {
+                    // Try last name only
+                    $athlete_id = (int) $wpdb->get_var( $wpdb->prepare(
+                        "SELECT id FROM {$at} WHERE last_name=%s LIMIT 1", $last
+                    ));
+                }
+                if ( ! $athlete_id ) {
+                    $errors[] = "Row " . ($line_no+1) . ": Athlete '{$first} {$last}' not found — skipped.";
+                    $skipped++;
+                    continue;
+                }
+            } else {
+                $errors[] = "Row " . ($line_no+1) . ": Unrecognised format — skipped.";
+                $skipped++;
+                continue;
+            }
+
+            if ( empty($result_value) ) { $skipped++; continue; }
+
+            // Skip duplicates check
+            if ( $skip_dupes ) {
+                $exists = $wpdb->get_var( $wpdb->prepare(
+                    "SELECT id FROM {$rt} WHERE meet_id=%d AND athlete_id=%d AND event_category=%s AND result_value=%s LIMIT 1",
+                    $meet_id, $athlete_id, $event_category, $result_value
+                ));
+                if ( $exists ) { $skipped++; continue; }
+            }
+
+            $results = new self();
+            $id = $results->create([
+                'meet_id'        => $meet_id,
+                'athlete_id'     => $athlete_id,
+                'event_category' => $event_category,
+                'result_value'   => $result_value,
+                'placement'      => $placement,
+            ]);
+
+            if ( $id ) {
+                $imported++;
+                if ($auto_pb) {
+                    $rec = $results->get($id);
+                    if ($rec->is_personal_best) $pbs++;
+                    if ($rec->is_club_record)   $crs++;
+                }
+            } else {
+                $errors[] = "Row " . ($line_no+1) . ": Database error.";
+            }
+        }
+
+        $msg  = "✅ Import complete: <strong>{$imported}</strong> results saved";
+        if ($pbs)     $msg .= " · <strong>⚡ {$pbs}</strong> Personal Bests";
+        if ($crs)     $msg .= " · <strong>🏆 {$crs}</strong> Club Records";
+        if ($skipped) $msg .= " · <strong>{$skipped}</strong> skipped";
+        if ($errors)  $msg .= '<br/><small style="color:#cc0000;">' . implode('<br/>', array_slice($errors,0,10)) . '</small>';
+
+        return $msg;
+    }
+
+    /* ── Helper: singleton for get() in static AJAX handlers ──── */
+    private static function get_instance() {
+        static $inst;
+        if (!$inst) $inst = new self();
+        return $inst;
+    }
+
+    /* ── Register AJAX hooks (call from plugin bootstrap) ────── */
+    public static function register_ajax_hooks() {
+        add_action('wp_ajax_xftc_save_result',        ['XFTC_Results','ajax_save_result']);
+        add_action('wp_ajax_xftc_save_roster_results',['XFTC_Results','ajax_save_roster_results']);
+        add_action('wp_ajax_xftc_get_meet_athletes',  ['XFTC_Results','ajax_get_meet_athletes']);
+    }
+
+} // end class XFTC_Results (closing brace — remove the one already in the file)
