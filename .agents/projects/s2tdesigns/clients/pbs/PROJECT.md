@@ -1,20 +1,20 @@
-# S2T Designs — Client: Phi Beta Sigma 1914
+# S2T Designs — Client: Psi Beta Sigma 1914
 **Client Slug:** pbs
 **Last Updated:** 2026-05-22
 
 ---
 
 ## Client Info
-- **Organization:** Psi Beta Sigma 1914
-- **Site URL (Live):** https://psibetasigma1914.org *(pending)*
+- **Organization:** Psi Beta Sigma Graduate Chapter (Austin Sigmas)
 - **Site URL (New Build):** https://newsite.psibetasigma1914.org
-- **Platform:** WordPress (fresh install)
-- **Reference Site:** https://www.pbsgulfcoastregion.org *(Wix — design reference)*
+- **Site URL (Production):** https://psibetasigma1914.org *(target domain)*
+- **Platform:** WordPress (fresh install confirmed)
+- **Reference Site:** https://www.pbsgulfcoastregion.org *(design reference — Wix)*
+- **Contact:** Marketing@psibetasigma1914.org
 
-## Project Goal
-Build a full WordPress site for Psi Beta Sigma 1914 that mirrors the look, feel, and feature set of pbsgulfcoastregion.org — including announcement bar, members portal, events, programs, and gated content — using Kadence theme + free plugin stack.
+---
 
-## Theme & Stack Decision
+## Theme & Stack
 - **Theme:** Kadence (Free) — see THEME-RESEARCH.md
 - **Page Builder:** Kadence Blocks (Free)
 - **Members Portal:** ProfilePress (Free tier)
@@ -23,39 +23,71 @@ Build a full WordPress site for Psi Beta Sigma 1914 that mirrors the look, feel,
 - **Newsletter:** MailPoet
 - **SEO:** Yoast SEO
 
-## Branding
-- **Brand Guidelines:** `/assets/branding/` ← upload files here
-- **Logo Files:** `/assets/logo/` ← upload files here
-- **Colors:** TBD — pending branding guidelines upload
-- **Fonts:** TBD — pending branding guidelines upload
+---
 
-## Site Structure (Planned — based on reference site)
+## Confirmed Branding (from Brand Guidelines 2.0)
+
+### Colors
+| Role | Name | Hex |
+|------|------|-----|
+| Primary | PBS Royal Blue | `#164f90` |
+| White | PBS Pure White | `#FFFFFF` |
+| Dark BG | Midnight Blue | `#0F3765` |
+| Darkest | Oxford Blue | `#0B2848` |
+| Accent | Soft Slate Blue | `#5C84B1` |
+| Light Fill | Powder Blue | `#A2B9D3` |
+| Subtle Fill | Cloud Blue | `#E8EDF4` |
+| Text | Black | `#000000` |
+| Border | Lavender Gray | `#D9D9D9` |
+
+### Fonts
+- **Headlines:** Open Sans Bold / Semi Bold
+- **Body:** Open Sans Regular
+- **Secondary/Docs:** Arial
+
+### Logos
+- Primary: Psi Beta Sigma Wordmark
+- Spirit Mark: Austin Sigmas Monogram
+- Official: Chapter Seal (restricted use)
+- National: Phi Beta Sigma Fraternity Shield
+
+---
+
+## Site Structure (based on pbsgulfcoastregion.org reference)
 - Home
-- About Us
-  - Regional Leadership / Chapter Info
+- About Us → Chapter Info, Leadership
 - Programs
 - Events
 - Join Sigma
 - Groups
 - News / Blog
-- Members Portal (gated)
+- Members Portal (gated — ProfilePress)
 - Contact
+
+---
 
 ## Status
 | Phase | Status | Notes |
 |-------|--------|-------|
-| Client intake | ✅ Done | New WP install confirmed at newsite.psibetasigma1914.org |
-| Theme research | ✅ Done | Kadence selected — see THEME-RESEARCH.md |
-| Branding guidelines | ⬜ Pending | David uploading to repo |
-| Theme install & config | ⬜ Pending | Waiting on branding |
-| Homepage build | ⬜ Pending | |
-| Members portal | ⬜ Pending | |
-| Events setup | ⬜ Pending | |
-| Content entry | ⬜ Pending | |
+| Client intake | ✅ Done | New WP install confirmed |
+| Theme research | ✅ Done | Kadence selected |
+| Branding guidelines | ✅ Done | PDF extracted, BRAND-GUIDE.md complete |
+| Logo files | ⬜ Pending | Upload SVG/PNG to assets/logo/ |
+| Kadence install & global config | ⬜ Next | Colors + fonts ready to apply |
+| Announcement bar | ⬜ Pending | Oxford Blue `#0B2848` bg, white text |
+| Header build | ⬜ Pending | Royal Blue, wordmark left, Members login right |
+| Homepage hero | ⬜ Pending | Need hero photo from client |
+| Inner pages | ⬜ Pending | |
+| Members portal | ⬜ Pending | ProfilePress setup |
+| Events | ⬜ Pending | The Events Calendar |
 | QA & review | ⬜ Pending | |
 | Launch | ⬜ Pending | |
 
+---
+
 ## Key Files
-- `THEME-RESEARCH.md` — theme selection rationale
-- `assets/branding/` — brand guidelines (upload here)
-- `assets/logo/` — logo files (upload here)
+- `BRAND-GUIDE.md` — full extracted brand spec (colors, fonts, logo rules)
+- `THEME-RESEARCH.md` — Kadence theme selection rationale
+- `assets/branding/Psi Beta Sigma Brand Guidelines 2.0.pdf` — official source
+- `assets/logo/` — upload logo files here
+- `assets/images/` — upload site photography here
