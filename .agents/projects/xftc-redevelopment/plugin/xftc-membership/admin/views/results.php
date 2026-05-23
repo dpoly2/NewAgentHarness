@@ -1,140 +1,249 @@
 <?php
 /**
- * Admin View — Results Entry
- * WP Admin → Xtreme Force → Results
- *
+ * Admin View — Results Entry & Management
+ * Variables: $meets, $athletes, $results (list)
  * @package XFTC_Membership
- * @since   0.2.0
  */
-if ( ! defined( 'ABSPATH' ) ) exit;
+defined( 'ABSPATH' ) || exit;
 
-$results_mgr = new XFTC_Results();
-$meets_mgr   = new XFTC_Meets();
+global $wpdb;
+$rt  = $wpdb->prefix . 'xftc_results';
+$mt  = $wpdb->prefix . 'xftc_meets';
+$at  = $wpdb->prefix . 'xftc_athletes';
 
-if ( isset( $_POST['xftc_results_nonce'] ) && wp_verify_nonce( $_POST['xftc_results_nonce'], 'xftc_save_result' ) ) {
-    $id = $results_mgr->add_result( $_POST );
-    echo $id
-        ? '<div class="notice notice-success"><p>Result saved.' . ( $_POST['is_personal_best'] ?? false ? ' 🏅 Personal Best!' : '' ) . '</p></div>'
-        : '<div class="notice notice-error"><p>Failed to save result.</p></div>';
+$meets   = $wpdb->get_results( "SELECT * FROM {$mt} ORDER BY meet_date DESC LIMIT 50" );
+$athletes = $wpdb->get_results( "SELECT * FROM {$at} ORDER BY last_name, first_name ASC" );
+
+// Recent results list
+$results = $wpdb->get_results(
+    "SELECT r.*, m.name AS meet_name, m.meet_date, a.first_name, a.last_name
+     FROM {$rt} r
+     LEFT JOIN {$mt} m ON r.meet_id=m.id
+     LEFT JOIN {$at} a ON r.athlete_id=a.id
+     ORDER BY r.recorded_at DESC LIMIT 100"
+);
+
+// All track events and field events for dropdown
+$track_events = XFTC_Results::$TRACK_EVENTS;
+$field_events = XFTC_Results::$FIELD_EVENTS;
+?>
+<div class="wrap xftc-admin-wrap">
+    <h1 class="xftc-page-title">
+        <span class="dashicons dashicons-chart-line"></span>
+        Results Entry & Management
+    </h1>
+
+    <div class="xftc-admin-two-col">
+
+        <!-- ── Entry Form ─────────────────────────────────────── -->
+        <div class="xftc-admin-col xftc-admin-col--form">
+            <div class="xftc-widget">
+                <div class="xftc-widget__header">
+                    <h2>📝 Enter Result</h2>
+                </div>
+                <div class="xftc-widget__body">
+                    <form id="xftc-result-entry-form">
+                        <?php wp_nonce_field( 'xftc_admin_nonce', 'nonce' ); ?>
+
+                        <div class="xftc-form-row">
+                            <label>Meet <span class="required">*</span></label>
+                            <select name="meet_id" required class="xftc-admin-select">
+                                <option value="">— Select Meet —</option>
+                                <?php foreach ($meets as $m) : ?>
+                                    <option value="<?php echo $m->id; ?>">
+                                        <?php echo esc_html($m->name . ' · ' . date('M j, Y', strtotime($m->meet_date))); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="xftc-form-row">
+                            <label>Athlete <span class="required">*</span></label>
+                            <select name="athlete_id" required class="xftc-admin-select">
+                                <option value="">— Select Athlete —</option>
+                                <?php foreach ($athletes as $a) : ?>
+                                    <option value="<?php echo $a->id; ?>">
+                                        <?php echo esc_html($a->first_name . ' ' . $a->last_name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="xftc-form-row">
+                            <label>Event Category <span class="required">*</span></label>
+                            <select name="event_category" required class="xftc-admin-select" id="xftc-event-select"
+                                onchange="xftcUpdateResultHint(this.value)">
+                                <option value="">— Select Event —</option>
+                                <optgroup label="Track Events">
+                                    <?php foreach ($track_events as $ev) : ?>
+                                        <option value="<?php echo esc_attr($ev); ?>"><?php echo esc_html($ev); ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                                <optgroup label="Field Events">
+                                    <?php foreach ($field_events as $ev) : ?>
+                                        <option value="<?php echo esc_attr($ev); ?>"><?php echo esc_html($ev); ?></option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                                <optgroup label="Other">
+                                    <option value="Custom">Custom / Other</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <div class="xftc-form-row" id="xftc-custom-event-row" style="display:none;">
+                            <label>Custom Event Name</label>
+                            <input type="text" name="custom_event" placeholder="e.g. 60m Dash" class="xftc-admin-input"/>
+                        </div>
+
+                        <div class="xftc-form-row">
+                            <label>Result <span class="required">*</span></label>
+                            <input type="text" name="result_value" required class="xftc-admin-input"
+                                placeholder="e.g. 12.34 or 1:45.60 or 25-6.5"
+                                id="xftc-result-input"/>
+                            <p class="xftc-form-hint" id="xftc-result-hint">
+                                Track: MM:SS.ss or SS.ss &nbsp;·&nbsp; Field: FT-IN.dec (e.g. 25-6.5)
+                            </p>
+                        </div>
+
+                        <div class="xftc-form-row-group">
+                            <div class="xftc-form-row">
+                                <label>Place / Finish</label>
+                                <input type="number" name="placement" min="1" max="999"
+                                    placeholder="e.g. 1" class="xftc-admin-input xftc-admin-input--sm"/>
+                            </div>
+                            <div class="xftc-form-row">
+                                <label>Wind (m/s)</label>
+                                <input type="text" name="wind" placeholder="+1.2 or -0.5"
+                                    class="xftc-admin-input xftc-admin-input--sm"/>
+                            </div>
+                        </div>
+
+                        <div class="xftc-form-row">
+                            <label class="xftc-checkbox-label">
+                                <input type="checkbox" name="override_pb" value="1"/>
+                                Force Personal Best flag (normally auto-detected)
+                            </label>
+                        </div>
+                        <div class="xftc-form-row">
+                            <label class="xftc-checkbox-label">
+                                <input type="checkbox" name="override_cr" value="1"/>
+                                Force Club Record flag (normally auto-detected)
+                            </label>
+                        </div>
+
+                        <div class="xftc-form-row">
+                            <button type="submit" class="button button-primary xftc-btn-submit">
+                                ✅ Save Result
+                            </button>
+                            <span class="xftc-form-feedback" id="xftc-result-feedback"></span>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div><!-- /.xftc-admin-col--form -->
+
+        <!-- ── Recent Results ─────────────────────────────────── -->
+        <div class="xftc-admin-col xftc-admin-col--list">
+            <div class="xftc-widget">
+                <div class="xftc-widget__header">
+                    <h2>📋 Recent Results</h2>
+                    <a href="<?php echo esc_url( home_url('/top-times/') ); ?>" target="_blank" class="xftc-widget__action">
+                        View Public Leaderboard →
+                    </a>
+                </div>
+                <div class="xftc-widget__body" style="overflow-x:auto;">
+                    <?php if (empty($results)) : ?>
+                        <p class="xftc-empty">No results entered yet. Use the form to add the first result.</p>
+                    <?php else : ?>
+                    <table class="xftc-widget-table">
+                        <thead>
+                            <tr>
+                                <th>Athlete</th>
+                                <th>Event</th>
+                                <th>Result</th>
+                                <th>Place</th>
+                                <th>Meet</th>
+                                <th>Date</th>
+                                <th>Badges</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($results as $res) : ?>
+                            <tr>
+                                <td>
+                                    <strong><?php echo esc_html($res->first_name . ' ' . $res->last_name); ?></strong>
+                                </td>
+                                <td><?php echo esc_html($res->event_category); ?></td>
+                                <td>
+                                    <strong class="xftc-result-val"><?php echo esc_html($res->result_value); ?></strong>
+                                </td>
+                                <td><?php echo $res->placement ? '#' . $res->placement : '—'; ?></td>
+                                <td><?php echo esc_html($res->meet_name ?? '—'); ?></td>
+                                <td><?php echo $res->meet_date ? date('M j, Y', strtotime($res->meet_date)) : '—'; ?></td>
+                                <td>
+                                    <?php if ($res->is_personal_best) echo '<span class="xftc-badge xftc-badge--green">⚡ PB</span> '; ?>
+                                    <?php if ($res->is_club_record)   echo '<span class="xftc-badge xftc-badge--orange">🏆 CR</span>'; ?>
+                                </td>
+                                <td>
+                                    <a href="<?php echo esc_url(admin_url('admin.php?page=xftc-results&action=delete&id='.$res->id)); ?>"
+                                       onclick="return confirm('Delete this result?');"
+                                       class="xftc-delete-link">Delete</a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div><!-- /.xftc-admin-col--list -->
+
+    </div><!-- /.xftc-admin-two-col -->
+</div><!-- /.wrap -->
+
+<script>
+var fieldEvents = <?php echo json_encode(array_map('strtolower', $field_events)); ?>;
+
+function xftcUpdateResultHint(val) {
+    var lower   = val.toLowerCase();
+    var isField = fieldEvents.some(function(ev) { return lower.indexOf(ev.split(' ')[0]) !== -1 || lower === ev; });
+    var hint    = document.getElementById('xftc-result-hint');
+    var input   = document.getElementById('xftc-result-input');
+    var customRow = document.getElementById('xftc-custom-event-row');
+
+    if (val === 'Custom') {
+        customRow.style.display = 'block';
+    } else {
+        customRow.style.display = 'none';
+    }
+
+    if (isField) {
+        hint.innerHTML = '<strong>Field Event:</strong> Enter as FT-IN.dec &nbsp;·&nbsp; e.g. <code>25-6.5</code> or <code>6-2</code>';
+        input.placeholder = 'e.g. 25-6.5 (feet-inches)';
+    } else {
+        hint.innerHTML = '<strong>Track Event:</strong> Enter as MM:SS.ss or SS.ss &nbsp;·&nbsp; e.g. <code>12.34</code> or <code>1:45.60</code>';
+        input.placeholder = 'e.g. 12.34 or 1:45.60';
+    }
 }
 
-$selected_meet = isset( $_GET['meet_id'] ) ? (int) $_GET['meet_id'] : 0;
-$meets         = $meets_mgr->get_all_meets( 'completed' );
-$meet_results  = $selected_meet ? $results_mgr->get_meet_results( $selected_meet ) : [];
-$club_records  = $results_mgr->get_club_records();
-?>
+// AJAX form submit
+document.getElementById('xftc-result-entry-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var $form = jQuery(this);
+    var $btn  = $form.find('.xftc-btn-submit');
+    var $fb   = jQuery('#xftc-result-feedback');
+    $btn.prop('disabled', true).text('Saving...');
 
-<div class="wrap xftc-admin-results">
-    <h1>📊 Results</h1>
-
-    <!-- Meet Selector -->
-    <form method="get" style="margin-bottom:16px;">
-        <input type="hidden" name="page" value="xftc-results">
-        <label><strong>View Results For:</strong>
-            <select name="meet_id" onchange="this.form.submit()">
-                <option value="">— Select Meet —</option>
-                <?php foreach ( $meets as $m ) : ?>
-                    <option value="<?php echo $m['id']; ?>" <?php selected( $selected_meet, $m['id'] ); ?>>
-                        <?php echo esc_html( $m['name'] . ' — ' . date( 'M j, Y', strtotime( $m['meet_date'] ) ) ); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </label>
-    </form>
-
-    <?php if ( $selected_meet ) : ?>
-    <!-- Results Table -->
-    <h2>Results: <?php echo esc_html( $meets_mgr->get_meet( $selected_meet )['name'] ?? '' ); ?></h2>
-    <table class="wp-list-table widefat fixed striped">
-        <thead><tr><th>Athlete</th><th>Event</th><th>Placement</th><th>Result</th><th>PB</th><th>Club Record</th></tr></thead>
-        <tbody>
-        <?php if ( empty( $meet_results ) ) : ?>
-            <tr><td colspan="6" style="text-align:center;"><em>No results entered yet.</em></td></tr>
-        <?php else : foreach ( $meet_results as $r ) : ?>
-            <tr>
-                <td><?php echo esc_html( $r['first_name'] . ' ' . $r['last_name'] ); ?></td>
-                <td><?php echo esc_html( $r['event_category'] ); ?></td>
-                <td><?php echo $r['placement'] ? '#' . $r['placement'] : '—'; ?></td>
-                <td><strong><?php echo esc_html( $r['result_value'] ); ?></strong></td>
-                <td><?php echo $r['is_personal_best'] ? '🏅 Yes' : '—'; ?></td>
-                <td><?php echo $r['is_club_record'] ? '🏆 Yes' : '—'; ?></td>
-            </tr>
-        <?php endforeach; endif; ?>
-        </tbody>
-    </table>
-    <?php endif; ?>
-
-    <hr>
-
-    <!-- Add Result Form -->
-    <h2>Enter Result</h2>
-    <form method="post">
-        <?php wp_nonce_field( 'xftc_save_result', 'xftc_results_nonce' ); ?>
-        <table class="form-table">
-            <tr>
-                <th><label>Meet</label></th>
-                <td>
-                    <select name="meet_id" required>
-                        <option value="">— Select Meet —</option>
-                        <?php foreach ( $meets as $m ) : ?>
-                            <option value="<?php echo $m['id']; ?>" <?php selected( $selected_meet, $m['id'] ); ?>>
-                                <?php echo esc_html( $m['name'] ); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label>Athlete ID</label></th>
-                <td><input type="number" name="athlete_id" required class="small-text" placeholder="Athlete DB ID"></td>
-            </tr>
-            <tr>
-                <th><label>Event Category</label></th>
-                <td>
-                    <select name="event_category" required>
-                        <?php foreach ( ['100m','200m','400m','800m','1500m','3000m','100m Hurdles','110m Hurdles','400m Hurdles','Long Jump','High Jump','Triple Jump','Shot Put','Discus','Javelin','4x100 Relay','4x400 Relay'] as $evt ) : ?>
-                            <option value="<?php echo $evt; ?>"><?php echo $evt; ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label>Result Value</label></th>
-                <td>
-                    <input type="text" name="result_value" required placeholder="e.g. 12.45 or 15'6&quot;" class="regular-text">
-                    <select name="result_unit">
-                        <option value="time">Time (seconds/MM:SS)</option>
-                        <option value="distance">Distance (feet/meters)</option>
-                        <option value="points">Points</option>
-                    </select>
-                </td>
-            </tr>
-            <tr>
-                <th><label>Placement</label></th>
-                <td><input type="number" name="placement" min="1" class="small-text" placeholder="1st, 2nd, etc."></td>
-            </tr>
-        </table>
-        <?php submit_button( 'Save Result' ); ?>
-    </form>
-
-    <hr>
-
-    <!-- Club Records -->
-    <h2>🏆 Club Records</h2>
-    <table class="wp-list-table widefat fixed striped">
-        <thead><tr><th>Event</th><th>Athlete</th><th>Result</th><th>Meet</th><th>Date</th></tr></thead>
-        <tbody>
-        <?php if ( empty( $club_records ) ) : ?>
-            <tr><td colspan="5" style="text-align:center;"><em>No club records on file yet.</em></td></tr>
-        <?php else : foreach ( $club_records as $cr ) : ?>
-            <tr>
-                <td><?php echo esc_html( $cr['event_category'] ); ?></td>
-                <td><?php echo esc_html( $cr['first_name'] . ' ' . $cr['last_name'] ); ?></td>
-                <td><strong><?php echo esc_html( $cr['result_value'] ); ?></strong></td>
-                <td><?php echo esc_html( $cr['meet_name'] ); ?></td>
-                <td><?php echo esc_html( date( 'M j, Y', strtotime( $cr['meet_date'] ) ) ); ?></td>
-            </tr>
-        <?php endforeach; endif; ?>
-        </tbody>
-    </table>
-</div>
+    jQuery.post(ajaxurl, $form.serialize() + '&action=xftc_save_result', function(res) {
+        if (res.success) {
+            $fb.css('color','green').text('✅ Result saved! PB: ' + (res.data.is_pb ? 'Yes' : 'No') + ' · CR: ' + (res.data.is_cr ? 'Yes' : 'No'));
+            $form[0].reset();
+            setTimeout(function(){ location.reload(); }, 1500);
+        } else {
+            $fb.css('color','red').text('❌ ' + (res.data.message || 'Error saving result.'));
+        }
+        $btn.prop('disabled', false).text('✅ Save Result');
+    }, 'json');
+});
+</script>
