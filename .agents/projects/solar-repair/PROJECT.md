@@ -1,8 +1,8 @@
 # Solar Repair Company — Master Project File
 **Created:** 2026-05-24
 **Owner:** David Smith
-**Current Legal Name:** Smith and Taylor Construction → **New Name: Apex Solar Services
-**Status:** 🟡 Planning Phase — Pre-Launch | **Name CONFIRMED: Apex Solar Services**
+**Current Legal Name:** Smith and Taylor Construction → **New Name: Clarity Solar Services
+**Status:** 🟡 Planning Phase — Pre-Launch | **Name CONFIRMED: Clarity Solar Services**
 
 ---
 
@@ -27,11 +27,11 @@ A solar repair and maintenance company specializing in **residential solar syste
 
 ## Proposed Company Names
 
-> See `NAMING.md` for full analysis. Top recommendation: **Apex Solar Services**
+> See `NAMING.md` for full analysis. Top recommendation: **Clarity Solar Services**
 
 | Name | Vibe | Domain Check Needed |
 |------|------|-------------------|
-| **Apex Solar Services** | Professional, strong, scalable | apexsolarservices.com |
+| **Clarity Solar Services** | Professional, strong, scalable | claritysolarservices.com |
 | **Solara Repairs** | Clean, modern, memorable | solaraRepairs.com |
 | **SunPath Services** | Warm, Texas-feel, friendly | sunpathservices.com |
 | **Clarity Solar** | Trust, transparency, professional | claritysolar.com |

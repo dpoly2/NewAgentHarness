@@ -8,7 +8,7 @@
 ## Responsibilities
 
 ### Brand & Identity
-- Finalize company name (top recommendation: Apex Solar Services)
+- Finalize company name (top recommendation: Clarity Solar Services)
 - Register domain immediately after name confirmed
 - Brief S2T Designs for logo and brand kit development
 - Color palette, typography, and visual language

@@ -18,9 +18,9 @@
 
 ## Name Recommendations
 
-### 🥇 TOP PICK — Apex Solar Services
+### 🥇 TOP PICK — Clarity Solar Services
 **Why:** "Apex" signals top-tier, authoritative service. Clean, professional, scalable. Works for both residential homeowners and commercial clients (Hert contract). Strong domain potential. Easy to say, easy to spell, hard to confuse.
-- **Domain target:** apexsolarservices.com / apexsolar.services
+- **Domain target:** claritysolarservices.com / apexsolar.services
 - **Tagline idea:** *"Peak Performance for Your Solar System"*
 - **Brand feel:** Navy + orange, bold, trustworthy contractor energy
 - **B2B fit:** Strong — Hert Renewables would feel confident listing Apex as a partner
@@ -82,7 +82,7 @@
 
 | Name | Memorability | B2B Fit | SEO Value | Domain Ease | Scalability | Score |
 |------|-------------|---------|-----------|-------------|-------------|-------|
-| **Apex Solar Services** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | **22/25** |
+| **Clarity Solar Services** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | **22/25** |
 | **Clarity Solar** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ | **20/25** |
 | **SunPath Services** | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | **20/25** |
 | **Summit Solar Repair** | ⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | **21/25** |
@@ -102,12 +102,12 @@
 
 ---
 
-## ✅ NAME CONFIRMED: Apex Solar Services
+## ✅ NAME CONFIRMED: Clarity Solar Services
 
 **Decision made by David Smith — May 24, 2026**
 
 Next steps:
-1. Register domain: apexsolarservices.com (check Namecheap)
+1. Register domain: claritysolarservices.com (check Namecheap)
 2. Run TX SOS name availability check
 3. Reserve social handles: @apexsolarservices
 4. Brief S2T Designs for logo and brand kit
@@ -116,10 +116,10 @@ Next steps:
 
 ## ⚠️ NAMING CONFLICT ALERT — Updated May 24, 2026
 
-**David confirmed: Apex Solar Services**
+**David confirmed: Clarity Solar Services**
 
 ### Domain Status
-- `apexsolarservices.com` — **No WHOIS record found — likely AVAILABLE** ✅
+- `claritysolarservices.com` — **No WHOIS record found — likely AVAILABLE** ✅
 - `apexsolar.com` — TAKEN (national company, Denver CO)
 
 ### Competitor: "Apex Solar" (National)
@@ -132,19 +132,19 @@ Next steps:
 ### Risk Assessment
 | Risk | Level | Notes |
 |------|-------|-------|
-| Trademark conflict | 🟡 Medium | "Apex Solar" is likely trademarked. "Apex Solar Services" may be distinct enough. |
+| Trademark conflict | 🟡 Medium | "Apex Solar" is likely trademarked. "Clarity Solar Services" may be distinct enough. |
 | Consumer confusion | 🟡 Medium | Different market (repair vs install) but same name root |
 | TX SOS name conflict | ⬜ Check | Run Texas SOS availability check before filing |
-| Domain differentiation | ✅ Low | apexsolarservices.com appears available |
+| Domain differentiation | ✅ Low | claritysolarservices.com appears available |
 
 ### Recommendation
 Two paths:
 
-**Path A — Keep Apex Solar Services (lower risk than it looks)**
-- "Apex Solar Services" vs. "Apex Solar" are legally distinct names
+**Path A — Keep Clarity Solar Services (lower risk than it looks)**
+- "Clarity Solar Services" vs. "Apex Solar" are legally distinct names
 - Different service (repair vs. install) reduces consumer confusion argument
-- Register `apexsolarservices.com` immediately
-- Run USPTO trademark search for "Apex Solar Services" specifically
+- Register `claritysolarservices.com` immediately
+- Run USPTO trademark search for "Clarity Solar Services" specifically
 - TX SOS name search before LLC filing
 
 **Path B — Pivot to Summit Solar Repair (cleanest trademark position)**
@@ -154,5 +154,24 @@ Two paths:
 - Stronger local brand differentiation from the national Apex Solar
 
 ### David's Call
-- Stick with **Apex Solar Services** → register domain now, run trademark check
+- Stick with **Clarity Solar Services** → register domain now, run trademark check
 - Or pivot to **Summit Solar Repair** → cleanest path, stronger SEO
+
+---
+
+## ✅ FINAL DECISION — Clarity Solar Services
+**Confirmed by David Smith — May 24, 2026**
+
+| Check | Result |
+|-------|--------|
+| `claritysolarservices.com` | ✅ AVAILABLE — register immediately |
+| `claritysolar.com` | ❌ Taken (HugeDomains broker) — not needed |
+| TX "Clarity Solar Services" conflict | ✅ None found |
+| "Clarity Roofing and Solar" (Dallas) | Different name, different service — no conflict |
+| National brand conflict | ✅ None |
+| USPTO trademark risk | ✅ Low |
+
+**Domain to register:** `claritysolarservices.com`
+**Social handles to claim:** @claritysolarservices (Instagram, Facebook, Google Business)
+**Tagline:** *"Clear Skies. Clear Results."*
+**Brand colors:** Sky blue + white + slate gray

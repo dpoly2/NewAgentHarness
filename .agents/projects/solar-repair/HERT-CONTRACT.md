@@ -1,4 +1,4 @@
-# Apex Solar Services — Hert Renewables Partnership
+# Clarity Solar Services — Hert Renewables Partnership
 **Created:** 2026-05-24
 **Managed By:** solar-legal-agent + solar-finance-agent
 **Status:** 🟡 Contact established — outreach pending
@@ -7,7 +7,7 @@
 
 ## Partnership Overview
 
-Apex Solar Services will serve as a **subcontractor** for Hert Renewables, providing commercial solar repair services on projects across the Central Texas market. This relationship provides immediate commercial revenue from day one — without the cold-start challenge of building a B2C commercial pipeline.
+Clarity Solar Services will serve as a **subcontractor** for Hert Renewables, providing commercial solar repair services on projects across the Central Texas market. This relationship provides immediate commercial revenue from day one — without the cold-start challenge of building a B2C commercial pipeline.
 
 ---
 
@@ -30,11 +30,11 @@ Apex Solar Services will serve as a **subcontractor** for Hert Renewables, provi
 
 ---
 
-**Subject:** Subcontractor Partnership — Apex Solar Services (Commercial Repair)
+**Subject:** Subcontractor Partnership — Clarity Solar Services (Commercial Repair)
 
 Hey [Name],
 
-Hope you're doing well. I wanted to reach out about a new venture I'm launching — **Apex Solar Services**, a solar repair and maintenance company based out of Pflugerville.
+Hope you're doing well. I wanted to reach out about a new venture I'm launching — **Clarity Solar Services**, a solar repair and maintenance company based out of Pflugerville.
 
 We're specializing in residential repair primarily, but I'd love to explore a formal subcontractor relationship with Hert Renewables for commercial repair work. I know you all handle a significant volume of commercial projects and I'd like to be your go-to repair resource in the Central Texas corridor.
 
@@ -50,7 +50,7 @@ Are you free for 20–30 minutes this week or next?
 
 Best,
 David Smith
-Apex Solar Services
+Clarity Solar Services
 Pflugerville, TX
 [Phone] | [Email]
 
