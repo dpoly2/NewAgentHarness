@@ -68,11 +68,26 @@ function getTableName(sql) {
 
 function applyWhere(rows, whereStr, params) {
   if (!whereStr) return rows
-  // Very simple: col=? AND col=? support
   const conditions = whereStr.split(/\s+AND\s+/i).map(c => c.trim())
   let paramIdx = 0
   return rows.filter(row => {
     for (const cond of conditions) {
+      // NOT IN ('a','b') support
+      const notInM = cond.match(/([a-z_]+)\s+NOT\s+IN\s*\(([^)]+)\)/i)
+      if (notInM) {
+        const col = notInM[1]
+        const vals = notInM[2].split(',').map(v => v.trim().replace(/^'|'$/g, ''))
+        if (vals.includes(String(row[col]))) return false
+        continue
+      }
+      // IN ('a','b') support
+      const inM = cond.match(/([a-z_]+)\s+IN\s*\(([^)]+)\)/i)
+      if (inM) {
+        const col = inM[1]
+        const vals = inM[2].split(',').map(v => v.trim().replace(/^'|'$/g, ''))
+        if (!vals.includes(String(row[col]))) return false
+        continue
+      }
       const m = cond.match(/([a-z_]+)\s*([=!<>]+)\s*(\?|'[^']*'|date\([^)]*\))/i)
       if (!m) continue
       const col = m[1]; const op = m[2]; const valStr = m[3]
@@ -182,13 +197,14 @@ function makeStmt(sql) {
       const whereMatch = sql.match(/WHERE\s+(.+?)(?:\s+ORDER|\s+LIMIT|$)/i)
       const whereStr = whereMatch ? whereMatch[1] : ''
       const filtered = applyWhere(rows, whereStr, flat)
-      if (!filtered.length) return null
 
-      // COUNT(*) query
+      // COUNT(*) query — always return count even if 0
       if (/COUNT\(\*\)\s+as\s+([a-z_]+)/i.test(sql)) {
         const alias = sql.match(/COUNT\(\*\)\s+as\s+([a-z_]+)/i)[1]
         return { [alias]: filtered.length }
       }
+
+      if (!filtered.length) return null
       return filtered[0]
     },
 
