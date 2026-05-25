@@ -18,6 +18,23 @@
 
 ---
 
+## 📋 PENDING — DAVID TO PROVIDE WHEN READY
+
+> These items are needed to complete the personal financial baseline. No rush — add them when you have time.
+
+| # | Item Needed | Why It Matters | Notes |
+|---|-------------|---------------|-------|
+| 1 | **W-2 gross salary** (annual or monthly) | Anchors all personal planning, savings rate, and SBA pre-qual | Exact or approximate is fine |
+| 2 | **Net monthly take-home** (after tax + benefits) | Sets the real budget ceiling | Check your pay stub |
+| 3 | **Employer 401(k) match %** | Determines minimum contribution to capture full match | Check your benefits portal |
+| 4 | **Current debt balances** — credit cards, vehicle, student loans, personal loans | Required for DTI calc and debt paydown strategy | Balances + interest rates |
+| 5 | **Current credit score** | SBA eligibility — need 680+ | Pull free from Credit Karma or Experian |
+| 6 | **Current savings / checking balances** | Emergency fund baseline | Approximate OK |
+| 7 | **Retirement account balances** — employer 401k, any IRA | Net worth and contribution gap analysis | Approximate OK |
+| 8 | **Major monthly fixed expenses** — rent/mortgage, car payment, insurance | Personal budget framework | Approximate OK |
+
+---
+
 ## 💰 INCOME SNAPSHOT
 
 | Source | Type | Monthly (Est.) | Status |
