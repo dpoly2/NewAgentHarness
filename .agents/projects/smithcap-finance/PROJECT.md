@@ -2,7 +2,7 @@
 **Created:** 2026-05-24
 **Owner:** David Smith
 **Lead Agent:** finance-cfo
-**Status:** 🟡 Initializing
+**Status:** 🟡 Active — Building Out
 
 ---
 
@@ -50,27 +50,34 @@ David Smith (Owner)
 
 ---
 
-## Immediate Priorities (Q2 2026)
+## FMO File Library
 
-- [ ] **Confirm W-2 salary** — anchor all personal planning with actual net income
-- [ ] **Pull debt balances** — credit cards, vehicle, student loans, personal loans
-- [ ] **Q2 estimated tax payment** — due June 16, 2026 — calculate and submit
-- [ ] **Open Solo 401(k)** — for S2T Designs income via Fidelity or Vanguard
-- [ ] **File The Elevation LLC** — TX SOS ($300) — most urgent entity formation
-- [ ] **Get insurance quotes** — E&O for S2T + term life for David
-- [ ] **Set up bookkeeping** — Wave (free) or QuickBooks for all entities
-- [ ] **Build personal net worth baseline** — David fills in asset/liability numbers
+| File | Description | Status |
+|------|-------------|--------|
+| `PROJECT.md` | This file — master overview | ✅ Complete |
+| `DASHBOARD.md` | Live consolidated financial dashboard | ✅ Built |
+| `PERSONAL-FINANCES.md` | Full personal financial plan | ✅ Built |
+| `CAPITAL-ROADMAP.md` | 3-year capital deployment plan (2026–2028) | ✅ Built |
+| `ENTITY-TAX-CALENDAR.md` | All filing deadlines — every entity | ✅ Built |
+| `BOOKKEEPING-SETUP.md` | Chart of accounts, bank setup, monthly close | ✅ Built |
+| `SBA-READINESS.md` | SBA pre-qualification checklist + profile | ⬜ To Build |
+| `INVESTMENT-POLICY.md` | Portfolio allocation model + IPS | ⬜ To Build |
+| `INSURANCE-REVIEW.md` | Coverage gap analysis + quotes tracker | ⬜ To Build |
+| `GRANT-FINANCE-TRACKER.md` | Active grants, restrictions, reporting | ⬜ To Build |
 
 ---
 
-## Financial Files
+## Immediate Priorities (Q2 2026)
 
-| File | Description |
-|------|-------------|
-| `DASHBOARD.md` | Live consolidated financial dashboard — personal + business |
-| `PERSONAL-FINANCES.md` | Full personal financial plan — income, budget, debt, retirement, insurance |
-| `CAPITAL-ROADMAP.md` | 3-year capital deployment plan (to be built) |
-| `ENTITY-TAX-CALENDAR.md` | All filing deadlines across every entity (to be built) |
+- [ ] **Confirm W-2 salary** *(David to provide when ready)* — anchor all personal planning
+- [ ] **Pull debt balances** *(David to provide when ready)* — credit cards, vehicle, student loans
+- [ ] **Q2 estimated tax payment** — due **June 16, 2026**
+- [ ] **Open Solo 401(k)** — Fidelity or Vanguard, before Dec 31, 2026
+- [ ] **File The Elevation LLC** — TX SOS ($300) — most urgent
+- [ ] **Open Mercury bank accounts** — one per active LLC
+- [ ] **Set up Wave bookkeeping** — free, connect all business accounts
+- [ ] **Get E&O insurance quote** — S2T Designs client work exposure
+- [ ] **Get term life insurance quote** — $500K–$1M, 20-year term
 
 ---
 
@@ -78,10 +85,10 @@ David Smith (Owner)
 
 | Metric | May 2026 | Dec 2026 | Dec 2027 | Dec 2028 |
 |--------|----------|----------|----------|----------|
-| Personal net worth | TBD | +$25K | +$75K | +$200K |
+| Personal net worth | TBD | +$25K | +$100K | +$400K |
 | Emergency fund | TBD | 3 months | 6 months | 6 months |
 | Investment portfolio | TBD | $5K | $25K | $75K |
-| Retirement balance | TBD | $15K | $40K | $80K |
-| Monthly passive income | $0 | $500 | $2K | $5K |
+| Retirement balance | TBD | $15K | $45K | $100K |
+| Monthly passive income | $0 | $500 | $3K | $8K |
 | LLCs formed | 0 | 3 | 4 | 5+ |
-| Total entity revenue (monthly) | $2–5K | $5K+ | $10K+ | $20K+ |
+| Total entity revenue (monthly) | ~$2–5K | $5K+ | $12K+ | $25K+ |
