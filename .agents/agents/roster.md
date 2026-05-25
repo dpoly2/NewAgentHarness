@@ -330,3 +330,36 @@
 ### Files
 - `.agents/projects/smithcap-finance/`
 - `.agents/agents/projects/smithcap-finance/`
+
+---
+
+## PROJECT 10 — SOLAR REPAIR COMPANY (TBD NAME)
+
+### Lead
+**solar-project-lead** — Launch planning, milestone tracking, Hert Renewables coordination, business plan execution
+
+### Current Name
+Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
+
+### Business Model
+- Primary: Residential solar repair (panel, inverter, wiring, roof penetration)
+- Secondary: Commercial repair via subcontract with Hert Renewables
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| solar-legal-agent | Legal & Compliance | LLC formation, TDLR licensing, Hert contract review, TX SB 1036 |
+| solar-finance-agent | Finance & Insurance | GL/E&O/WC quotes, bookkeeping, Hert billing, payroll |
+| solar-marketing-agent | Brand & Marketing | Name/domain, website, Google Business, local SEO, lead gen |
+| solar-sales-agent | Sales & Pricing | Residential quotes, service menu, maintenance contracts |
+| solar-operations-agent | Field Operations | Scheduling, crew dispatch, Hert coordination, safety, parts |
+
+### Key Insurance Note
+- Must carry multi-trade GL (electrical + roofing + structural) — NOT a standard single-trade policy
+- TX SB 1036 requires GL for all solar contractors by September 1, 2026
+- Primary insurance contact: The Agent's Office, Frisco TX (972-696-9995)
+
+### Files
+- `.agents/projects/solar-repair/`
+- `.agents/agents/projects/solar-repair/`
