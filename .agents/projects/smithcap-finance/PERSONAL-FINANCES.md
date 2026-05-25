@@ -1,265 +1,229 @@
-# David Smith — Personal Financial Plan
-**Created:** 2026-05-24
+# David Smith — Personal Financial Profile
+**Updated:** 2026-05-25
 **Managed By:** finance-advisor + finance-cfo
-**Status:** 🟡 Baseline Setup
+**Source Documents:** 2025 W-2 (HP Inc.) + ARC Rewards Statement (Dec 2025)
+**Status:** 🟢 Baseline Established — Real Numbers On File
 
 ---
 
-## Personal Financial Overview
+## EMPLOYMENT PROFILE
 
-David Smith is a Senior Quality Engineer (SQE) with a stable W-2 income, operating as a multi-entity entrepreneur across 7 ventures. The financial plan below treats his W-2 as the foundation and layers business income, real estate equity, and investment growth on top to build long-term wealth.
-
----
-
-## INCOME PROFILE
-
-### W-2 Employment (Primary)
-| Source | Type | Est. Annual | Est. Monthly (Net) |
-|--------|------|-------------|-------------------|
-| SQE Employment | W-2 Salary | TBD — confirm | TBD |
-| Benefits (401k match, health) | Employer | Included | Included |
-
-> **Action:** Confirm exact gross salary, 401(k) match %, and net take-home pay to anchor all planning.
-
-### Self-Employment / Business Income (Secondary)
-| Entity | Type | Monthly Revenue (Est.) | Net to David |
-|--------|------|----------------------|-------------|
-| S2T Designs | Web Agency | $2K–$5K | ~$1.5K–$3.5K |
-| XFTC | Stipend / Admin | $500–$1K | ~$500 |
-| Nutrue Apparel | POD Sales | $0–$500 | ~$0–$300 |
-| The Elevation ATX | Events (future) | $0 (pre-revenue) | — |
-| Smith Capital | Consulting (future) | $0 (pre-revenue) | — |
-
-### Total Estimated Monthly Income
-| Scenario | Monthly | Annual |
-|----------|---------|--------|
-| Conservative (W-2 only) | TBD | TBD |
-| Base (W-2 + S2T + XFTC) | TBD + $2K | TBD |
-| Optimistic (all streams) | TBD + $5K+ | TBD |
+| Field | Detail |
+|-------|--------|
+| **Employer** | HP Inc. (1501 Page Mill Rd, Palo Alto, CA 94304) |
+| **Title** | Software Applications Engineer 4 |
+| **Manager** | Chester Stedman |
+| **EIN** | 94-1081436 |
+| **Location** | Remote — Pflugerville, TX 78660 |
 
 ---
 
-## PERSONAL BUDGET FRAMEWORK
+## COMPENSATION SUMMARY — FY2025 / FY2026
 
-### Fixed Monthly Expenses (Estimate — to be confirmed)
-| Category | Monthly Est. |
-|----------|-------------|
-| Housing (rent/mortgage) | TBD |
-| Vehicle (payment + insurance) | TBD |
-| Health insurance (employee share) | TBD |
-| Life/disability insurance | TBD |
-| Cell phone | ~$80–$120 |
-| Internet | ~$60–$80 |
-| Subscriptions (personal) | ~$50–$100 |
-| **Fixed Total** | **TBD** |
+### Base Salary
+| Period | Salary | Notes |
+|--------|--------|-------|
+| FY2025 (W-2 Gross) | **$166,403.31** | Includes salary + RSU vests + bonus |
+| Prior Salary (pre-raise) | **$137,553.21** | Pre-Feb 2026 |
+| **New Salary (eff. Feb 1, 2026)** | **$150,743.10** | +$13,189.89 (9.59% merit increase) |
 
-### Variable Monthly Expenses (Estimate)
-| Category | Monthly Budget |
-|----------|---------------|
-| Groceries | ~$300–$500 |
-| Dining / entertainment | ~$200–$400 |
-| Gas / transportation | ~$150–$250 |
-| Clothing / personal care | ~$100–$200 |
-| Miscellaneous | ~$100–$200 |
-| **Variable Total** | **~$850–$1,550** |
+### FY2025 Bonus
+| Item | Value |
+|------|-------|
+| Eligible Earnings | $134,737.00 |
+| Bonus Target | 9.00% |
+| Bonus Awarded | **4.45% → $6,000.00** |
+| Plan | VPB HPCO |
+| FY26 Target | 9.00% (next year payout target) |
 
-### Business Expenses (Tracked Separately — Deductible)
-| Category | Monthly Est. | Entity |
-|----------|-------------|--------|
-| Software & tools (Base44, GitHub, hosting) | ~$100–$200 | S2T / XFTC |
-| Printing / promo materials | ~$100–$300 | XFTC / Nutrue |
-| Marketing / advertising | ~$50–$200 | Nutrue / Elevation |
-| Professional services | ~$100–$300 | All entities |
-| Travel & mileage | ~$100–$300 | XFTC / Smith Cap |
+### RSU / Stock Grant (FY2025)
+| Item | Value |
+|------|-------|
+| Grant Date | December 8, 2025 |
+| Grant Type | RSU (Restricted Stock Units) |
+| Shares Granted | **1,226 shares** |
+| Grant Price | $24.46/share |
+| **Total Grant Value** | **$30,000** |
+| Vesting Schedule | 1/3 per year over 3 years (~409 shares/yr) |
+| Est. Annual Vest Value (at $24.46) | ~$10,000/yr |
+
+> **Note:** RSU values will fluctuate with HP stock price (NYSE: HPQ). At time of grant: $24.46. Watch for vest dates ~Dec 2026, 2027, 2028.
 
 ---
 
-## SAVINGS & EMERGENCY FUND
+## W-2 INCOME BREAKDOWN (2025)
 
-### Emergency Fund Target
-| Metric | Target | Status |
-|--------|--------|--------|
-| Months of expenses covered | 6 months | ⬜ Unknown — needs baseline |
-| Estimated monthly expenses | TBD | Confirm with David |
-| Emergency fund target | TBD | Calculate once expenses confirmed |
-| Recommended account | High-yield savings (HYSA) | Marcus, Ally, or SoFi (~4.5% APY) |
+| Box | Description | Amount |
+|-----|-------------|--------|
+| Box 1 | Wages, tips, other comp. (taxable) | **$141,223.31** |
+| Box 3 | Social security wages | $153,562.49 |
+| Box 5 | Medicare wages and tips | $153,562.49 |
+| Box 2 | Federal income tax withheld | **$22,750.65** |
+| Box 4 | Social security tax withheld | $9,520.87 |
+| Box 6 | Medicare tax withheld | $2,226.66 |
+| Box 12C | Taxable group-term life insurance | $1,738.80 |
+| Box 12D | 401(k) elective deferrals | **$12,409.84** |
+| Box 12DD | Employer-sponsored health coverage (non-taxable) | $31,615.20 |
+| Box 14 | DQ SOP (disqualified stock options) | $70.66 |
+| Box 14 | RSU Vest (taxable income) | **$21,479.39** |
+| Box 13 | Retirement plan — checked | ✅ Yes |
+| State Income Tax | Texas (no state income tax) | $0.00 |
 
-### Savings Rate Target
-| Priority | Goal | Notes |
-|----------|------|-------|
-| Emergency fund | $10K–$20K min | Before aggressive investment |
-| Business seed capital | $5K–$10K | The Elevation LLC filing + seed |
-| Investment contributions | 15–20% of income | After emergency fund is funded |
-| Annual savings target | TBD | Based on confirmed income |
+### Key W-2 Insights
+- **Total Gross Pay (all sources):** $166,403.31
+- **Taxable Wages (Box 1):** $141,223.31 — lower than gross because 401(k) deferrals ($12,409.84) + life insurance adjustments reduce Box 1
+- **401(k) already contributing:** $12,409.84 in 2025 — but 2026 max is $23,500. Room to increase ~$11K more.
+- **RSU Vested in 2025:** $21,479.39 — this is taxable as ordinary income in the year it vests
+- **Health coverage:** $31,615.20 employer-sponsored (non-taxable — this is info only)
+- **Texas resident:** $0 state income tax — significant advantage
 
 ---
 
-## RETIREMENT ACCOUNTS
+## TOTAL COMPENSATION PICTURE (FY2025)
 
-### Employer 401(k) — SQE Employment
-| Item | Detail |
+| Component | Amount |
+|-----------|--------|
+| W-2 Gross Pay | $166,403.31 |
+| RSU Vest (included in above) | $21,479.39 |
+| Year-End Bonus | $6,000.00 |
+| New RSU Grant (Dec 2025) | $30,000 (vests over 3 yrs) |
+| Employer Health Benefit | $31,615.20 (non-taxable) |
+| **Total Cash Compensation** | **~$172,403** |
+| **Total Comp (cash + equity + benefits)** | **~$204,018+** |
+
+---
+
+## FORWARD-LOOKING INCOME (2026)
+
+| Source | Annual Amount |
+|--------|--------------|
+| Base Salary (HP — new) | **$150,743.10** |
+| Target Bonus (9% of base) | ~$13,567 |
+| RSU Vest Year 1 (~409 shares) | ~$10,000 (at grant price; market-dependent) |
+| **Estimated W-2 Total 2026** | **~$174,310** |
+| S2T Designs (agency) | $24K–$60K (growing) |
+| XFTC admin/stipend | ~$6K |
+| The Elevation (launch year) | TBD |
+| **Total Estimated 2026 Income** | **$200K–$240K range** |
+
+---
+
+## TAX PROFILE (2025 → 2026)
+
+### 2025 Federal Tax Summary
+| Item | Amount |
 |------|--------|
-| Contribution | Contribute at minimum to capture full employer match |
-| 2026 Max (employee) | $23,500 |
-| Recommended | 10–15% of gross salary |
-| Investment allocation | Target-date fund or 3-fund portfolio (VTI / VXUS / BND) |
+| Taxable wages (Box 1) | $141,223.31 |
+| Federal withheld (Box 2) | $22,750.65 |
+| Social Security withheld | $9,520.87 |
+| Medicare withheld | $2,226.66 |
+| **Total payroll taxes paid** | **$34,498.18** |
+| State income tax | $0.00 (Texas — no state tax) |
 
-### Self-Employed Retirement (Recommended)
-| Account | Best For | 2026 Contribution Limit |
-|---------|----------|------------------------|
-| Solo 401(k) | High self-employment income (S2T Designs) | Up to $69,000 total |
-| SEP-IRA | Simpler setup, lower admin | 25% of net self-employment income |
-| Roth IRA | Tax-free growth, income limits apply | $7,000/yr (if MAGI < $161K) |
+### Effective Tax Rate (Estimate)
+- Federal effective rate on Box 1: ~16.1%
+- Marginal bracket (2025, single): **32%** on income over ~$191K — but taxable wages are $141K, so likely in **22–24% bracket**
+- **Important:** Self-employment income from S2T/XFTC adds SE tax (15.3% on net) — need to factor in for 2026
 
-> **Recommendation:** Open a Solo 401(k) through Fidelity or Vanguard for S2T Designs. Contribute as employee (up to $23,500) + employer match (25% of net income). Maximize tax deduction while building retirement wealth.
+### 2026 Tax Planning Priorities
+| Action | Impact | Deadline |
+|--------|--------|----------|
+| Max 401(k) contributions ($23,500) | ~$5,750 tax savings at 24% bracket | Dec 2026 (via HP payroll) |
+| Open Solo 401(k) for S2T Designs | Shelter up to $23,500 additional | Dec 31, 2026 |
+| Capture all business deductions | $12K–$35K in deductible expenses | Ongoing |
+| Quarterly estimated tax payments | Avoid underpayment penalty | Jun 16, Sep 15, Jan 15 |
+| Track RSU vest dates | Vest = taxable event — plan withholding | Dec 2026, 2027, 2028 |
 
-### 10-Year Retirement Projection (Conservative)
-| Year | Annual Contribution | Balance (6% growth) |
-|------|--------------------|--------------------|
-| 2026 | $10,000 | $10,600 |
-| 2027 | $12,000 | $23,836 |
-| 2028 | $15,000 | $40,266 |
-| 2029 | $18,000 | $58,682 |
-| 2030 | $20,000 | $80,202 |
-| 2031–2035 | $25,000/yr | $250K+ |
-
----
-
-## DEBT & LIABILITIES
-
-### Personal Debt Tracking (To Be Confirmed)
-| Type | Balance | Rate | Monthly Payment | Strategy |
-|------|---------|------|-----------------|----------|
-| Student loans | TBD | TBD | TBD | IBR / paydown |
-| Vehicle loan | TBD | TBD | TBD | Standard |
-| Credit cards | TBD | TBD | TBD | Avalanche method |
-| Personal loans | TBD | TBD | TBD | — |
-
-### Debt Priority Framework (Avalanche Method)
-1. Any debt >8% APR — pay aggressively
-2. Credit cards — zero balance goal within 12 months
-3. Vehicle — standard payments, no early payoff unless surplus
-4. Student loans — IBR or standard, depending on forgiveness eligibility
-5. Leverage (real estate, SBA) — strategic, not fast payoff
-
-### SBA Borrowing Profile (Critical for YEPC)
-| Metric | Current | Required for SBA |
-|--------|---------|-----------------|
-| Personal credit score | TBD | 680+ minimum |
-| Debt-to-income ratio | TBD | <43% preferred |
-| Annual gross income | TBD | $100K+ preferred |
-| Existing derogatory marks | TBD | None preferred |
+### Estimated Q2 2026 Estimated Tax Payment
+> Since David has self-employment income from multiple entities, he should pay quarterly estimates.
+> **Q2 due: June 16, 2026**
+> Estimate: 90% of prior year liability ÷ 4 = ~$8,625/quarter (rough — need to calculate with net SE income)
 
 ---
 
-## NET WORTH TRACKER
+## 401(k) OPTIMIZATION
 
-### Assets (To Be Confirmed)
-| Asset | Value | Type |
-|-------|-------|------|
-| Checking / savings accounts | TBD | Liquid |
-| Brokerage investments | TBD | Semi-liquid |
-| 401(k) / retirement | TBD | Illiquid |
-| Vehicle equity | TBD | Physical |
-| Business equity (S2T, XFTC) | TBD | Illiquid |
-| Real estate equity | TBD | Illiquid |
+| Item | 2025 Actual | 2026 Target | Gap |
+|------|------------|------------|-----|
+| Employee contribution | $12,409.84 | $23,500 (max) | +$11,090 |
+| Employer match | TBD | Confirm HP match % | TBD |
+| Investment allocation | Unknown | 3-fund or target-date | Review |
 
-### Liabilities (To Be Confirmed)
-| Liability | Balance |
-|-----------|---------|
-| All personal debts | TBD |
-| Business debts | TBD |
-
-### Net Worth = Assets − Liabilities
-| Date | Net Worth | Notes |
-|------|-----------|-------|
-| May 2026 | **TBD** | Baseline — needs David's numbers |
-| Dec 2026 | Target: +$25K | After emergency fund + investments |
-| Dec 2027 | Target: +$75K | After The Elevation revenue kicks in |
-| Dec 2028 | Target: +$150K | Smith Capital first acquisition |
-| Dec 2030 | Target: +$500K | YEPC + portfolio equity build |
+> **Recommendation:** Increase 401(k) contribution rate in HP Workday to hit the $23,500 max. At 24% marginal rate, maxing out saves ~$2,660/yr in federal taxes vs. 2025 level.
 
 ---
 
-## TAX STRATEGY (PERSONAL)
+## RSU VEST CALENDAR
 
-### 2026 Tax Situation
-| Item | Detail |
-|------|--------|
-| Filing status | Single or Head of Household (confirm) |
-| W-2 withholding | Likely sufficient for employment income |
-| Self-employment tax | 15.3% on net S2T / XFTC income |
-| Quarterly estimated taxes | Due Jun 16, Sep 15, Jan 15 |
-| Key deductions | Home office, vehicle mileage, Solo 401(k), health insurance |
+| Vest Year | Shares | Est. Value (at $24.46) | Taxable Event |
+|-----------|--------|----------------------|---------------|
+| Dec 2026 | ~409 | ~$10,000 | Yes — ordinary income |
+| Dec 2027 | ~409 | ~$10,000 | Yes — ordinary income |
+| Dec 2028 | ~408 | ~$10,000 | Yes — ordinary income |
 
-### Top Deductions to Capture
-| Deduction | Entity | Est. Annual Value |
-|-----------|--------|------------------|
-| Home office (dedicated space) | S2T Designs | $1,200–$3,600 |
-| Vehicle mileage (IRS rate $0.67/mi) | XFTC / Smith Cap | $500–$2,000 |
-| Self-employed health insurance | S2T (if no employer plan) | $3K–$8K |
-| Solo 401(k) contributions | S2T Designs | $5K–$15K |
-| Business meals (50%) | All entities | $500–$1,500 |
-| Software & tools | S2T / XFTC | $1K–$3K |
-| Professional development | All | $500–$2K |
-| **Total estimated annual deductions** | | **$12K–$35K** |
+> **Tax Note:** When RSUs vest, the value is taxable as W-2 income in that year. HP will automatically withhold, but actual tax owed may be higher depending on total income that year. Plan for additional Q4 estimated payments in vest years.
 
 ---
 
 ## WEALTH BUILDING ROADMAP
 
-### Phase 1 — Foundation (2026)
-- [ ] Confirm W-2 income and calculate true monthly net take-home
-- [ ] Build 3-month emergency fund (minimum $10K)
-- [ ] Zero out high-interest debt (>8% APR)
-- [ ] Open Solo 401(k) for S2T Designs income
-- [ ] File 3 LLCs (The Elevation, Nutrue, Smith Capital)
-- [ ] Establish dedicated business bank accounts per entity
-- [ ] Set up bookkeeping system (Wave or QuickBooks)
-- [ ] File Q2 estimated tax payment (June 16)
+### Phase 1 — Foundation (2026) — NOW
+- [ ] Increase 401(k) to max ($23,500) via HP Workday
+- [ ] Open Solo 401(k) for S2T Designs self-employment income
+- [ ] Build 3-month emergency fund (~$15K minimum)
+- [ ] Pay Q2 estimated tax (June 16, 2026)
+- [ ] File The Elevation LLC ($300 TX SOS)
+- [ ] Open dedicated business accounts per entity
+- [ ] Set up bookkeeping (Wave or QuickBooks)
 
 ### Phase 2 — Growth (2027)
-- [ ] Build 6-month emergency fund
-- [ ] Begin systematic brokerage investing ($500–$1K/month)
-- [ ] The Elevation generating event revenue ($5K–$15K/event)
-- [ ] S2T Designs at $5K–$8K/month in client revenue
-- [ ] Smith Capital LLC active with first deal in pipeline
+- [ ] Build 6-month emergency fund (~$30K)
+- [ ] Begin brokerage investing ($500–$1,000/month)
+- [ ] The Elevation generating event revenue
+- [ ] S2T at $5K–$8K/month
+- [ ] Smith Capital first deal in pipeline
 - [ ] Retire all high-interest personal debt
 
 ### Phase 3 — Wealth Acceleration (2028–2030)
 - [ ] YEPC land acquisition under contract
-- [ ] Smith Capital first property generating cash flow
-- [ ] Investment portfolio at $50K+
-- [ ] Business equity in The Elevation at $250K+
-- [ ] Passive income covering 25%+ of personal expenses
-- [ ] Net worth at $250K–$500K
+- [ ] Smith Capital first property cash-flowing
+- [ ] Investment portfolio at $75K+
+- [ ] RSU portfolio fully vested — decision to hold or liquidate HPQ
+- [ ] Net worth target: $300K–$500K
 
 ---
 
-## INSURANCE COVERAGE (TO REVIEW)
+## NET WORTH SNAPSHOT (May 2026 — Baseline)
 
-| Type | Current | Recommended | Priority |
-|------|---------|-------------|----------|
-| Health | Employer plan | Keep + max HSA | 🟢 OK |
-| Life (term) | TBD | $500K–$1M 20-yr term | 🔴 Priority |
-| Disability (LTD) | Employer plan? | Supplement with own policy | 🟡 Review |
-| E&O / Professional Liability | None | Required for S2T Designs | 🔴 Priority |
-| General Liability | None | Required for The Elevation events | 🔴 Priority |
-| Business Owner's Policy | None | Consider for XFTC / S2T | 🟡 When revenue grows |
+| Asset | Est. Value | Notes |
+|-------|-----------|-------|
+| HP 401(k) | TBD | $12,409 contributed in 2025 + prior years + employer match |
+| HP RSU (unvested) | ~$20,000 | 2 remaining vest tranches at grant price |
+| Checking / savings | TBD | Confirm |
+| Vehicle equity | TBD | Confirm |
+| Business equity | TBD | S2T, XFTC (sweat equity) |
+| **Total Assets** | **TBD** | |
+| Personal liabilities | TBD | Confirm debt balances |
+| **Net Worth Estimate** | **$50K–$150K range** | Refine with actual balances |
 
 ---
 
 ## IMMEDIATE ACTION ITEMS
 
-| Priority | Action | Owner | Deadline |
-|----------|--------|-------|----------|
-| 🔴 | Confirm W-2 gross salary + net take-home | David → finance-advisor | ASAP |
-| 🔴 | Pull current debt balances and credit score | David → finance-cpa | ASAP |
-| 🔴 | Calculate Q2 estimated tax payment | finance-cpa + finance-tax-strategist | June 16, 2026 |
-| 🔴 | Open Solo 401(k) for S2T Designs | David → finance-investment-manager | Before Dec 2026 |
-| 🟡 | Start 3-month emergency fund | David → finance-advisor | Q3 2026 |
-| 🟡 | Get term life insurance quote | finance-advisor | July 2026 |
-| 🟡 | Get E&O insurance quote for S2T Designs | finance-compliance | July 2026 |
-| 🟡 | Open HYSA for emergency fund | David | Q3 2026 |
-| 🟡 | Review 401(k) allocation at employer | David → finance-investment-manager | Q3 2026 |
-| 🟢 | Set up Wave or QuickBooks free tier | finance-bookkeeper | Q3 2026 |
+| Priority | Action | Deadline |
+|----------|--------|----------|
+| 🔴 | Increase 401(k) contribution to max in HP Workday | ASAP |
+| 🔴 | Pay Q2 estimated tax payment | June 16, 2026 |
+| 🔴 | Open Solo 401(k) at Fidelity for S2T Designs | Before Dec 2026 |
+| 🟡 | Confirm 401(k) balance + HP employer match % | ASAP |
+| 🟡 | Pull credit score + all debt balances | This week |
+| 🟡 | File The Elevation LLC ($300) | ASAP |
+| 🟡 | Set up quarterly estimated tax tracking | June 2026 |
+| 🟢 | Calendar RSU vest alerts (Dec 2026, 2027, 2028) | One-time setup |
+| 🟢 | Review HP stock (HPQ) price trajectory vs. grant price | Quarterly |
+
+---
+
+## SOURCE DOCUMENTS ON FILE
+- `2025 W-2` — HP Inc., uploaded May 25, 2026
+- `ARC Rewards Statement FY25` — HP Inc., Dec 11, 2025, uploaded May 25, 2026
