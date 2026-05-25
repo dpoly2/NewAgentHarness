@@ -102,4 +102,57 @@
 
 ---
 
-## ✅ ACTION NEEDED: David to pick a name (or greenlight top pick: **Apex Solar Services**)
+## ✅ NAME CONFIRMED: Apex Solar Services
+
+**Decision made by David Smith — May 24, 2026**
+
+Next steps:
+1. Register domain: apexsolarservices.com (check Namecheap)
+2. Run TX SOS name availability check
+3. Reserve social handles: @apexsolarservices
+4. Brief S2T Designs for logo and brand kit
+
+---
+
+## ⚠️ NAMING CONFLICT ALERT — Updated May 24, 2026
+
+**David confirmed: Apex Solar Services**
+
+### Domain Status
+- `apexsolarservices.com` — **No WHOIS record found — likely AVAILABLE** ✅
+- `apexsolar.com` — TAKEN (national company, Denver CO)
+
+### Competitor: "Apex Solar" (National)
+- Headquartered in Denver, CO
+- Operates in all 50 states including Texas
+- Website: apexsolar.com | Phone: 1-800-541-APEX
+- **They are an INSTALLER** — David's company is a **REPAIR specialist**
+- Different enough in positioning, but same root name creates risk
+
+### Risk Assessment
+| Risk | Level | Notes |
+|------|-------|-------|
+| Trademark conflict | 🟡 Medium | "Apex Solar" is likely trademarked. "Apex Solar Services" may be distinct enough. |
+| Consumer confusion | 🟡 Medium | Different market (repair vs install) but same name root |
+| TX SOS name conflict | ⬜ Check | Run Texas SOS availability check before filing |
+| Domain differentiation | ✅ Low | apexsolarservices.com appears available |
+
+### Recommendation
+Two paths:
+
+**Path A — Keep Apex Solar Services (lower risk than it looks)**
+- "Apex Solar Services" vs. "Apex Solar" are legally distinct names
+- Different service (repair vs. install) reduces consumer confusion argument
+- Register `apexsolarservices.com` immediately
+- Run USPTO trademark search for "Apex Solar Services" specifically
+- TX SOS name search before LLC filing
+
+**Path B — Pivot to Summit Solar Repair (cleanest trademark position)**
+- "Summit Solar Repair" has the word "repair" built in — dominant SEO advantage
+- Much lower trademark conflict risk
+- `summitsolarrepair.com` likely available
+- Stronger local brand differentiation from the national Apex Solar
+
+### David's Call
+- Stick with **Apex Solar Services** → register domain now, run trademark check
+- Or pivot to **Summit Solar Repair** → cleanest path, stronger SEO

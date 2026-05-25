@@ -1,8 +1,8 @@
 # Solar Repair Company — Master Project File
 **Created:** 2026-05-24
 **Owner:** David Smith
-**Current Legal Name:** Smith and Taylor Construction
-**Status:** 🟡 Planning Phase — Pre-Launch
+**Current Legal Name:** Smith and Taylor Construction → **New Name: Apex Solar Services
+**Status:** 🟡 Planning Phase — Pre-Launch | **Name CONFIRMED: Apex Solar Services**
 
 ---
 
