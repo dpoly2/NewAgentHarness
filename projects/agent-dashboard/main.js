@@ -1993,7 +1993,7 @@ function parseRosterMarkdown(content) {
     'S2T Designs Agency': 's2tdesigns',
     'Personal Productivity': 'personal'
   }
-  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤' }
+  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤', finance:'💰', 'solar-repair':'☀️', 'social-media':'📱', ministry:'✝️' }
   const DOCS_PATH_MAP = {
     xftc: '.agents/projects/xftc-redevelopment/',
     elevation: '.agents/projects/rowdy-crown/'
@@ -2029,15 +2029,61 @@ function parseRosterMarkdown(content) {
     }
   }
 
+  // Also scan for ## PROJECT N sections not captured by the INDEX table (projects 9+)
+  const EXTRA_SLUG_MAP = {
+    'SMITHCAP FINANCIAL': 'finance',
+    'SOLAR': 'solar-repair',
+    'S2T DESIGNS SOCIAL': 'social-media',
+    'MINISTRY': 'ministry'
+  }
+  const projectSectionRe = /## PROJECT (\d+)\s*[—–-]\s*([^\n]+)/g
+  let psMatch
+  while ((psMatch = projectSectionRe.exec(content)) !== null) {
+    const id = parseInt(psMatch[1])
+    if (projects.some(p => p.id === id)) continue // already in index
+    const rawTitle = psMatch[2].trim()
+    let slug = 'project-' + id
+    for (const [key, val] of Object.entries(EXTRA_SLUG_MAP)) {
+      if (rawTitle.toUpperCase().includes(key)) { slug = val; break }
+    }
+    if (slug === 'project-' + id) slug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || slug
+    // Shorten name to a readable label
+    const nameMap = { finance: 'SmithCap FMO', 'solar-repair': 'Solar Repair Co.', 'social-media': 'S2T Social Media', ministry: 'Ministry & Preaching' }
+    const name = nameMap[slug] || rawTitle
+    projects.push({
+      id, name, slug,
+      icon: ICON_MAP[slug] || '📁',
+      leadAgentName: '',
+      leadRole: '',
+      status: '🟡',
+      statusLabel: 'Active',
+      specialists: [],
+      helpers: [],
+      agentDocsPath: `.agents/agents/projects/${slug}/`,
+      projectDocsPath: DOCS_PATH_MAP[slug] || `.agents/projects/${slug}/`
+    })
+  }
+  projects.sort((a, b) => a.id - b.id)
+
   // Parse per-project details
   for (const proj of projects) {
-    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## )`)
+    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## |$)`)
     const m = content.match(re)
     if (!m) continue
     const block = m[0]
 
-    const leadLine = block.match(/\*\*[^*]+\*\*\s*—\s*(.+)/)
-    if (leadLine) proj.leadRole = leadLine[1].trim()
+    // Lead role from inline bold (projects 1-8) or ### Lead section (projects 9+)
+    const leadLine = block.match(/\*\*([^*]+)\*\*\s*—\s*(.+)/)
+    if (leadLine) {
+      if (!proj.leadAgentName) proj.leadAgentName = leadLine[1].trim()
+      proj.leadRole = leadLine[2].trim()
+    }
+    // ### Lead section
+    const leadSection = block.match(/### Lead\s*\n\*\*([^*]+)\*\*\s*—\s*(.+)/)
+    if (leadSection) {
+      if (!proj.leadAgentName) proj.leadAgentName = leadSection[1].trim()
+      proj.leadRole = leadSection[2].trim()
+    }
 
     const specBlock = block.match(/### Specialist Agents([\s\S]*?)(?=###|$)/)
     if (specBlock) {
