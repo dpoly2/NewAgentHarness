@@ -1,0 +1,168 @@
+const path = require('path')
+const fs = require('fs')
+
+const AGENTS_ROOT = path.join(__dirname, '..', '..', '..', '..')
+
+function parseRosterMarkdown(content) {
+  const lastUpdatedMatch = content.match(/\*\*Last Updated:\*\*\s*(.+)/)
+  const lastUpdated = lastUpdatedMatch ? lastUpdatedMatch[1].trim() : ''
+  const coordinatorMatch = content.match(/\*\*Coordinator:\*\*\s*(.+)/)
+  const coordinator = coordinatorMatch ? coordinatorMatch[1].trim() : ''
+
+  const projects = []
+  const indexSection = content.match(/## [^\n]*PROJECT INDEX([\s\S]*?)\r?\n---\r?\n/)
+  if (indexSection) {
+    indexSection[1].split('\n').filter(l => /^\|\s*\d/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 4) {
+        const id = parseInt(cols[0])
+        const name = cols[1]
+        const leadAgent = cols[2]
+        const statusRaw = cols[4] || cols[3] || ''
+        const status = statusRaw.includes('🟢') ? 'active' : statusRaw.includes('🔴') ? 'blocked' : 'in-progress'
+        const SLUG_MAP = {
+          'XFTC Website & Plugin': 'xftc',
+          'YEPC': 'yepc',
+          'The Elevation ATX': 'elevation',
+          'PBS Foundation': 'pbs-foundation',
+          'Nutrue Apparel': 'nutrue',
+          'Smith Capital Properties': 'smithcap',
+          'S2T Designs Agency': 's2tdesigns',
+          'Personal Productivity': 'personal',
+          'SMITHCAP FINANCIAL': 'finance',
+          'SOLAR': 'solar-repair',
+          'S2T DESIGNS SOCIAL': 'social-media',
+          'MINISTRY': 'ministry'
+        }
+        let slug = 'project-' + id
+        for (const [key, val] of Object.entries(SLUG_MAP)) {
+          if (name.toUpperCase().includes(key.toUpperCase())) { slug = val; break }
+        }
+        projects.push({ id, slug, name, leadAgent, status, statusLabel: statusRaw.replace(/[🟢🟡🔴]/g, '').trim(), specialists: [], helpers: [] })
+      }
+    })
+  }
+
+  for (const proj of projects) {
+    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## )`)
+    const m = content.match(re)
+    if (!m) continue
+    const block = m[0]
+    const leadLine = block.match(/\*\*[^*]+\*\*\s*—\s*(.+)/)
+    if (leadLine) proj.leadRole = leadLine[1].trim()
+
+    const specBlock = block.match(/### Specialist Agents([\s\S]*?)(?=###|$)/)
+    if (specBlock) {
+      specBlock[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 2) proj.specialists.push({ name: cols[0], role: cols[1], responsibilities: cols[2] || '', type: 'specialist' })
+      })
+    }
+    const helperBlock = block.match(/### Helper Agents[\s\S]*?(?=###|$)/)
+    if (helperBlock) {
+      helperBlock[0].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 3) proj.helpers.push({ name: cols[0], assignedBy: cols[1], taskType: cols[2], type: 'helper' })
+      })
+    }
+    const emailBlock = block.match(/### Email Agents([\s\S]*?)(?=###|$)/)
+    if (emailBlock) {
+      emailBlock[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+        const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cols.length >= 2) proj.specialists.push({ name: cols[0], role: cols[1], status: cols[2] || '', type: 'email-agent' })
+      })
+    }
+  }
+
+  const sharedAgents = []
+  const sharedMatch = content.match(/## [^\n]*SHARED[^\n]*\n([\s\S]*?)(?=\r?\n---\r?\n|\n## )/)
+  if (sharedMatch) {
+    sharedMatch[1].split('\n').filter(l => /^\|\s*[a-zA-Z]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 3) sharedAgents.push({ agentName: cols[0], specialty: cols[1], projectsServed: cols[2].split(',').map(p => p.trim()) })
+    })
+  }
+
+  const automations = []
+  const autoMatch = content.match(/## [^\n]*ACTIVE AUTOMATIONS([\s\S]*?)(?=\r?\n---\r?\n|\n## [^\n]*OPEN ITEMS)/)
+  if (autoMatch) {
+    autoMatch[1].split('\n').filter(l => /^\|\s*[A-Za-z]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 3) {
+        const active = cols[2].includes('✅')
+        automations.push({ name: cols[0], schedule: cols[1], active, statusNote: cols[2].replace('✅', '').replace('⬜', '').trim() })
+      }
+    })
+  }
+
+  const openItems = []
+  const openMatch = content.match(/## [^\n]*OPEN ITEMS[\s\S]*$/)
+  if (openMatch) {
+    openMatch[0].split('\n').filter(l => /^\|[^|]*[🔴🟡🟢]/.test(l)).forEach(row => {
+      const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+      if (cols.length >= 4) openItems.push({ priority: cols[0], item: cols[1], project: cols[2], deadline: cols[3] })
+    })
+  }
+
+  return { lastUpdated, coordinator, projects, sharedAgents, automations, openItems }
+}
+
+function loadRoster() {
+  try {
+    const rosterPath = path.join(AGENTS_ROOT, '.agents', 'agents', 'roster.md')
+    if (!fs.existsSync(rosterPath)) return null
+    const content = fs.readFileSync(rosterPath, 'utf8').replace(/^\uFEFF/, '')
+    return parseRosterMarkdown(content)
+  } catch (e) {
+    console.error('[roster] parse error:', e.message)
+    return null
+  }
+}
+
+function loadAgentProfile(agentId) {
+  const searchDirs = [
+    path.join(AGENTS_ROOT, '.agents', 'agents', 'projects'),
+    path.join(AGENTS_ROOT, '.agents', 'agents'),
+    path.join(AGENTS_ROOT, 'agents')
+  ]
+  const variants = [agentId, agentId.replace(/-/g, '_'), agentId.replace(/_/g, '-')]
+  for (const dir of searchDirs) {
+    if (!fs.existsSync(dir)) continue
+    for (const v of variants) {
+      const candidates = [`${v}.md`, `${v.toLowerCase()}.md`]
+      for (const c of candidates) {
+        const fp = path.join(dir, c)
+        if (fs.existsSync(fp)) return fs.readFileSync(fp, 'utf8')
+      }
+    }
+    // Search recursively one level
+    try {
+      const subdirs = fs.readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory())
+      for (const sub of subdirs) {
+        for (const v of variants) {
+          const fp = path.join(dir, sub.name, `${v}.md`)
+          if (fs.existsSync(fp)) return fs.readFileSync(fp, 'utf8')
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+  return null
+}
+
+function listProjectDocs(slug) {
+  const pathOverrides = { xftc: 'xftc-redevelopment', elevation: 'rowdy-crown' }
+  const folder = pathOverrides[slug] || slug
+  const docPath = path.join(AGENTS_ROOT, '.agents', 'projects', folder)
+  if (!fs.existsSync(docPath)) return []
+  return fs.readdirSync(docPath).filter(f => f.endsWith('.md')).map(f => ({ name: f, slug, folder }))
+}
+
+function readProjectDoc(slug, filename) {
+  const pathOverrides = { xftc: 'xftc-redevelopment', elevation: 'rowdy-crown' }
+  const folder = pathOverrides[slug] || slug
+  const fp = path.join(AGENTS_ROOT, '.agents', 'projects', folder, filename)
+  if (!fs.existsSync(fp)) return null
+  return fs.readFileSync(fp, 'utf8')
+}
+
+module.exports = { loadRoster, loadAgentProfile, listProjectDocs, readProjectDoc, parseRosterMarkdown }

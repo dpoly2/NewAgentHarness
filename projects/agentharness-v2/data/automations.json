@@ -1,0 +1,32 @@
+[
+  {
+    "id": "morning-briefing",
+    "name": "Morning Briefing",
+    "schedule": "0 7 * * *",
+    "enabled": 1
+  },
+  {
+    "id": "email-digest",
+    "name": "Daily Email Digest",
+    "schedule": "0 8 * * *",
+    "enabled": 1
+  },
+  {
+    "id": "grant-sweep",
+    "name": "Weekly Grant Sweep",
+    "schedule": "0 8 * * 1",
+    "enabled": 1
+  },
+  {
+    "id": "open-items-sync",
+    "name": "Open Items Sync",
+    "schedule": "0 9 * * 1",
+    "enabled": 1
+  },
+  {
+    "id": "xftc-signup-check",
+    "name": "XFTC Signup Check",
+    "schedule": "0 */4 * * *",
+    "enabled": 1
+  }
+]
