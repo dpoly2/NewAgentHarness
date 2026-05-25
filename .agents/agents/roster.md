@@ -298,3 +298,35 @@
 | 🟢 | Outlook connection for allensmithagent | Productivity | When available |
 | 🟢 | Psi Beta Sigma 1914 email credentials | Productivity | When available |
 | 🟢 | Gravity Forms cleanup — XFTC WP Admin (deactivate 17 legacy forms) | XFTC | When available |
+
+---
+
+## PROJECT 9 — SMITHCAP FINANCIAL MANAGEMENT OFFICE (FMO)
+
+### Lead
+**finance-cfo** — Portfolio-wide CFO, consolidated financial oversight, capital strategy, agent coordination
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| finance-cpa | CPA | Tax compliance, entity structure, financial statements, 990 filing |
+| finance-advisor | Personal Financial Advisor | Personal wealth planning, income optimization, risk management, retirement |
+| finance-investment-manager | Investment Manager | Portfolio allocation, brokerage management, real estate ROI, business equity |
+| finance-bookkeeper | Bookkeeper | Daily transaction recording, bank reconciliation, AR/AP, 1099s |
+| finance-tax-strategist | Tax Strategist | Deduction optimization, entity tax structure, year-end moves, OZ/1031 |
+| finance-analyst | Financial Analyst | Pro formas, investor decks, deal analysis, scenario modeling |
+| finance-compliance | Compliance & Grant Reporting | Nonprofit 990 filing, grant spend tracking, restricted fund compliance |
+
+### Portfolio Served
+- Smith Capital Properties (RE Holding)
+- YEPC — CR 132 (Development)
+- The Elevation ATX (Hospitality)
+- XFTC (501c3)
+- PBS Foundation (501c3)
+- Nutrue Apparel (POD)
+- S2T Designs (Agency)
+
+### Files
+- `.agents/projects/smithcap-finance/`
+- `.agents/agents/projects/smithcap-finance/`
