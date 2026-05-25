@@ -7,142 +7,116 @@
 
 ---
 
-## INCOME ASSUMPTIONS
+## INCOME — CONFIRMED 2026
 
-| Source | Scenario A (Conservative) | Scenario B (Optimized) |
-|--------|--------------------------|----------------------|
-| HP Salary (new rate) | $150,743.10 | $150,743.10 |
-| HP Bonus (FY25 payout) | $6,000.00 | $6,000.00 |
-| RSU Vest Year 1 (~409 shares) | $10,000.00 | $10,000.00 |
-| S2T Designs (gross revenue) | $24,000.00 | $36,000.00 |
-| XFTC Stipend | $6,000.00 | $6,000.00 |
-| **Total Gross Income** | **$196,743** | **$208,743** |
+| Source | Amount | Notes |
+|--------|--------|-------|
+| HP Salary | $150,743.10 | New rate eff. Feb 1, 2026 |
+| HP Bonus (target 9%) | ~$13,567 | FY26 target — not guaranteed |
+| RSU Vest Year 1 (~409 shares) | ~$10,000 | Dec 2026, market-dependent |
+| S2T Designs | $0 | Pre-revenue — no SE tax owed |
+| XFTC Stipend | $0 | Pre-revenue — no SE tax owed |
+| The Elevation ATX | $0 | Pre-revenue |
+| Clarity Solar Services | $0 | Pre-revenue |
+| **Total Confirmed 2026 Income** | **~$174,310** | HP only |
+
+> **Note:** All business ventures are currently pre-revenue. No self-employment income = no SE tax and no quarterly estimated payments required until revenue begins.
 
 ---
 
-## SCENARIO A — CONSERVATIVE
-*No changes from 2025. Same 401(k) rate. No Solo 401(k). Minimal SE deductions.*
+## TAX PROJECTION — W-2 ONLY (CURRENT REALITY)
 
+### Scenario A — No 401(k) changes
 | Item | Amount |
 |------|--------|
-| HP 401(k) contribution | ($12,409) |
-| Business expenses (S2T + XFTC) | ($10,000) |
-| SE Tax deductible half | ($1,413) |
-| Solo 401(k) | $0 |
+| HP Gross (salary + bonus + RSU) | $174,310 |
+| HP 401(k) contribution (same as 2025) | ($12,409) |
 | Standard Deduction | ($15,000) |
-| **Federal Taxable Income** | **$157,921** |
-| Federal Income Tax | $28,464 |
-| Self-Employment Tax | $2,826 |
-| Medicare Surcharge (>$200K) | $0 |
+| **Federal Taxable Income** | **$146,901** |
+| Federal Income Tax | ~$25,906 |
+| Social Security Tax (HP withholds) | ~$9,807 |
+| Medicare Tax (HP withholds) | ~$2,527 |
 | State Tax (TX) | $0 |
-| **TOTAL TAX BURDEN** | **$31,290** |
-| **Effective Rate** | **15.9%** |
-| Monthly Take-Home (net) | **$12,754** |
+| **TOTAL TAX BURDEN** | **~$38,240** |
+| **Effective Federal Rate** | **~14.9%** |
+| **Est. Monthly Take-Home** | **~$11,339** |
 
-**Quarterly Estimated Tax (SE):** ~$707/quarter
-- Q2: June 16, 2026
-- Q3: Sep 15, 2026
-- Q4: Jan 15, 2027
-
----
-
-## SCENARIO B — OPTIMIZED
-*Max HP 401(k) + Solo 401(k) for S2T Designs + full business deductions captured.*
-
+### Scenario B — Max 401(k) to $23,500
 | Item | Amount |
 |------|--------|
-| HP 401(k) — maxed | ($23,500) |
-| Business expenses (S2T + XFTC) | ($12,000) |
-| SE Tax deductible half | ($2,119) |
-| Solo 401(k) — S2T Designs | ($10,000) |
+| HP Gross (salary + bonus + RSU) | $174,310 |
+| HP 401(k) contribution — maxed | ($23,500) |
 | Standard Deduction | ($15,000) |
-| **Federal Taxable Income** | **$146,124** |
-| Federal Income Tax | $25,869 |
-| Self-Employment Tax | $4,239 |
-| Medicare Surcharge (>$200K) | $0 |
+| **Federal Taxable Income** | **$135,810** |
+| Federal Income Tax | ~$23,244 |
+| Social Security Tax (HP withholds) | ~$9,807 |
+| Medicare Tax (HP withholds) | ~$2,527 |
 | State Tax (TX) | $0 |
-| **TOTAL TAX BURDEN** | **$30,108** |
-| **Effective Rate** | **14.4%** |
-| Monthly Take-Home (net) | **$12,095** |
-
-**Quarterly Estimated Tax (SE):** ~$1,060/quarter
-- Q2: June 16, 2026
-- Q3: Sep 15, 2026
-- Q4: Jan 15, 2027
+| **TOTAL TAX BURDEN** | **~$35,578** |
+| **Effective Federal Rate** | **~13.3%** |
+| **Est. Monthly Take-Home** | **~$11,561** |
 
 ---
 
-## SCENARIO COMPARISON — TAX SAVINGS
+## SCENARIO COMPARISON
 
-| Action | Extra Shelter | Tax Saved (~24%) |
-|--------|--------------|-----------------|
-| Max HP 401(k) (+$11,091 over 2025) | $11,091 | $2,662 |
-| Open Solo 401(k) for S2T Designs | $10,000 | $2,400 |
-| Additional business deductions | $2,000 | $480 |
-| **Total** | **$23,091** | **~$5,542** |
+| | Scenario A | Scenario B | Difference |
+|--|-----------|-----------|-----------|
+| Taxable Income | $146,901 | $135,810 | -$11,091 |
+| Federal Income Tax | $25,906 | $23,244 | **-$2,662** |
+| Monthly Take-Home | $11,339 | $11,561 | +$222/mo |
+| 401(k) Retirement Balance Added | $12,409 | $23,500 | +$11,091 |
 
-> **Going optimized saves ~$5,542 in 2026 federal taxes.**
-> That money goes into retirement accounts — not to the IRS.
-> Monthly take-home difference is only ~$660/month, but you're building $33,500 in retirement wealth.
-
----
-
-## KEY TAKEAWAYS
-
-### 1. Texas is your biggest advantage — use it
-$0 state income tax on $196K–$208K gross. A California resident at your income level would owe ~$13,000–$16,000 in state tax. That advantage is real — protect it.
-
-### 2. Max the 401(k) — it's the single highest-leverage move
-You're currently contributing $12,409/yr. The 2026 max is $23,500. Increasing it saves $2,662 in federal taxes AND compounds tax-deferred in your retirement account. Do this in HP Workday first.
-
-### 3. Open a Solo 401(k) at Fidelity for S2T Designs
-As long as S2T Designs has net self-employment income, you can contribute up to $23,500 as the employee + 25% of net profit as the employer. Even contributing $10K saves $2,400/year.
-> **Setup:** Fidelity Self-Employed 401(k) — free, no annual fees, open online in ~20 min.
-
-### 4. Your SE tax is manageable — but needs quarterly payments
-S2T + XFTC = ~$18,000–$26,000 net SE income = ~$2,800–$4,200 in SE tax annually.
-**Don't skip quarterly payments.** The IRS penalty for underpayment is 7–8% — not worth it.
-
-### 5. RSU vest is a taxable event — plan for it
-Each December when RSUs vest (~409 shares), that's ~$10,000 added to your W-2 Box 1.
-HP will withhold at a flat 22% federal rate on equity — but if you're in the 24% bracket, you may owe the difference at year-end. Consider bumping your W-4 withholding slightly in Q4.
-
-### 6. The Elevation and Clarity Solar — watch for taxable revenue
-Any revenue from The Elevation or Clarity Solar in 2026 is fully taxable as SE income. If either generates $20K+, you'll need to revisit this projection and increase Q4 estimated payments.
+> Maxing the 401(k) saves **$2,662 in taxes** AND adds $11,091 more to your retirement account.
+> Monthly take-home actually goes UP by ~$222 because the tax savings offset the extra contribution.
 
 ---
 
-## QUARTERLY TAX CALENDAR 2026
+## KEY FACTS — W-2 ONLY
 
-| Date | Action | Amount (Optimized) |
-|------|--------|--------------------|
-| **June 16, 2026** | Q2 estimated tax payment | ~$1,060 |
-| **Sep 15, 2026** | Q3 estimated tax payment | ~$1,060 |
-| **Oct 15, 2026** | Review YTD income — adjust Q4 if needed | — |
-| **Dec 2026** | RSU vest — check withholding | ~$10K taxable event |
-| **Jan 15, 2027** | Q4 / Q1 estimated tax payment | ~$1,060 |
-| **Apr 15, 2027** | 2026 Federal tax return due | File + any balance due |
+### No Quarterly Estimated Payments Required
+Since all your income is W-2 from HP, they handle all withholding automatically. You will not owe quarterly estimated tax payments **unless and until** a business starts generating revenue.
 
----
+### When Quarterly Payments Become Required
+As soon as any of these generate net profit, quarterly estimates kick in:
 
-## DEDUCTIONS CHECKLIST — CAPTURE THESE
+| Business | Trigger Point | Quarterly Payment Starts |
+|---------|--------------|------------------------|
+| S2T Designs | First paid client invoice | That same quarter |
+| XFTC Stipend | First payroll/stipend issued | That same quarter |
+| The Elevation ATX | First event revenue | That same quarter |
+| Clarity Solar Services | First repair invoice | That same quarter |
 
-| Deduction | Entity | Est. Annual | Status |
-|-----------|--------|------------|--------|
-| HP 401(k) — max | HP W-2 | $23,500 | 🔴 Update in Workday |
-| Solo 401(k) — S2T | S2T Designs | $10,000+ | 🔴 Open at Fidelity |
-| Home office (dedicated space ÷ sq ft) | S2T Designs | $1,200–$3,600 | 🟡 Calculate |
-| Vehicle mileage (XFTC / SmithCap meets) | XFTC + Smith Cap | $500–$2,000 | 🟡 Track now |
-| Software & tools (Base44, GitHub, hosting) | S2T / XFTC | $1,000–$2,500 | 🟢 Already paying |
-| Business meals (50%) | All entities | $500–$1,500 | 🟡 Log receipts |
-| Phone (business %) | All | $600–$900 | 🟡 Calculate % |
-| Professional dev / education | All | $500–$2,000 | 🟡 Log |
-| XFTC / event supplies | XFTC | $500–$1,500 | 🟢 Already occurring |
+> **Rule of thumb:** If you expect to owe more than $1,000 in SE tax for the year, you must pay quarterly. At that point, come back to this projection and we'll calculate the right amount.
+
+### RSU Vest — Watch This in December
+When ~409 shares vest in December 2026, HP adds ~$10,000 to your W-2 and withholds at a flat 22%. Since you're in the 22–24% bracket, you should be close to even — but check your withholding in November to be safe.
 
 ---
 
-## IMPORTANT DISCLAIMERS
-- This projection is an estimate based on known income data. Actual tax liability depends on final income, deductions, and IRS 2026 brackets.
-- RSU values are estimated at grant price ($24.46). Actual vest value depends on HPQ stock price at vest date.
-- Consult a licensed CPA for final tax filing and formal advice.
-- This document is for planning purposes only.
+## 2026 TAX CALENDAR (W-2 ONLY)
+
+| Date | Action |
+|------|--------|
+| **Now** | Update HP 401(k) to $23,500 in Workday |
+| **December 2026** | RSU vest — verify HP withholding is sufficient |
+| **January 2027** | Review year-end income total |
+| **April 15, 2027** | File 2026 federal return — likely small refund or breakeven |
+
+---
+
+## WHEN REVENUE STARTS — REVISIT THIS PROJECTION
+
+Once any business goes live, return to the FMO for an updated projection that adds:
+- SE tax calculation on net business profit
+- Quarterly estimated payment schedule
+- Solo 401(k) contribution strategy for S2T Designs
+- Business deduction capture plan (home office, mileage, tools, meals)
+
+---
+
+## IMMEDIATE ACTION ITEM — ONE THING TO DO NOW
+
+> **🔴 Max your HP 401(k) to $23,500 in HP Workday.**
+> It saves $2,662 in taxes this year and adds $11,091 more to your retirement.
+> Monthly take-home goes UP, not down. There is no downside.
