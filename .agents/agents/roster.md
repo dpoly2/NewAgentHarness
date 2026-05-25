@@ -298,3 +298,98 @@
 | 🟢 | Outlook connection for allensmithagent | Productivity | When available |
 | 🟢 | Psi Beta Sigma 1914 email credentials | Productivity | When available |
 | 🟢 | Gravity Forms cleanup — XFTC WP Admin (deactivate 17 legacy forms) | XFTC | When available |
+
+---
+
+## PROJECT 9 — SMITHCAP FINANCIAL MANAGEMENT OFFICE (FMO)
+
+### Lead
+**finance-cfo** — Portfolio-wide CFO, consolidated financial oversight, capital strategy, agent coordination
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| finance-cpa | CPA | Tax compliance, entity structure, financial statements, 990 filing |
+| finance-advisor | Personal Financial Advisor | Personal wealth planning, income optimization, risk management, retirement |
+| finance-investment-manager | Investment Manager | Portfolio allocation, brokerage management, real estate ROI, business equity |
+| finance-bookkeeper | Bookkeeper | Daily transaction recording, bank reconciliation, AR/AP, 1099s |
+| finance-tax-strategist | Tax Strategist | Deduction optimization, entity tax structure, year-end moves, OZ/1031 |
+| finance-analyst | Financial Analyst | Pro formas, investor decks, deal analysis, scenario modeling |
+| finance-compliance | Compliance & Grant Reporting | Nonprofit 990 filing, grant spend tracking, restricted fund compliance |
+
+### Portfolio Served
+- Smith Capital Properties (RE Holding)
+- YEPC — CR 132 (Development)
+- The Elevation ATX (Hospitality)
+- XFTC (501c3)
+- PBS Foundation (501c3)
+- Nutrue Apparel (POD)
+- S2T Designs (Agency)
+
+### Files
+- `.agents/projects/smithcap-finance/`
+- `.agents/agents/projects/smithcap-finance/`
+
+---
+
+## PROJECT 10 — SOLAR REPAIR COMPANY (TBD NAME)
+
+### Lead
+**solar-project-lead** — Launch planning, milestone tracking, Hert Renewables coordination, business plan execution
+
+### Current Name
+Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
+
+### Business Model
+- Primary: Residential solar repair (panel, inverter, wiring, roof penetration)
+- Secondary: Commercial repair via subcontract with Hert Renewables
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| solar-legal-agent | Legal & Compliance | LLC formation, TDLR licensing, Hert contract review, TX SB 1036 |
+| solar-finance-agent | Finance & Insurance | GL/E&O/WC quotes, bookkeeping, Hert billing, payroll |
+| solar-marketing-agent | Brand & Marketing | Name/domain, website, Google Business, local SEO, lead gen |
+| solar-sales-agent | Sales & Pricing | Residential quotes, service menu, maintenance contracts |
+| solar-operations-agent | Field Operations | Scheduling, crew dispatch, Hert coordination, safety, parts |
+
+### Key Insurance Note
+- Must carry multi-trade GL (electrical + roofing + structural) — NOT a standard single-trade policy
+- TX SB 1036 requires GL for all solar contractors by September 1, 2026
+- Primary insurance contact: The Agent's Office, Frisco TX (972-696-9995)
+
+### Files
+- `.agents/projects/solar-repair/`
+- `.agents/agents/projects/solar-repair/`
+
+---
+
+## PROJECT 11 — S2T DESIGNS SOCIAL MEDIA DIVISION
+
+### Lead
+**social-project-lead** — Client campaign oversight, content calendar management, monthly reporting, new client onboarding
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| social-content-strategist | Content Strategist | Platform strategy, content pillars, monthly calendars, trend research, creative briefs |
+| social-copywriter | Copywriter | Captions, video scripts, ad copy, hashtags, CTAs — all clients and platforms |
+| social-designer | Graphic Designer | Static posts, carousels, Reels covers, Story frames, ad creatives, brand templates |
+| social-analyst | Performance Analyst | KPI tracking, monthly client reports, optimization recommendations, benchmarking |
+| social-ads-manager | Paid Ads Manager | Meta, TikTok, YouTube paid campaigns — targeting, budgets, A/B testing, ROAS tracking |
+| social-community-manager | Community Manager | Daily comment/DM engagement, Google Business reviews, escalation handling, sentiment tracking |
+
+### Active Clients
+| Client | Status |
+|--------|--------|
+| S2T Designs (internal brand) | 🟡 Setup |
+| Little Ebenezer Baptist Church | 🟡 Pending discovery |
+| Xtreme Force Track Club | 🟡 Pending scope |
+| Clarity Solar Services | 🟡 Pending brand launch |
+
+### Files
+- `.agents/agents/projects/social-media/`
+- `.agents/projects/social-media/PROJECT.md`
