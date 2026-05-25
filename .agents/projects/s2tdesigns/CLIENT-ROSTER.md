@@ -1,5 +1,5 @@
 # S2T Designs — Client Roster
-**Last Updated:** 2026-05-22
+**Last Updated:** 2026-05-24
 
 ---
 
@@ -8,6 +8,7 @@
 | Client | Project | Platform | Start Date | Status | Contact |
 |--------|---------|----------|------------|--------|---------|
 | Xtreme Force Track Club | Membership plugin + theme redevelopment | WordPress | 2026-05 | 🟡 Sprint 3 | dsmith@xtremeforcetrackclub.org |
+| Little Ebenezer Baptist Church | Full website revamp | WordPress (Kadence) | 2026-05 | 🟡 Discovery | Rev. Arthur L. Spence |
 
 ---
 
