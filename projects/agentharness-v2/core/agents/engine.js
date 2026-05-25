@@ -5,6 +5,7 @@
 const { getDb, generateId } = require('../db/database')
 const { loadAgentProfile } = require('../roster/parser')
 const { callLLM, streamLLM } = require('./llm')
+const { sendPush } = require('../notifications/push')
 
 let io = null  // socket.io instance, set by server
 
@@ -134,6 +135,9 @@ function createNotification(message, type = 'info', projectSlug = null, priority
   const id = generateId()
   db.prepare(`INSERT INTO notifications (id, type, message, project_slug, priority) VALUES (?,?,?,?,?)`).run(id, type, message, projectSlug, priority)
   emit('notification:new', { id, type, message, project_slug: projectSlug, priority, read: 0 })
+  // Fire push to Apple Watch / phone for high-priority events
+  const pushTitle = type === 'task' ? '⚡ Agent Task' : type === 'todo' ? '✅ New Todo' : '🤖 AgentHarness'
+  sendPush(message, pushTitle, priority, type).catch(() => {})
 }
 
 function getQueueStatus() {

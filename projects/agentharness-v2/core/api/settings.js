@@ -3,6 +3,7 @@ const router = express.Router()
 const { loadAgentProfile } = require('../roster/parser')
 const { saveConfig, getConfig } = require('../agents/llm')
 const { getDb } = require('../db/database')
+const { saveConfig: savePushConfig, getConfig: getPushConfig, sendPush } = require('../notifications/push')
 const path = require('path')
 const fs = require('fs')
 
@@ -65,6 +66,42 @@ router.post('/notifications/read-all', (req, res) => {
     const db = getDb()
     db.prepare(`UPDATE notifications SET read=1`).run()
     res.json({ ok: true })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// ─── Push Notifications ────────────────────────────────────────────────────
+
+// GET /api/settings/push
+router.get('/push', (req, res) => {
+  try {
+    const config = getPushConfig()
+    // Mask secrets
+    res.json({
+      ...config,
+      pushoverToken: config.pushoverToken ? '***' : '',
+      pushoverUser: config.pushoverUser ? config.pushoverUser : ''
+    })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/settings/push
+router.post('/push', (req, res) => {
+  try {
+    const updates = req.body
+    // Don't overwrite token with masked value
+    if (updates.pushoverToken === '***') delete updates.pushoverToken
+    const config = savePushConfig(updates)
+    res.json({ ...config, pushoverToken: config.pushoverToken ? '***' : '' })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/settings/push/test — send a test notification
+router.post('/push/test', async (req, res) => {
+  try {
+    const config = getPushConfig()
+    if (!config.enabled) return res.status(400).json({ error: 'Push notifications are disabled. Enable them first.' })
+    await sendPush('AgentHarness is connected! ✅ Your Apple Watch will receive agent alerts.', '🤖 Test Notification', 'high', 'bell')
+    res.json({ ok: true, message: 'Test notification sent' })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
