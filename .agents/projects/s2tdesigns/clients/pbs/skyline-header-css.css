@@ -1,0 +1,90 @@
+/* ============================================================
+   PBS Austin Sigmas — Skyline Header CSS
+   Adds Austin skyline silhouette to site header background
+   Image: /wp-content/uploads/2026/05/austin-skyline-hero.png
+   Target: All pages via #masthead / .site-header
+   Author: AgentJames / S2T Designs
+   Date: 2026-05-25
+   ============================================================ */
+
+/* --- HEADER: Austin Skyline Background --- */
+#masthead,
+.site-header {
+    background-color: #164f90;
+    background-image: url('https://newsite.psibetasigma1914.org/wp-content/uploads/2026/05/austin-skyline-hero.png');
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: auto 55%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Overlay to keep logo/nav readable over the skyline */
+#masthead::before,
+.site-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(22, 79, 144, 0.92) 0%,
+        rgba(22, 79, 144, 0.75) 60%,
+        rgba(22, 79, 144, 0.55) 100%
+    );
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Ensure header content sits above the overlay */
+#masthead > *,
+.site-header > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* --- ANNOUNCEMENT BAR (if present) --- */
+.kadence-top-header-area,
+.site-top-header-wrap {
+    background-color: #0B2848 !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* --- LOGO: ensure crisp rendering over skyline --- */
+.site-header .custom-logo {
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+    max-height: 70px;
+    width: auto;
+}
+
+/* --- NAV LINKS: keep readable on skyline --- */
+.site-header .main-navigation a,
+.site-header .nav--toggle-sub a {
+    color: #ffffff !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.site-header .main-navigation a:hover,
+.site-header .nav--toggle-sub a:hover {
+    color: #A2B9D3 !important;
+}
+
+/* --- MOBILE: scale skyline for small screens --- */
+@media (max-width: 767px) {
+    #masthead,
+    .site-header {
+        background-size: auto 40%;
+        background-position: center bottom;
+    }
+}
+
+/* --- TABLET --- */
+@media (min-width: 768px) and (max-width: 1024px) {
+    #masthead,
+    .site-header {
+        background-size: auto 48%;
+    }
+}
