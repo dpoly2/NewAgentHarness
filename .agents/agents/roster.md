@@ -363,3 +363,33 @@ Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
 ### Files
 - `.agents/projects/solar-repair/`
 - `.agents/agents/projects/solar-repair/`
+
+---
+
+## PROJECT 11 — S2T DESIGNS SOCIAL MEDIA DIVISION
+
+### Lead
+**social-project-lead** — Client campaign oversight, content calendar management, monthly reporting, new client onboarding
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| social-content-strategist | Content Strategist | Platform strategy, content pillars, monthly calendars, trend research, creative briefs |
+| social-copywriter | Copywriter | Captions, video scripts, ad copy, hashtags, CTAs — all clients and platforms |
+| social-designer | Graphic Designer | Static posts, carousels, Reels covers, Story frames, ad creatives, brand templates |
+| social-analyst | Performance Analyst | KPI tracking, monthly client reports, optimization recommendations, benchmarking |
+| social-ads-manager | Paid Ads Manager | Meta, TikTok, YouTube paid campaigns — targeting, budgets, A/B testing, ROAS tracking |
+| social-community-manager | Community Manager | Daily comment/DM engagement, Google Business reviews, escalation handling, sentiment tracking |
+
+### Active Clients
+| Client | Status |
+|--------|--------|
+| S2T Designs (internal brand) | 🟡 Setup |
+| Little Ebenezer Baptist Church | 🟡 Pending discovery |
+| Xtreme Force Track Club | 🟡 Pending scope |
+| Clarity Solar Services | 🟡 Pending brand launch |
+
+### Files
+- `.agents/agents/projects/social-media/`
+- `.agents/projects/social-media/PROJECT.md`
