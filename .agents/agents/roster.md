@@ -1,5 +1,5 @@
 # Agent Roster — Master Registry
-**Last Updated:** 2026-05-22
+**Last Updated:** 2026-05-25
 **Coordinator:** AgentJames (main orchestrator — routes tasks, manages GitHub, tracks milestones)
 
 ---
@@ -381,6 +381,7 @@ Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
 | social-analyst | Performance Analyst | KPI tracking, monthly client reports, optimization recommendations, benchmarking |
 | social-ads-manager | Paid Ads Manager | Meta, TikTok, YouTube paid campaigns — targeting, budgets, A/B testing, ROAS tracking |
 | social-community-manager | Community Manager | Daily comment/DM engagement, Google Business reviews, escalation handling, sentiment tracking |
+| social-video-designer | Graphic Designer & Video Producer | Short-form video (Reels/TikTok/YT Shorts), motion graphics, branded video templates, event recaps, thumbnails — cross-client |
 
 ### Active Clients
 | Client | Status |
