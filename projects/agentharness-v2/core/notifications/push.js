@@ -80,6 +80,11 @@ async function sendPush(message, title = 'AgentHarness', priority = 'medium', ta
 const NTFY_PRIORITY = { urgent: 5, high: 4, medium: 3, low: 2 }
 const NTFY_TAGS = { task: 'robot', todo: 'white_check_mark', info: 'bell', warning: 'warning', error: 'x' }
 
+// Strip emoji and non-ASCII chars from strings used in HTTP headers
+function toAscii(str) {
+  return str.replace(/[^\x20-\x7E]/g, '').trim() || 'AgentHarness'
+}
+
 async function sendNtfy(config, message, title, priority, tag) {
   if (!config.ntfyTopic) {
     console.warn('[push/ntfy] ntfyTopic not configured — set it in Settings → Push Notifications')
@@ -91,11 +96,11 @@ async function sendNtfy(config, message, title, priority, tag) {
     method: 'POST',
     headers: {
       'Content-Type': 'text/plain',
-      'Title': title,
+      'Title': toAscii(title),
       'Priority': String(NTFY_PRIORITY[priority] || 3),
       'Tags': NTFY_TAGS[tag] || tag || 'robot'
     },
-    body: message
+    body: toAscii(message)
   })
   if (!res.ok) console.warn(`[push/ntfy] HTTP ${res.status}: ${await res.text()}`)
   else console.log('[push/ntfy] Sent:', title)

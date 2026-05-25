@@ -136,7 +136,7 @@ function createNotification(message, type = 'info', projectSlug = null, priority
   db.prepare(`INSERT INTO notifications (id, type, message, project_slug, priority) VALUES (?,?,?,?,?)`).run(id, type, message, projectSlug, priority)
   emit('notification:new', { id, type, message, project_slug: projectSlug, priority, read: 0 })
   // Fire push to Apple Watch / phone for high-priority events
-  const pushTitle = type === 'task' ? '⚡ Agent Task' : type === 'todo' ? '✅ New Todo' : '🤖 AgentHarness'
+  const pushTitle = type === 'task' ? 'Agent Task' : type === 'todo' ? 'New Todo' : 'AgentHarness'
   sendPush(message, pushTitle, priority, type).catch(() => {})
 }
 

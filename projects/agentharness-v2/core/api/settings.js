@@ -100,7 +100,7 @@ router.post('/push/test', async (req, res) => {
   try {
     const config = getPushConfig()
     if (!config.enabled) return res.status(400).json({ error: 'Push notifications are disabled. Enable them first.' })
-    await sendPush('AgentHarness is connected! ✅ Your Apple Watch will receive agent alerts.', '🤖 Test Notification', 'high', 'bell')
+    await sendPush('AgentHarness is connected! Your Apple Watch will receive agent alerts.', 'Test Notification', 'high', 'bell')
     res.json({ ok: true, message: 'Test notification sent' })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
