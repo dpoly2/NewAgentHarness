@@ -393,3 +393,38 @@ Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
 ### Files
 - `.agents/agents/projects/social-media/`
 - `.agents/projects/social-media/PROJECT.md`
+
+---
+
+## PROJECT 12 — MINISTRY & PREACHING TEAM
+
+### Lead
+**ministry-project-lead** — Content calendar, sermon series tracking, team coordination, SoulSpeak alignment review
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| ministry-sermon-writer | Sermon Manuscript Developer | Full sermon manuscripts in Expository SoulSpeak format — 3-stage arc, delivery markup, cadence and pause indicators |
+| ministry-bible-study | Bible Study Developer | Weekly Bible study lessons, discussion guides, devotionals — all levels |
+| ministry-sunday-school | Sunday School Curriculum | Age-grouped lessons: Little Lights (4–8), Junior (9–12), Youth (13–18), Young Adult (19–25), Adult (26+) |
+| ministry-delivery-coach | Preaching Delivery Coach | 30-Day SoulSpeak Training Program — drills, feedback, pre-sermon checklists, self-grading rubrics |
+| ministry-research-agent | Biblical Research | Scripture context, original language study, commentary synthesis, sermon illustrations |
+
+### Preaching Style
+**Expository SoulSpeak** — Rooted in biblical exposition, shaped by personal testimony, structured for musical cadence, built for emotional movement.
+
+**The 6 P's:** Presence · Pace · Power · Pause · Passion · Precision
+
+**The 3-Stage Arc:** Explain (text) → Feel (testimony) → Release (declaration)
+
+**The SoulSpeak Formula:** Teach it clearly. Feel it honestly. Deliver it musically. End it powerfully.
+
+### Personal Testimony Bank
+- Running from the call in 1997 — returning in 2001 through Sister Valerie
+- "But God brought me through." — core testimony phrase
+- "There is fire in me." — "I'm On Fire" active sermon series
+
+### Files
+- `.agents/projects/ministry/`
+- `.agents/agents/projects/ministry/`
