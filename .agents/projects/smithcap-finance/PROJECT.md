@@ -60,10 +60,10 @@ David Smith (Owner)
 | `CAPITAL-ROADMAP.md` | 3-year capital deployment plan (2026–2028) | ✅ Built |
 | `ENTITY-TAX-CALENDAR.md` | All filing deadlines — every entity | ✅ Built |
 | `BOOKKEEPING-SETUP.md` | Chart of accounts, bank setup, monthly close | ✅ Built |
-| `SBA-READINESS.md` | SBA pre-qualification checklist + profile | ⬜ To Build |
-| `INVESTMENT-POLICY.md` | Portfolio allocation model + IPS | ⬜ To Build |
-| `INSURANCE-REVIEW.md` | Coverage gap analysis + quotes tracker | ⬜ To Build |
-| `GRANT-FINANCE-TRACKER.md` | Active grants, restrictions, reporting | ⬜ To Build |
+| `SBA-READINESS.md` | SBA pre-qualification checklist + profile | ✅ Built |
+| `INVESTMENT-POLICY.md` | Portfolio allocation model + IPS | ✅ Built |
+| `INSURANCE-REVIEW.md` | Coverage gap analysis + quotes tracker | ✅ Built |
+| `GRANT-FINANCE-TRACKER.md` | Active grants, restrictions, reporting | ✅ Built |
 
 ---
 
