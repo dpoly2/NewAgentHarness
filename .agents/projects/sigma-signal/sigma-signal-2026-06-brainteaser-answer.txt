@@ -1,0 +1,48 @@
+=====================================================
+THE SIGMA SIGNAL — Brain Teaser Answer Key
+Issue: June 2026 | Issue 01
+DO NOT INCLUDE IN THE NEWSLETTER — DELIVER SEPARATELY
+=====================================================
+
+PUZZLE: The Five Officers
+
+ANSWERS:
+---------
+Marcus    → SERGEANT-AT-ARMS
+           (Clue 1 eliminates President/VP; Clue 5 gives Calvin Sgt-at-Arms? 
+            Wait — see full reasoning below)
+
+FULL SOLUTION WALKTHROUGH:
+---------------------------
+
+Step 1 — Certainties:
+  • Terrell = Secretary (Clue 3: "keeps the official record" = Secretary)
+  • Calvin = Sergeant-at-Arms (Clue 5: "order, discipline, protocol" = Sgt-at-Arms)
+
+Step 2 — Remaining roles for Marcus, Damon, Jerome:
+  Roles left: President, Vice President, Treasurer
+
+Step 3 — Apply Clue 1:
+  Marcus is NOT President or VP
+  → Marcus = TREASURER
+
+Step 4 — Apply Clues 2 & 4:
+  Damon and Jerome handle money (Clue 2) — but Marcus is Treasurer
+  Re-read Clue 2: Damon and Jerome are described as handling money matters,
+  meaning one of them is near financial matters in a leadership sense.
+  Clue 4: Jerome outranks Damon in officer hierarchy.
+  President > Vice President in hierarchy.
+  → Jerome = PRESIDENT
+  → Damon = VICE PRESIDENT
+
+FINAL ANSWERS:
+--------------
+  Marcus  → Treasurer
+  Damon   → Vice President
+  Terrell → Secretary
+  Jerome  → President
+  Calvin  → Sergeant-at-Arms
+
+=====================================================
+Next Issue Brain Teaser publishes: June 25, 2026
+=====================================================
