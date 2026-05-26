@@ -20,9 +20,9 @@ function parseRosterMarkdown(content) {
     'S2T Designs Agency': 's2tdesigns',
     'Personal Productivity': 'personal'
   }
-  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤', finance:'💰', 'solar-repair':'☀️', 'social-media':'📱', ministry:'✝️' }
-  const EXTRA_SLUG_MAP = { 'SMITHCAP FINANCIAL': 'finance', 'SOLAR': 'solar-repair', 'S2T DESIGNS SOCIAL': 'social-media', 'MINISTRY': 'ministry' }
-  const NAME_MAP = { finance: 'SmithCap FMO', 'solar-repair': 'Solar Repair Co.', 'social-media': 'S2T Social Media', ministry: 'Ministry & Preaching' }
+  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤', finance:'💰', 'solar-repair':'☀️', 'social-media':'📱', ministry:'✝️', 'sigma-signal':'📰' }
+  const EXTRA_SLUG_MAP = { 'SMITHCAP FINANCIAL': 'finance', 'SOLAR': 'solar-repair', 'S2T DESIGNS SOCIAL': 'social-media', 'MINISTRY': 'ministry', 'SIGMA SIGNAL': 'sigma-signal' }
+  const NAME_MAP = { finance: 'SmithCap FMO', 'solar-repair': 'Solar Repair Co.', 'social-media': 'S2T Social Media', ministry: 'Ministry & Preaching', 'sigma-signal': 'The Sigma Signal' }
 
   const indexSection = content.match(/## [^\n]*PROJECT INDEX([\s\S]*?)\r?\n---\r?\n/)
   if (indexSection) {
@@ -43,8 +43,8 @@ function parseRosterMarkdown(content) {
     })
   }
 
-  // Also capture ## PROJECT N sections not in the INDEX (projects 9+)
-  const projectSectionRe = /## PROJECT (\d+)\s*[—–-]\s*([^\n]+)/g
+  // Also capture ## PROJECT N / ## Project N sections not in the INDEX (projects 9+)
+  const projectSectionRe = /## project (\d+)\s*[—–-]\s*([^\n]+)/gi
   let psMatch
   while ((psMatch = projectSectionRe.exec(content)) !== null) {
     const id = parseInt(psMatch[1])
@@ -60,7 +60,7 @@ function parseRosterMarkdown(content) {
   projects.sort((a, b) => a.id - b.id)
 
   for (const proj of projects) {
-    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## |$)`)
+    const re = new RegExp(`## project ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## project \\d|\\n## |$)`, 'i')
     const m = content.match(re)
     if (!m) continue
     const block = m[0]

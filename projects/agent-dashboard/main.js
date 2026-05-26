@@ -1993,7 +1993,7 @@ function parseRosterMarkdown(content) {
     'S2T Designs Agency': 's2tdesigns',
     'Personal Productivity': 'personal'
   }
-  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤', finance:'💰', 'solar-repair':'☀️', 'social-media':'📱', ministry:'✝️' }
+  const ICON_MAP = { xftc:'⚽', yepc:'🏟️', elevation:'✨', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', personal:'👤', finance:'💰', 'solar-repair':'☀️', 'social-media':'📱', ministry:'✝️', 'sigma-signal':'📰' }
   const DOCS_PATH_MAP = {
     xftc: '.agents/projects/xftc-redevelopment/',
     elevation: '.agents/projects/rowdy-crown/'
@@ -2029,14 +2029,15 @@ function parseRosterMarkdown(content) {
     }
   }
 
-  // Also scan for ## PROJECT N sections not captured by the INDEX table (projects 9+)
+  // Also scan for ## PROJECT N / ## Project N sections not captured by the INDEX table (projects 9+)
   const EXTRA_SLUG_MAP = {
     'SMITHCAP FINANCIAL': 'finance',
     'SOLAR': 'solar-repair',
     'S2T DESIGNS SOCIAL': 'social-media',
-    'MINISTRY': 'ministry'
+    'MINISTRY': 'ministry',
+    'SIGMA SIGNAL': 'sigma-signal'
   }
-  const projectSectionRe = /## PROJECT (\d+)\s*[—–-]\s*([^\n]+)/g
+  const projectSectionRe = /## project (\d+)\s*[—–-]\s*([^\n]+)/gi
   let psMatch
   while ((psMatch = projectSectionRe.exec(content)) !== null) {
     const id = parseInt(psMatch[1])
@@ -2048,7 +2049,7 @@ function parseRosterMarkdown(content) {
     }
     if (slug === 'project-' + id) slug = rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || slug
     // Shorten name to a readable label
-    const nameMap = { finance: 'SmithCap FMO', 'solar-repair': 'Solar Repair Co.', 'social-media': 'S2T Social Media', ministry: 'Ministry & Preaching' }
+    const nameMap = { finance: 'SmithCap FMO', 'solar-repair': 'Solar Repair Co.', 'social-media': 'S2T Social Media', ministry: 'Ministry & Preaching', 'sigma-signal': 'The Sigma Signal' }
     const name = nameMap[slug] || rawTitle
     projects.push({
       id, name, slug,
@@ -2067,7 +2068,7 @@ function parseRosterMarkdown(content) {
 
   // Parse per-project details
   for (const proj of projects) {
-    const re = new RegExp(`## PROJECT ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## PROJECT \\d|\\n## |$)`)
+    const re = new RegExp(`## project ${proj.id} [\\s\\S]*?(?=\\r?\\n---\\r?\\n|\\n## project \\d|\\n## |$)`, 'i')
     const m = content.match(re)
     if (!m) continue
     const block = m[0]

@@ -9,6 +9,18 @@ const path = require('path')
 const fs = require('fs')
 const cors = require('cors')
 
+const os = require('os')
+
+function getLanIP() {
+  const nets = os.networkInterfaces()
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) return net.address
+    }
+  }
+  return null
+}
+
 const { Server } = require('socket.io')
 const { getDb, generateId } = require('./db/database')
 const { setIO } = require('./agents/engine')
@@ -155,12 +167,16 @@ async function bootstrap() {
     console.warn('[scheduler] Could not start:', e.message)
   }
 
-  // Start server
-  server.listen(PORT, () => {
+  // Start server — bind to 0.0.0.0 so it's reachable on the local network
+  const HOST = process.env.HOST || '0.0.0.0'
+  server.listen(PORT, HOST, () => {
+    const lanIP = getLanIP()
     console.log(`\n╔══════════════════════════════════════════╗`)
     console.log(`║  AgentHarness v2 Core Server              ║`)
-    console.log(`║  http://localhost:${PORT}                    ║`)
-    console.log(`║  WebSocket: ws://localhost:${PORT}           ║`)
+    console.log(`║  Local:   http://localhost:${PORT}              ║`)
+    if (lanIP) {
+      console.log(`║  Network: http://${lanIP}:${PORT}`.padEnd(44) + '║')
+    }
     console.log(`╚══════════════════════════════════════════╝\n`)
   })
 }
