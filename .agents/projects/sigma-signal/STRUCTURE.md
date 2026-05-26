@@ -1,5 +1,5 @@
 # The Sigma Signal — Newsletter Structure
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-05-25
 **Based on:** Analysis of 6 national PBS Constant Contact issues + project requirements
 
@@ -15,19 +15,19 @@
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
-│        SECTION 1: SIGMA BRAINTEASER          │
-│   🧠 Oxford Blue header bar                  │
-│   Puzzle statement (3–6 sentences)           │
-│   [Submit Your Answer] button (optional)     │
-│   * Answer Key delivered as SEPARATE file *  │
-└─────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────┐
-│        SECTION 2: CHAPTER SPOTLIGHT          │
+│        SECTION 1: CHAPTER SPOTLIGHT          │
 │   🌟 Royal Blue header bar                   │
 │   Chapter name + photo placeholder           │
 │   Spotlight copy (150–250 words)             │
 │   New initiates list (if applicable)         │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│        SECTION 2: EDITOR'S NOTE (optional)   │
+│   ✉️ Oxford Blue header bar                  │
+│   50–100 words from David                    │
+│   Signed: — Bro. David Smith, Editor         │
+│   * Skip this section if nothing to say *    │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
@@ -39,10 +39,24 @@
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
-│        SECTION 4: SIGMA TRIVIA               │
-│   ❓ Powder Blue header bar + dark text      │
-│   3–5 numbered trivia questions              │
-│   [Answers in next issue / answer file]      │
+│        SECTION 4: SIGMA BRAIN GAMES          │
+│   🧠 Oxford Blue header bar                  │
+│   Sub-label: "This Issue: [BrainTeaser /     │
+│               Trivia / Sudoku]"              │
+│                                              │
+│   OPTION A — BRAINTEASER                     │
+│   Logic / wordplay / history puzzle          │
+│   3–6 sentences. Answer key = separate file  │
+│                                              │
+│   OPTION B — TRIVIA                          │
+│   3–5 numbered questions                     │
+│   Answers in next issue or separate file     │
+│                                              │
+│   OPTION C — SUDOKU                          │
+│   9×9 HTML table grid (medium difficulty)    │
+│   Answer key = separate file                 │
+│                                              │
+│   * David picks A, B, or C each issue *      │
 └─────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────┐
@@ -63,7 +77,7 @@
 │        SECTION 7: SUBMIT YOUR CONTENT        │
 │   📬 Cloud Blue BG (light section)           │
 │   Call-to-action: "Share your story..."      │
-│   Submission email / form link               │
+│   Submission email + form link               │
 │   Deadline reminder                          │
 └─────────────────────────────────────────────┘
 
@@ -80,13 +94,26 @@
 ---
 
 ## Section Order Rationale
-1. **BrainTeaser first** — hooks the reader immediately, creates engagement before they scroll
-2. **Chapter Spotlight second** — community recognition, relatable content
-3. **Poem third** — emotional + cultural depth, mid-newsletter break
-4. **Trivia fourth** — light, interactive content to re-engage
+1. **Chapter Spotlight first** — mirrors national PBS newsletter pattern; community recognition leads
+2. **Editor's Note second (optional)** — leadership voice; skip if nothing meaningful to add
+3. **Poem third** — emotional and cultural anchor, mid-newsletter break
+4. **Sigma Brain Games fourth** — rotating puzzle section; David picks format at issue kickoff
 5. **Membership Tips fifth** — practical value, brothers learn something
-6. **News sixth** — informational, end of main content
+6. **News & Updates sixth** — informational closing block
 7. **Submissions CTA last** — convert readers into contributors before footer
+
+---
+
+## Brain Games — Per-Issue Format Selection
+At the start of each production cycle, David selects one:
+
+| Format | When to Use |
+|--------|-------------|
+| **BrainTeaser** | Logic/wordplay focus; when you want engagement and replies |
+| **Trivia** | History/culture focus; good for building from previous issues |
+| **Sudoku** | Visual variety; great for issues with lighter editorial content |
+
+The section header is always **"Sigma Brain Games"** — the sub-label changes per issue.
 
 ---
 
@@ -95,10 +122,10 @@
 | Section | Header Bar Color | Background |
 |---------|-----------------|------------|
 | Header Banner | `#164f90` Royal Blue | `#164f90` |
-| BrainTeaser | `#0B2848` Oxford Blue | `#FFFFFF` |
 | Chapter Spotlight | `#164f90` Royal Blue | `#FFFFFF` |
+| Editor's Note | `#0B2848` Oxford Blue | `#FFFFFF` |
 | Poem | `#0F3765` Midnight Blue | `#E8EDF4` Cloud Blue |
-| Trivia | `#A2B9D3` Powder Blue | `#FFFFFF` |
+| Sigma Brain Games | `#0B2848` Oxford Blue | `#FFFFFF` |
 | Membership Tips | `#164f90` Royal Blue | `#FFFFFF` |
 | News & Updates | `#0B2848` Oxford Blue | `#FFFFFF` |
 | Submit CTA | — | `#E8EDF4` Cloud Blue |
@@ -108,59 +135,31 @@
 
 ## Constant Contact Template Blocks
 
-Each section maps to a CC content block:
-
 | Block Type | Used For |
 |-----------|----------|
 | Image + Text | Header banner |
-| Text (full width) | BrainTeaser, Poem |
 | Image + Text | Chapter Spotlight (with photo) |
-| Text with columns | Trivia (2-col: Q on left, category on right) |
-| Button + Text | BrainTeaser answer CTA, Submissions CTA |
+| Text (full width) | Editor's Note, Poem, News & Updates |
+| Text (full width) | Brain Games — BrainTeaser or Trivia |
+| HTML Table block | Brain Games — Sudoku grid |
+| Numbered List | Membership Tips |
+| Button + Text | Brain Games answer CTA, Submissions CTA |
 | Divider | Between all sections |
 | Social Follow | Footer social icons |
 | Footer | Unsubscribe, address, copyright |
 
 ---
 
-## Brain Teaser Export Format
-
-The brain teaser is exported as a **standalone HTML file** for copy-paste into Constant Contact:
-
-```html
-<!-- SIGMA BRAINTEASER BLOCK — paste into CC HTML editor -->
-<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:0 auto;">
-  <tr>
-    <td style="background-color:#0B2848; padding:12px 20px;">
-      <h2 style="color:#ffffff; font-family:Arial,sans-serif; font-size:18px; margin:0;">
-        🧠 Sigma BrainTeaser
-      </h2>
-    </td>
-  </tr>
-  <tr>
-    <td style="background-color:#ffffff; padding:20px; font-family:Arial,sans-serif; color:#000000; font-size:15px; line-height:1.6;">
-      <!-- PUZZLE TEXT GOES HERE -->
-      <p><strong>[Puzzle Statement]</strong></p>
-      <p>[Additional context or clues]</p>
-      <p style="color:#5C84B1; font-size:13px;">
-        * Answer key delivered separately — check your email or download below.
-      </p>
-    </td>
-  </tr>
-</table>
-```
-
-**Answer Key file:** Plain `.txt` or `.pdf` — named `sigma-signal-[YYYY-MM]-brainteaser-answer.txt`
-
----
-
-## File Naming Convention
+## Answer Key / Separate File Convention
+For BrainTeaser and Sudoku issues, the answer key is NEVER included in the newsletter body.
 
 | File | Name Pattern |
 |------|-------------|
-| Issue draft | `sigma-signal-YYYY-MM-issue-NN-draft.md` |
-| Brain Teaser HTML | `sigma-signal-YYYY-MM-brainteaser.html` |
-| Answer Key | `sigma-signal-YYYY-MM-brainteaser-answer.txt` |
+| Brain Teaser HTML block | `sigma-signal-YYYY-MM-brainteaser.html` |
+| Trivia block (if HTML export needed) | `sigma-signal-YYYY-MM-trivia.html` |
+| Sudoku grid HTML block | `sigma-signal-YYYY-MM-sudoku.html` |
+| Answer Key (BrainTeaser or Sudoku) | `sigma-signal-YYYY-MM-answer-key.txt` |
+| Full issue draft | `sigma-signal-YYYY-MM-issue-NN-draft.md` |
 | Final CC-ready HTML | `sigma-signal-YYYY-MM-issue-NN-final.html` |
 
 ---
@@ -171,9 +170,10 @@ The brain teaser is exported as a **standalone HTML file** for copy-paste into C
 |-----|------|-------|
 | T-14 | Open content collection window | sigma-signal-submissions |
 | T-7 | Submission deadline | sigma-signal-submissions |
+| T-7 | **David selects Brain Games format for this issue** | David Smith |
 | T-6 | Research fallback if needed | sigma-signal-researcher |
-| T-5 | Draft all 7 sections | sigma-signal-writer, sigma-signal-poet |
-| T-4 | Brain Teaser + Answer Key generated | sigma-signal-writer |
+| T-5 | Draft all sections | sigma-signal-writer, sigma-signal-poet |
+| T-4 | Brain Games content + Answer Key generated | sigma-signal-writer |
 | T-3 | Editor review + revisions | sigma-signal-project-lead |
 | T-2 | HTML export + CC formatting | sigma-signal-designer |
 | T-1 | David reviews final draft | David Smith |

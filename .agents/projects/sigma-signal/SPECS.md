@@ -1,5 +1,5 @@
 # The Sigma Signal — Newsletter Specifications
-**Version:** 1.0
+**Version:** 1.1
 **Date:** 2026-05-25
 **Source:** Analysis of 6 national Phi Beta Sigma Constant Contact newsletters (Mar–May 2026)
 
@@ -40,21 +40,18 @@
 
 ## 3. Section Specifications
 
-### 3.1 Sigma BrainTeaser
-- **Difficulty:** Moderate (not too easy, not impossible)
-- **Age Range:** Appropriate for brothers 18–60
-- **Format:** One primary puzzle per issue — may be logic, wordplay, historical, or lateral thinking
-- **Categories (rotate):** Logic puzzle, Fraternity history riddle, Wordplay, Math/Pattern, Cultural knowledge
-- **Export:** Standalone HTML block for Constant Contact insertion
-- **Answer Key:** Delivered as a SEPARATE file (PDF or TXT) — NOT included in the newsletter body
-- **Length:** Puzzle statement = 3–6 sentences max. Clear, concise instructions.
-
-### 3.2 Chapter Spotlight
+### 3.1 Chapter Spotlight
 - **Length:** 150–250 words
 - **Content:** New initiates, chapter awards, community service highlights, events
 - **Sources:** Submissions first → chapter websites → social media (Instagram, Facebook) as fallback
 - **Format:** Chapter name (bold header), body copy, optional photo placeholder
 - **Rotation:** Collegiate and graduate chapters alternated
+
+### 3.2 Editor's Note *(Optional)*
+- **Length:** 50–100 words
+- **Content:** Brief word from David — current events, chapter updates, personal reflection, or series intro
+- **Format:** Short paragraph, signed "— Bro. David Smith, Editor"
+- **Cadence:** Include when there's something meaningful to say; skip when not needed
 
 ### 3.3 Poem
 - **Length:** 12–24 lines
@@ -64,12 +61,32 @@
 - **Byline:** Always credit the author (or note "The Sigma Signal Editorial Team")
 - **National example:** "What Are The Blues?" (Apr 2026) — reflective, purpose-driven, accessible
 
-### 3.4 Trivia
+### 3.4 Sigma Brain Games *(Rotating — One Per Issue)*
+This is a single section that rotates between three interchangeable formats. David selects which format to use at the start of each issue's production cycle.
+
+**Option A — Sigma BrainTeaser**
+- **Difficulty:** Moderate (not too easy, not impossible)
+- **Age Range:** Appropriate for brothers 18–60
+- **Format:** One primary puzzle — logic, wordplay, historical, or lateral thinking
+- **Categories (rotate):** Logic puzzle, Fraternity history riddle, Wordplay, Math/Pattern, Cultural knowledge
+- **Export:** Standalone HTML block for Constant Contact insertion
+- **Answer Key:** Delivered as a SEPARATE file (PDF or TXT) — NOT included in the newsletter body
+- **Length:** Puzzle statement = 3–6 sentences max
+
+**Option B — Sigma Trivia**
 - **Count:** 3–5 questions per issue
 - **Categories (rotate):** Phi Beta Sigma history, Black history, Current events, Austin Sigmas chapter history, Pop culture
-- **Format:** Question → Answer (delivered separately or revealed in next issue)
+- **Format:** Numbered questions; answers revealed in the NEXT issue or delivered as separate file
 - **Difficulty:** Mix of easy, medium, hard per issue
-- **Export:** Can be included in newsletter body or as a sidebar block
+
+**Option C — Sigma Sudoku**
+- **Difficulty:** Medium (accessible to all skill levels)
+- **Format:** Standard 9×9 Sudoku grid, rendered as an HTML table for email
+- **Theme:** Optional — e.g., replace numbers 1–9 with PBS-significant digits or years (purely cosmetic)
+- **Answer Key:** Delivered as a SEPARATE file — NOT included in the newsletter body
+- **Export:** HTML table block for Constant Contact insertion
+
+**Per-Issue Decision:** At the start of each production cycle, David chooses Option A, B, or C. The section header in the newsletter always reads **"Sigma Brain Games"** with the specific type noted below (e.g., "This Issue: BrainTeaser").
 
 ### 3.5 Membership Tips
 - **Count:** 3–5 tips per issue
@@ -85,7 +102,8 @@
 - **Format:** Short paragraph or bulleted list
 
 ### 3.7 Brother Submissions
-- **Intake:** Designated submission email or Google Form
+- **Intake:** thesigmasignal.1stvp1914@gmail.com OR Google Form
+- **Form:** https://docs.google.com/forms/d/e/1FAIpQLSeT1dVpP2K-8u3rEmyQyEArzlOnUOqd2aA6N650MsJ5-pM21w/viewform
 - **Categories:** Spotlight nominations, poems, trivia questions, photos, announcements
 - **Deadline:** 7 days before send date (Thursday before send Thursday)
 - **Management:** sigma-signal-submissions agent triages and routes content
@@ -104,20 +122,20 @@ Example: The Sigma Signal — June 2026 | Issue 01
 
 | Section | Min | Max |
 |---------|-----|-----|
-| Brain Teaser | 50 | 150 |
 | Chapter Spotlight | 150 | 250 |
+| Editor's Note (optional) | 50 | 100 |
 | Poem | 80 | 200 |
-| Trivia (3–5 Qs) | 60 | 150 |
+| Sigma Brain Games (any format) | 50 | 200 |
 | Membership Tips | 75 | 200 |
 | News & Updates | 100 | 200 |
-| **Total Issue** | **515** | **1,150** |
+| **Total Issue** | **505** | **1,150** |
 
 ---
 
 ## 6. Constant Contact Export Requirements
-- **Brain Teaser block:** Valid HTML, inline CSS only (no external stylesheets), table-based layout for email client compatibility
+- **Brain Games block:** Valid HTML, inline CSS only (no external stylesheets), table-based layout for email client compatibility
 - **Images:** Hosted URLs (no attachments)
-- **Answer Key:** Plain text or PDF — delivered separately, NOT embedded in campaign
+- **Answer Key (BrainTeaser or Sudoku):** Plain text or PDF — delivered separately, NOT embedded in campaign
 - **Mobile-first:** Max width 600px, single column preferred
 - **Test render:** Always preview in CC before sending
 
