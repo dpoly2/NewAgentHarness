@@ -3,12 +3,14 @@
  * Express + socket.io + SQLite
  * Runs on :4000, serves API + WebSocket
  */
+require('dotenv').config()
 const express = require('express')
 const http = require('http')
 const path = require('path')
 const fs = require('fs')
 const cors = require('cors')
-
+const helmet = require('helmet')
+const rateLimit = require('express-rate-limit')
 const os = require('os')
 
 function getLanIP() {
@@ -26,6 +28,8 @@ const { getDb, generateId } = require('./db/database')
 const { setIO } = require('./agents/engine')
 const { chat } = require('./agents/majesty')
 const { startScheduler } = require('./automations/scheduler')
+const { requireAuth, getAccessToken } = require('./middleware/auth')
+const { validateChat } = require('./middleware/validate')
 
 const PORT = process.env.PORT || 4000
 const WEB_DIST = path.join(__dirname, '..', 'web', 'dist')
@@ -35,24 +39,56 @@ const PROFILE_PATH = path.join(__dirname, '..', 'data', 'profile.json')
 const app = express()
 const server = http.createServer(app)
 
+// ─── CORS configuration ───────────────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s => s.trim())
+const corsOptions = allowedOrigins.includes('*')
+  ? { origin: '*' }
+  : { origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) cb(null, true)
+      else cb(new Error('CORS: origin not allowed'))
+    }, credentials: true }
+
 // socket.io
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] }
+  cors: allowedOrigins.includes('*') ? { origin: '*', methods: ['GET', 'POST'] } : { origin: allowedOrigins, credentials: true }
 })
 setIO(io)
 
-app.use(cors())
-app.use(express.json({ limit: '10mb' }))
+// ─── Security middleware ──────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // disabled to allow React app to load
+  crossOriginEmbedderPolicy: false
+}))
+app.use(cors(corsOptions))
+app.use(express.json({ limit: '2mb' }))
+
+// ─── Rate limiting ────────────────────────────────────────────────
+const globalLimiter = rateLimit({ windowMs: 60 * 1000, max: 200, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, slow down.' } })
+const chatLimiter = rateLimit({ windowMs: 60 * 1000, max: 30, message: { error: 'Chat rate limit exceeded.' } })
+const taskLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { error: 'Task rate limit exceeded.' } })
+app.use(globalLimiter)
 
 // ─── API Routes ──────────────────────────────────────────────────
+// Public health check (no auth needed)
+app.get('/api/health', (req, res) => {
+  const db = getDb()
+  const convCount = db.prepare('SELECT COUNT(*) as c FROM conversations').get().c
+  const taskCount = db.prepare(`SELECT COUNT(*) as c FROM agent_tasks WHERE status='running'`).get().c
+  const todoCount = db.prepare(`SELECT COUNT(*) as c FROM todos WHERE status NOT IN ('done','cancelled')`).get().c
+  const authEnabled = !!getAccessToken()
+  res.json({ status: 'ok', version: '2.0.0', conversations: convCount, runningTasks: taskCount, openTodos: todoCount, authEnabled })
+})
+
+// All other API routes require authentication (if configured)
+app.use('/api', requireAuth)
 app.use('/api/conversations', require('./api/conversations'))
-app.use('/api/tasks', require('./api/tasks'))
+app.use('/api/tasks', taskLimiter, require('./api/tasks'))
 app.use('/api/todos', require('./api/todos'))
 app.use('/api/projects', require('./api/projects'))
 app.use('/api/settings', require('./api/settings'))
 
 // ─── Chat Endpoint (streaming SSE) ───────────────────────────────
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', chatLimiter, validateChat, async (req, res) => {
   const { conversationId, message, projectSlug } = req.body
   if (!message) return res.status(400).json({ error: 'message required' })
   if (!conversationId) return res.status(400).json({ error: 'conversationId required' })
@@ -83,15 +119,6 @@ app.post('/api/chat', async (req, res) => {
     const result = await chat({ conversationId, userMessage: message, projectSlug, profile })
     res.json(result)
   }
-})
-
-// ─── Health check ─────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  const db = getDb()
-  const convCount = db.prepare('SELECT COUNT(*) as c FROM conversations').get().c
-  const taskCount = db.prepare(`SELECT COUNT(*) as c FROM agent_tasks WHERE status='running'`).get().c
-  const todoCount = db.prepare(`SELECT COUNT(*) as c FROM todos WHERE status NOT IN ('done','cancelled')`).get().c
-  res.json({ status: 'ok', version: '2.0.0', conversations: convCount, runningTasks: taskCount, openTodos: todoCount })
 })
 
 // ─── Serve React web app (production) ─────────────────────────────
@@ -171,15 +198,36 @@ async function bootstrap() {
   const HOST = process.env.HOST || '0.0.0.0'
   server.listen(PORT, HOST, () => {
     const lanIP = getLanIP()
+    const accessToken = getAccessToken()
     console.log(`\n╔══════════════════════════════════════════╗`)
     console.log(`║  AgentHarness v2 Core Server              ║`)
     console.log(`║  Local:   http://localhost:${PORT}              ║`)
     if (lanIP) {
       console.log(`║  Network: http://${lanIP}:${PORT}`.padEnd(44) + '║')
     }
-    console.log(`╚══════════════════════════════════════════╝\n`)
+    console.log(`╚══════════════════════════════════════════╝`)
+    if (!accessToken) {
+      console.warn(`\n⚠️  WARNING: No ACCESS_TOKEN set. API is open to anyone on the network.`)
+      console.warn(`   Set ACCESS_TOKEN in .env to secure this server before internet exposure.\n`)
+    } else {
+      console.log(`\n🔒 Authentication enabled (Bearer token)\n`)
+    }
   })
 }
+
+// ─── Graceful shutdown ─────────────────────────────────────────────
+function shutdown(signal) {
+  console.log(`\n[server] ${signal} received, shutting down gracefully...`)
+  server.close(() => {
+    console.log('[server] HTTP server closed.')
+    process.exit(0)
+  })
+  setTimeout(() => { console.error('[server] Forced shutdown.'); process.exit(1) }, 10000)
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('unhandledRejection', (reason) => console.error('[server] Unhandled rejection:', reason))
+process.on('uncaughtException', (err) => { console.error('[server] Uncaught exception:', err); process.exit(1) })
 
 bootstrap().catch(console.error)
 

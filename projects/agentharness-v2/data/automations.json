@@ -3,7 +3,8 @@
     "id": "morning-briefing",
     "name": "Morning Briefing",
     "schedule": "0 7 * * *",
-    "enabled": 1
+    "enabled": 1,
+    "last_run": "2026-05-26 12:00:00"
   },
   {
     "id": "email-digest",

@@ -7,9 +7,22 @@ let _socket = null
 
 function getSocket() {
   if (!_socket) {
-    _socket = io(API_BASE || window.location.origin, { path: '/socket.io', transports: ['websocket', 'polling'] })
+    const token = localStorage.getItem('agentharness_token')
+    _socket = io(API_BASE || window.location.origin, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      auth: token ? { token } : {}
+    })
   }
   return _socket
+}
+
+/** Get stored access token (used for remote/protected deployments) */
+export function getStoredToken() { return localStorage.getItem('agentharness_token') || '' }
+export function setStoredToken(t) {
+  if (t) localStorage.setItem('agentharness_token', t)
+  else localStorage.removeItem('agentharness_token')
+  _socket = null // force reconnect with new token
 }
 
 export function useSocket(events = {}) {
@@ -36,9 +49,13 @@ export function useSocket(events = {}) {
 
 export async function api(path, options = {}) {
   const url = `${API_BASE}/api${path}`
+  const method = options.method || 'GET'
+  const token = getStoredToken()
+  const headers = { 'Content-Type': 'application/json', ...options.headers }
+  if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
+    method,
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined
   })
   if (!res.ok) {

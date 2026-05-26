@@ -15,9 +15,12 @@ router.post('/', (req, res) => {
   try {
     const db = getDb()
     const id = generateId()
+    const ts = new Date().toISOString().replace('T', ' ').slice(0, 19)
     const { slug = 'global', title = 'New Conversation' } = req.body
-    db.prepare('INSERT INTO conversations (id, slug, title) VALUES (?,?,?)').run(id, slug, title)
-    res.json(db.prepare('SELECT * FROM conversations WHERE id=?').get(id))
+    db.prepare('INSERT INTO conversations (id, slug, title, created_at, updated_at) VALUES (?,?,?,?,?)').run(id, slug, title, ts, ts)
+    // Build response directly — avoids SELECT-after-INSERT fragility in JSON DB
+    const conv = db.prepare('SELECT * FROM conversations WHERE id=?').get(id) || { id, slug, title, created_at: ts, updated_at: ts }
+    res.json(conv)
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 

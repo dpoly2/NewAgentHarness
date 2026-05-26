@@ -146,18 +146,24 @@ function loadRoster() {
 }
 
 function loadAgentProfile(agentId) {
+  // Sanitize — only allow alphanumeric, hyphens, underscores. No path traversal.
+  const safe = agentId.replace(/[^a-zA-Z0-9_-]/g, '')
+  if (!safe || safe !== agentId) return null
+
   const searchDirs = [
     path.join(AGENTS_ROOT, '.agents', 'agents', 'projects'),
     path.join(AGENTS_ROOT, '.agents', 'agents'),
     path.join(AGENTS_ROOT, 'agents')
   ]
-  const variants = [agentId, agentId.replace(/-/g, '_'), agentId.replace(/_/g, '-')]
+  const variants = [safe, safe.replace(/-/g, '_'), safe.replace(/_/g, '-')]
   for (const dir of searchDirs) {
     if (!fs.existsSync(dir)) continue
     for (const v of variants) {
       const candidates = [`${v}.md`, `${v.toLowerCase()}.md`]
       for (const c of candidates) {
-        const fp = path.join(dir, c)
+        const fp = path.resolve(path.join(dir, c))
+        // Guard: ensure resolved path stays within expected directory
+        if (!fp.startsWith(path.resolve(dir))) continue
         if (fs.existsSync(fp)) return fs.readFileSync(fp, 'utf8')
       }
     }
@@ -166,7 +172,8 @@ function loadAgentProfile(agentId) {
       const subdirs = fs.readdirSync(dir, { withFileTypes: true }).filter(d => d.isDirectory())
       for (const sub of subdirs) {
         for (const v of variants) {
-          const fp = path.join(dir, sub.name, `${v}.md`)
+          const fp = path.resolve(path.join(dir, sub.name, `${v}.md`))
+          if (!fp.startsWith(path.resolve(dir))) continue
           if (fs.existsSync(fp)) return fs.readFileSync(fp, 'utf8')
         }
       }

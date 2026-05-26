@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api } from '../hooks/useSocket'
+import { api, getStoredToken, setStoredToken } from '../hooks/useSocket'
 
 const PROVIDERS = [
   { id: 'ollama', label: 'Ollama (Local)', baseUrl: 'http://localhost:11434/v1', model: 'llama3.2', note: 'Free, runs on your machine. Install Ollama + pull a model.' },
@@ -25,9 +25,13 @@ export default function Settings() {
   const [aiConfig, setAiConfig] = useState({ provider: 'ollama', baseUrl: '', apiKey: '', model: '', enabled: false })
   const [profile, setProfile] = useState({ name: '', role: '', priorities: '', communicationStyle: '' })
   const [pushConfig, setPushConfig] = useState({ enabled: false, provider: 'ntfy', minPriority: 'high', ntfyTopic: '', ntfyServer: 'https://ntfy.sh', pushoverToken: '', pushoverUser: '', pushcutWebhook: '' })
+  const [security, setSecurity] = useState({ authEnabled: false, mode: 'open' })
+  const [clientToken, setClientToken] = useState(getStoredToken())
   const [saved, setSaved] = useState('')
   const [generating, setGenerating] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [testingAI, setTestingAI] = useState(false)
+  const [aiTestResult, setAiTestResult] = useState(null)
   const [briefs, setBriefs] = useState([])
   const [selectedBrief, setSelectedBrief] = useState(null)
 
@@ -36,16 +40,34 @@ export default function Settings() {
     api('/settings/profile').then(setProfile).catch(console.error)
     api('/settings/briefings').then(setBriefs).catch(console.error)
     api('/settings/push').then(setPushConfig).catch(console.error)
+    api('/settings/security').then(setSecurity).catch(console.error)
   }, [])
 
   function applyPreset(providerId) {
     const preset = PROVIDERS.find(p => p.id === providerId)
     if (preset) setAiConfig(c => ({ ...c, provider: providerId, baseUrl: preset.baseUrl, model: preset.model }))
+    setAiTestResult(null)
   }
 
   async function saveAI() {
     await api('/settings/ai', { method: 'POST', body: aiConfig })
     flash('AI settings saved')
+    setAiTestResult(null)
+  }
+
+  async function testAI() {
+    setTestingAI(true)
+    setAiTestResult(null)
+    try {
+      // Save first so test uses latest config
+      await api('/settings/ai', { method: 'POST', body: aiConfig })
+      const result = await api('/settings/ai/test', { method: 'POST', body: {} })
+      setAiTestResult(result)
+    } catch (e) {
+      setAiTestResult({ ok: false, error: e.message })
+    } finally {
+      setTestingAI(false)
+    }
   }
 
   async function saveProfile() {
@@ -78,6 +100,22 @@ export default function Settings() {
     finally { setGenerating(false) }
   }
 
+  async function generateToken() {
+    try {
+      const result = await api('/settings/security/token', { method: 'POST', body: {} })
+      setSecurity({ authEnabled: true, mode: 'protected' })
+      flash(`Access token generated — copy it now and add to .env: ACCESS_TOKEN=${result.token}`)
+    } catch (e) { flash(`Error: ${e.message}`) }
+  }
+
+  async function disableAuth() {
+    try {
+      await api('/settings/security/token', { method: 'DELETE' })
+      setSecurity({ authEnabled: false, mode: 'open' })
+      flash('Authentication disabled — server is now in open LAN mode')
+    } catch (e) { flash(`Error: ${e.message}`) }
+  }
+
   function flash(msg) { setSaved(msg); setTimeout(() => setSaved(''), 3500) }
 
   const activeProvider = PROVIDERS.find(p => p.id === aiConfig.provider)
@@ -94,7 +132,20 @@ export default function Settings() {
 
       {/* AI Provider */}
       <section className="card mb-6">
-        <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">🤖 AI Provider</h2>
+        <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
+          🤖 AI Provider
+          {aiConfig.enabled && (
+            <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+              aiTestResult?.ok === true ? 'bg-success/20 text-success' :
+              aiTestResult?.ok === false ? 'bg-error/20 text-error' :
+              'bg-brand/10 text-brand-light'
+            }`}>
+              {aiTestResult?.ok === true ? '✓ Connected' :
+               aiTestResult?.ok === false ? '✗ Unreachable' :
+               `Enabled — ${aiConfig.provider}`}
+            </span>
+          )}
+        </h2>
 
         <div className="grid grid-cols-2 gap-2 mb-4">
           {PROVIDERS.map(p => (
@@ -127,8 +178,20 @@ export default function Settings() {
             <span className="text-sm text-gray-300">{aiConfig.enabled ? 'AI enabled' : 'AI disabled'}</span>
           </div>
         </div>
+
+        {aiTestResult && (
+          <div className={`mt-3 p-3 rounded-xl text-sm ${aiTestResult.ok ? 'bg-success/10 border border-success/30 text-success' : 'bg-error/10 border border-error/30 text-error'}`}>
+            {aiTestResult.ok
+              ? `✓ Connected to ${aiTestResult.provider} — model: ${aiTestResult.model}`
+              : `✗ ${aiTestResult.error}`}
+          </div>
+        )}
+
         <div className="flex gap-2 mt-4">
           <button onClick={saveAI} className="btn-primary text-sm">Save AI Settings</button>
+          <button onClick={testAI} disabled={testingAI || !aiConfig.enabled} className="btn-secondary text-sm disabled:opacity-40">
+            {testingAI ? 'Testing...' : '🔌 Test Connection'}
+          </button>
         </div>
       </section>
 
@@ -282,6 +345,50 @@ export default function Settings() {
             <div className="text-xs text-gray-500 mb-2">{new Date(selectedBrief.generated_at).toLocaleString()}</div>
             <div className="text-sm text-gray-200 whitespace-pre-wrap">{selectedBrief.content}</div>
           </div>
+        )}
+      </section>
+
+      {/* Security */}
+      <section className="card mb-6">
+        <h2 className="text-base font-semibold text-white mb-1 flex items-center gap-2">
+          🔒 Security
+          <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${security.authEnabled ? 'bg-success/20 text-success' : 'bg-warning/20 text-warning'}`}>
+            {security.authEnabled ? 'Protected' : 'Open (LAN only)'}
+          </span>
+        </h2>
+        <p className="text-xs text-gray-500 mb-4">
+          {security.authEnabled
+            ? 'Bearer token authentication is active. Remote access is safe.'
+            : '⚠️ No access token set. Safe on local network only. Set a token before exposing to the internet.'}
+        </p>
+        <div className="flex gap-2">
+          <button onClick={generateToken} className="btn-primary text-sm">
+            {security.authEnabled ? '🔄 Rotate Token' : '🔑 Enable Auth (Generate Token)'}
+          </button>
+          {security.authEnabled && (
+            <button onClick={disableAuth} className="btn-secondary text-sm text-error/80 border-error/20">
+              Disable Auth
+            </button>
+          )}
+        </div>
+        {security.authEnabled && (
+          <div className="mt-4 space-y-2">
+            <p className="text-xs text-gray-400">If accessing from a remote browser, paste the token here to authenticate this client:</p>
+            <div className="flex gap-2">
+              <input type="password" value={clientToken} onChange={e => setClientToken(e.target.value)}
+                className="input flex-1 text-sm" placeholder="Paste access token..." />
+              <button onClick={() => { setStoredToken(clientToken); flash('Token saved — this browser is now authenticated') }}
+                className="btn-primary text-sm px-3">Save</button>
+              <button onClick={() => { setClientToken(''); setStoredToken(''); flash('Token cleared') }}
+                className="btn-secondary text-sm px-3">Clear</button>
+            </div>
+          </div>
+        )}
+        {security.authEnabled && (
+          <p className="text-xs text-gray-500 mt-3">
+            Add your token to <code className="bg-surface-lighter px-1 rounded">.env</code> as <code className="bg-surface-lighter px-1 rounded">ACCESS_TOKEN=&lt;token&gt;</code> so it persists across restarts.
+            Clients must send <code className="bg-surface-lighter px-1 rounded">Authorization: Bearer &lt;token&gt;</code> header.
+          </p>
         )}
       </section>
 

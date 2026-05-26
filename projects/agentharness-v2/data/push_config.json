@@ -1,0 +1,10 @@
+{
+  "enabled": true,
+  "provider": "ntfy",
+  "minPriority": "high",
+  "ntfyTopic": "agentharness-david",
+  "ntfyServer": "https://ntfy.sh",
+  "pushoverToken": "",
+  "pushoverUser": "",
+  "pushcutWebhook": ""
+}

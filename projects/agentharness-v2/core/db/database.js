@@ -117,6 +117,9 @@ function makeStmt(sql) {
         if (cols.length && flat.length >= cols.length) {
           const row = {}
           cols.forEach((c, i) => { row[c] = flat[i] })
+          // Auto-add timestamps if not provided
+          if (!row.created_at) row.created_at = now()
+          if (!row.updated_at) row.updated_at = now()
           // ON CONFLICT DO UPDATE
           if (/ON CONFLICT/i.test(sql) && /DO UPDATE/i.test(sql)) {
             const conflictMatch = sql.match(/UNIQUE\(([^)]+)\)/)

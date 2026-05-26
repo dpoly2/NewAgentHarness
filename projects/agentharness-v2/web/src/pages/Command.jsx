@@ -6,7 +6,7 @@ marked.setOptions({ breaks: true, gfm: true })
 
 function generateId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }
 
-const PROJECT_ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', global:'✨' }
+const PROJECT_ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', 'sigma-signal':'📰', global:'✨' }
 
 export default function Command({ roster }) {
   const [conversations, setConversations] = useState([])

@@ -107,9 +107,13 @@ async function* streamLLM(messages, { maxTokens = 2000 } = {}) {
     throw new Error(`LLM API error ${res.status}: ${err.slice(0, 200)}`)
   }
 
+  let sseBuffer = ''
   for await (const chunk of res.body) {
-    const lines = chunk.toString().split('\n').filter(l => l.startsWith('data: '))
+    sseBuffer += chunk.toString()
+    const lines = sseBuffer.split('\n')
+    sseBuffer = lines.pop() // keep incomplete last line
     for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
       const data = line.slice(6).trim()
       if (data === '[DONE]') return
       try {
@@ -126,4 +130,44 @@ async function* streamLLM(messages, { maxTokens = 2000 } = {}) {
   }
 }
 
-module.exports = { callLLM, streamLLM, getConfig, saveConfig, reloadConfig }
+/**
+ * Test connectivity to the configured LLM provider.
+ * Returns { ok: true, model, provider } or { ok: false, error }
+ */
+async function testConnection() {
+  let fetch
+  try { fetch = require('node-fetch') } catch (e) { fetch = global.fetch }
+
+  const config = loadConfig()
+  if (!config.enabled) return { ok: false, error: 'AI is disabled. Enable it in Settings → AI Provider.' }
+  if (!config.apiKey && config.provider !== 'ollama') return { ok: false, error: 'No API key configured.' }
+
+  try {
+    const isAnthropic = config.provider === 'anthropic'
+    const url = isAnthropic ? `${config.baseUrl}/messages` : `${config.baseUrl}/chat/completions`
+    const headers = { 'Content-Type': 'application/json' }
+    if (config.apiKey) headers['Authorization'] = `Bearer ${config.apiKey}`
+    if (isAnthropic) { headers['x-api-key'] = config.apiKey; headers['anthropic-version'] = '2023-06-01'; delete headers['Authorization'] }
+
+    const body = isAnthropic
+      ? JSON.stringify({ model: config.model, max_tokens: 5, messages: [{ role: 'user', content: 'hi' }] })
+      : JSON.stringify({ model: config.model, max_tokens: 5, messages: [{ role: 'user', content: 'hi' }], stream: false })
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+    const res = await fetch(url, { method: 'POST', headers, body, signal: controller.signal })
+    clearTimeout(timeout)
+
+    if (!res.ok) {
+      const err = await res.text()
+      return { ok: false, error: `HTTP ${res.status}: ${err.slice(0, 200)}` }
+    }
+    return { ok: true, provider: config.provider, model: config.model }
+  } catch (e) {
+    if (e.name === 'AbortError') return { ok: false, error: `Connection timed out. Is ${config.provider} running?` }
+    if (e.code === 'ECONNREFUSED') return { ok: false, error: `Cannot connect to ${config.baseUrl}. Is ${config.provider} running?` }
+    return { ok: false, error: e.message }
+  }
+}
+
+module.exports = { callLLM, streamLLM, getConfig, saveConfig, reloadConfig, testConnection }

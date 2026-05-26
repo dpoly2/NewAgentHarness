@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { loadAgentProfile } = require('../roster/parser')
-const { saveConfig, getConfig } = require('../agents/llm')
+const { saveConfig, getConfig, testConnection } = require('../agents/llm')
 const { getDb } = require('../db/database')
 const { saveConfig: savePushConfig, getConfig: getPushConfig, sendPush } = require('../notifications/push')
 const path = require('path')
@@ -18,9 +18,20 @@ router.get('/ai', (req, res) => {
 // POST /api/settings/ai
 router.post('/ai', (req, res) => {
   try {
-    const config = saveConfig(req.body)
+    const updates = req.body
+    // Don't overwrite a real key with the masked display value
+    if (updates.apiKey === '***') delete updates.apiKey
+    const config = saveConfig(updates)
     res.json({ ...config, apiKey: config.apiKey ? '***' : '' })
   } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/settings/ai/test — verify provider connectivity
+router.post('/ai/test', async (req, res) => {
+  try {
+    const result = await testConnection()
+    res.json(result)
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }) }
 })
 
 // GET /api/settings/profile
@@ -122,6 +133,35 @@ router.post('/briefings/generate', async (req, res) => {
     try { if (fs.existsSync(profilePath)) profile = JSON.parse(fs.readFileSync(profilePath, 'utf8')) } catch (e) {}
     const brief = await generateMorningBrief(profile)
     res.json(brief)
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// ─── Security Settings ─────────────────────────────────────────────────────
+
+// GET /api/settings/security — current security status
+router.get('/security', (req, res) => {
+  const { getAccessToken } = require('../middleware/auth')
+  const token = getAccessToken()
+  res.json({ authEnabled: !!token, mode: token ? 'protected' : 'open' })
+})
+
+// POST /api/settings/security/token — set or rotate access token
+router.post('/security/token', (req, res) => {
+  try {
+    const crypto = require('crypto')
+    const tokenFile = path.join(__dirname, '..', '..', 'data', 'access_token.json')
+    const token = req.body.token || crypto.randomBytes(32).toString('hex')
+    fs.writeFileSync(tokenFile, JSON.stringify({ token }, null, 2))
+    res.json({ ok: true, token })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// DELETE /api/settings/security/token — disable auth (open mode)
+router.delete('/security/token', (req, res) => {
+  try {
+    const tokenFile = path.join(__dirname, '..', '..', 'data', 'access_token.json')
+    if (fs.existsSync(tokenFile)) fs.unlinkSync(tokenFile)
+    res.json({ ok: true, mode: 'open' })
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
