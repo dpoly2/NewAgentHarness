@@ -25,6 +25,16 @@
 - **June 25, 2026** — Issue 02
 - Continues bi-weekly every 2nd and 4th Thursday
 
+## Agent Team
+| Agent | Role |
+|-------|------|
+| sigma-signal-writer | Brain Games content, Membership Tips, News |
+| sigma-signal-poet | Poem per issue |
+| sigma-signal-historian | Crescent archive, PBS History KB, trivia + BrainTeaser concepts |
+| sigma-signal-researcher | Chapter Spotlight fallback research |
+| sigma-signal-designer | CC-ready HTML export |
+| sigma-signal-submissions | Intake triage and deadline tracking |
+
 ## Reference Files
 - PROJECT.md — full project brief
 - SPECS.md — all section specifications

@@ -451,6 +451,7 @@ Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
 | sigma-signal-researcher | Chapter Researcher | Web/social scraping fallback when no submissions received |
 | sigma-signal-designer | Layout & Export | Constant Contact-ready HTML, inline CSS, file naming and delivery |
 | sigma-signal-submissions | Submissions Manager | Intake triage, deadline tracking, routing to appropriate agent |
+| sigma-signal-historian | Fraternity Historian | Crescent Magazine archive processing, PBS History Knowledge Base maintenance, per-issue history content delivery |
 
 ### Files
 - `.agents/projects/sigma-signal/`
