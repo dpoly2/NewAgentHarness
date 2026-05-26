@@ -103,5 +103,5 @@ See `.agents/agents/projects/sigma-signal/` for full team configuration.
 | Agent team | ✅ Built |
 | First issue draft | ⬜ Next |
 | Constant Contact template | ⬜ Pending |
-| Submission intake form | ⬜ Pending |
+| Submission intake form | ✅ Done |
 | Automation (bi-weekly) | ✅ Scheduled |

@@ -21,8 +21,8 @@
 | Photo | sigma-signal-designer |
 
 ## Submission Intake Method
-- **Email:** thesigmasignal.1stvp1914@gmail.com (primary)
-- **Form:** Google Form (to be created — link distributed to all brothers)
+- **Email:** thesigmasignal.1stvp1914@gmail.com (primary — connected via Gmail)
+- **Form:** https://docs.google.com/forms/d/e/1FAIpQLSeT1dVpP2K-8u3rEmyQyEArzlOnUOqd2aA6N650MsJ5-pM21w/viewform
 - **Deadline:** 7 days before each 2nd/4th Thursday send date
 
 ## Tracking
