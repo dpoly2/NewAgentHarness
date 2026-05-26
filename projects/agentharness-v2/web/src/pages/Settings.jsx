@@ -27,6 +27,10 @@ export default function Settings() {
   const [pushConfig, setPushConfig] = useState({ enabled: false, provider: 'ntfy', minPriority: 'high', ntfyTopic: '', ntfyServer: 'https://ntfy.sh', pushoverToken: '', pushoverUser: '', pushcutWebhook: '' })
   const [security, setSecurity] = useState({ authEnabled: false, mode: 'open' })
   const [clientToken, setClientToken] = useState(getStoredToken())
+  const [ddnsConfig, setDdnsConfig] = useState({ enabled: false, method: 'dynamic-url', dynamicUrl: '', authId: '', authPassword: '', domain: '', host: '@', ttl: 300, updateIntervalMin: 5 })
+  const [ddnsStatus, setDdnsStatus] = useState(null)
+  const [ddnsUpdating, setDdnsUpdating] = useState(false)
+  const [publicIp, setPublicIp] = useState('')
   const [saved, setSaved] = useState('')
   const [generating, setGenerating] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -41,6 +45,8 @@ export default function Settings() {
     api('/settings/briefings').then(setBriefs).catch(console.error)
     api('/settings/push').then(setPushConfig).catch(console.error)
     api('/settings/security').then(setSecurity).catch(console.error)
+    api('/settings/ddns').then(setDdnsConfig).catch(console.error)
+    api('/settings/ddns/ip').then(d => setPublicIp(d.ip)).catch(() => {})
   }, [])
 
   function applyPreset(providerId) {
@@ -114,6 +120,26 @@ export default function Settings() {
       setSecurity({ authEnabled: false, mode: 'open' })
       flash('Authentication disabled — server is now in open LAN mode')
     } catch (e) { flash(`Error: ${e.message}`) }
+  }
+
+  async function saveDdns() {
+    try {
+      const saved = await api('/settings/ddns', { method: 'POST', body: ddnsConfig })
+      setDdnsConfig(saved)
+      flash('ClouDNS DDNS settings saved')
+    } catch (e) { flash(`Error: ${e.message}`) }
+  }
+
+  async function testDdns() {
+    setDdnsUpdating(true)
+    setDdnsStatus(null)
+    try {
+      const result = await api('/settings/ddns/update', { method: 'POST', body: {} })
+      setDdnsStatus(result)
+      if (result.ip) setPublicIp(result.ip)
+    } catch (e) {
+      setDdnsStatus({ ok: false, error: e.message })
+    } finally { setDdnsUpdating(false) }
   }
 
   function flash(msg) { setSaved(msg); setTimeout(() => setSaved(''), 3500) }
@@ -392,25 +418,153 @@ export default function Settings() {
         )}
       </section>
 
-      {/* Remote Access info */}
+      {/* ClouDNS DDNS + Remote Access */}
       <section className="card">
-        <h2 className="text-base font-semibold text-white mb-4 flex items-center gap-2">🌐 Remote Access</h2>
-        <p className="text-sm text-gray-400 mb-4">Use Cloudflare Tunnel to access AgentHarness from any browser or phone without port forwarding.</p>
-        <div className="bg-surface rounded-xl p-4 font-mono text-sm text-gray-300 space-y-2">
-          <div className="text-xs text-gray-500 mb-2"># Install cloudflared (one-time)</div>
-          <div>npm install -g cloudflared</div>
-          <div className="text-xs text-gray-500 mt-2"># Login and create tunnel</div>
-          <div>cloudflared tunnel login</div>
-          <div>cloudflared tunnel create agentharness</div>
-          <div className="text-xs text-gray-500 mt-2"># Route your domain</div>
-          <div>cloudflared tunnel route dns agentharness yourname.com</div>
-          <div className="text-xs text-gray-500 mt-2"># Start the tunnel (auto-HTTPS)</div>
-          <div>cloudflared tunnel run --url http://localhost:4000 agentharness</div>
+        <h2 className="text-base font-semibold text-white mb-1 flex items-center gap-2">
+          🌐 Remote Access — ClouDNS DDNS
+          {ddnsConfig.enabled && (
+            <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-success/20 text-success">Active</span>
+          )}
+        </h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Keep your domain's DNS A record pointed at this server's public IP. Pair with Caddy for automatic HTTPS.
+          {publicIp && <span className="ml-2 text-brand-light">Current public IP: <strong>{publicIp}</strong></span>}
+        </p>
+
+        {/* Enable toggle */}
+        <div className="flex items-center gap-3 mb-5">
+          <button onClick={() => setDdnsConfig(c => ({ ...c, enabled: !c.enabled }))}
+            className={`relative w-12 h-6 rounded-full transition-colors ${ddnsConfig.enabled ? 'bg-brand' : 'bg-surface-border'}`}>
+            <span className={`absolute w-4 h-4 bg-white rounded-full top-1 transition-transform ${ddnsConfig.enabled ? 'translate-x-7' : 'translate-x-1'}`} />
+          </button>
+          <span className="text-sm text-gray-300">{ddnsConfig.enabled ? 'DDNS enabled' : 'DDNS disabled'}</span>
         </div>
-        <p className="text-xs text-gray-500 mt-3">The web app can be deployed separately to Cloudflare Pages with <code className="bg-surface-lighter px-1 rounded">VITE_API_URL</code> set to your tunnel URL.</p>
+
+        {/* Method picker */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {[
+            { id: 'dynamic-url', label: '🔗 Dynamic URL', note: 'Simplest. Paste the URL from ClouDNS panel.' },
+            { id: 'api', label: '⚙️ API Credentials', note: 'Full control. Uses ClouDNS auth-id + password.' }
+          ].map(m => (
+            <button key={m.id} onClick={() => setDdnsConfig(c => ({ ...c, method: m.id }))}
+              className={`text-left p-3 rounded-xl border transition-all ${ddnsConfig.method === m.id ? 'border-brand/50 bg-brand/10' : 'border-surface-border hover:border-surface-lighter'}`}>
+              <div className="text-sm font-medium text-white">{m.label}</div>
+              <div className="text-xs text-gray-500 mt-0.5">{m.note}</div>
+            </button>
+          ))}
+        </div>
+
+        {ddnsConfig.method === 'dynamic-url' ? (
+          <div className="space-y-3 p-4 bg-surface rounded-xl border border-surface-border mb-4">
+            <div className="text-xs text-gray-400">
+              1. Log into <span className="text-brand">ClouDNS.net</span> → DNS Hosting → your domain → Dynamic DNS tab.<br />
+              2. Add a dynamic record for your hostname (e.g. <code className="bg-surface-lighter px-1 rounded">home</code>).<br />
+              3. Click <strong>Generate URL</strong> → copy the full Dynamic URL and paste below.
+            </div>
+            <div>
+              <label className="text-xs text-gray-400 mb-1 block">ClouDNS Dynamic URL</label>
+              <input value={ddnsConfig.dynamicUrl} onChange={e => setDdnsConfig(c => ({ ...c, dynamicUrl: e.target.value }))}
+                className="input w-full" placeholder="https://ipv4.cloudns.net/api/dynamicURL/?q=xxxxxxxx" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-4 bg-surface rounded-xl border border-surface-border mb-4">
+            <div className="text-xs text-gray-400">
+              Get your auth-id from <span className="text-brand">ClouDNS.net</span> → API → Manage API credentials.
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Auth ID</label>
+                <input value={ddnsConfig.authId} onChange={e => setDdnsConfig(c => ({ ...c, authId: e.target.value }))}
+                  className="input w-full" placeholder="12345" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Auth Password</label>
+                <input type="password" value={ddnsConfig.authPassword === '***' ? '' : ddnsConfig.authPassword}
+                  onChange={e => setDdnsConfig(c => ({ ...c, authPassword: e.target.value }))}
+                  className="input w-full" placeholder="your API password" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Domain Name</label>
+                <input value={ddnsConfig.domain} onChange={e => setDdnsConfig(c => ({ ...c, domain: e.target.value }))}
+                  className="input w-full" placeholder="yourdomain.com" />
+              </div>
+              <div>
+                <label className="text-xs text-gray-400 mb-1 block">Hostname</label>
+                <input value={ddnsConfig.host} onChange={e => setDdnsConfig(c => ({ ...c, host: e.target.value }))}
+                  className="input w-full" placeholder="@ or home or agent" />
+                <div className="text-xs text-gray-600 mt-1">@ = root domain, or enter subdomain</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">TTL (seconds)</label>
+            <select value={ddnsConfig.ttl} onChange={e => setDdnsConfig(c => ({ ...c, ttl: parseInt(e.target.value) }))} className="input w-full">
+              <option value={60}>60s (1 min)</option>
+              <option value={300}>300s (5 min)</option>
+              <option value={900}>900s (15 min)</option>
+              <option value={3600}>3600s (1 hour)</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 mb-1 block">Update Interval</label>
+            <select value={ddnsConfig.updateIntervalMin} onChange={e => setDdnsConfig(c => ({ ...c, updateIntervalMin: parseInt(e.target.value) }))} className="input w-full">
+              <option value={2}>Every 2 min</option>
+              <option value={5}>Every 5 min</option>
+              <option value={10}>Every 10 min</option>
+              <option value={30}>Every 30 min</option>
+            </select>
+          </div>
+        </div>
+
+        {ddnsStatus && (
+          <div className={`mb-4 p-3 rounded-xl text-sm ${ddnsStatus.error ? 'bg-error/10 border border-error/30 text-error' : 'bg-success/10 border border-success/30 text-success'}`}>
+            {ddnsStatus.error ? `✗ ${ddnsStatus.error}` : `✓ ${ddnsStatus.ip} — ${ddnsStatus.status}`}
+          </div>
+        )}
+
+        <div className="flex gap-2 mb-6">
+          <button onClick={saveDdns} className="btn-primary text-sm">Save DDNS Settings</button>
+          <button onClick={testDdns} disabled={ddnsUpdating || !ddnsConfig.enabled} className="btn-secondary text-sm disabled:opacity-40">
+            {ddnsUpdating ? 'Updating...' : '🔄 Update DNS Now'}
+          </button>
+          <button onClick={() => api('/settings/ddns/ip').then(d => setPublicIp(d.ip)).catch(() => {})}
+            className="btn-secondary text-sm">
+            Check IP
+          </button>
+        </div>
+
+        {/* Caddy HTTPS setup */}
+        <div className="border-t border-surface-border pt-5">
+          <h3 className="text-sm font-semibold text-white mb-2">🔐 HTTPS with Caddy (Auto SSL)</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            Caddy automatically gets a free Let's Encrypt certificate for your domain. 
+            Requires port 80 and 443 forwarded on your router to this machine.
+          </p>
+          <div className="bg-surface rounded-xl p-4 font-mono text-sm text-gray-300 space-y-2 text-xs">
+            <div className="text-gray-500"># 1. Install Caddy (Windows)</div>
+            <div>winget install Caddy.Caddy</div>
+            <div className="text-gray-500 mt-2"># 2. Create Caddyfile (in the same folder)</div>
+            <div className="bg-surface-lighter rounded p-3 my-1">
+              <div>{ddnsConfig.domain || 'yourdomain.com'} {'{'}</div>
+              <div>&nbsp;&nbsp;reverse_proxy localhost:4000</div>
+              <div>{'}'}</div>
+            </div>
+            <div className="text-gray-500"># 3. Run Caddy (auto-fetches SSL cert)</div>
+            <div>caddy run</div>
+            <div className="text-gray-500 mt-2"># 4. Optional: run Caddy as a Windows service</div>
+            <div>caddy start</div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Once running: <strong>{ddnsConfig.host && ddnsConfig.host !== '@' ? `https://${ddnsConfig.host}.` : 'https://'}{ddnsConfig.domain || 'yourdomain.com'}</strong> will serve AgentHarness over HTTPS automatically.
+          </p>
+        </div>
       </section>
     </div>
   )
 }
-
-

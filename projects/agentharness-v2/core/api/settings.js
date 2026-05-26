@@ -136,6 +136,50 @@ router.post('/briefings/generate', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
+// ─── ClouDNS DDNS Settings ─────────────────────────────────────────────────
+
+// GET /api/settings/ddns
+router.get('/ddns', (req, res) => {
+  try {
+    const { getConfig } = require('../services/ddns')
+    const config = getConfig()
+    // Mask auth password
+    res.json({ ...config, authPassword: config.authPassword ? '***' : '' })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/settings/ddns
+router.post('/ddns', (req, res) => {
+  try {
+    const { saveConfig, startDdns, stopDdns } = require('../services/ddns')
+    const updates = req.body
+    if (updates.authPassword === '***') delete updates.authPassword
+    const config = saveConfig(updates)
+    // Restart DDNS loop with new config
+    stopDdns()
+    if (config.enabled) startDdns()
+    res.json({ ...config, authPassword: config.authPassword ? '***' : '' })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
+// POST /api/settings/ddns/update — force immediate IP update
+router.post('/ddns/update', async (req, res) => {
+  try {
+    const { updateDdns } = require('../services/ddns')
+    const result = await updateDdns(true)
+    res.json(result)
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }) }
+})
+
+// GET /api/settings/ddns/ip — get current public IP (no DNS update)
+router.get('/ddns/ip', async (req, res) => {
+  try {
+    const { getPublicIp } = require('../services/ddns')
+    const ip = await getPublicIp()
+    res.json({ ip })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
 // ─── Security Settings ─────────────────────────────────────────────────────
 
 // GET /api/settings/security — current security status

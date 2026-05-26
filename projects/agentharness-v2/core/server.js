@@ -30,6 +30,7 @@ const { chat } = require('./agents/majesty')
 const { startScheduler } = require('./automations/scheduler')
 const { requireAuth, getAccessToken } = require('./middleware/auth')
 const { validateChat } = require('./middleware/validate')
+const { startDdns } = require('./services/ddns')
 
 const PORT = process.env.PORT || 4000
 const WEB_DIST = path.join(__dirname, '..', 'web', 'dist')
@@ -192,6 +193,13 @@ async function bootstrap() {
     startScheduler(profile)
   } catch (e) {
     console.warn('[scheduler] Could not start:', e.message)
+  }
+
+  // Start ClouDNS DDNS updater (if configured)
+  try {
+    startDdns()
+  } catch (e) {
+    console.warn('[ddns] Could not start:', e.message)
   }
 
   // Start server — bind to 0.0.0.0 so it's reachable on the local network
