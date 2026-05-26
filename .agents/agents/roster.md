@@ -429,3 +429,30 @@ Smith and Taylor Construction → **Rebranding** (top pick: Apex Solar Services)
 ### Files
 - `.agents/projects/ministry/`
 - `.agents/agents/projects/ministry/`
+
+---
+
+## Project 13 — The Sigma Signal (Newsletter)
+**Status:** Active
+**Newsletter:** The Sigma Signal — Phi Beta Sigma / Psi Beta Sigma 1914
+**Platform:** Constant Contact
+**Cadence:** 2nd & 4th Thursday of each month
+**Outlook:** davidallensmith77@outlook.com (connected)
+
+### Lead
+**sigma-signal-project-lead** — Editor-in-Chief; manages production schedule, coordinates all agents, delivers final draft to David
+
+### Specialist Agents
+
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| sigma-signal-writer | Content Writer | Brain Teasers (HTML export + Answer Key), Trivia, Membership Tips, News & Updates |
+| sigma-signal-poet | Poet-in-Residence | Original and curated poems aligned with PBS ideals |
+| sigma-signal-researcher | Chapter Researcher | Web/social scraping fallback when no submissions received |
+| sigma-signal-designer | Layout & Export | Constant Contact-ready HTML, inline CSS, file naming and delivery |
+| sigma-signal-submissions | Submissions Manager | Intake triage, deadline tracking, routing to appropriate agent |
+| sigma-signal-historian | Fraternity Historian | Crescent Magazine archive processing, PBS History Knowledge Base maintenance, per-issue history content delivery |
+
+### Files
+- `.agents/projects/sigma-signal/`
+- `.agents/agents/projects/sigma-signal/`
