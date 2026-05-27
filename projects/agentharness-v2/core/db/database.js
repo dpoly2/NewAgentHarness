@@ -36,9 +36,8 @@ const tables = {}
 const TABLE_FILES = ['conversations','messages','agent_tasks','todos','agent_memory','projects','notifications','daily_briefs','automations']
 
 function loadTable(name) {
-  if (tables[name]) return tables[name]
   const fp = path.join(DATA_DIR, `${name}.json`)
-  try { tables[name] = JSON.parse(fs.readFileSync(fp, 'utf8')) } catch (e) { tables[name] = [] }
+  try { tables[name] = JSON.parse(fs.readFileSync(fp, 'utf8')) } catch (e) { if (!tables[name]) tables[name] = [] }
   return tables[name]
 }
 
@@ -148,7 +147,11 @@ function makeStmt(sql) {
             const pkCol = cols[0]
             if (!rows.find(r => String(r[pkCol]) === String(row[pkCol]))) rows.push(row)
           } else {
-            rows.push(row)
+            // Default INSERT: skip if primary key already exists (prevent duplicates)
+            const pkCol = cols[0]
+            if (!rows.find(r => String(r[pkCol]) === String(row[pkCol]))) {
+              rows.push(row)
+            }
           }
           saveTable(tableName)
         }

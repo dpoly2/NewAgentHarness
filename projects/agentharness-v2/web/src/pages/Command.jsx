@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { marked } from 'marked'
-import { api, getSocket } from '../hooks/useSocket'
+import { api, getSocket, getStoredToken } from '../hooks/useSocket'
 
 marked.setOptions({ breaks: true, gfm: true })
 
@@ -23,15 +23,22 @@ export default function Command({ roster }) {
   const abortRef = useRef(null)
 
   // Load conversations
-  useEffect(() => {
+  const loadConversations = useCallback(() => {
     api('/conversations').then(convs => {
-      setConversations(convs)
-      if (convs.length > 0 && !activeConvId) {
-        setActiveConvId(convs[0].id)
-      } else if (convs.length === 0) {
+      // De-duplicate by id (guard against stale JSON data)
+      const seen = new Set()
+      const unique = convs.filter(c => { if (seen.has(c.id)) return false; seen.add(c.id); return true })
+      setConversations(unique)
+      if (unique.length > 0 && !activeConvId) {
+        setActiveConvId(unique[0].id)
+      } else if (unique.length === 0) {
         createNewConversation()
       }
     }).catch(console.error)
+  }, [activeConvId])
+
+  useEffect(() => {
+    loadConversations()
   }, [])
 
   // Load messages when conversation changes
@@ -50,11 +57,31 @@ export default function Command({ roster }) {
       setChatError('')
       const conv = await api('/conversations', { method: 'POST', body: { slug: projectScope, title: 'New Chat' } })
       if (!conv || !conv.id) throw new Error('Server returned an empty conversation. Try restarting the server.')
-      setConversations(prev => [conv, ...prev.filter(c => c.id !== conv.id)])
+      setConversations(prev => {
+        const filtered = prev.filter(c => c.id !== conv.id)
+        return [conv, ...filtered]
+      })
       setActiveConvId(conv.id)
       setMessages([])
     } catch (e) {
       setChatError(`Could not create conversation: ${e.message}`)
+    }
+  }
+
+  async function deleteConversation(convId, e) {
+    e.stopPropagation()
+    try {
+      await api(`/conversations/${convId}`, { method: 'DELETE' })
+      setConversations(prev => {
+        const remaining = prev.filter(c => c.id !== convId)
+        if (activeConvId === convId) {
+          setActiveConvId(remaining[0]?.id || null)
+          setMessages([])
+        }
+        return remaining
+      })
+    } catch (e) {
+      setChatError(`Could not delete conversation: ${e.message}`)
     }
   }
 
@@ -78,9 +105,14 @@ export default function Command({ roster }) {
       const controller = new AbortController()
       abortRef.current = controller
 
+      const token = getStoredToken()
       const res = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ conversationId: activeConvId, message: text, projectSlug: projectScope === 'global' ? null : projectScope }),
         signal: controller.signal
       })
@@ -117,6 +149,18 @@ export default function Command({ roster }) {
           const msgs = await api(`/conversations/${activeConvId}/messages`)
           if (Array.isArray(msgs) && msgs.length > 0) {
             setMessages(msgs)
+            // Auto-update conversation title from first user message
+            if (msgs.length <= 2) {
+              const firstUserMsg = msgs.find(m => m.role === 'user')
+              if (firstUserMsg) {
+                const newTitle = firstUserMsg.content.slice(0, 60)
+                await api(`/conversations/${activeConvId}`, { method: 'PATCH', body: { title: newTitle } }).catch(() => {})
+                setConversations(prev => prev.map(c => c.id === activeConvId ? { ...c, title: newTitle, updated_at: new Date().toISOString() } : c))
+              }
+            } else {
+              // Just bump updated_at in list
+              setConversations(prev => prev.map(c => c.id === activeConvId ? { ...c, updated_at: new Date().toISOString() } : c))
+            }
           } else {
             // Server returned empty — construct messages from what we streamed
             setMessages(prev => [
@@ -170,10 +214,15 @@ export default function Command({ roster }) {
               className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all group ${activeConvId === conv.id ? 'bg-brand/15 text-white' : 'text-gray-400 hover:text-white hover:bg-surface-lighter'}`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-base">{PROJECT_ICONS[conv.slug] || '💬'}</span>
+                <span className="text-base flex-shrink-0">{PROJECT_ICONS[conv.slug] || '💬'}</span>
                 <span className="truncate flex-1">{conv.title || 'Untitled'}</span>
+                <span
+                  onClick={(e) => deleteConversation(conv.id, e)}
+                  className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-opacity text-xs px-1 flex-shrink-0"
+                  title="Delete"
+                >✕</span>
               </div>
-              <div className="text-xs text-gray-600 mt-0.5 pl-6">{new Date(conv.updated_at).toLocaleDateString()}</div>
+              <div className="text-xs text-gray-600 mt-0.5 pl-6">{conv.updated_at ? new Date(conv.updated_at).toLocaleDateString() : ''}</div>
             </button>
           ))}
         </div>
