@@ -1,0 +1,15 @@
+[
+  {
+    "id": "mpne2lg92xoeh",
+    "title": "Revisit web design brief with frontend dev",
+    "description": "Ensure new design meets brand standards before plugin release",
+    "priority": "medium",
+    "project_slug": "xftc-website-plugin",
+    "due_date": null,
+    "source": "agent",
+    "source_agent": "agentmajesty",
+    "tags": "[\"webdesignupdate\",\"brandstandards\"]",
+    "created_at": "2026-05-27 01:32:06",
+    "updated_at": "2026-05-27 01:32:06"
+  }
+]
