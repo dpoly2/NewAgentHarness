@@ -90,33 +90,54 @@ export default function Command({ roster }) {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let fullText = ''
+      let sseLineBuffer = '' // accumulate partial SSE lines across TCP chunks
+      let gotDone = false
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        const lines = decoder.decode(value).split('\n')
+        sseLineBuffer += decoder.decode(value, { stream: true })
+        const lines = sseLineBuffer.split('\n')
+        sseLineBuffer = lines.pop() // keep incomplete last line buffered
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
-          try {
-            const data = JSON.parse(line.slice(6))
-            if (data.chunk) {
-              fullText += data.chunk
-              setStreamBuffer(fullText)
-            }
-            if (data.done) {
-              setStreamBuffer('')
-              // Reload messages to get persisted version with parsed todos/tasks
-              const msgs = await api(`/conversations/${activeConvId}/messages`)
-              setMessages(msgs)
-            }
-          } catch (e) { /* skip malformed */ }
+          let data
+          try { data = JSON.parse(line.slice(6)) } catch { continue }
+          if (data.chunk) {
+            fullText += data.chunk
+            setStreamBuffer(fullText)
+          }
+          if (data.done) gotDone = true
+        }
+      }
+
+      // Stream ended — reload persisted messages (includes AI response with parsed todos/tasks)
+      if (gotDone || fullText) {
+        try {
+          const msgs = await api(`/conversations/${activeConvId}/messages`)
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            setMessages(msgs)
+          } else {
+            // Server returned empty — construct messages from what we streamed
+            setMessages(prev => [
+              ...prev.filter(m => m.id !== tempId),
+              { id: generateId(), role: 'user', content: text, created_at: new Date().toISOString() },
+              { id: generateId(), role: 'assistant', content: fullText, agent_id: 'agentmajesty', created_at: new Date().toISOString() }
+            ])
+          }
+        } catch {
+          // Fetch failed — at minimum keep what was streamed visible
+          setMessages(prev => [
+            ...prev.filter(m => m.id !== tempId),
+            { id: generateId(), role: 'user', content: text, created_at: new Date().toISOString() },
+            { id: generateId(), role: 'assistant', content: fullText, agent_id: 'agentmajesty', created_at: new Date().toISOString() }
+          ])
         }
       }
     } catch (e) {
       if (e.name !== 'AbortError') {
-        setMessages(prev => [...prev.filter(m => m.id !== tempId),
-          { id: generateId(), role: 'assistant', content: `Error: ${e.message}`, created_at: new Date().toISOString() }
-        ])
+        setChatError(`Chat error: ${e.message}`)
+        setMessages(prev => prev.filter(m => m.id !== tempId))
       }
     } finally {
       setStreaming(false)
