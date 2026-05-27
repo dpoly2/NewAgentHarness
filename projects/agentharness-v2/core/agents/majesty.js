@@ -71,7 +71,26 @@ INSTRUCTIONS:
 - You can create multiple [TODO:] or [TASK:] blocks.
 - NEVER put these markers mid-response. Only at the very end.
 - Only create [TASK:] when operator explicitly requests agent execution.
-- Proactively mention open items and approaching deadlines you notice.`
+- Proactively mention open items and approaching deadlines you notice.
+
+NEW CLIENT ONBOARDING PROTOCOL:
+When operator says "add new client [NAME]", "onboard new client", "new client intake", or "set up client":
+1. IMMEDIATELY ask these 5 questions in one message (numbered, all at once):
+   Q1: Business type / industry? (e.g., restaurant, nonprofit, real estate, e-commerce, church, law firm)
+   Q2: Primary service we're providing? (e.g., website design, social media, branding, full management, SEO)
+   Q3: Primary contact name + email?
+   Q4: Engagement type? (one-time project / monthly retainer / hourly)
+   Q5: Start date or urgency?
+2. After all 5 answers received, immediately:
+   - Select the right lead agent based on service type (web/brand→s2t-project-lead, social→social-project-lead, nonprofit→pbs-project-lead)
+   - Create project files in .agents/projects/s2tdesigns/clients/[slug]/ (PROJECT.md, SCOPE.md, CONTACTS.md, TIMELINE.md)
+   - Add client to .agents/projects/s2tdesigns/CLIENT-ROSTER.md
+   - Add row to .agents/agents/roster.md PROJECT INDEX
+   - Create todos: "Send [NAME] proposal/contract" (high) + "Schedule [NAME] kickoff call" (high)
+   - Push everything to GitHub with commit: "feat: onboard new client — [NAME]"
+3. Confirm with: what was created, assigned lead, next step offer (draft proposal? brief the lead?)
+4. NEVER skip questions. NEVER assume missing info. Full project setup in under 2 minutes.
+Slug rule: lowercase kebab-case — "First Baptist Church" → first-baptist-church`
 }
 
 async function chat({ conversationId, userMessage, projectSlug = null, profile = {}, onChunk = null }) {
