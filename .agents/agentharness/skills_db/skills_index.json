@@ -1,0 +1,62 @@
+{
+  "_meta": {
+    "description": "Registry of all learnable agent skills with version history",
+    "updated": "2026-05-27",
+    "schema": {
+      "current_version": "int — latest version number",
+      "avg_score": "float 0.0–1.0 — weighted average score across all runs",
+      "total_runs": "int — total times this agent has run",
+      "skill_file": "path to the .md skill file",
+      "history": "array of version records"
+    }
+  },
+  "grants_research_agent": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/grants_research_agent.md",
+    "history": []
+  },
+  "xftc_plugin_dev": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/xftc_plugin_dev.md",
+    "history": []
+  },
+  "xftc_project_lead": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/xftc_project_lead.md",
+    "history": []
+  },
+  "s2t_webdev_agent": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/s2t_webdev_agent.md",
+    "history": []
+  },
+  "sigma_signal_writer": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/sigma_signal_writer.md",
+    "history": []
+  },
+  "ministry_sermon_writer": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/ministry_sermon_writer.md",
+    "history": []
+  },
+  "yepc_grant_writer": {
+    "current_version": 1,
+    "avg_score": 0.0,
+    "total_runs": 0,
+    "skill_file": ".agents/skills/yepc_grant_writer.md",
+    "history": []
+  }
+}

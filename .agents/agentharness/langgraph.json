@@ -1,0 +1,10 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "reflexion_loop":   "./graphs/reflexion_loop.py:build_reflexion_graph",
+    "research_graph":   "./graphs/research_graph.py:build_research_graph",
+    "wordpress_graph":  "./graphs/wordpress_graph.py:build_wordpress_graph"
+  },
+  "env": ".env",
+  "python_version": "3.11"
+}

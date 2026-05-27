@@ -1,0 +1,49 @@
+{
+  "type": "object",
+  "properties": {
+    "run_id": {
+      "type": "string"
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    },
+    "score": {
+      "type": "number"
+    },
+    "critique": {
+      "type": "string"
+    },
+    "revision_count": {
+      "type": "number"
+    },
+    "output_summary": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "base44",
+        "local"
+      ]
+    },
+    "skill_version": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "running",
+        "complete",
+        "failed"
+      ]
+    }
+  },
+  "required": [],
+  "name": "AgentRunLog"
+}

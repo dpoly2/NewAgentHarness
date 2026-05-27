@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "properties": {
+    "agent_id": {
+      "type": "string"
+    },
+    "skill_name": {
+      "type": "string"
+    },
+    "version": {
+      "type": "number"
+    },
+    "content": {
+      "type": "string"
+    },
+    "avg_score": {
+      "type": "number"
+    },
+    "total_runs": {
+      "type": "number"
+    },
+    "last_critique": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "base44",
+        "local"
+      ]
+    }
+  },
+  "required": [],
+  "name": "AgentSkillVersion"
+}
