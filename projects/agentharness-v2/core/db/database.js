@@ -68,8 +68,8 @@ function getTableName(sql) {
 function applyWhere(rows, whereStr, params) {
   if (!whereStr) return rows
   const conditions = whereStr.split(/\s+AND\s+/i).map(c => c.trim())
-  let paramIdx = 0
   return rows.filter(row => {
+    let paramIdx = 0  // reset for every row so ?-params line up correctly
     for (const cond of conditions) {
       // NOT IN ('a','b') support
       const notInM = cond.match(/([a-z_]+)\s+NOT\s+IN\s*\(([^)]+)\)/i)
