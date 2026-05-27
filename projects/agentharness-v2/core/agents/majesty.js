@@ -2,12 +2,52 @@
  * AgentMajesty — Chief of Staff
  * Handles streaming chat, memory, briefings, and task routing
  */
+const path = require('path')
+const fs = require('fs')
 const { getDb, generateId } = require('../db/database')
 const { callLLM, streamLLM, getConfig } = require('./llm')
 const { enqueueTask, createTodo, createNotification } = require('./engine')
 const { loadRoster } = require('../roster/parser')
 
 const AGENTMAJESTY_ID = 'agentmajesty'
+const AGENTS_ROOT = path.join(__dirname, '..', '..', '..', '.agents')
+
+function loadClientRoster() {
+  // Load S2T Designs client roster + scan all client folders for PROJECT.md
+  const rosterPath = path.join(AGENTS_ROOT, 'projects', 's2tdesigns', 'CLIENT-ROSTER.md')
+  const clientsDir = path.join(AGENTS_ROOT, 'projects', 's2tdesigns', 'clients')
+  const lines = []
+  try {
+    const rosterText = fs.readFileSync(rosterPath, 'utf8')
+    // Extract just the Active Clients table rows
+    const tableMatch = rosterText.match(/## Active Clients[\s\S]*?\n((?:\|[^\n]+\n)+)/)
+    if (tableMatch) {
+      lines.push('S2T DESIGNS ACTIVE CLIENTS:')
+      tableMatch[1].trim().split('\n').slice(2).forEach(row => {
+        const cells = row.split('|').map(c => c.trim()).filter(Boolean)
+        if (cells.length >= 5) lines.push(`  • ${cells[0]} — ${cells[4]} (Lead: ${cells[3]})`)
+      })
+    }
+  } catch { /* no roster file */ }
+  // Scan client subfolders for PROJECT.md status
+  try {
+    const clientDirs = fs.readdirSync(clientsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory()).map(d => d.name)
+    for (const slug of clientDirs) {
+      const projFile = path.join(clientsDir, slug, 'PROJECT.md')
+      if (!fs.existsSync(projFile)) continue
+      const text = fs.readFileSync(projFile, 'utf8')
+      const nameMatch = text.match(/^# .+?— Client: (.+)/m)
+      const blockerMatches = [...text.matchAll(/- \[ \] (.+)/g)].map(m => m[1]).slice(0, 3)
+      const statusMatch = text.match(/Current Status.*?:\s*(.+)/i)
+      const name = nameMatch ? nameMatch[1] : slug.toUpperCase()
+      const blockers = blockerMatches.length ? `\n      Blockers: ${blockerMatches.join('; ')}` : ''
+      const status = statusMatch ? ` — ${statusMatch[1].trim()}` : ''
+      lines.push(`  [${slug.toUpperCase()}] ${name}${status}${blockers}`)
+    }
+  } catch { /* no clients dir */ }
+  return lines.join('\n')
+}
 
 function buildSystemPrompt(profile = {}, roster = null) {
   const db = getDb()
@@ -42,6 +82,8 @@ function buildSystemPrompt(profile = {}, roster = null) {
   const memory = db.prepare(`SELECT key, value FROM agent_memory WHERE agent_id='agentmajesty' ORDER BY updated_at DESC LIMIT 20`).all()
   const memoryLines = memory.map(m => `  - ${m.key}: ${m.value}`).join('\n')
 
+  const clientRoster = loadClientRoster()
+
   return `You are AgentMajesty, the AI Chief of Staff for ${profile.name || 'the operator'} (${profile.role || 'Founder & Director'}).
 
   Personality: Confident, warm, and strategically sharp. You think like a trusted advisor — direct, never verbose, always useful. You are the hub that connects all ${roster?.projects?.length || 0} project teams and helps the operator stay on top of everything.
@@ -51,6 +93,9 @@ Your operator runs multiple businesses and initiatives simultaneously. You proac
 ${roster?.projects?.length ? `PORTFOLIO — ${roster.projects.length} active projects:
 ${agentList}` : ''}
 
+${clientRoster ? `S2T DESIGNS WEB AGENCY — ACTIVE CLIENT ACCOUNTS:
+${clientRoster}
+` : ''}
 CURRENT STATUS:
 Running/Queued Tasks:
 ${taskStatus}

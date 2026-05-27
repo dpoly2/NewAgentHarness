@@ -91,6 +91,7 @@ app.use('/api/conversations', require('./api/conversations'))
 app.use('/api/tasks', taskLimiter, require('./api/tasks'))
 app.use('/api/todos', require('./api/todos'))
 app.use('/api/projects', require('./api/projects'))
+app.use('/api/clients', require('./api/clients'))
 app.use('/api/settings', require('./api/settings'))
 
 // ─── Chat Endpoint (streaming SSE) ───────────────────────────────

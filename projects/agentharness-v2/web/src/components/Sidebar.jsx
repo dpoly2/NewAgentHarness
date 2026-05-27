@@ -1,6 +1,10 @@
 import { NavLink } from 'react-router-dom'
 
-const PROJECT_ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', 'sigma-signal':'📰' }
+const PROJECT_ICONS = {
+  xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕',
+  smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️',
+  ministry:'⛪', finance:'💰', personal:'🗓️', 'sigma-signal':'📰', travel:'✈️'
+}
 
 export default function Sidebar({ roster, connected, unreadCount, authUser, onLogout }) {
   const projects = roster?.projects || []
@@ -24,7 +28,9 @@ export default function Sidebar({ roster, connected, unreadCount, authUser, onLo
       {/* Main nav */}
       <nav className="p-2 space-y-0.5">
         <NavItem to="/command" icon="💬" label="Command" badge={unreadCount > 0 ? unreadCount : null} exact />
-        <NavItem to="/" icon="🏠" label="Home" exact />
+        <NavItem to="/" icon="🏠" label="Dashboard" exact />
+        <NavItem to="/agents" icon="🤖" label="Agents" />
+        <NavItem to="/clients" icon="👥" label="Clients" />
         <div className="border-t border-surface-border my-2" />
       </nav>
 
@@ -37,7 +43,7 @@ export default function Sidebar({ roster, connected, unreadCount, authUser, onLo
         {projects.map(proj => (
           <NavLink key={proj.slug} to={`/project/${proj.slug}`}
             className={({ isActive }) => `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all cursor-pointer ${isActive ? 'bg-brand/15 text-white' : 'text-gray-400 hover:text-white hover:bg-surface-lighter'}`}>
-            <span>{PROJECT_ICONS[proj.slug] || '📁'}</span>
+            <span className="flex-shrink-0">{PROJECT_ICONS[proj.slug] || '📁'}</span>
             <span className="truncate flex-1">{proj.name?.split(' ').slice(0, 3).join(' ')}</span>
             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${proj.status === 'active' ? 'bg-success' : 'bg-warning'}`} />
           </NavLink>
