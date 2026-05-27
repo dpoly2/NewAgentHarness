@@ -38,6 +38,8 @@ export default function Settings() {
   const [aiTestResult, setAiTestResult] = useState(null)
   const [briefs, setBriefs] = useState([])
   const [selectedBrief, setSelectedBrief] = useState(null)
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirm: '' })
+  const [pwMsg, setPwMsg] = useState(null) // {ok, text}
 
   useEffect(() => {
     api('/settings/ai').then(setAiConfig).catch(console.error)
@@ -416,6 +418,45 @@ export default function Settings() {
             Clients must send <code className="bg-surface-lighter px-1 rounded">Authorization: Bearer &lt;token&gt;</code> header.
           </p>
         )}
+
+        {/* Change Password */}
+        <div className="mt-5 pt-4 border-t border-surface-border">
+          <h3 className="text-sm font-medium text-white mb-3">🔑 Change Password</h3>
+          {pwMsg && (
+            <div className={`text-xs mb-3 px-3 py-2 rounded-lg border ${pwMsg.ok ? 'bg-success/10 border-success/20 text-success' : 'bg-error/10 border-error/20 text-error'}`}>
+              {pwMsg.text}
+            </div>
+          )}
+          <div className="space-y-2">
+            <input type="password" placeholder="Current password" value={pwForm.currentPassword}
+              onChange={e => setPwForm(f => ({ ...f, currentPassword: e.target.value }))}
+              className="input w-full text-sm" />
+            <input type="password" placeholder="New password (min 8 chars)" value={pwForm.newPassword}
+              onChange={e => setPwForm(f => ({ ...f, newPassword: e.target.value }))}
+              className="input w-full text-sm" />
+            <input type="password" placeholder="Confirm new password" value={pwForm.confirm}
+              onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+              className="input w-full text-sm" />
+            <button
+              disabled={!pwForm.currentPassword || !pwForm.newPassword || pwForm.newPassword !== pwForm.confirm}
+              onClick={async () => {
+                if (pwForm.newPassword !== pwForm.confirm) { setPwMsg({ ok: false, text: 'Passwords do not match' }); return }
+                try {
+                  const res = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getStoredToken()}` },
+                    body: JSON.stringify({ currentPassword: pwForm.currentPassword, newPassword: pwForm.newPassword })
+                  })
+                  const data = await res.json()
+                  if (res.ok) { setPwMsg({ ok: true, text: 'Password changed successfully!' }); setPwForm({ currentPassword: '', newPassword: '', confirm: '' }) }
+                  else setPwMsg({ ok: false, text: data.error || 'Failed to change password' })
+                } catch { setPwMsg({ ok: false, text: 'Server error' }) }
+              }}
+              className="btn-primary text-sm disabled:opacity-40">
+              Update Password
+            </button>
+          </div>
+        </div>
       </section>
 
       {/* ClouDNS DDNS + Remote Access */}

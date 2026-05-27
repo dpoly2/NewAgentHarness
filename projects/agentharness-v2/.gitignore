@@ -7,3 +7,5 @@ dist/
 .DS_Store
 Thumbs.db
 data/logs/
+data/sessions.json
+data/users.json

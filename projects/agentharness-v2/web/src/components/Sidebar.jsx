@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom'
 
-const PROJECT_ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️' }
+const PROJECT_ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', 'sigma-signal':'📰' }
 
-export default function Sidebar({ roster, connected, unreadCount }) {
+export default function Sidebar({ roster, connected, unreadCount, authUser, onLogout }) {
   const projects = roster?.projects || []
 
   return (
@@ -49,6 +49,17 @@ export default function Sidebar({ roster, connected, unreadCount }) {
         <NavItem to="/todos" icon="✅" label="Todos" />
         <NavItem to="/tasks" icon="⚡" label="Tasks" />
         <NavItem to="/settings" icon="⚙️" label="Settings" />
+        {authUser && (
+          <div className="pt-2 mt-1 border-t border-surface-border">
+            <div className="flex items-center gap-2 px-3 py-1.5">
+              <span className="text-xs text-gray-500 flex-1 truncate">👤 {authUser.username}</span>
+              <button onClick={onLogout} title="Sign out"
+                className="text-xs text-gray-500 hover:text-error transition-colors px-1.5 py-0.5 rounded hover:bg-error/10">
+                ⏏
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -64,3 +75,4 @@ function NavItem({ to, icon, label, badge, exact }) {
     </NavLink>
   )
 }
+

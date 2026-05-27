@@ -78,9 +78,12 @@ app.get('/api/health', (req, res) => {
   const convCount = db.prepare('SELECT COUNT(*) as c FROM conversations').get().c
   const taskCount = db.prepare(`SELECT COUNT(*) as c FROM agent_tasks WHERE status='running'`).get().c
   const todoCount = db.prepare(`SELECT COUNT(*) as c FROM todos WHERE status NOT IN ('done','cancelled')`).get().c
-  const authEnabled = !!getAccessToken()
+  const authEnabled = true // login always required for remote access
   res.json({ status: 'ok', version: '2.0.0', conversations: convCount, runningTasks: taskCount, openTodos: todoCount, authEnabled })
 })
+
+// Auth routes — public (no token required for login)
+app.use('/api/auth', require('./api/auth').router)
 
 // All other API routes require authentication (if configured)
 app.use('/api', requireAuth)
