@@ -2,6 +2,6 @@
   "provider": "ollama",
   "baseUrl": "http://localhost:11434/v1",
   "apiKey": "",
-  "model": "llama3.2",
+  "model": "llama3.2:3b",
   "enabled": true
 }
