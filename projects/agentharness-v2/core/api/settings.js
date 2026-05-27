@@ -136,6 +136,15 @@ router.post('/briefings/generate', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
+// GET /api/settings/logs — recent server log lines
+router.get('/logs', (req, res) => {
+  try {
+    const { getRecentLogs } = require('../services/logger')
+    const lines = parseInt(req.query.lines) || 100
+    res.json({ lines: getRecentLogs(Math.min(lines, 500)) })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+})
+
 // ─── ClouDNS DDNS Settings ─────────────────────────────────────────────────
 
 // GET /api/settings/ddns

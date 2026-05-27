@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { api, useSocket } from '../hooks/useSocket'
 
 const STATUS_DOT = { active: '🟢', 'in-progress': '🟡', blocked: '🔴' }
-const ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', global:'✨' }
+const ICONS = { xftc:'🌐', yepc:'🏟️', elevation:'🎭', 'pbs-foundation':'🏛️', nutrue:'👕', smithcap:'🏢', s2tdesigns:'🎨', 'social-media':'📱', 'solar-repair':'☀️', ministry:'⛪', finance:'💰', personal:'🗓️', 'sigma-signal':'📰', global:'✨' }
 
 export default function Home({ roster }) {
   const [tasks, setTasks] = useState({ running: [], queued: [], recent: [] })
@@ -10,6 +10,7 @@ export default function Home({ roster }) {
   const [notifs, setNotifs] = useState([])
   const [brief, setBrief] = useState(null)
   const [showBrief, setShowBrief] = useState(false)
+  const [aiStatus, setAiStatus] = useState(null) // null=checking, {ok,provider,error}
 
   useSocket({
     'task:queued': t => setTasks(p => ({ ...p, queued: [t, ...p.queued] })),
@@ -25,6 +26,8 @@ export default function Home({ roster }) {
     api('/todos?status=pending').then(setTodos).catch(console.error)
     api('/settings/notifications').then(n => setNotifs(n.slice(0, 10))).catch(console.error)
     api('/settings/briefings').then(b => { if (b.length) setBrief(b[0]) }).catch(console.error)
+    // Check AI connectivity silently
+    api('/settings/ai/test', { method: 'POST', body: {} }).then(setAiStatus).catch(() => setAiStatus({ ok: false, error: 'AI not reachable' }))
   }, [])
 
   const projects = roster?.projects || []
@@ -40,11 +43,23 @@ export default function Home({ roster }) {
           <h1 className="text-2xl font-bold text-white">Portfolio Dashboard</h1>
           <p className="text-sm text-gray-500 mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        {brief && (
-          <button onClick={() => setShowBrief(true)} className="btn-primary text-sm">
-            📋 Morning Briefing
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {aiStatus !== null && (
+            <div className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border ${
+              aiStatus.ok
+                ? 'border-success/30 bg-success/10 text-success'
+                : 'border-error/30 bg-error/10 text-error'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${aiStatus.ok ? 'bg-success' : 'bg-error'}`} />
+              {aiStatus.ok ? `AI: ${aiStatus.provider}` : 'AI: offline'}
+            </div>
+          )}
+          {brief && (
+            <button onClick={() => setShowBrief(true)} className="btn-primary text-sm">
+              📋 Morning Briefing
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats row */}

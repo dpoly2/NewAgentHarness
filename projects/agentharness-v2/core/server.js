@@ -12,6 +12,8 @@ const cors = require('cors')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const os = require('os')
+const { patchConsole } = require('./services/logger')
+patchConsole() // redirect console.* to rotating log files
 
 function getLanIP() {
   const nets = os.networkInterfaces()

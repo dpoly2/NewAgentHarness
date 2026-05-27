@@ -17,6 +17,7 @@ export default function Command({ roster }) {
   const [streamBuffer, setStreamBuffer] = useState('')
   const [projectScope, setProjectScope] = useState('global')
   const [showNewConv, setShowNewConv] = useState(false)
+  const [chatError, setChatError] = useState('')
   const chatRef = useRef(null)
   const inputRef = useRef(null)
   const abortRef = useRef(null)
@@ -45,16 +46,27 @@ export default function Command({ roster }) {
   }, [messages, streamBuffer])
 
   async function createNewConversation() {
-    const conv = await api('/conversations', { method: 'POST', body: { slug: projectScope, title: 'New Chat' } })
-    setConversations(prev => [conv, ...prev])
-    setActiveConvId(conv.id)
-    setMessages([])
+    try {
+      setChatError('')
+      const conv = await api('/conversations', { method: 'POST', body: { slug: projectScope, title: 'New Chat' } })
+      if (!conv || !conv.id) throw new Error('Server returned an empty conversation. Try restarting the server.')
+      setConversations(prev => [conv, ...prev.filter(c => c.id !== conv.id)])
+      setActiveConvId(conv.id)
+      setMessages([])
+    } catch (e) {
+      setChatError(`Could not create conversation: ${e.message}`)
+    }
   }
 
   async function sendMessage() {
-    if (!input.trim() || streaming || !activeConvId) return
+    if (!input.trim() || streaming) return
+    if (!activeConvId) {
+      setChatError('No active conversation. Click "+ New Chat" to start one.')
+      return
+    }
     const text = input.trim()
     setInput('')
+    setChatError('')
 
     // Optimistic user message
     const tempId = 'temp-' + generateId()
@@ -171,7 +183,13 @@ export default function Command({ roster }) {
           </div>
         </div>
 
-        {/* Messages */}
+        {/* Error banner */}
+        {chatError && (
+          <div className="px-5 py-2 bg-error/10 border-b border-error/20 text-error text-xs flex items-center gap-2 flex-shrink-0">
+            ⚠️ {chatError}
+            <button onClick={() => setChatError('')} className="ml-auto text-gray-500 hover:text-white">✕</button>
+          </div>
+        )}
         <div ref={chatRef} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {messages.length === 0 && !streaming && (
             <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 space-y-3">

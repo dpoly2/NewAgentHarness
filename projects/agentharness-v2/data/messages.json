@@ -3,78 +3,90 @@
     "id": "mplcwn0fgj67a",
     "conversation_id": "mplchpcacpddf",
     "role": "user",
-    "content": "need to build an altar call structure that will make it more impactful"
+    "content": "need to build an altar call structure that will make it more impactful",
+    "created_at": "2026-05-26 05:00:00"
   },
   {
     "id": "mplcwn68wwazg",
     "conversation_id": "mplchpcacpddf",
     "role": "assistant",
     "content": "I encountered an error: request to http://localhost:11434/v1/chat/completions failed, reason: . Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:05"
   },
   {
     "id": "mplcxmwc3h3pk",
     "conversation_id": "mplchpcacpddf",
     "role": "user",
-    "content": "Ministry and PReaching"
+    "content": "Ministry and PReaching",
+    "created_at": "2026-05-26 05:00:10"
   },
   {
     "id": "mplcxmwhq3aen",
     "conversation_id": "mplchpcacpddf",
     "role": "assistant",
     "content": "I encountered an error: request to http://localhost:11434/v1/chat/completions failed, reason: . Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:15"
   },
   {
     "id": "mpm87n6psn8uz",
     "conversation_id": "mplchpcacpddf",
     "role": "user",
-    "content": "need to build an altar call structure that will make it more impactful"
+    "content": "need to build an altar call structure that will make it more impactful",
+    "created_at": "2026-05-26 05:00:20"
   },
   {
     "id": "mpm87nnor13d6",
     "conversation_id": "mplchpcacpddf",
     "role": "assistant",
     "content": "I encountered an error: LLM API error 401: {\"error\":{\"code\":\"unauthorized\",\"message\":\"Bad credentials\",\"details\":\"Bad credentials\"}}. Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:25"
   },
   {
     "id": "mpm88dmstdbbo",
     "conversation_id": "mplchpcacpddf",
     "role": "user",
-    "content": "ytf"
+    "content": "ytf",
+    "created_at": "2026-05-26 05:00:30"
   },
   {
     "id": "mpm88dtd1vbf0",
     "conversation_id": "mplchpcacpddf",
     "role": "assistant",
     "content": "I encountered an error: LLM API error 401: {\"error\":{\"code\":\"unauthorized\",\"message\":\"Bad credentials\",\"details\":\"Bad credentials\"}}. Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:35"
   },
   {
     "id": "mpm88wklmc9bg",
     "conversation_id": "mpm73sr6w0h4o",
     "role": "user",
-    "content": "by"
+    "content": "by",
+    "created_at": "2026-05-26 05:00:40"
   },
   {
     "id": "mpm88wtrfqujd",
     "conversation_id": "mpm73sr6w0h4o",
     "role": "assistant",
     "content": "I encountered an error: LLM API error 401: {\"error\":{\"code\":\"unauthorized\",\"message\":\"Bad credentials\",\"details\":\"Bad credentials\"}}. Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:45"
   },
   {
     "id": "mpm897wdfkf1w",
     "conversation_id": "mpm73sr6w0h4o",
     "role": "user",
-    "content": "Brief me on today's priorities"
+    "content": "Brief me on today's priorities",
+    "created_at": "2026-05-26 05:00:50"
   },
   {
     "id": "mpm8982cid8hn",
     "conversation_id": "mpm73sr6w0h4o",
     "role": "assistant",
     "content": "I encountered an error: LLM API error 401: {\"error\":{\"code\":\"unauthorized\",\"message\":\"Bad credentials\",\"details\":\"Bad credentials\"}}. Please check your AI configuration in Settings.",
-    "agent_id": "agentmajesty"
+    "agent_id": "agentmajesty",
+    "created_at": "2026-05-26 05:00:55"
   }
 ]

@@ -10,7 +10,9 @@
     "web:build": "cd web && npm run build",
     "electron": "electron .",
     "dev": "concurrently \"npm run core:dev\" \"npm run web:dev\"",
-    "start": "node core/server.js"
+    "start": "node core/server.js",
+    "start:prod": "node core/server.js",
+    "health": "node -e \"const http=require('http');http.get('http://localhost:4000/api/health',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(d))}).on('error',e=>{ console.error('Server not reachable:',e.message); process.exit(1) })\""
   },
   "dependencies": {
     "cheerio": "^1.0.0",
