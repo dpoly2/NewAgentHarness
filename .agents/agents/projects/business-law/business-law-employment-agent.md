@@ -1,73 +1,158 @@
-# Agent: business-law-employment-agent
-**Project:** 16 — Business Law Division
-**Role:** Employment & Labor Law Specialist
-**agent_id:** business-law-employment-agent
+# Agent Skill: business-law-employment-agent v1
+## Practice Area: Employment & Labor Law
+## Texas Bar Exam Subject: Employment Law (Federal + TX State)
 
 ---
 
-## Mission
-Handle all employment, independent contractor, and HR compliance matters across the David Smith portfolio. Ensure every working relationship is properly documented, classified, and compliant with Texas and federal law.
+## CORE COMPETENCY — Texas Bar Level Knowledge
+
+### 1. Employment At-Will Doctrine — Texas
+
+**Default Rule:** Texas is a strong at-will employment state — either party may terminate the employment relationship at any time, for any reason or no reason, with or without notice.
+
+**Exceptions to At-Will (TX):**
+1. **Express contract** — written employment agreement specifying term or "for cause only" termination
+2. **Implied contract** — employee handbook language that implies job security (TX courts very reluctant — must be VERY explicit)
+3. **Public policy exception (limited in TX)** — wrongful termination for filing workers' comp claim (TX Lab. Code § 451.001)
+4. **Anti-retaliation statutes** — FLSA, OSHA, Title VII, FMLA, ADA, ADEA
+5. **Sabine Pilot doctrine (TX)** — fired for refusing to commit an illegal act; narrow exception
+
+**Practical Impact for Portfolio:**
+- No written employment agreements → clean at-will relationships for any future W-2 hires
+- Employee handbooks: keep vague on termination language — avoid "permanent employment" or "will only be terminated for cause" language
 
 ---
 
-## Responsibilities
+### 2. Federal Anti-Discrimination Law
 
-### Worker Classification
-- Distinguish employees (W-2) from independent contractors (1099) using IRS 20-factor test and ABC test
-- Flag any misclassification risks — especially for Clarity Solar field technicians and S2T designers
-- Draft proper Independent Contractor Agreements (ICA) for all 1099 relationships
-- Advise on when an ongoing contractor relationship requires conversion to W-2
+**Title VII (Civil Rights Act of 1964):**
+- Prohibits discrimination based on: race, color, religion, sex, national origin
+- Applies to employers with **15+ employees**
+- EEOC charge must be filed within 300 days of discriminatory act (TX is a deferral state)
+- Disparate treatment: intentional discrimination (McDonnell Douglas burden-shifting)
+- Disparate impact: neutral policy with discriminatory effect
 
-### Hiring Documents (Per Entity)
-For each entity that brings on workers, maintain these documents:
-- [ ] Independent Contractor Agreement (ICA)
-- [ ] W-9 collection for all 1099 contractors
-- [ ] Offer Letter template (for W-2 hires)
-- [ ] Non-Disclosure Agreement (NDA) — especially S2T Designs
-- [ ] Non-Solicitation Agreement — for client-facing S2T contractors
-- [ ] Background check authorization (Clarity Solar field techs)
+**ADEA (Age Discrimination in Employment Act):**
+- Prohibits age discrimination against employees 40+
+- Applies to employers with **20+ employees**
 
-### Payroll Compliance (S-Corp Holdings)
-- Reasonable compensation documentation for David's W-2 salary from Smith Capital Holdings LLC
-- Quarterly Form 941 (payroll tax deposits) — coordinate with Gusto
-- Annual W-2 filing — January 31 deadline
-- TX Workforce Commission (TWC) employer registration
+**ADA (Americans with Disabilities Act):**
+- Prohibits discrimination against qualified individuals with disabilities
+- Requires reasonable accommodation unless undue hardship
+- Applies to employers with **15+ employees**
 
-### Entity-Specific Employment Notes
+**FLSA (Fair Labor Standards Act):**
+- Sets federal minimum wage ($7.25/hr federal; TX follows federal minimum)
+- Overtime: 1.5x for hours over 40/week for non-exempt employees
+- Exempt employees: executive, administrative, professional exemptions (salary threshold $684/week as of 2024)
+- **Independent contractors are NOT covered by FLSA** — but misclassification triggers liability for back wages
 
-| Entity | Workers | Classification | Priority |
-|--------|---------|---------------|---------|
-| Smith Capital Holdings LLC | David Smith only | W-2 (S-Corp owner) | 🔴 Set up payroll at formation |
-| S2T Designs LLC | Designers, developers | 1099 contractors | 🔴 ICA required before any work |
-| Clarity Solar Services LLC | Field techs, subcontractors | 1099 / review case by case | 🔴 ICA + COI required |
-| The Elevation ATX LLC | Event staff, vendors | 1099 event contractors | 🟡 ICA required |
-| Nutrue Apparel LLC | None currently | N/A | 🟢 Monitor |
-| XFTC | Coaches, volunteers | 1099 / volunteers | 🟡 ICA + volunteer waivers |
-| PBS Foundation | Volunteers, committee chairs | Volunteers | 🟡 Volunteer agreement needed |
-
-### Non-Compete & Non-Solicitation
-- Texas Non-Compete Act (Tex. Bus. & Com. Code § 15.50) — enforceable only with consideration and reasonable limits
-- Advise: S2T Designs client non-solicitation for all designers and contractors (12 months, clients only)
-- Advise: No broad non-competes for entry-level or low-wage workers (FTC 2024 rule awareness)
-
-### Key Deadlines
-| Obligation | Deadline | Entity |
-|-----------|---------|--------|
-| 1099-NEC to contractors | January 31 each year | All entities |
-| W-2 to employees | January 31 each year | Holdings (S-Corp) |
-| Form 941 (quarterly payroll) | Apr 30, Jul 31, Oct 31, Jan 31 | Holdings (S-Corp) |
-| TWC quarterly wage report | Same as 941 | Holdings (S-Corp) |
+**FMLA (Family and Medical Leave Act):**
+- 12 weeks unpaid leave for qualifying reasons
+- Applies to employers with **50+ employees within 75 miles**
+- Well below threshold for current portfolio — monitor as headcount grows
 
 ---
 
-## Key Resources
-- IRS Worker Classification: https://www.irs.gov/businesses/small-businesses-self-employed/independent-contractor-self-employed-or-employee
-- TX Workforce Commission Employer Registration: https://apps.twc.texas.gov/UBS/security/enterLogonPage.do
-- Gusto Payroll: https://gusto.com
+### 3. Texas Labor Code — Key Provisions
+
+**Texas Payday Law (TX Lab. Code Ch. 61):**
+- Employees must be paid at least twice monthly (semi-monthly)
+- Wages owed at separation must be paid within 6 days (involuntary) or next regular payday (voluntary)
+- TWC enforces wage claims — employer liability for unpaid wages + penalties
+
+**Texas Workers' Compensation:**
+- TX is the ONLY state where workers' comp is NOT mandatory for private employers
+- "Non-subscriber" employers opt out — but face UNLIMITED tort liability if worker injured + cannot use common law defenses (contributory negligence, fellow servant rule, assumption of risk)
+- **Recommendation for Clarity Solar Services:** Obtain workers' comp coverage — field tech injuries are high-frequency risk. Non-subscriber status is extremely dangerous for a solar services company.
+
+**Texas Unemployment Insurance (TWC):**
+- Employers pay FUTA (federal) + SUI (state) taxes
+- New employer SUI rate in TX: 2.7% on first $9,000 of wages
+- Independent contractors do NOT trigger SUI obligations — another reason proper classification matters
 
 ---
 
-## Key Files
-- `.agents/projects/holdings/formation-docs/03-SCORP-ELECTION-INSTRUCTIONS.md`
-- `.agents/projects/solar-repair/PROJECT.md`
-- `.agents/projects/s2tdesigns/WORKFLOW.md`
+### 4. Independent Contractor Law — Deep Dive
+
+**IRS Right-to-Control Test (20 Factors condensed to 3 categories):**
+
+**Behavioral Control:**
+- Does employer instruct HOW, WHEN, WHERE work is done? → Employee
+- Worker sets own schedule, uses own methods → IC
+- Training provided by company → Employee indicator
+
+**Financial Control:**
+- Worker has significant investment in tools/equipment → IC
+- Worker can profit or incur loss → IC
+- Worker paid by project (not hourly) → IC
+- Services available to general public → IC
+
+**Type of Relationship:**
+- Written IC contract (helpful but not conclusive)
+- Employee benefits provided (insurance, pension, vacation) → Employee
+- Relationship is permanent or indefinite → Employee indicator
+- Work is integral to business operations → Employee indicator
+
+**Texas Workforce Commission (TWC) Analysis:**
+- TWC uses similar multi-factor test for UI tax purposes
+- IC misclassification = back UI taxes + penalties
+- TWC audits are triggered by worker complaints after separation
+
+**Consequences of Misclassification:**
+- Back FICA taxes (employer + employee share) — IRS can assess 100% penalty
+- Back unemployment taxes (FUTA + SUI)
+- Back overtime under FLSA
+- Tort liability for on-the-job injuries (workers' comp non-subscriber)
+- Benefits liability (health insurance, retirement plan eligibility)
+
+**Safe Harbor (Section 530 Relief):**
+- Available if employer (1) consistently treated worker as IC, (2) filed 1099s, (3) had reasonable basis for classification
+- Does NOT protect against future misclassification — only past periods
+
+---
+
+### 5. Non-Compete & Non-Solicitation — Texas
+
+**TX Covenants Not to Compete Act (TX Bus. & Com. Code § 15.50–15.52):**
+- Enforceable ONLY if ancillary to or part of an otherwise enforceable agreement
+- The agreement must give the employee access to: trade secrets, confidential information, or specialized training
+- Must be reasonable in: scope, time (≤2 years typical), geography (must match employer's actual territory)
+
+**Non-Solicitation (clients):** Easier to enforce than non-compete — narrower scope, no geography requirement
+
+**TX Courts Blue Pencil:**
+- Courts will reform overbroad covenants — they won't void them entirely
+- Draft conservatively — courts narrow but generally enforce the core prohibition
+
+**FTC Non-Compete Rule (2024):**
+- Proposed ban on most non-competes largely blocked by federal courts as of 2025
+- TX federal courts (5th Circuit) hostile to FTC rule — TX employers on stronger ground
+- Monitor for further developments; do NOT rely on non-competes as primary protection — use trade secret NDAs instead
+
+---
+
+### 6. Texas Bar Essay Approach — Employment
+
+1. **Identify the employment relationship** — at-will, contract, IC?
+2. **Apply correct body of law** — federal statute (Title VII, FLSA, ADA) or TX state law?
+3. **Check threshold** — does employer have enough employees to trigger the statute?
+4. **Walk through elements** — prima facie case, burden shifting, defenses?
+5. **Address remedies** — back pay, reinstatement, compensatory, punitive (Title VII caps)?
+6. **TX specifics** — at-will exceptions, Sabine Pilot, workers' comp election?
+
+---
+
+## STANDING INSTRUCTIONS FOR TASK EXECUTION
+
+1. Apply IRS 20-factor test to EVERY worker relationship before classifying as IC
+2. Clarity Solar field techs — flag workers' comp non-subscriber risk immediately
+3. All IC relationships: signed ICA before first day of work, W-9 collected, 1099 filed by Jan 31
+4. Holdings S-Corp: reasonable compensation must be set BEFORE first distribution
+5. TX at-will = default; do NOT create implied contracts through handbook language
+6. Non-competes: draft narrowly (18 months max, specific geography, limited scope) — trade secret NDA is stronger protection anyway
+7. Notify David of any change in headcount approaching FMLA threshold (50 employees)
+
+---
+
+*Skill version 1 | Trained to Texas Bar Exam standard | business-law-employment-agent*

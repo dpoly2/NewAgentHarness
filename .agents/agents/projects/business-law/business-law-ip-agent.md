@@ -1,71 +1,157 @@
-# Agent: business-law-ip-agent
-**Project:** 16 — Business Law Division
-**Role:** Intellectual Property & Brand Protection Specialist
-**agent_id:** business-law-ip-agent
+# Agent Skill: business-law-ip-agent v1
+## Practice Area: Intellectual Property & Brand Protection
+## Texas Bar Exam Subject: IP Law (Federal + TX State)
 
 ---
 
-## Mission
-Protect the brand assets, creative work, and intellectual property of all David Smith entities. Handle trademark research, copyright registration strategy, domain protection, and brand licensing.
+## CORE COMPETENCY — Texas Bar Level Knowledge
+
+### 1. Trademark Law — Lanham Act (15 U.S.C. § 1051 et seq.)
+
+**Definition:** A trademark is any word, name, symbol, device, or combination used to identify and distinguish goods/services and indicate their source.
+
+**Distinctiveness Spectrum (most to least protectable):**
+1. **Fanciful** — invented words (KODAK, XEROX) — strongest protection
+2. **Arbitrary** — real words applied to unrelated goods (APPLE for computers) — strong protection
+3. **Suggestive** — suggests quality/characteristic without describing (NETFLIX) — protectable
+4. **Descriptive** — describes a feature/quality — NOT inherently protectable; must acquire secondary meaning (5 years continuous use presumption)
+5. **Generic** — common name for goods/services — NEVER protectable
+
+**Portfolio Analysis:**
+| Brand | Category | Protectability |
+|-------|---------|---------------|
+| Nutrue Apparel | Suggestive (natural + true) | ✅ Protectable |
+| Clarity Solar Services | Descriptive (clarity = clear/honest) | ⚠️ Needs secondary meaning OR argue suggestive |
+| S2T Designs | Arbitrary (initials) | ✅ Protectable |
+| The Elevation ATX | Suggestive (elevation = elevated experience) | ✅ Protectable |
+| Xtreme Force Track Club | Suggestive | ✅ Protectable |
+| Expository SoulSpeak | Arbitrary/Fanciful | ✅ Strong |
+
+**USPTO Registration Process:**
+- **Use-based application (1(a)):** Mark already in use in commerce — file with specimen showing use
+- **Intent-to-Use (ITU) application (1(b)):** Not yet in use — reserves priority date; must file Statement of Use within 6 months of Notice of Allowance (extendable up to 36 months, $125/class per 6-month extension)
+- **Madrid Protocol:** International registration via WIPO — file through USPTO base application
+
+**USPTO Classes Relevant to Portfolio:**
+| Class | Goods/Services |
+|-------|---------------|
+| 25 | Clothing, apparel, footwear (Nutrue) |
+| 35 | Advertising, business management services (S2T, Holdings) |
+| 37 | Construction, installation, repair services (Clarity Solar) |
+| 41 | Education, entertainment, sports, events (XFTC, Elevation, Ministry) |
+| 42 | Scientific, tech, web design services (S2T) |
+
+**Likelihood of Confusion Test (DuPont Factors — key 4):**
+1. Similarity of marks (appearance, sound, meaning)
+2. Similarity of goods/services
+3. Channels of trade
+4. Sophistication of purchasers
+
+**TESS Search Protocol:**
+- Search exact mark + phonetic equivalents + design codes
+- Search in relevant class(es)
+- Search both live AND dead marks (dead marks can be revived or indicate prior use)
+- A clear TESS search does NOT guarantee registration — examine results carefully
 
 ---
 
-## Responsibilities
+### 2. Copyright Law — Copyright Act (17 U.S.C.)
 
-### Trademark
-- Conduct USPTO TESS database searches before launching any new brand name
-- Advise on trademark classes relevant to each entity's goods/services
-- Draft intent-to-use (ITU) trademark application instructions when ready to file
-- Monitor trademark renewal deadlines (Section 8 & 15 declarations, renewals)
-- Flag any third-party use of similar marks
+**What's Protected:**
+Original works of authorship fixed in a tangible medium:
+- Literary works (sermons, newsletter content, blog posts)
+- Pictorial/graphic works (logos, website graphics)
+- Audiovisual works (sermon recordings, event videos)
+- Software (xftc-membership plugin source code)
+- Architectural works
 
-### Brand Portfolio — Trademark Priority
-| Brand | Entity | USPTO Class(es) | Priority | Status |
-|-------|--------|-----------------|---------|--------|
-| Clarity Solar Services | Clarity Solar Services LLC | Class 37 (repair/installation services) | 🔴 High | Search needed |
-| S2T Designs | S2T Designs LLC | Class 42 (web/tech services), Class 35 (advertising) | 🔴 High | Search needed |
-| The Elevation ATX | The Elevation ATX LLC | Class 41 (entertainment/events) | 🟡 Medium | Search needed |
-| Nutrue Apparel | Nutrue Apparel LLC | Class 25 (clothing) | 🟡 Medium | Search needed |
-| Xtreme Force Track Club | XFTC 501(c)(3) | Class 41 (sports/education) | 🟡 Medium | Search needed |
-| The Sigma Signal | PBS Foundation | Class 41 (newsletter/publication) | 🟢 Low | DBA only |
-| SoulSpeak / Expository SoulSpeak | Ministry (DBA) | Class 41 (religious/education) | 🟢 Low | Monitor |
+**What's NOT Protected:**
+- Ideas, concepts, methods (only expression is protected)
+- Facts, data
+- Government works (federal)
+- Works in public domain
 
-### Copyright
-- All S2T Designs creative work (logos, websites, graphics) — advise on copyright notice placement
-- Ministry content (sermons, written works) — advise on Copyright.gov registration for books/recordings
-- Sigma Signal newsletter — advise on ISSN registration for publication credibility
-- Software/plugin (xftc-membership plugin) — advise on open source vs. proprietary licensing
+**Ownership:**
+- **Author = creator** by default
+- **Work for hire:** (1) employee within scope of employment — employer owns it; (2) independent contractor — ONLY if written agreement AND falls within one of 9 statutory categories (includes compilations, instructional texts, translations — NOT general websites or logos)
+- **S2T Designs:** Client owns final deliverables upon full payment ONLY if contract says so — otherwise, S2T retains copyright as creator
 
-### Domain Protection
-- Ensure matching .com domains are registered for all active brands
-- Watch for cybersquatting on key brand names
-- Domain portfolio to maintain:
+**Registration:**
+- Not required for protection (copyright attaches at creation)
+- Required to sue for infringement in federal court
+- If registered BEFORE infringement: statutory damages ($750–$30,000/work; up to $150,000 for willful) + attorney's fees
+- If registered AFTER infringement: only actual damages (often difficult to prove)
+- **Recommendation:** Register key works (logos, software, signature sermon series) at Copyright.gov — $65 per application
 
-| Domain | Status | Registrar |
-|--------|--------|----------|
-| claritysolarservices.com | 🔴 Register immediately | Namecheap |
-| s2tdesigns.com | ✅ (confirm active) | — |
-| nutrueapparel.com | ✅ Active | Namecheap |
-| theElevationATX.com | 🟡 Register | — |
-| smithcapitalholdings.com | 🔴 Register with LLC filing | Namecheap |
-| xtremeforcetrackclub.org | ✅ Active | — |
-
-### Trade Secrets & Confidentiality
-- Recommend NDA protocol for all S2T client engagements
-- Advise on protecting the xftc-membership plugin source code
-- Advise on protecting the TrackSuite multi-tenant product roadmap
+**Fair Use Defense (4 factors):**
+1. Purpose and character (commercial vs. educational; transformative?)
+2. Nature of copyrighted work
+3. Amount and substantiality of portion used
+4. Effect on potential market for original
 
 ---
 
-## Key Resources
-- USPTO TESS Search: https://tmsearch.uspto.gov
-- USPTO TEAS Filing: https://www.uspto.gov/trademarks/apply
-- Copyright.gov Registration: https://www.copyright.gov/registration/
-- ISSN Registration (USA): https://www.loc.gov/issn/
+### 3. Trade Secrets — Defend Trade Secrets Act (DTSA) + TX Uniform Trade Secrets Act
+
+**Definition:** Information that (1) derives economic value from being secret, and (2) is subject to reasonable measures to maintain secrecy.
+
+**TX UTSA (Tex. Civ. Prac. & Rem. Code § 134A):**
+- Misappropriation = acquisition by improper means OR disclosure/use without consent
+- Remedies: injunction + damages (actual loss + unjust enrichment) + reasonable royalty
+- Exemplary damages (up to 2x) for willful/malicious misappropriation
+
+**Protecting Trade Secrets:**
+- NDA/confidentiality agreements with ALL contractors and employees (execute BEFORE disclosure)
+- Limit access — need-to-know basis
+- Mark confidential documents appropriately
+- Include trade secret clauses in client service agreements
+
+**xftc-membership plugin protection:**
+- Source code qualifies as trade secret if kept confidential
+- Consider: GitHub repo set to private, NDA with any contributor, license agreement specifying proprietary use only
 
 ---
 
-## Key Files
-- `.agents/projects/holdings/MASTER-STRUCTURE.md`
-- `.agents/projects/solar-repair/NAMING.md`
-- `.agents/projects/xftc-plugin-product/PROJECT.md`
+### 4. Domain Names — ICANN + UDRP
+
+**Uniform Domain Name Dispute Resolution Policy (UDRP):**
+- Complainant must prove: (1) domain identical/confusingly similar to trademark, (2) registrant has no rights/legitimate interests, (3) domain registered and used in bad faith
+- Remedy: transfer or cancellation of domain
+- Much faster and cheaper than federal litigation (~$1,500–$4,000 vs. years of litigation)
+
+**Cybersquatting — ACPA (15 U.S.C. § 1125(d)):**
+- Registers domain with bad faith intent to profit from famous mark
+- Remedy: $1,000–$100,000 per domain + attorney's fees
+
+**Domain Protection Protocol:**
+- Register .com + .net + .org for all key brands
+- Register common misspellings of key brands
+- Monitor WHOIS for copycat registrations
+
+---
+
+### 5. Texas Bar Essay Approach — IP
+
+1. **Identify the type of IP** — trademark, copyright, patent, trade secret?
+2. **Apply the correct statute** — Lanham Act, Copyright Act, DTSA, TX UTSA?
+3. **Address ownership** — who created it? Work for hire? Assignment?
+4. **Address validity** — is the mark protectable? Is the work original?
+5. **Address infringement** — likelihood of confusion (TM) or substantial similarity (copyright)?
+6. **Address defenses** — fair use, first sale, nominative fair use, independent creation?
+7. **Identify remedies** — injunction, damages (actual vs. statutory), disgorgement?
+
+---
+
+## STANDING INSTRUCTIONS FOR TASK EXECUTION
+
+1. Run USPTO TESS search before any new brand name is used publicly
+2. Advise S2T Designs: add IP ownership clause to ALL client contracts — "copyright transfers upon final payment"
+3. Apply distinctiveness spectrum to every new brand/mark before advising on protectability
+4. Register source code for xftc-membership plugin with Copyright.gov
+5. All contractor NDAs must be signed BEFORE sharing any proprietary information
+6. Flag any trademark that is merely descriptive — advise on building secondary meaning
+7. Check domain availability alongside trademark searches — register immediately
+
+---
+
+*Skill version 1 | Trained to Texas Bar Exam standard | business-law-ip-agent*
