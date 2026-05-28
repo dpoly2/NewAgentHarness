@@ -445,6 +445,10 @@ class AgentHarnessM365(tk.Tk):
         self._notifs      = []              # list of {msg, color, ts}
         self._notif_count = tk.IntVar(value=0)
         self._notif_panel = None            # toplevel when open
+        self._run_count   = 0               # total completed runs this session
+        self._last_agent  = ""              # last agent that ran
+        self._last_score  = None            # last score (float|None)
+        self._cmd_palette = None            # command palette Toplevel
 
         self._setup_fonts()
         self._setup_styles()
@@ -544,6 +548,23 @@ class AgentHarnessM365(tk.Tk):
         self._build_view_skills()
         self._build_view_settings()
 
+        # ── VS Code-style status bar (bottom) ──────────────────────────────
+        self._statusbar = tk.Frame(self, bg=ACCENT_DARK, height=24)
+        self._statusbar.pack(fill=tk.X, side=tk.BOTTOM)
+        self._statusbar.pack_propagate(False)
+        # Left: current view / active agent
+        self._sb_left = tk.Label(self._statusbar, text="  ⬡ AgentHarness  ·  Ready",
+            font=tkfont.Font(family="Segoe UI",size=8), bg=ACCENT_DARK, fg=TEXT_PRIMARY, anchor=tk.W)
+        self._sb_left.pack(side=tk.LEFT, padx=6)
+        # Right: run count · last score · theme indicator
+        self._sb_right = tk.Label(self._statusbar, text="",
+            font=tkfont.Font(family="Segoe UI",size=8), bg=ACCENT_DARK, fg=TEXT_PRIMARY, anchor=tk.E)
+        self._sb_right.pack(side=tk.RIGHT, padx=10)
+        # Ctrl+K → command palette
+        self.bind("<Control-k>", lambda e: self._open_cmd_palette())
+        self.bind("<Control-K>", lambda e: self._open_cmd_palette())
+        self._update_statusbar()
+
         self._show_view("home")
 
     # ── Left nav rail ────────────────────────────────────────────────────────
@@ -583,6 +604,7 @@ class AgentHarnessM365(tk.Tk):
             else: v.pack_forget()
         if key == "history": self._refresh_history()
         if key == "home":    self._refresh_home_cards()
+        self._update_statusbar()
 
     # ════════════════════════════════════════════════════════════════════════
     # VIEW: HOME — Agent card grid (M365 App Launcher style)
@@ -978,11 +1000,16 @@ class AgentHarnessM365(tk.Tk):
         if final.get("critique"): qlog(f"  Critique: {final['critique'][:120]}", TEXT_MUTED)
         qlog(f"{'─'*60}", DIVIDER)
         self._set_output(final.get("output","(no output)"))
+        self._run_count += 1
+        self._last_agent = final.get("agent_id", "")
+        self._last_score = score
+        self._update_statusbar()
 
     def _on_error(self):
         self._running=False; self._run_btn.config(state=tk.NORMAL); self._stop_btn.config(state=tk.DISABLED)
         self._score_pill.config(text="Score: ERR", fg=ERROR)
         self._push_notif("⚠ Agent run failed — check Live Log for details.", ERROR)
+        self._update_statusbar()
 
     def _stop_agent(self):
         qlog("⚠ Stop requested — will finish current node.", WARNING)
@@ -1116,6 +1143,164 @@ class AgentHarnessM365(tk.Tk):
         self._notif_count.set(0)
         self._badge_lbl.pack_forget()
         self._build_notif_contents()
+
+
+    # ════════════════════════════════════════════════════════════════════════
+    # STATUS BAR
+    # ════════════════════════════════════════════════════════════════════════
+    def _update_statusbar(self):
+        view = self._active_view.get().capitalize()
+        if self._running:
+            left = f"  ⬡ AgentHarness  ·  ▶ Running {self._last_agent}…"
+        elif self._last_agent:
+            left = f"  ⬡ AgentHarness  ·  {view}  ·  Last: {self._last_agent}"
+        else:
+            left = f"  ⬡ AgentHarness  ·  {view}  ·  Ready"
+        self._sb_left.config(text=left)
+
+        parts = []
+        if self._run_count:
+            parts.append(f"Runs: {self._run_count}")
+        if self._last_score is not None:
+            col = SUCCESS if self._last_score>=0.75 else (WARNING if self._last_score>=0.5 else ERROR)
+            self._sb_right.config(fg=col)
+            parts.append(f"Score: {self._last_score:.2f}")
+        parts.append("🌙 Dark" if self._theme=="dark" else "☀ Light")
+        parts.append("Ctrl+K = Search")
+        self._sb_right.config(text="  ·  ".join(parts) + "  ")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # COMMAND PALETTE  (Ctrl+K)
+    # ════════════════════════════════════════════════════════════════════════
+    def _open_cmd_palette(self):
+        if self._cmd_palette and self._cmd_palette.winfo_exists():
+            self._cmd_palette.destroy(); self._cmd_palette = None; return
+
+        # Build command list: nav views + all agents (quick-launch)
+        commands = [
+            ("📌", "Go to: Home",     lambda: (self._close_palette(), self._show_view("home"))),
+            ("📌", "Go to: Run",      lambda: (self._close_palette(), self._show_view("run"))),
+            ("📌", "Go to: History",  lambda: (self._close_palette(), self._show_view("history"))),
+            ("📌", "Go to: Skills",   lambda: (self._close_palette(), self._show_view("skills"))),
+            ("📌", "Go to: Settings", lambda: (self._close_palette(), self._show_view("settings"))),
+            ("🌙", "Toggle Theme",    lambda: (self._close_palette(), self._toggle_theme())),
+            ("🔔", "Open Notifications", lambda: (self._close_palette(), self._toggle_notif_panel())),
+            ("🗑", "Clear Log",       lambda: (self._close_palette(), self._clear_log())),
+        ]
+        for team, agents in AGENT_REGISTRY.items():
+            for a in agents:
+                agent_copy = a; team_copy = team
+                commands.append(("▶", f"Run: {a}  [{team}]",
+                    lambda ac=agent_copy, tc=team_copy: (self._close_palette(), self._quick_launch(ac, tc))))
+
+        # Palette window — centred
+        pw, ph = 560, 420
+        sx = self.winfo_x() + (self.winfo_width()  - pw) // 2
+        sy = self.winfo_y() + max(40, (self.winfo_height() - ph) // 4)
+        pal = tk.Toplevel(self)
+        pal.overrideredirect(True)
+        pal.geometry(f"{pw}x{ph}+{sx}+{sy}")
+        pal.configure(bg=BG_PANEL, highlightbackground=ACCENT, highlightthickness=1)
+        self._cmd_palette = pal
+
+        # Search input
+        search_f = tk.Frame(pal, bg=BG_PANEL)
+        search_f.pack(fill=tk.X, padx=1, pady=1)
+        tk.Label(search_f, text="🔍", font=self.fBody, bg=BG_INPUT, fg=TEXT_MUTED).pack(side=tk.LEFT, padx=8)
+        self._palette_var = tk.StringVar()
+        entry = tk.Entry(search_f, textvariable=self._palette_var, font=self.fH1,
+                         bg=BG_INPUT, fg=TEXT_PRIMARY, insertbackground=TEXT_PRIMARY,
+                         relief=tk.FLAT, bd=0)
+        entry.pack(fill=tk.X, expand=True, ipady=10, padx=(0,8))
+        tk.Frame(pal, bg=DIVIDER, height=1).pack(fill=tk.X)
+
+        # Results list (canvas-scrollable)
+        list_f = tk.Frame(pal, bg=BG_PANEL)
+        list_f.pack(fill=tk.BOTH, expand=True)
+        vsb = ttk.Scrollbar(list_f, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._pal_canvas = tk.Canvas(list_f, bg=BG_PANEL, highlightthickness=0, yscrollcommand=vsb.set)
+        self._pal_canvas.pack(fill=tk.BOTH, expand=True)
+        vsb.configure(command=self._pal_canvas.yview)
+        self._pal_inner = tk.Frame(self._pal_canvas, bg=BG_PANEL)
+        self._pal_canvas.create_window((0,0), window=self._pal_inner, anchor="nw", width=pw-20)
+        self._pal_inner.bind("<Configure>", lambda e: self._pal_canvas.configure(scrollregion=self._pal_canvas.bbox("all")))
+
+        # Footer hint
+        tk.Frame(pal, bg=DIVIDER, height=1).pack(fill=tk.X)
+        tk.Label(pal, text="  ↑↓ navigate   Enter select   Esc close",
+                 font=tkfont.Font(family="Segoe UI",size=8), bg=BG_CARD, fg=TEXT_MUTED, anchor=tk.W
+                 ).pack(fill=tk.X, ipady=4)
+
+        self._pal_commands = commands
+        self._pal_selection = 0
+        self._render_palette(commands)
+
+        # Bindings
+        self._palette_var.trace_add("write", lambda *_: self._filter_palette())
+        entry.bind("<Up>",      lambda e: self._palette_nav(-1))
+        entry.bind("<Down>",    lambda e: self._palette_nav(+1))
+        entry.bind("<Return>",  lambda e: self._palette_exec())
+        entry.bind("<Escape>",  lambda e: self._close_palette())
+        pal.bind("<FocusOut>",  lambda e: self._close_palette() if pal.winfo_exists() else None)
+        entry.focus_set()
+
+    def _render_palette(self, commands):
+        for w in self._pal_inner.winfo_children(): w.destroy()
+        self._pal_rows = []
+        for i,(icon,label,cmd) in enumerate(commands[:40]):  # cap at 40 rows
+            is_sel = (i == self._pal_selection)
+            bg = BG_SELECTED if is_sel else BG_PANEL
+            row = tk.Frame(self._pal_inner, bg=bg, cursor="hand2")
+            row.pack(fill=tk.X, padx=2, pady=1)
+            tk.Label(row, text=icon, font=self.fSmall, bg=bg, fg=ACCENT_LIGHT, width=3).pack(side=tk.LEFT, padx=6)
+            # Highlight matched text
+            lbl_w = tk.Label(row, text=label, font=self.fBody, bg=bg,
+                             fg=TEXT_PRIMARY if is_sel else TEXT_BODY, anchor=tk.W)
+            lbl_w.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=5)
+            cmd_copy = cmd; idx = i
+            for w in [row, lbl_w]:
+                w.bind("<Button-1>", lambda e, c=cmd_copy: c())
+                w.bind("<Enter>",    lambda e, r=row, lw=lbl_w: (r.config(bg=BG_HOVER), lw.config(bg=BG_HOVER)))
+                w.bind("<Leave>",    lambda e, r=row, lw=lbl_w, ii=idx: (
+                    r.config(bg=BG_SELECTED if ii==self._pal_selection else BG_PANEL),
+                    lw.config(bg=BG_SELECTED if ii==self._pal_selection else BG_PANEL)))
+            self._pal_rows.append((row, lbl_w))
+
+    def _filter_palette(self):
+        query = self._palette_var.get().lower().strip()
+        filtered = [(ic,lb,c) for ic,lb,c in self._pal_commands if not query or query in lb.lower()]
+        self._pal_selection = 0
+        self._render_palette(filtered)
+        self._pal_filtered = filtered
+
+    def _palette_nav(self, direction):
+        rows = getattr(self,"_pal_filtered", self._pal_commands)
+        n = min(len(rows), 40)
+        if n == 0: return
+        self._pal_selection = (self._pal_selection + direction) % n
+        self._render_palette(rows)
+        # Scroll into view
+        if self._pal_rows:
+            row_h = 34; self._pal_canvas.yview_moveto(self._pal_selection * row_h / max(n * row_h, 1))
+
+    def _palette_exec(self):
+        rows = getattr(self,"_pal_filtered", self._pal_commands)
+        if rows and self._pal_selection < len(rows):
+            rows[self._pal_selection][2]()
+
+    def _close_palette(self):
+        if self._cmd_palette and self._cmd_palette.winfo_exists():
+            self._cmd_palette.destroy()
+        self._cmd_palette = None
+
+    def _quick_launch(self, agent_id, team):
+        """Pre-fill Run view with agent + team, then switch to it."""
+        self._team_var.set(team)
+        self._on_team_change()
+        self._agent_var.set(agent_id)
+        self._show_view("run")
+        self._update_statusbar()
 
     # ── Log poll ─────────────────────────────────────────────────────────────
     def _poll_log(self):
