@@ -45,6 +45,35 @@ except ImportError:
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, font as tkfont
 
+# ── Hub client (gracefully skipped if httpx/websockets not installed) ─────────
+try:
+    from hub_client import HubClient
+    HUB_CLIENT_OK = True
+except ImportError:
+    HUB_CLIENT_OK = False
+    class HubClient:
+        online = False
+        def start(self): pass
+        def stop(self): pass
+        def poll_events(self): return []
+        def submit_run(self, *a, **kw): return None
+        def list_runs(self, **kw): return []
+        def queue_jobs(self): return []
+        def list_todos(self, **kw): return []
+        def create_todo(self, *a, **kw): return None
+        def update_todo(self, *a, **kw): return None
+        def delete_todo(self, *a): return False
+        def get_briefing(self): return None
+        def list_notifications(self, **kw): return []
+        def clear_notifications(self): pass
+        def list_scheduler_jobs(self): return []
+        def cancel_run(self, *a): return False
+        def run_stats(self): return {}
+        def get_config(self): return {}
+        def update_config(self, **kw): return {}
+        def pause_queue(self): pass
+        def resume_queue(self): pass
+
 # ════════════════════════════════════════════════════════════════════════════
 # FLUENT DESIGN TOKENS  (M365 / WinUI3 palette)
 # ════════════════════════════════════════════════════════════════════════════
@@ -456,6 +485,11 @@ class AgentHarnessM365(tk.Tk):
         self._cmd_palette = None            # command palette Toplevel
         self._admin_unlocked = False        # PIN lock state
 
+        # ── Hub client ────────────────────────────────────────────────────────
+        self.hub = HubClient(on_event=self._on_hub_event)
+        self.hub.start()
+        self._hub_jobs: dict = {}      # job_id → {node, score, ...} live state
+
         self._setup_fonts()
         self._setup_styles()
         self._build_layout()
@@ -463,6 +497,7 @@ class AgentHarnessM365(tk.Tk):
         self.after(2000, self._check_scheduled_runs)  # Feature 4: scheduler
         self._poll_log()
         self.after(200, self._check_api)
+        self.after(100, self._poll_hub_events)     # drain Hub WebSocket events
 
     # ── Fonts ────────────────────────────────────────────────────────────────
     def _setup_fonts(self):
@@ -1187,8 +1222,6 @@ class AgentHarnessM365(tk.Tk):
 
     def _run_agent(self):
         if self._running: return
-        if not LANGGRAPH_OK:
-            messagebox.showerror("Missing","pip install langgraph langchain-openai"); return
         api_key = self._key_var.get().strip() or os.environ.get("OPENAI_API_KEY","")
         if not api_key or not api_key.startswith("sk-"):
             messagebox.showerror("API Key","Enter your OpenAI API key in Settings."); return
@@ -1198,6 +1231,7 @@ class AgentHarnessM365(tk.Tk):
         ph = "Describe the task for this agent…"
         if not task or task == ph:
             messagebox.showwarning("No Task","Enter a task first."); return
+
         self._running=True; self._run_btn.config(state=tk.DISABLED); self._stop_btn.config(state=tk.NORMAL)
         self._score_pill.config(text="Score: …", fg=WARNING)
         self._clear_log()
@@ -1206,7 +1240,32 @@ class AgentHarnessM365(tk.Tk):
         qlog(f"  Task: {task[:90]}{'…' if len(task)>90 else ''}", TEXT_BODY)
         qlog(f"{'─'*60}", DIVIDER)
         self._show_view("run")
-        self._thread = threading.Thread(target=self._exec_thread, args=(agent,project,task,graph,max_rev), daemon=True)
+
+        # ── Route to Hub if online, else fall back to embedded execution ──────
+        if self.hub.online:
+            result = self.hub.submit_run(agent, project, task, graph, max_rev)
+            if result:
+                job_id = result.get("job_id","?")
+                pos    = result.get("position", 1)
+                qlog(f"  [Hub] Job queued — ID: {job_id}  Position: {pos}", ACCENT_LIGHT)
+                qlog(f"  [Hub] Waiting for execution...", TEXT_MUTED)
+                self._hub_jobs[job_id] = {
+                    "agent_id": agent, "project": project,
+                    "graph": graph, "task": task,
+                }
+                self._active_node = ""
+                return   # UI updates arrive via WebSocket → _on_hub_event
+            # submit returned None (transient error) — fall through to embedded
+            qlog("  [Hub] Submit failed — falling back to embedded mode", WARNING)
+
+        # ── Embedded fallback (Hub offline or submit failed) ──────────────────
+        if not LANGGRAPH_OK:
+            messagebox.showerror("Missing","pip install langgraph langchain-openai")
+            self._running=False
+            self._run_btn.config(state=tk.NORMAL); self._stop_btn.config(state=tk.DISABLED)
+            return
+        self._thread = threading.Thread(
+            target=self._exec_thread, args=(agent,project,task,graph,max_rev), daemon=True)
         self._thread.start()
 
     def _exec_thread(self, agent, project, task, graph_type, max_rev):
@@ -1229,6 +1288,147 @@ class AgentHarnessM365(tk.Tk):
             qlog(f"ERROR: {e}", ERROR, bold=True)
             qlog(traceback.format_exc(), ERROR)
             self.after(0, self._on_error)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # HUB CLIENT — event handlers
+    # ════════════════════════════════════════════════════════════════════════
+
+    def _poll_hub_events(self):
+        """Drain Hub WebSocket event queue every 100ms — runs on main Tkinter thread."""
+        for event in self.hub.poll_events():
+            self._on_hub_event(event)
+        self.after(100, self._poll_hub_events)
+
+    def _on_hub_event(self, event: dict):
+        """Route Hub WebSocket events to the appropriate UI update."""
+        evt = event.get("type", "")
+
+        if evt == "hub_status":
+            online = event.get("online", False)
+            self._update_hub_status(online)
+
+        elif evt == "state_snapshot":
+            active = event.get("active_runs", [])
+            if active:
+                qlog(f"[Hub] {len(active)} run(s) active on Hub", ACCENT_LIGHT)
+
+        elif evt == "run_queued":
+            job_id   = event.get("job_id","")
+            agent_id = event.get("agent_id","")
+            pos      = event.get("position",1)
+            qlog(f"[Hub] Queued: {agent_id}  ID={job_id}  pos={pos}", ACCENT_LIGHT)
+
+        elif evt == "run_started":
+            job_id   = event.get("job_id","")
+            agent_id = event.get("agent_id","")
+            graph    = event.get("graph","reflexion")
+            qlog(f"[Hub] Started: {agent_id}  graph={graph}", SUCCESS)
+            self._active_node = "act"
+            self._redraw_pipe()
+            if self._active_view.get() == "tasks":
+                self._refresh_tasks()
+
+        elif evt == "node_update":
+            node   = event.get("node","")
+            status = event.get("status","")
+            score  = event.get("score")
+            if status == "running":
+                self._active_node = node
+                self._redraw_pipe()
+                qlog(f"  ▶ {node}", ACCENT_LIGHT)
+            elif status == "complete":
+                qlog(f"  ✓ {node}" + (f"  score={score:.2f}" if score else ""), SUCCESS)
+                if score is not None:
+                    color = SUCCESS if score >= 0.75 else (WARNING if score >= 0.5 else ERROR)
+                    self._score_pill.config(text=f"Score: {score:.2f}", fg=color)
+
+        elif evt == "run_complete":
+            job_id  = event.get("job_id","")
+            score   = event.get("score", 0.0)
+            critique = event.get("critique","")
+            preview  = event.get("output_preview","")
+            color   = SUCCESS if score >= 0.75 else (WARNING if score >= 0.5 else ERROR)
+            agent_id = self._hub_jobs.get(job_id, {}).get("agent_id","agent")
+            self._hub_jobs.pop(job_id, None)
+            self._running = False
+            self._run_btn.config(state=tk.NORMAL)
+            self._stop_btn.config(state=tk.DISABLED)
+            self._active_node = ""
+            self._redraw_pipe()
+            self._score_pill.config(text=f"Score: {score:.2f}", fg=color)
+            DIVLINE = "─" * 60
+            qlog(DIVLINE, DIVIDER)
+            qlog(f"  ✓ COMPLETE (Hub)  score={score:.2f}", color, bold=True)
+            if critique: qlog(f"  Critique: {critique[:120]}", TEXT_MUTED)
+            if preview:  self._set_output(preview)
+            qlog(DIVLINE, DIVIDER)
+            self._push_notif(f"✓ {agent_id} — score {score:.2f}", color)
+            self._run_count += 1
+            self._last_agent = agent_id
+            if self._active_view.get() == "tasks":
+                self._refresh_tasks()
+
+        elif evt == "run_failed":
+            job_id = event.get("job_id","")
+            error  = event.get("error","unknown error")
+            agent_id = self._hub_jobs.get(job_id, {}).get("agent_id","agent")
+            self._hub_jobs.pop(job_id, None)
+            self._running = False
+            self._run_btn.config(state=tk.NORMAL)
+            self._stop_btn.config(state=tk.DISABLED)
+            qlog(f"  ✗ FAILED (Hub): {error[:120]}", ERROR, bold=True)
+            self._push_notif(f"✗ {agent_id} failed: {error[:60]}", ERROR)
+
+        elif evt == "run_cancelled":
+            job_id = event.get("job_id","")
+            self._hub_jobs.pop(job_id, None)
+            self._running = False
+            self._run_btn.config(state=tk.NORMAL)
+            self._stop_btn.config(state=tk.DISABLED)
+            qlog("  [Cancelled]", WARNING)
+
+        elif evt == "notif":
+            text  = event.get("text","")
+            color = event.get("color", ACCENT_LIGHT)
+            self._push_notif(text, color)
+
+        elif evt == "briefing_ready":
+            if self._active_view.get() == "home":
+                self.after(500, self._refresh_briefing_card)
+
+        elif evt == "todo_update":
+            if self._active_view.get() == "todos":
+                self.after(200, self._refresh_todos)
+
+        elif evt == "scheduler_fired":
+            agent_id = event.get("agent_id","")
+            self._push_notif(f"[Scheduler] {agent_id} triggered", ACCENT_LIGHT)
+
+        elif evt == "heartbeat":
+            pass   # keep-alive — no action needed
+
+    def _update_hub_status(self, online: bool):
+        """Update the status bar Hub indicator."""
+        try:
+            if hasattr(self, "_hub_status_lbl"):
+                if online:
+                    self._hub_status_lbl.config(text="Hub: Online ●", fg=SUCCESS)
+                else:
+                    self._hub_status_lbl.config(text="Hub: Offline ○", fg=ERROR)
+        except Exception:
+            pass
+        if online:
+            qlog("[Hub] Connected — running in Hub mode", SUCCESS)
+        else:
+            qlog("[Hub] Offline — running in embedded fallback mode", WARNING)
+
+    def _stop_hub_run(self):
+        """Cancel all active Hub jobs + stop embedded run."""
+        for job_id in list(self._hub_jobs.keys()):
+            self.hub.cancel_run(job_id)
+        self._hub_jobs.clear()
+        # Also stop embedded thread if running
+        self._running = False
 
     def _on_complete(self, score, final):
         self._running=False; self._run_btn.config(state=tk.NORMAL); self._stop_btn.config(state=tk.DISABLED)
@@ -2145,39 +2345,68 @@ class AgentHarnessM365(tk.Tk):
         qlog(f"[Tasks] Queued: {title} → {agent} ({proj})", ACCENT_LIGHT)
 
     def _refresh_tasks(self):
-        # Pull from db
-        c = _get_db()
-        try:
-            rows = c.execute(
-                "SELECT run_id, agent_id, project, task, score, status, output, critique "
-                "FROM runs ORDER BY id DESC LIMIT 100"
-            ).fetchall()
-            c.close()
-        except Exception:
-            rows = []
-
-        # Classify into running/queued/recent from db + in-memory queue
+        """Refresh Tasks view — pulls from Hub API if online, else local SQLite."""
         for w in self._tasks_inner.winfo_children():
             w.destroy()
 
-        running = [t for t in self._tasks_data["queued"] if t["status"] == "running"]
-        queued  = [t for t in self._tasks_data["queued"] if t["status"] == "queued"]
+        if self.hub.online:
+            # ── Hub mode: live queue + completed from API ──────────────────
+            queue_jobs = self.hub.queue_jobs()
+            running = [j for j in queue_jobs if j.get("status") == "running"]
+            queued  = [j for j in queue_jobs if j.get("status") == "queued"]
 
-        if running:
-            self._tasks_section("Running", running, "⚡", INFO)
-        if queued:
-            self._tasks_section("Queued", queued, "📋", TEXT_MUTED)
+            def _card(j):
+                return {
+                    "title":       (j.get("task") or "")[:80],
+                    "agent_id":    j.get("agent_id",""),
+                    "project_slug":j.get("project",""),
+                    "status":      j.get("status",""),
+                    "score":       None,
+                    "job_id":      j.get("id",""),
+                }
 
-        # Recent from DB
-        recent_tasks = [{"id": r[0], "title": r[3][:80], "agent_id": r[1],
-                         "project_slug": r[2], "status": r[5],
-                         "result": r[6] or "", "score": r[4]}
-                        for r in rows]
-        self._tasks_section("Recent (from run log)", recent_tasks, "✅", SUCCESS)
+            if running:
+                self._tasks_section("Running on Hub ⚡", [_card(j) for j in running], "⚡", INFO)
+            if queued:
+                self._tasks_section("Queued", [_card(j) for j in queued], "📋", TEXT_MUTED)
 
-        r = len(running)
-        q = len(queued)
-        self._tasks_count_lbl.config(text=f"{r} running · {q} queued · {len(rows)} logged")
+            recent_runs = self.hub.list_runs(status="complete,failed", limit=50)
+            recent_tasks = [
+                {"title": r.get("task","")[:80], "agent_id": r.get("agent_id",""),
+                 "project_slug": r.get("project",""), "status": r.get("status",""),
+                 "score": r.get("score")}
+                for r in recent_runs
+            ]
+            self._tasks_section("Recent Runs (Hub)", recent_tasks, "✅", SUCCESS)
+            self._tasks_count_lbl.config(
+                text=f"[Hub] {len(running)} running · {len(queued)} queued · {len(recent_runs)} recent")
+        else:
+            # ── Fallback: local SQLite + in-memory queue ───────────────────
+            c = _get_db()
+            try:
+                rows = c.execute(
+                    "SELECT run_id, agent_id, project, task, score, status, output, critique "
+                    "FROM runs ORDER BY id DESC LIMIT 100"
+                ).fetchall()
+                c.close()
+            except Exception:
+                rows = []
+
+            running = [t for t in self._tasks_data["queued"] if t["status"] == "running"]
+            queued  = [t for t in self._tasks_data["queued"] if t["status"] == "queued"]
+
+            if running:
+                self._tasks_section("Running", running, "⚡", INFO)
+            if queued:
+                self._tasks_section("Queued", queued, "📋", TEXT_MUTED)
+
+            recent_tasks = [{"id": r[0], "title": r[3][:80], "agent_id": r[1],
+                             "project_slug": r[2], "status": r[5],
+                             "result": r[6] or "", "score": r[4]}
+                            for r in rows]
+            self._tasks_section("Recent (local log)", recent_tasks, "✅", SUCCESS)
+            r = len(running); q = len(queued)
+            self._tasks_count_lbl.config(text=f"{r} running · {q} queued · {len(rows)} logged")
 
     def _tasks_section(self, title, tasks, icon, color):
         sec_hdr = tk.Frame(self._tasks_inner, bg=BG_CANVAS)
@@ -3125,12 +3354,15 @@ Be concise, direct, and strategic. Surface blockers proactively. Max 3 paragraph
     # Real Socket.IO would require a Node server — this uses threads instead.
     # ════════════════════════════════════════════════════════════════════════
     def _start_live_bridge(self):
-        """Start background polling thread for live task/run updates."""
+        """Start background polling thread for live task/run updates.
+        When Hub is online the WebSocket replaces this polling loop.
+        We keep the polling loop as fallback for when Hub is offline."""
         self._bridge_last_run_id = 0
         self._bridge_running = True
         import threading
         threading.Thread(target=self._bridge_loop, daemon=True).start()
-        qlog("[LiveBridge] Polling for new runs every 5s", ACCENT_LIGHT)
+        if not self.hub.online:
+            qlog("[LiveBridge] Hub offline — polling SQLite every 5s", TEXT_MUTED)
 
     def _bridge_loop(self):
         import time
@@ -3179,13 +3411,19 @@ Be concise, direct, and strategic. Surface blockers proactively. Max 3 paragraph
         return self._TODOS_PATH
 
     def _todos_load(self):
+        """Load todos — Hub API when online, local JSON file as fallback."""
+        if self.hub.online:
+            items = self.hub.list_todos()
+            if items is not None:
+                qlog(f"[Todos] Loaded {len(items)} todos from Hub", TEXT_MUTED)
+                return items
         import json, os
         path = self._todos_file()
         if os.path.exists(path):
             try:
                 with open(path) as f:
                     data = json.load(f)
-                qlog(f"[Todos] Loaded {len(data)} todos from disk", TEXT_MUTED)
+                qlog(f"[Todos] Loaded {len(data)} todos from disk (Hub offline)", TEXT_MUTED)
                 return data
             except Exception as e:
                 qlog(f"[Todos] Load error: {e}", WARNING)
