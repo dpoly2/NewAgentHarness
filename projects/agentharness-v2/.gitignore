@@ -1,0 +1,11 @@
+node_modules/
+web/node_modules/
+web/dist/
+dist/
+.env
+*.env.local
+.DS_Store
+Thumbs.db
+data/logs/
+data/sessions.json
+data/users.json

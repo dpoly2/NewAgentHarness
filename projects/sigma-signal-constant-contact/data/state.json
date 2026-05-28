@@ -1,0 +1,16 @@
+{
+  "lastSuccessfulCheckAt": null,
+  "lastLocalCheckAt": "2026-05-21T05:36:15.817Z",
+  "monitorMode": "local-app",
+  "setupStatus": "Waiting for Gmail OAuth/API credentials or a Codex Gmail connector for thesigmasignal.1stvp1914@gmail.com.",
+  "summary": {
+    "generatedAt": "2026-05-21T05:36:15.818Z",
+    "health": "yellow",
+    "newsletterStatus": "Next newsletter target is 2026-05-28.",
+    "openRequestCount": 1,
+    "urgentRequestCount": 1,
+    "watchAddress": "thesigmasignal.1stvp1914@gmail.com",
+    "lastSuccessfulCheckAt": null,
+    "nextRecommendedCheck": "Every morning, plus once after any Constant Contact campaign is sent."
+  }
+}

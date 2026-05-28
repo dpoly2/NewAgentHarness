@@ -1,0 +1,12 @@
+[
+  {
+    "id": "setup-constant-contact",
+    "receivedAt": "2026-05-21T00:00:00-05:00",
+    "from": "system",
+    "subject": "Connect Constant Contact and Sigma Signal Gmail",
+    "snippet": "Live monitoring starts after Gmail access for thesigmasignal.1stvp1914@gmail.com and Constant Contact access are connected.",
+    "status": "open",
+    "priority": "high",
+    "type": "setup"
+  }
+]

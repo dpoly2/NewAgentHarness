@@ -1,0 +1,35 @@
+{
+  "name": "agentharness-v2",
+  "version": "2.0.0",
+  "private": true,
+  "main": "desktop/main.js",
+  "scripts": {
+    "core": "node core/server.js",
+    "core:dev": "node --watch core/server.js",
+    "web:dev": "cd web && npm run dev",
+    "web:build": "cd web && npm run build",
+    "electron": "electron .",
+    "dev": "concurrently \"npm run core:dev\" \"npm run web:dev\"",
+    "start": "node core/server.js",
+    "start:prod": "node core/server.js",
+    "health": "node -e \"const http=require('http');http.get('http://localhost:4000/api/health',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>console.log(d))}).on('error',e=>{ console.error('Server not reachable:',e.message); process.exit(1) })\""
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "marked": "^18.0.4",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "socket.io": "^4.7.2",
+    "winston": "^3.9.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^42.2.0"
+  }
+}

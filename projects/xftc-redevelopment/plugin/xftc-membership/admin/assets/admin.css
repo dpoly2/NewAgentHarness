@@ -1,0 +1,101 @@
+﻿/* XFTC Membership — Admin Styles */
+
+:root {
+    --ts-red:   #c8102e;
+    --ts-dark:  #1a1a2e;
+    --ts-light: #f8f9fa;
+}
+
+.ts-admin-wrap {
+    max-width: 1400px;
+}
+
+.ts-page-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px !important;
+    margin-bottom: 20px !important;
+}
+
+.ts-page-title .dashicons {
+    color: var(--ts-red);
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+}
+
+/* Stats Grid */
+.ts-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+.ts-stat-card {
+    background: #fff;
+    border: 1px solid #e2e4e7;
+    border-top: 4px solid var(--ts-red);
+    border-radius: 4px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+}
+
+.ts-stat-number {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ts-dark);
+    line-height: 1;
+}
+
+.ts-stat-label {
+    font-size: 13px;
+    color: #666;
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+/* Quick Links */
+.ts-quick-links {
+    margin-top: 8px;
+}
+
+.ts-quick-links .button {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+/* Badges */
+.ts-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+
+.ts-badge-active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.ts-badge-inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.ts-badge-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Table tweaks */
+.wp-list-table th {
+    font-weight: 600;
+}
+
