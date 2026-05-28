@@ -1503,18 +1503,29 @@ class AgentHarnessM365(tk.Tk):
     # ════════════════════════════════════════════════════════════════════════
     # NOTIFICATION PANEL
     # ════════════════════════════════════════════════════════════════════════
-    def _push_notif(self, msg: str, color: str = None):
-        """Add a notification. Called from _on_complete, errors, etc."""
+    def _push_notif(self, msg: str, color: str = None, category: str = "system"):
+        """Add a notification. Called from _on_complete, errors, Hub events."""
         if color is None: color = SUCCESS
         ts = datetime.now().strftime("%H:%M")
-        self._notifs.insert(0, {"msg": msg, "color": color, "ts": ts})
-        if len(self._notifs) > 50: self._notifs = self._notifs[:50]
+        self._notifs.insert(0, {"msg": msg, "color": color, "ts": ts, "category": category})
+        if len(self._notifs) > 200: self._notifs = self._notifs[:200]
         self._notif_count.set(len(self._notifs))
         # Show badge
         self._badge_lbl.pack(side=tk.LEFT)
         # Refresh panel if open
         if self._notif_panel and self._notif_panel.winfo_exists():
             self._build_notif_contents()
+        # Persist to Hub notification history (fire-and-forget, non-blocking)
+        if self.hub.online and category != "_nopersist":
+            try:
+                import threading as _thr
+                _thr.Thread(
+                    target=self.hub.push_notification,
+                    args=(msg, color or SUCCESS, category),
+                    daemon=True
+                ).start()
+            except Exception:
+                pass
 
     def _toggle_notif_panel(self):
         if self._notif_panel and self._notif_panel.winfo_exists():
@@ -1800,6 +1811,324 @@ class AgentHarnessM365(tk.Tk):
         self._admin_auto_frame = t5
         self._build_automation_status(t5)
 
+        # ── Tab 6: Hub Control Panel ────────────────────────────────────
+        t6 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t6, text="  🖥 Hub Server  ")
+        self._admin_hub_frame = t6
+        self._build_hub_control_panel(t6)
+
+    # ── Hub Control Panel ────────────────────────────────────────────────
+    def _build_hub_control_panel(self, parent):
+        """Admin Tab 6 — Hub server status, queue, scheduler, controls."""
+        self._hub_panel_parent = parent
+
+        # ── Top status bar ────────────────────────────────────────────────
+        status_row = tk.Frame(parent, bg=BG_CANVAS)
+        status_row.pack(fill=tk.X, padx=16, pady=(14, 4))
+
+        self._hub_admin_status = tk.Label(
+            status_row, text="Hub: checking...", font=self.fH2,
+            bg=BG_CANVAS, fg=TEXT_MUTED)
+        self._hub_admin_status.pack(side=tk.LEFT)
+
+        tk.Button(status_row, text="↻ Refresh", font=self.fSmall,
+                  bg=BG_CARD, fg=TEXT_MUTED, relief=tk.FLAT,
+                  cursor="hand2", padx=8,
+                  command=self._refresh_hub_panel).pack(side=tk.RIGHT, padx=4)
+
+        tk.Button(status_row, text="▶ Start Hub", font=self.fSmall,
+                  bg=SUCCESS, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                  cursor="hand2", padx=10,
+                  command=self._hub_start_process).pack(side=tk.RIGHT, padx=4)
+
+        tk.Button(status_row, text="⏹ Stop Hub", font=self.fSmall,
+                  bg=ERROR, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                  cursor="hand2", padx=10,
+                  command=self._hub_stop_process).pack(side=tk.RIGHT, padx=4)
+
+        DIVIDER_LINE = tk.Frame(parent, bg=DIVIDER, height=1)
+        DIVIDER_LINE.pack(fill=tk.X, padx=16, pady=4)
+
+        # ── Two-column layout ─────────────────────────────────────────────
+        cols = tk.Frame(parent, bg=BG_CANVAS)
+        cols.pack(fill=tk.BOTH, expand=True, padx=16, pady=4)
+
+        left  = tk.Frame(cols, bg=BG_CANVAS)
+        right = tk.Frame(cols, bg=BG_CANVAS)
+        left.pack(side=tk.LEFT,  fill=tk.BOTH, expand=True, padx=(0,8))
+        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(8,0))
+
+        # ── LEFT: Hub stats ───────────────────────────────────────────────
+        tk.Label(left, text="Server Stats", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(anchor=tk.W, pady=(4,6))
+
+        self._hub_stats_frame = tk.Frame(left, bg=BG_CARD,
+            highlightbackground=BORDER_CARD, highlightthickness=1)
+        self._hub_stats_frame.pack(fill=tk.X)
+
+        self._hub_stat_vars = {}
+        for label in ["Status","Version","Uptime","Active Runs",
+                       "Queue Depth","WS Clients","Thread Pool","LangGraph"]:
+            row = tk.Frame(self._hub_stats_frame, bg=BG_CARD)
+            row.pack(fill=tk.X, padx=12, pady=3)
+            tk.Label(row, text=label, font=self.fSmall, width=14,
+                     bg=BG_CARD, fg=TEXT_MUTED, anchor=tk.W).pack(side=tk.LEFT)
+            v = tk.StringVar(value="—")
+            self._hub_stat_vars[label] = v
+            tk.Label(row, textvariable=v, font=self.fSmall,
+                     bg=BG_CARD, fg=TEXT_PRIMARY, anchor=tk.W).pack(side=tk.LEFT, padx=4)
+
+        # ── LEFT: Queue controls ──────────────────────────────────────────
+        tk.Label(left, text="Queue Control", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(anchor=tk.W, pady=(14,6))
+
+        q_row = tk.Frame(left, bg=BG_CANVAS)
+        q_row.pack(fill=tk.X)
+        tk.Button(q_row, text="⏸ Pause Queue", font=self.fSmall,
+                  bg=WARNING, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                  cursor="hand2", padx=10, pady=3,
+                  command=lambda: self._hub_queue_action("pause")).pack(side=tk.LEFT, padx=(0,6))
+        tk.Button(q_row, text="▶ Resume Queue", font=self.fSmall,
+                  bg=SUCCESS, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                  cursor="hand2", padx=10, pady=3,
+                  command=lambda: self._hub_queue_action("resume")).pack(side=tk.LEFT)
+
+        # Thread pool slider
+        tp_row = tk.Frame(left, bg=BG_CANVAS)
+        tp_row.pack(fill=tk.X, pady=(10,0))
+        tk.Label(tp_row, text="Thread Pool Size:", font=self.fSmall,
+                 bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT)
+        self._hub_pool_var = tk.IntVar(value=3)
+        self._hub_pool_lbl = tk.Label(tp_row, text="3",
+            font=self.fSmall, bg=BG_CANVAS, fg=ACCENT_LIGHT, width=3)
+        self._hub_pool_lbl.pack(side=tk.RIGHT)
+        slider = tk.Scale(left, from_=1, to=10, orient=tk.HORIZONTAL,
+                          variable=self._hub_pool_var,
+                          bg=BG_CANVAS, fg=TEXT_MUTED, troughcolor=BG_CARD,
+                          highlightthickness=0, showvalue=False,
+                          command=lambda v: (
+                              self._hub_pool_lbl.config(text=str(int(float(v))))
+                          ))
+        slider.pack(fill=tk.X, pady=(2,0))
+        tk.Button(left, text="Apply Pool Size", font=self.fSmall,
+                  bg=ACCENT, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                  cursor="hand2", padx=10, pady=3,
+                  command=self._hub_apply_pool_size).pack(anchor=tk.W, pady=4)
+
+        # ── RIGHT: Scheduled jobs ─────────────────────────────────────────
+        sched_hdr = tk.Frame(right, bg=BG_CANVAS)
+        sched_hdr.pack(fill=tk.X, pady=(4,6))
+        tk.Label(sched_hdr, text="Scheduled Jobs", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(side=tk.LEFT)
+
+        self._hub_sched_inner = tk.Frame(right, bg=BG_CANVAS)
+        self._hub_sched_inner.pack(fill=tk.BOTH, expand=True)
+
+        # ── RIGHT: Active runs list ───────────────────────────────────────
+        tk.Label(right, text="Active Runs", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(anchor=tk.W, pady=(14,6))
+
+        self._hub_active_inner = tk.Frame(right, bg=BG_CANVAS)
+        self._hub_active_inner.pack(fill=tk.X)
+
+        # ── BOTTOM: Hub log viewer ────────────────────────────────────────
+        DIVIDER_LINE2 = tk.Frame(parent, bg=DIVIDER, height=1)
+        DIVIDER_LINE2.pack(fill=tk.X, padx=16, pady=(8,4))
+
+        log_hdr = tk.Frame(parent, bg=BG_CANVAS)
+        log_hdr.pack(fill=tk.X, padx=16)
+        tk.Label(log_hdr, text="Hub Log (today)", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(side=tk.LEFT)
+
+        self._hub_log_box = tk.Text(parent, height=8, state=tk.DISABLED,
+            bg=BG_PANEL, fg=TEXT_BODY, font=self.fMonoSm,
+            relief=tk.FLAT, wrap=tk.WORD, insertbackground=TEXT_BODY)
+        self._hub_log_box.pack(fill=tk.X, padx=16, pady=(4,12))
+
+        # Initial load
+        self.after(500, self._refresh_hub_panel)
+
+    def _refresh_hub_panel(self):
+        """Refresh all Hub control panel widgets."""
+        if not self._admin_unlocked:
+            return
+
+        # ── Stats from Hub health endpoint ────────────────────────────────
+        health = self.hub.health() if self.hub.online else None
+        config = self.hub.get_config() if self.hub.online else None
+
+        if health:
+            uptime = health.get("uptime_seconds", 0)
+            hrs, rem = divmod(uptime, 3600); mins = rem // 60
+            self._hub_admin_status.config(text="Hub: Online ●", fg=SUCCESS)
+            vals = {
+                "Status":      "Online",
+                "Version":     health.get("version","?"),
+                "Uptime":      f"{hrs}h {mins}m",
+                "Active Runs": str(health.get("active_runs",0)),
+                "Queue Depth": str(health.get("queue_depth",0)),
+                "WS Clients":  str(health.get("ws_clients",0)),
+                "Thread Pool": str(health.get("thread_pool",3)),
+                "LangGraph":   "✅ OK" if health.get("langgraph_ok") else "❌ Missing",
+            }
+            pool_size = health.get("thread_pool", 3)
+            self._hub_pool_var.set(pool_size)
+            self._hub_pool_lbl.config(text=str(pool_size))
+        else:
+            self._hub_admin_status.config(text="Hub: Offline ○", fg=ERROR)
+            vals = {k: "—" for k in ["Status","Version","Uptime","Active Runs",
+                                      "Queue Depth","WS Clients","Thread Pool","LangGraph"]}
+            vals["Status"] = "Offline"
+
+        for label, v in vals.items():
+            if label in self._hub_stat_vars:
+                self._hub_stat_vars[label].set(v)
+
+        # ── Scheduled jobs ────────────────────────────────────────────────
+        for w in self._hub_sched_inner.winfo_children():
+            w.destroy()
+
+        if self.hub.online:
+            jobs = self.hub.list_scheduler_jobs()
+            if jobs:
+                for job in jobs[:12]:
+                    row = tk.Frame(self._hub_sched_inner, bg=BG_CARD,
+                                   highlightbackground=BORDER_CARD, highlightthickness=1)
+                    row.pack(fill=tk.X, pady=2)
+                    inner = tk.Frame(row, bg=BG_CARD)
+                    inner.pack(fill=tk.X, padx=10, pady=5)
+                    tk.Label(inner, text=job.get("name","job")[:38],
+                             font=self.fSmall, bg=BG_CARD, fg=TEXT_PRIMARY,
+                             anchor=tk.W).pack(side=tk.LEFT, fill=tk.X, expand=True)
+                    nf = job.get("next_fire","")[:16] if job.get("next_fire") else "paused"
+                    tk.Label(inner, text=nf, font=self.fSmall,
+                             bg=BG_CARD, fg=ACCENT_LIGHT).pack(side=tk.RIGHT, padx=4)
+            else:
+                tk.Label(self._hub_sched_inner, text="No scheduled jobs",
+                         font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack()
+        else:
+            tk.Label(self._hub_sched_inner, text="Hub offline",
+                     font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack()
+
+        # ── Active runs ───────────────────────────────────────────────────
+        for w in self._hub_active_inner.winfo_children():
+            w.destroy()
+
+        if self.hub.online:
+            active = self.hub.list_runs(status="running", limit=10)
+            if active:
+                for r in active:
+                    row = tk.Frame(self._hub_active_inner, bg=BG_CARD,
+                                   highlightbackground=BORDER_CARD, highlightthickness=1)
+                    row.pack(fill=tk.X, pady=2)
+                    inner = tk.Frame(row, bg=BG_CARD)
+                    inner.pack(fill=tk.X, padx=10, pady=5)
+                    tk.Label(inner, text=r.get("agent_id","?"),
+                             font=self.fSmall, bg=BG_CARD,
+                             fg=ACCENT_LIGHT).pack(side=tk.LEFT)
+                    job_id = r.get("run_id", r.get("id",""))
+                    tk.Button(inner, text="✕ Cancel", font=self.fSmall,
+                              bg=ERROR, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                              cursor="hand2", padx=6,
+                              command=lambda jid=job_id: self._hub_cancel_run(jid)
+                              ).pack(side=tk.RIGHT, padx=4)
+            else:
+                tk.Label(self._hub_active_inner, text="No active runs",
+                         font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack()
+
+        # ── Hub log ───────────────────────────────────────────────────────
+        self._load_hub_log()
+
+    def _load_hub_log(self):
+        """Read today's Hub log file and display last 30 lines."""
+        import os
+        from datetime import datetime as _dt
+        log_dir  = os.path.join(str(AGENTS_ROOT), "data", "logs")
+        log_file = os.path.join(log_dir, f"hub_{_dt.now().strftime('%Y-%m-%d')}.log")
+        self._hub_log_box.config(state=tk.NORMAL)
+        self._hub_log_box.delete("1.0", tk.END)
+        if os.path.exists(log_file):
+            try:
+                with open(log_file) as f:
+                    lines = f.readlines()
+                tail = lines[-30:] if len(lines) > 30 else lines
+                self._hub_log_box.insert(tk.END, "".join(tail))
+                self._hub_log_box.see(tk.END)
+            except Exception as e:
+                self._hub_log_box.insert(tk.END, f"Log read error: {e}")
+        else:
+            self._hub_log_box.insert(tk.END,
+                f"No log file found for today.\nExpected: {log_file}\n"
+                "Start the Hub to generate logs.")
+        self._hub_log_box.config(state=tk.DISABLED)
+
+    def _hub_start_process(self):
+        """Launch hub_server.py as a background subprocess."""
+        import subprocess, os, sys
+        from pathlib import Path
+        script = Path(__file__).parent / "hub_server.py"
+        python = sys.executable
+        if not script.exists():
+            self._push_notif("hub_server.py not found", ERROR)
+            return
+        try:
+            subprocess.Popen(
+                [python, str(script)],
+                cwd=str(script.parent),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self._push_notif("Hub server starting... (check status in ~3s)", ACCENT_LIGHT)
+            self.after(3000, self._refresh_hub_panel)
+        except Exception as e:
+            self._push_notif(f"Failed to start Hub: {e}", ERROR)
+
+    def _hub_stop_process(self):
+        """Stop the Hub by reading its PID file and sending SIGTERM."""
+        import os, signal as _sig
+        from pathlib import Path
+        pid_file = Path(__file__).parent.parent.parent.parent / ".agents" / "data" / "hub.pid"
+        if not pid_file.exists():
+            self._push_notif("Hub PID file not found — Hub may not be running", WARNING)
+            return
+        try:
+            pid = int(pid_file.read_text().strip())
+            os.kill(pid, _sig.SIGTERM)
+            pid_file.unlink(missing_ok=True)
+            self._push_notif(f"Hub stopped (PID {pid})", SUCCESS)
+            self.after(1000, self._refresh_hub_panel)
+        except Exception as e:
+            self._push_notif(f"Stop failed: {e}", ERROR)
+
+    def _hub_queue_action(self, action: str):
+        """Pause or resume the Hub job queue."""
+        if not self.hub.online:
+            self._push_notif("Hub is offline", WARNING); return
+        if action == "pause":
+            self.hub.pause_queue()
+            self._push_notif("Hub queue paused", WARNING)
+        else:
+            self.hub.resume_queue()
+            self._push_notif("Hub queue resumed", SUCCESS)
+        self.after(500, self._refresh_hub_panel)
+
+    def _hub_apply_pool_size(self):
+        """Send new thread pool size to Hub."""
+        if not self.hub.online:
+            self._push_notif("Hub is offline", WARNING); return
+        size = self._hub_pool_var.get()
+        result = self.hub.update_config(thread_pool_size=size)
+        if result:
+            self._push_notif(f"Thread pool set to {size}", SUCCESS)
+        else:
+            self._push_notif("Failed to update pool size", ERROR)
+
+    def _hub_cancel_run(self, job_id: str):
+        """Cancel a running Hub job."""
+        if self.hub.cancel_run(job_id):
+            self._push_notif(f"Cancelled job {job_id}", WARNING)
+            self.after(500, self._refresh_hub_panel)
+
     # ── PIN lock ─────────────────────────────────────────────────────────
     def _admin_pin_prompt(self):
         if self._admin_unlocked:
@@ -1842,6 +2171,8 @@ class AgentHarnessM365(tk.Tk):
         self._refresh_reflexion_dashboard()
         self._refresh_agent_manager()
         self._refresh_db_stats()
+        if hasattr(self, "_hub_stat_vars"):
+            self._refresh_hub_panel()
         self._refresh_log_viewer()
         self._refresh_automation_status()
 
@@ -2543,19 +2874,53 @@ class AgentHarnessM365(tk.Tk):
             self._push_notif("Todo title is required.", WARNING)
             return
         import uuid as _uuid, datetime as _dt
+        priority = self._todo_priority2_var.get()
+        project  = self._todo_project2_var.get()
+        due_date = self._todo_due_var.get()
+
+        if self.hub.online:
+            # ── Hub mode: create via API ──────────────────────────────────
+            result = self.hub.create_todo(
+                title=title, priority=priority,
+                project=project or None, due_date=due_date or None
+            )
+            if result:
+                self._todos_data.insert(0, result)
+                self._push_notif(f"Todo added (Hub): {title[:50]}", SUCCESS)
+            else:
+                self._push_notif("Hub: failed to create todo — saved locally", WARNING)
+                self._todos_data_local_fallback(title, priority, project, due_date)
+        else:
+            # ── Fallback: local only ──────────────────────────────────────
+            todo = {
+                "id": _uuid.uuid4().hex[:8],
+                "title": title,
+                "priority": priority,
+                "project_slug": project,
+                "due_date": due_date,
+                "status": "pending",
+                "created_at": _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            }
+            self._todos_data.insert(0, todo)
+            self._todos_save()
+
+        self._todo_title_var.set("")
+        self._todo_due_var.set("")
+        self._todo_add_frame.pack_forget()
+        self._refresh_todos()
+
+    def _todos_data_local_fallback(self, title, priority, project, due_date):
+        import uuid as _uuid, datetime as _dt
         todo = {
             "id": _uuid.uuid4().hex[:8],
             "title": title,
-            "priority": self._todo_priority2_var.get(),
-            "project_slug": self._todo_project2_var.get(),
-            "due_date": self._todo_due_var.get(),
+            "priority": priority,
+            "project_slug": project,
+            "due_date": due_date,
             "status": "pending",
             "created_at": _dt.datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
         self._todos_data.insert(0, todo)
-        self._todo_title_var.set("")
-        self._todo_due_var.set("")
-        self._todo_add_frame.pack_forget()
         self._todos_save()
         self._refresh_todos()
         self._push_notif(f"Todo added: {title}", SUCCESS)
@@ -2627,13 +2992,20 @@ class AgentHarnessM365(tk.Tk):
                   command=lambda t=todo: self._todo_delete(t)).pack(side=tk.RIGHT, padx=(0,4))
 
     def _todo_toggle(self, todo):
-        todo["status"] = "pending" if todo.get("status") == "done" else "done"
-        self._todos_save()
+        new_status = "pending" if todo.get("status") == "done" else "done"
+        todo["status"] = new_status
+        if self.hub.online and todo.get("id"):
+            self.hub.update_todo(todo["id"], status=new_status)
+        else:
+            self._todos_save()
         self._refresh_todos()
 
     def _todo_delete(self, todo):
+        if self.hub.online and todo.get("id"):
+            self.hub.delete_todo(todo["id"])
         self._todos_data = [t for t in self._todos_data if t["id"] != todo["id"]]
-        self._todos_save()
+        if not self.hub.online:
+            self._todos_save()
         self._refresh_todos()
 
 
@@ -3743,8 +4115,13 @@ Be concise, direct, and strategic. Surface blockers proactively. Max 3 paragraph
     def _notif_clear_all(self):
         if hasattr(self, '_notif_history'):
             self._notif_history.clear()
+        self._notifs.clear()
+        self._notif_count.set(0)
+        if self.hub.online:
+            import threading as _thr
+            _thr.Thread(target=self.hub.clear_notifications, daemon=True).start()
         self._notif_refresh_list()
-        qlog("[Notifications] History cleared", TEXT_MUTED)
+        qlog("[Notifications] History cleared (Hub + local)", TEXT_MUTED)
 
     def _notif_export(self):
         """Export notification log to a text file."""
