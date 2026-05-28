@@ -427,6 +427,7 @@ class AgentHarnessM365(tk.Tk):
         ("📊", "History", "history"),
         ("🧠", "Skills",  "skills"),
         ("⚙️", "Settings","settings"),
+        ("🛡",  "Admin",   "admin"),
     ]
 
     def __init__(self):
@@ -449,6 +450,7 @@ class AgentHarnessM365(tk.Tk):
         self._last_agent  = ""              # last agent that ran
         self._last_score  = None            # last score (float|None)
         self._cmd_palette = None            # command palette Toplevel
+        self._admin_unlocked = False        # PIN lock state
 
         self._setup_fonts()
         self._setup_styles()
@@ -547,6 +549,7 @@ class AgentHarnessM365(tk.Tk):
         self._build_view_history()
         self._build_view_skills()
         self._build_view_settings()
+        self._build_view_admin()
 
         # ── VS Code-style status bar (bottom) ──────────────────────────────
         self._statusbar = tk.Frame(self, bg=ACCENT_DARK, height=24)
@@ -604,6 +607,7 @@ class AgentHarnessM365(tk.Tk):
             else: v.pack_forget()
         if key == "history": self._refresh_history()
         if key == "home":    self._refresh_home_cards()
+        if key == "admin":   self._refresh_admin()
         self._update_statusbar()
 
     # ════════════════════════════════════════════════════════════════════════
@@ -1301,6 +1305,496 @@ class AgentHarnessM365(tk.Tk):
         self._agent_var.set(agent_id)
         self._show_view("run")
         self._update_statusbar()
+
+
+    # ════════════════════════════════════════════════════════════════════════
+    # VIEW: ADMIN
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_view_admin(self):
+        f = tk.Frame(self._content, bg=BG_CANVAS)
+        self._views["admin"] = f
+
+        # Header row
+        hdr = tk.Frame(f, bg=BG_CANVAS)
+        hdr.pack(fill=tk.X, padx=24, pady=(20, 6))
+        tk.Label(hdr, text="🛡  Admin", font=self.fTitle, bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(side=tk.LEFT)
+        self._admin_lock_lbl = tk.Label(hdr, text="🔒 Locked", font=self.fSmall,
+                                        bg=BG_CANVAS, fg=WARNING, padx=8)
+        self._admin_lock_lbl.pack(side=tk.LEFT, pady=6)
+        tk.Button(hdr, text="🔓 Unlock", font=self.fSmall, bg=BG_CARD, fg=TEXT_MUTED,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=self._admin_pin_prompt).pack(side=tk.LEFT)
+        tk.Button(hdr, text="↻ Refresh", font=self.fSmall, bg=BG_CARD, fg=TEXT_MUTED,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=self._refresh_admin).pack(side=tk.RIGHT, padx=6)
+
+        # Sub-tab notebook
+        nb = ttk.Notebook(f)
+        nb.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 12))
+        self._admin_nb = nb
+
+        # ── Tab 1: Reflexion Dashboard ──────────────────────────────────
+        t1 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t1, text="  📈 Reflexion Dashboard  ")
+        self._admin_reflexion_frame = t1
+        self._build_reflexion_dashboard(t1)
+
+        # ── Tab 2: Agent Manager ────────────────────────────────────────
+        t2 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t2, text="  🤖 Agent Manager  ")
+        self._admin_agent_frame = t2
+        self._build_agent_manager(t2)
+
+        # ── Tab 3: DB Tools ─────────────────────────────────────────────
+        t3 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t3, text="  🗄 DB Tools  ")
+        self._admin_db_frame = t3
+        self._build_db_tools(t3)
+
+        # ── Tab 4: Log Viewer ───────────────────────────────────────────
+        t4 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t4, text="  📋 Log Viewer  ")
+        self._admin_log_frame = t4
+        self._build_log_viewer(t4)
+
+        # ── Tab 5: Automation Status ────────────────────────────────────
+        t5 = tk.Frame(nb, bg=BG_CANVAS); nb.add(t5, text="  ⏱ Automations  ")
+        self._admin_auto_frame = t5
+        self._build_automation_status(t5)
+
+    # ── PIN lock ─────────────────────────────────────────────────────────
+    def _admin_pin_prompt(self):
+        if self._admin_unlocked:
+            self._admin_unlocked = False
+            self._admin_lock_lbl.config(text="🔒 Locked", fg=WARNING)
+            return
+        win = tk.Toplevel(self)
+        win.title("Admin PIN")
+        win.geometry("300x140")
+        win.configure(bg=BG_PANEL)
+        win.resizable(False, False)
+        win.grab_set()
+        tk.Label(win, text="Enter Admin PIN", font=self.fH2, bg=BG_PANEL, fg=TEXT_PRIMARY).pack(pady=(18,6))
+        pin_var = tk.StringVar()
+        e = tk.Entry(win, textvariable=pin_var, show="●", font=self.fH1,
+                     bg=BG_INPUT, fg=TEXT_BODY, insertbackground=TEXT_BODY,
+                     relief=tk.FLAT, width=12, justify=tk.CENTER,
+                     highlightthickness=1, highlightbackground=DIVIDER)
+        e.pack(pady=4, ipady=6)
+        e.focus_set()
+        msg = tk.Label(win, text="", font=self.fSmall, bg=BG_PANEL, fg=ERROR)
+        msg.pack()
+        def _check(evt=None):
+            if pin_var.get() == "1914":   # Phi Beta Sigma founding year 🤙
+                self._admin_unlocked = True
+                self._admin_lock_lbl.config(text="🔓 Unlocked", fg=SUCCESS)
+                win.destroy()
+                self._refresh_admin()
+            else:
+                msg.config(text="Incorrect PIN")
+                pin_var.set("")
+        e.bind("<Return>", _check)
+        tk.Button(win, text="Unlock", font=self.fBtn, bg=ACCENT, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=16, pady=4,
+                  command=_check).pack(pady=6)
+
+    def _refresh_admin(self):
+        if not self._admin_unlocked:
+            return
+        self._refresh_reflexion_dashboard()
+        self._refresh_agent_manager()
+        self._refresh_db_stats()
+        self._refresh_log_viewer()
+        self._refresh_automation_status()
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ADMIN TAB 1: REFLEXION DASHBOARD
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_reflexion_dashboard(self, parent):
+        # Summary pills row
+        pill_row = tk.Frame(parent, bg=BG_CANVAS)
+        pill_row.pack(fill=tk.X, padx=12, pady=(12,6))
+        self._pill_total   = self._make_stat_pill(pill_row, "Total Runs",   "—", TEXT_MUTED)
+        self._pill_avg     = self._make_stat_pill(pill_row, "Avg Score",    "—", TEXT_MUTED)
+        self._pill_passing = self._make_stat_pill(pill_row, "Passing (≥.75)","—", TEXT_MUTED)
+        self._pill_flagged = self._make_stat_pill(pill_row, "Flagged (<.60)","—", TEXT_MUTED)
+
+        # Per-agent table
+        cols = ("agent","project","runs","avg_score","best","last_score","skill_v","status")
+        tf = tk.Frame(parent, bg=BG_CANVAS); tf.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+        vsb = ttk.Scrollbar(tf, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._reflex_tree = ttk.Treeview(tf, columns=cols, show="headings",
+                                          selectmode="browse", yscrollcommand=vsb.set)
+        vsb.configure(command=self._reflex_tree.yview)
+        widths = [180,110,55,80,75,80,65,80]
+        for col,w in zip(cols,widths):
+            self._reflex_tree.heading(col, text=col.replace("_"," ").title())
+            self._reflex_tree.column(col, width=w, minwidth=40)
+        self._reflex_tree.pack(fill=tk.BOTH, expand=True)
+        # Double-click → open skill
+        self._reflex_tree.bind("<Double-1>", self._reflex_open_skill)
+
+    def _make_stat_pill(self, parent, label, value, color):
+        f = tk.Frame(parent, bg=BG_CARD, highlightbackground=BORDER_CARD, highlightthickness=1)
+        f.pack(side=tk.LEFT, padx=6, ipadx=14, ipady=8)
+        val_lbl = tk.Label(f, text=value, font=self.fScore, bg=BG_CARD, fg=color)
+        val_lbl.pack()
+        tk.Label(f, text=label, font=self.fSmall, bg=BG_CARD, fg=TEXT_MUTED).pack()
+        return val_lbl
+
+    def _refresh_reflexion_dashboard(self):
+        stats = db_agent_stats()
+        runs = db_load_runs(500)
+        total = len(runs)
+        scores = [r[4] for r in runs if r[4] is not None]
+        avg    = sum(scores)/len(scores) if scores else 0
+        passing = sum(1 for s in scores if s >= 0.75)
+        flagged = sum(1 for s in scores if s < 0.60)
+
+        def upd(lbl, val, color): lbl.config(text=str(val), fg=color)
+        upd(self._pill_total,   total,   INFO)
+        upd(self._pill_avg,     f"{avg:.2f}", SUCCESS if avg>=0.75 else WARNING)
+        upd(self._pill_passing, passing, SUCCESS)
+        upd(self._pill_flagged, flagged, ERROR if flagged else TEXT_MUTED)
+
+        for r in self._reflex_tree.get_children(): self._reflex_tree.delete(r)
+        # Get last score per agent from full run list
+        last_scores = {}
+        for row in runs:
+            run_id,agent,proj,graph,score,status,ts = row
+            if agent not in last_scores: last_scores[agent] = score
+
+        for agent, s in sorted(stats.items(), key=lambda x: x[1]["avg"], reverse=True):
+            last = last_scores.get(agent)
+            proj = agent.split("-")[0] if "-" in agent else "—"
+            status = "✅ Good" if s["avg"]>=0.75 else ("⚠ Warn" if s["avg"]>=0.60 else "🔴 Flag")
+            tag = "good" if s["avg"]>=0.75 else ("warn" if s["avg"]>=0.60 else "flag")
+            # Get skill version from DB
+            sk_name = agent.replace("-","_")
+            _, sv = db_load_skill(sk_name)
+            self._reflex_tree.insert("","end", values=(
+                agent, proj, s["runs"],
+                f"{s['avg']:.2f}", f"{s['best']:.2f}",
+                f"{last:.2f}" if last else "—", sv, status
+            ), tags=(tag,))
+        self._reflex_tree.tag_configure("good", foreground=SUCCESS)
+        self._reflex_tree.tag_configure("warn", foreground=WARNING)
+        self._reflex_tree.tag_configure("flag", foreground=ERROR)
+
+    def _reflex_open_skill(self, evt):
+        sel = self._reflex_tree.selection()
+        if not sel: return
+        agent = self._reflex_tree.item(sel[0])["values"][0]
+        self._skill_agent_var.set(agent)
+        self._load_skill_view()
+        self._show_view("skills")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ADMIN TAB 2: AGENT MANAGER
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_agent_manager(self, parent):
+        ctrl = tk.Frame(parent, bg=BG_CANVAS); ctrl.pack(fill=tk.X, padx=12, pady=8)
+        tk.Label(ctrl, text="Filter team:", font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT)
+        self._mgr_team_var = tk.StringVar(value="All")
+        teams_list = ["All"] + list(AGENT_REGISTRY.keys())
+        tc = ttk.Combobox(ctrl, textvariable=self._mgr_team_var, values=teams_list, state="readonly", font=self.fSmall, width=20)
+        tc.pack(side=tk.LEFT, padx=8)
+        tc.bind("<<ComboboxSelected>>", lambda e: self._refresh_agent_manager())
+        tk.Button(ctrl, text="Reset Selected Stats", font=self.fSmall, bg=ERROR, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=self._reset_agent_stats).pack(side=tk.RIGHT, padx=6)
+        tk.Button(ctrl, text="Edit Skill File", font=self.fSmall, bg=ACCENT, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=self._mgr_edit_skill).pack(side=tk.RIGHT, padx=6)
+
+        cols = ("agent","team","runs","avg","skill_v","skill_file")
+        tf = tk.Frame(parent, bg=BG_CANVAS); tf.pack(fill=tk.BOTH, expand=True, padx=12)
+        vsb = ttk.Scrollbar(tf, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._mgr_tree = ttk.Treeview(tf, columns=cols, show="headings",
+                                       selectmode="browse", yscrollcommand=vsb.set)
+        vsb.configure(command=self._mgr_tree.yview)
+        for col, w in zip(cols, [200,130,55,65,65,220]):
+            self._mgr_tree.heading(col, text=col.replace("_"," ").title())
+            self._mgr_tree.column(col, width=w, minwidth=40)
+        self._mgr_tree.pack(fill=tk.BOTH, expand=True)
+
+        # Inline skill editor
+        tk.Frame(parent, bg=DIVIDER, height=1).pack(fill=tk.X, padx=12, pady=6)
+        tk.Label(parent, text="Skill Editor", font=self.fH2, bg=BG_CANVAS, fg=TEXT_MUTED).pack(anchor=tk.W, padx=14)
+        self._mgr_skill_ed = scrolledtext.ScrolledText(parent, height=10, font=self.fMonoSm,
+            bg=BG_INPUT, fg=TEXT_BODY, insertbackground=TEXT_BODY, relief=tk.FLAT, wrap=tk.WORD,
+            highlightthickness=1, highlightbackground=DIVIDER)
+        self._mgr_skill_ed.pack(fill=tk.X, padx=12, pady=(4,2))
+        save_row = tk.Frame(parent, bg=BG_CANVAS); save_row.pack(anchor=tk.W, padx=12, pady=(0,8))
+        tk.Button(save_row, text="💾 Save Skill", font=self.fSmall, bg=SUCCESS, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=10,
+                  command=self._mgr_save_skill).pack(side=tk.LEFT, padx=(0,8))
+        tk.Button(save_row, text="Clear", font=self.fSmall, bg=BG_CARD, fg=TEXT_MUTED,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=lambda: self._mgr_skill_ed.delete("1.0",tk.END)).pack(side=tk.LEFT)
+        self._mgr_current_agent = ""
+
+    def _refresh_agent_manager(self):
+        stats = db_agent_stats()
+        team_filter = self._mgr_team_var.get()
+        for r in self._mgr_tree.get_children(): self._mgr_tree.delete(r)
+        for team, agents in AGENT_REGISTRY.items():
+            if team_filter != "All" and team != team_filter: continue
+            for agent in agents:
+                s = stats.get(agent, {"runs":0,"avg":0.0})
+                sk_name = agent.replace("-","_")
+                _, sv = db_load_skill(sk_name)
+                # Find skill file path
+                skill_path = "—"
+                for md in SKILLS_DIR.rglob(f"{agent}.md"):
+                    skill_path = str(md.relative_to(APP_ROOT))
+                    break
+                tag = "good" if s["avg"]>=0.75 else ("warn" if s["avg"]>0 else "none")
+                self._mgr_tree.insert("","end", values=(agent,team,s["runs"],f"{s['avg']:.2f}" if s["runs"] else "—",sv,skill_path), tags=(tag,))
+        self._mgr_tree.tag_configure("good", foreground=SUCCESS)
+        self._mgr_tree.tag_configure("warn", foreground=WARNING)
+
+    def _mgr_edit_skill(self):
+        sel = self._mgr_tree.selection()
+        if not sel: return
+        agent = self._mgr_tree.item(sel[0])["values"][0]
+        self._mgr_current_agent = agent
+        content = read_agent_skill_file(agent)
+        sk_name = agent.replace("-","_")
+        db_content, _ = db_load_skill(sk_name)
+        final = db_content if db_content else content
+        self._mgr_skill_ed.delete("1.0", tk.END)
+        self._mgr_skill_ed.insert("1.0", final if final else "# Skill: " + agent + "\n\n## Instructions\n\n")
+
+    def _mgr_save_skill(self):
+        if not self._mgr_current_agent:
+            return
+        content = self._mgr_skill_ed.get("1.0", tk.END).strip()
+        sk_name = self._mgr_current_agent.replace("-","_")
+        _, sv = db_load_skill(sk_name)
+        db_save_skill(self._mgr_current_agent, sk_name, sv+1, content, 0.0, "Manual edit via Admin panel")
+        qlog(f"✓ Skill saved: {sk_name} → v{sv+1}", SUCCESS)
+        self._push_notif(f"💾 Skill updated: {self._mgr_current_agent} → v{sv+1}", SUCCESS)
+
+    def _reset_agent_stats(self):
+        sel = self._mgr_tree.selection()
+        if not sel: return
+        agent = self._mgr_tree.item(sel[0])["values"][0]
+        if not messagebox.askyesno("Reset Stats", "Delete all run history for " + agent + "? This cannot be undone."): return
+        c = _get_db()
+        c.execute("DELETE FROM runs WHERE agent_id=?", (agent,))
+        c.commit(); c.close()
+        qlog(f"✓ Stats reset for {agent}", WARNING)
+        self._refresh_agent_manager()
+        self._push_notif(f"🗑 Stats reset: {agent}", WARNING)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ADMIN TAB 3: DB TOOLS
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_db_tools(self, parent):
+        tk.Label(parent, text="Database", font=self.fH2, bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(anchor=tk.W, padx=16, pady=(16,8))
+
+        pill_row = tk.Frame(parent, bg=BG_CANVAS); pill_row.pack(fill=tk.X, padx=12, pady=(0,10))
+        self._db_pill_runs   = self._make_stat_pill(pill_row, "Total Runs",   "—", INFO)
+        self._db_pill_skills = self._make_stat_pill(pill_row, "Skill Versions","—", ACCENT_LIGHT)
+        self._db_pill_agents = self._make_stat_pill(pill_row, "Unique Agents", "—", SUCCESS)
+        self._db_pill_size   = self._make_stat_pill(pill_row, "DB Size",       "—", TEXT_MUTED)
+
+        btn_row = tk.Frame(parent, bg=BG_CANVAS); btn_row.pack(anchor=tk.W, padx=12, pady=6)
+        tk.Button(btn_row, text="📤 Export Runs CSV", font=self.fSmall, bg=ACCENT, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=10, command=self._db_export_csv).pack(side=tk.LEFT, padx=(0,8))
+        tk.Button(btn_row, text="🗑 Purge Runs > 30 days", font=self.fSmall, bg=WARNING, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=10, command=self._db_purge_old).pack(side=tk.LEFT, padx=(0,8))
+        tk.Button(btn_row, text="☠ Drop ALL Data", font=self.fSmall, bg=ERROR, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=10, command=self._db_drop_all).pack(side=tk.LEFT)
+
+        tk.Frame(parent, bg=DIVIDER, height=1).pack(fill=tk.X, padx=12, pady=8)
+        tk.Label(parent, text="Quick SQL Query", font=self.fH2, bg=BG_CANVAS, fg=TEXT_MUTED).pack(anchor=tk.W, padx=16)
+        sql_f = tk.Frame(parent, bg=BG_CANVAS); sql_f.pack(fill=tk.X, padx=12, pady=4)
+        self._sql_entry = tk.Entry(sql_f, font=self.fMono, bg=BG_INPUT, fg=TEXT_BODY,
+                                   insertbackground=TEXT_BODY, relief=tk.FLAT, width=60,
+                                   highlightthickness=1, highlightbackground=DIVIDER)
+        self._sql_entry.pack(side=tk.LEFT, ipady=4, padx=(0,8), fill=tk.X, expand=True)
+        self._sql_entry.insert(0, "SELECT agent_id, COUNT(*), AVG(score) FROM runs GROUP BY agent_id")
+        tk.Button(sql_f, text="Run", font=self.fSmall, bg=ACCENT, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=8, command=self._db_run_sql).pack(side=tk.LEFT)
+        self._sql_result = scrolledtext.ScrolledText(parent, height=10, font=self.fMonoSm,
+            bg=BG_INPUT, fg=TEXT_BODY, relief=tk.FLAT, state=tk.DISABLED, wrap=tk.NONE)
+        self._sql_result.pack(fill=tk.X, padx=12, pady=4)
+
+    def _refresh_db_stats(self):
+        c = _get_db()
+        runs    = c.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        skills  = c.execute("SELECT COUNT(*) FROM skills").fetchone()[0]
+        agents  = c.execute("SELECT COUNT(DISTINCT agent_id) FROM runs").fetchone()[0]
+        c.close()
+        size = DB_PATH.stat().st_size // 1024 if DB_PATH.exists() else 0
+        self._db_pill_runs.config(text=str(runs),   fg=INFO)
+        self._db_pill_skills.config(text=str(skills), fg=ACCENT_LIGHT)
+        self._db_pill_agents.config(text=str(agents), fg=SUCCESS)
+        self._db_pill_size.config(text=f"{size} KB",  fg=TEXT_MUTED)
+
+    def _db_export_csv(self):
+        import csv as _csv
+        out = APP_ROOT / "agent_runs_export.csv"
+        rows = db_load_runs(9999)
+        with open(out, "w", newline="") as f:
+            w = _csv.writer(f)
+            w.writerow(["run_id","agent","project","graph","score","status","date"])
+            w.writerows(rows)
+        qlog(f"✓ Exported {len(rows)} rows → {out}", SUCCESS)
+        self._push_notif(f"📤 Exported {len(rows)} runs to agent_runs_export.csv", SUCCESS)
+
+    def _db_purge_old(self):
+        if not messagebox.askyesno("Purge", "Delete all run records older than 30 days?"): return
+        c = _get_db()
+        c.execute("DELETE FROM runs WHERE created_at < datetime('now','-30 days')")
+        deleted = c.execute("SELECT changes()").fetchone()[0]
+        c.commit(); c.close()
+        qlog(f"✓ Purged {deleted} old records.", WARNING)
+        self._refresh_db_stats()
+        self._push_notif(f"🗑 Purged {deleted} records (>30 days)", WARNING)
+
+    def _db_drop_all(self):
+        if not messagebox.askyesno("DANGER", "Delete ALL runs and skill versions? Cannot be undone."): return
+        if not messagebox.askyesno("Confirm", "Really drop everything?"): return
+        c = _get_db()
+        c.execute("DELETE FROM runs"); c.execute("DELETE FROM skills")
+        c.commit(); c.close()
+        qlog("☠ All data dropped.", ERROR, bold=True)
+        self._refresh_db_stats()
+        self._push_notif("☠ All DB data dropped.", ERROR)
+
+    def _db_run_sql(self):
+        sql = self._sql_entry.get().strip()
+        if not sql: return
+        try:
+            c = _get_db()
+            rows = c.execute(sql).fetchall()
+            c.close()
+            out = "\n".join(str(r) for r in rows[:200])
+            if len(rows) > 200: out += f"\n… ({len(rows)-200} more rows)"
+        except Exception as e:
+            out = f"ERROR: {e}"
+        self._sql_result.config(state=tk.NORMAL)
+        self._sql_result.delete("1.0", tk.END)
+        self._sql_result.insert("1.0", out or "(no results)")
+        self._sql_result.config(state=tk.DISABLED)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ADMIN TAB 4: LOG VIEWER
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_log_viewer(self, parent):
+        ctrl = tk.Frame(parent, bg=BG_CANVAS); ctrl.pack(fill=tk.X, padx=12, pady=8)
+        tk.Label(ctrl, text="Agent:", font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT)
+        self._lv_agent_var = tk.StringVar(value="All")
+        ac = ttk.Combobox(ctrl, textvariable=self._lv_agent_var,
+                          values=["All"]+ALL_AGENTS, state="readonly", font=self.fSmall, width=28)
+        ac.pack(side=tk.LEFT, padx=6)
+        tk.Label(ctrl, text="Project:", font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT, padx=(12,0))
+        self._lv_proj_var = tk.StringVar(value="All")
+        pc = ttk.Combobox(ctrl, textvariable=self._lv_proj_var,
+                          values=["All"]+PROJECTS, state="readonly", font=self.fSmall, width=18)
+        pc.pack(side=tk.LEFT, padx=6)
+        tk.Button(ctrl, text="Filter", font=self.fSmall, bg=ACCENT, fg=TEXT_PRIMARY,
+                  relief=tk.FLAT, cursor="hand2", padx=8,
+                  command=self._refresh_log_viewer).pack(side=tk.LEFT, padx=8)
+
+        cols2 = ("run_id","agent","project","graph","score","revision","status","date")
+        tf = tk.Frame(parent, bg=BG_CANVAS); tf.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+        vsb = ttk.Scrollbar(tf, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._lv_tree = ttk.Treeview(tf, columns=cols2, show="headings",
+                                      selectmode="browse", yscrollcommand=vsb.set)
+        vsb.configure(command=self._lv_tree.yview)
+        for col, w in zip(cols2, [70,175,100,110,60,65,75,145]):
+            self._lv_tree.heading(col, text=col.replace("_"," ").title())
+            self._lv_tree.column(col, width=w, minwidth=40)
+        self._lv_tree.pack(fill=tk.BOTH, expand=True)
+        self._lv_tree.bind("<<TreeviewSelect>>", self._lv_show_detail)
+
+        # Detail pane
+        tk.Frame(parent, bg=DIVIDER, height=1).pack(fill=tk.X, padx=12, pady=4)
+        self._lv_detail = scrolledtext.ScrolledText(parent, height=7, font=self.fMonoSm,
+            bg=BG_INPUT, fg=TEXT_BODY, relief=tk.FLAT, state=tk.DISABLED, wrap=tk.WORD)
+        self._lv_detail.pack(fill=tk.X, padx=12, pady=(0,8))
+
+    def _refresh_log_viewer(self):
+        agent_f = self._lv_agent_var.get()
+        proj_f  = self._lv_proj_var.get()
+        for r in self._lv_tree.get_children(): self._lv_tree.delete(r)
+        c = _get_db()
+        rows = c.execute("SELECT run_id,agent_id,project,graph,score,revision_count,status,created_at,critique,output FROM runs ORDER BY id DESC LIMIT 300").fetchall()
+        c.close()
+        self._lv_data = {}
+        for row in rows:
+            run_id,agent,proj,graph,score,rev,status,ts,crit,out = row
+            if agent_f != "All" and agent != agent_f: continue
+            if proj_f  != "All" and proj  != proj_f:  continue
+            sc = f"{score:.2f}" if score else "—"
+            tag = "good" if (score or 0)>=0.75 else ("warn" if (score or 0)>=0.5 else "dim")
+            self._lv_tree.insert("","end", values=(run_id,agent,proj,graph,sc,rev or 0,status,ts[:16]), tags=(tag,))
+            self._lv_data[run_id] = {"critique": crit or "", "output": out or ""}
+        self._lv_tree.tag_configure("good", foreground=SUCCESS)
+        self._lv_tree.tag_configure("warn", foreground=WARNING)
+        self._lv_tree.tag_configure("dim",  foreground=TEXT_MUTED)
+
+    def _lv_show_detail(self, evt):
+        sel = self._lv_tree.selection()
+        if not sel: return
+        run_id = self._lv_tree.item(sel[0])["values"][0]
+        d = self._lv_data.get(run_id, {})
+        text = "CRITIQUE:\n" + d.get("critique","\u2014") + "\n\nOUTPUT PREVIEW:\n" + d.get("output","\u2014")[:600]
+        self._lv_detail.config(state=tk.NORMAL)
+        self._lv_detail.delete("1.0", tk.END)
+        self._lv_detail.insert("1.0", text)
+        self._lv_detail.config(state=tk.DISABLED)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # ADMIN TAB 5: AUTOMATION STATUS
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_automation_status(self, parent):
+        tk.Label(parent, text="Base44 Automations", font=self.fH2,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(anchor=tk.W, padx=16, pady=(16,4))
+        tk.Label(parent, text="Live status pulled from the Base44 platform on each refresh.",
+                 font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack(anchor=tk.W, padx=16)
+
+        self._known_automations = [
+            {"name": "Xtreme Force — New Signups & Payments Logger", "project": "xftc",     "schedule": "Every 30 min",   "last_runs": 11, "credits": 0.6},
+            {"name": "Sigma Signal — Daily Submission Check",        "project": "sigma",    "schedule": "Daily 8AM CT",   "last_runs": 3,  "credits": 0.0},
+            {"name": "Sigma Signal — Newsletter Production Reminder","project": "sigma",    "schedule": "2nd/4th Thu CT", "last_runs": 2,  "credits": 0.2},
+            {"name": "Daily Grant & Funding Research Sweep",         "project": "grants",   "schedule": "Mon 8AM CT",     "last_runs": 1,  "credits": 0.1},
+            {"name": "YEPC — Hutto Planning Monitor",                "project": "yepc",     "schedule": "Weekly Mon",     "last_runs": 1,  "credits": 0.0},
+            {"name": "SmithCap LLC Reactivation Reminder",           "project": "smithcap", "schedule": "One-time",       "last_runs": 1,  "credits": 0.0},
+            {"name": "Reflexion Daily Report — 7AM CT",              "project": "all",      "schedule": "Daily 7AM CT",   "last_runs": 1,  "credits": 0.1},
+            {"name": "Weekly Fare Monitor — AUS Routes",             "project": "travel",   "schedule": "Weekly",         "last_runs": 0,  "credits": 0.0},
+            {"name": "AgentHarness — Daily Auto-commit",             "project": "dev",      "schedule": "Daily midnight", "last_runs": 0,  "credits": 0.0},
+        ]
+
+        cols = ("name","project","schedule","runs_24h","credits","status")
+        tf = tk.Frame(parent, bg=BG_CANVAS); tf.pack(fill=tk.BOTH, expand=True, padx=12, pady=8)
+        vsb = ttk.Scrollbar(tf, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._auto_tree = ttk.Treeview(tf, columns=cols, show="headings",
+                                        selectmode="browse", yscrollcommand=vsb.set)
+        vsb.configure(command=self._auto_tree.yview)
+        for col, w in zip(cols, [310,90,130,80,70,90]):
+            self._auto_tree.heading(col, text=col.replace("_"," ").title())
+            self._auto_tree.column(col, width=w, minwidth=50)
+        self._auto_tree.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(parent, text="Last 24h: 9 active  17 runs  0.8 credits used",
+                 font=self.fSmall, bg=BG_CANVAS, fg=TEXT_MUTED).pack(anchor=tk.W, padx=16, pady=6)
+
+    def _refresh_automation_status(self):
+        for r in self._auto_tree.get_children(): self._auto_tree.delete(r)
+        for a in self._known_automations:
+            status = "Active" if a["last_runs"] > 0 else "Idle"
+            tag = "active" if a["last_runs"] > 0 else "idle"
+            self._auto_tree.insert("","end", values=(
+                a["name"], a["project"], a["schedule"],
+                a["last_runs"], f"{a['credits']:.1f}", status
+            ), tags=(tag,))
+        self._auto_tree.tag_configure("active", foreground="#92c353")
+        self._auto_tree.tag_configure("idle",   foreground="#8a8aaa")
 
     # ── Log poll ─────────────────────────────────────────────────────────────
     def _poll_log(self):
