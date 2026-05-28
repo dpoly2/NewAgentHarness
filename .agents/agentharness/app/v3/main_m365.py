@@ -617,23 +617,44 @@ class AgentHarnessM365(tk.Tk):
         f = tk.Frame(self._content, bg=BG_CANVAS)
         self._views["home"] = f
 
-        # Page header
+        # ── Top header bar ──────────────────────────────────────────────
         hdr = tk.Frame(f, bg=BG_CANVAS)
         hdr.pack(fill=tk.X, padx=24, pady=(20,10))
-        tk.Label(hdr, text="Agent Teams", font=self.fTitle, bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(side=tk.LEFT)
-        tk.Label(hdr, text="Smith Capital Portfolio — 10 Teams  ·  45 Agents", font=self.fBody, bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT, padx=16, pady=4)
+        tk.Label(hdr, text="Agent Teams", font=self.fTitle,
+                 bg=BG_CANVAS, fg=TEXT_PRIMARY).pack(side=tk.LEFT)
+        tk.Label(hdr, text="Smith Capital Portfolio — 10 Teams  ·  45 Agents",
+                 font=self.fBody, bg=BG_CANVAS, fg=TEXT_MUTED).pack(side=tk.LEFT, padx=16, pady=4)
+        # Toggle chat panel button (top-right)
+        self._chat_toggle_btn = tk.Button(hdr, text="💬 AgentMajesty",
+            font=self.fSmall, bg=ACCENT, fg=TEXT_PRIMARY, relief=tk.FLAT,
+            cursor="hand2", padx=10, pady=3,
+            command=self._toggle_chat_panel)
+        self._chat_toggle_btn.pack(side=tk.RIGHT, padx=4)
 
-        # Scrollable card grid
-        outer = tk.Frame(f, bg=BG_CANVAS)
+        # ── Body: card grid (left) + chat panel (right) ─────────────────
+        self._home_body = tk.Frame(f, bg=BG_CANVAS)
+        self._home_body.pack(fill=tk.BOTH, expand=True)
+
+        # LEFT — scrollable card grid
+        left = tk.Frame(self._home_body, bg=BG_CANVAS)
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        outer = tk.Frame(left, bg=BG_CANVAS)
         outer.pack(fill=tk.BOTH, expand=True, padx=12)
         vsb = ttk.Scrollbar(outer, orient="vertical")
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        self._home_canvas = tk.Canvas(outer, bg=BG_CANVAS, highlightthickness=0, yscrollcommand=vsb.set)
+        self._home_canvas = tk.Canvas(outer, bg=BG_CANVAS, highlightthickness=0,
+                                       yscrollcommand=vsb.set)
         self._home_canvas.pack(fill=tk.BOTH, expand=True)
         vsb.configure(command=self._home_canvas.yview)
         self._home_inner = tk.Frame(self._home_canvas, bg=BG_CANVAS)
         self._home_canvas.create_window((0,0), window=self._home_inner, anchor="nw")
-        self._home_inner.bind("<Configure>", lambda e: self._home_canvas.configure(scrollregion=self._home_canvas.bbox("all")))
+        self._home_inner.bind("<Configure>",
+            lambda e: self._home_canvas.configure(
+                scrollregion=self._home_canvas.bbox("all")))
+
+        # RIGHT — AgentMajesty chat panel (initially visible)
+        self._chat_panel_visible = True
+        self._build_chat_panel(self._home_body)
 
     def _refresh_home_cards(self):
         for w in self._home_inner.winfo_children(): w.destroy()
@@ -682,6 +703,228 @@ class AgentHarnessM365(tk.Tk):
         if agents:
             self._agent_var.set(agents[0])
         self._show_view("run")
+
+    # ════════════════════════════════════════════════════════════════════════
+    # AGENTMAJESTY CHAT PANEL  (Home screen right sidebar)
+    # ════════════════════════════════════════════════════════════════════════
+    def _build_chat_panel(self, parent):
+        """Builds the persistent right-side chat panel inside the Home body frame."""
+        self._chat_frame = tk.Frame(parent, bg=BG_PANEL, width=340,
+                                     highlightbackground=DIVIDER, highlightthickness=1)
+        self._chat_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=(0,0))
+        self._chat_frame.pack_propagate(False)
+
+        # ── Panel header ─────────────────────────────────────────────────
+        chat_hdr = tk.Frame(self._chat_frame, bg=BG_CARD, height=44)
+        chat_hdr.pack(fill=tk.X)
+        chat_hdr.pack_propagate(False)
+        # Avatar dot
+        av = tk.Label(chat_hdr, text="👑", font=tkfont.Font(family="Segoe UI Emoji",size=16),
+                      bg=BG_CARD, fg=ACCENT_LIGHT, padx=8)
+        av.pack(side=tk.LEFT, pady=4)
+        name_col = tk.Frame(chat_hdr, bg=BG_CARD)
+        name_col.pack(side=tk.LEFT, fill=tk.Y, pady=6)
+        tk.Label(name_col, text="AgentMajesty", font=self.fH2,
+                 bg=BG_CARD, fg=TEXT_PRIMARY).pack(anchor=tk.W)
+        tk.Label(name_col, text="Chief of Staff  ·  Online",
+                 font=self.fSmall, bg=BG_CARD, fg=SUCCESS).pack(anchor=tk.W)
+        # Online dot
+        tk.Label(chat_hdr, text="●", font=self.fSmall,
+                 bg=BG_CARD, fg=SUCCESS).pack(side=tk.RIGHT, padx=10)
+        tk.Frame(self._chat_frame, bg=DIVIDER, height=1).pack(fill=tk.X)
+
+        # ── Chip quick-actions ───────────────────────────────────────────
+        chip_row = tk.Frame(self._chat_frame, bg=BG_PANEL)
+        chip_row.pack(fill=tk.X, padx=8, pady=(6,2))
+        for chip_text in ["Today's briefing", "Run status", "Flag issues", "Top priority"]:
+            tk.Button(chip_row, text=chip_text, font=self.fSmall,
+                      bg=BG_HOVER, fg=TEXT_MUTED, relief=tk.FLAT, cursor="hand2",
+                      padx=6, pady=2,
+                      command=lambda t=chip_text: self._chat_send(t)
+                      ).pack(side=tk.LEFT, padx=2, pady=2)
+        tk.Frame(self._chat_frame, bg=DIVIDER, height=1).pack(fill=tk.X, pady=(4,0))
+
+        # ── Message history (scrollable canvas) ──────────────────────────
+        msg_outer = tk.Frame(self._chat_frame, bg=BG_PANEL)
+        msg_outer.pack(fill=tk.BOTH, expand=True)
+        self._chat_vsb = ttk.Scrollbar(msg_outer, orient="vertical")
+        self._chat_vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._chat_canvas = tk.Canvas(msg_outer, bg=BG_PANEL,
+                                       highlightthickness=0,
+                                       yscrollcommand=self._chat_vsb.set)
+        self._chat_canvas.pack(fill=tk.BOTH, expand=True)
+        self._chat_vsb.configure(command=self._chat_canvas.yview)
+        self._chat_msgs_frame = tk.Frame(self._chat_canvas, bg=BG_PANEL)
+        self._chat_canvas.create_window((0,0), window=self._chat_msgs_frame,
+                                         anchor="nw", width=320)
+        self._chat_msgs_frame.bind("<Configure>",
+            lambda e: self._chat_canvas.configure(
+                scrollregion=self._chat_canvas.bbox("all")))
+        self._chat_messages = []   # list of {role, text}
+
+        # ── Input bar ────────────────────────────────────────────────────
+        tk.Frame(self._chat_frame, bg=DIVIDER, height=1).pack(fill=tk.X)
+        input_row = tk.Frame(self._chat_frame, bg=BG_PANEL, pady=6)
+        input_row.pack(fill=tk.X, padx=8)
+        self._chat_input = tk.Text(input_row, height=2, font=self.fBody,
+                                    bg=BG_INPUT, fg=TEXT_BODY,
+                                    insertbackground=TEXT_BODY, relief=tk.FLAT,
+                                    wrap=tk.WORD, padx=8, pady=4,
+                                    highlightthickness=1,
+                                    highlightbackground=DIVIDER)
+        self._chat_input.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self._chat_input.bind("<Return>",     self._chat_on_enter)
+        self._chat_input.bind("<Shift-Return>", lambda e: None)  # allow newline
+        send_btn = tk.Button(input_row, text="⬆", font=self.fH1,
+                              bg=ACCENT, fg=TEXT_PRIMARY, relief=tk.FLAT,
+                              cursor="hand2", padx=8, pady=4,
+                              command=lambda: self._chat_send())
+        send_btn.pack(side=tk.LEFT, padx=(6,0))
+
+        # ── Welcome message ──────────────────────────────────────────────
+        self._chat_push("AgentMajesty",
+            "Chief of Staff online. Ready to brief you on the portfolio, "
+            "flag blockers, or coordinate agent tasks. What do you need?",
+            role="agent")
+
+    def _toggle_chat_panel(self):
+        """Show/hide the right chat panel."""
+        if self._chat_panel_visible:
+            self._chat_frame.pack_forget()
+            self._chat_panel_visible = False
+            self._chat_toggle_btn.config(text="💬 Open AgentMajesty", bg=BG_CARD, fg=TEXT_MUTED)
+        else:
+            self._chat_frame.pack(side=tk.RIGHT, fill=tk.Y)
+            self._chat_panel_visible = True
+            self._chat_toggle_btn.config(text="💬 AgentMajesty", bg=ACCENT, fg=TEXT_PRIMARY)
+            self._chat_scroll_bottom()
+
+    def _chat_push(self, sender, text, role="user"):
+        """Add a message bubble to the chat panel."""
+        is_agent = (role == "agent")
+        bg        = BG_CARD   if is_agent else ACCENT_DARK
+        fg        = TEXT_BODY if is_agent else TEXT_PRIMARY
+        anchor    = tk.W      if is_agent else tk.E
+        padx_l    = (8, 40)   if is_agent else (40, 8)
+
+        bubble_outer = tk.Frame(self._chat_msgs_frame, bg=BG_PANEL)
+        bubble_outer.pack(fill=tk.X, padx=0, pady=3, anchor=anchor)
+
+        if is_agent:
+            tk.Label(bubble_outer, text="👑", font=self.fSmall,
+                     bg=BG_PANEL, fg=ACCENT_LIGHT).pack(side=tk.LEFT, anchor=tk.N, padx=(6,2), pady=4)
+
+        bubble = tk.Frame(bubble_outer, bg=bg,
+                          highlightbackground=BORDER_CARD, highlightthickness=1)
+        bubble.pack(side=tk.LEFT if is_agent else tk.RIGHT,
+                    padx=padx_l, pady=2, anchor=anchor)
+        tk.Label(bubble, text=text, font=self.fBody, bg=bg, fg=fg,
+                 wraplength=230, justify=tk.LEFT, anchor=tk.W,
+                 padx=10, pady=6).pack()
+
+        self._chat_messages.append({"role": role, "text": text})
+        self._chat_scroll_bottom()
+
+    def _chat_scroll_bottom(self):
+        self._chat_msgs_frame.update_idletasks()
+        self._chat_canvas.configure(scrollregion=self._chat_canvas.bbox("all"))
+        self._chat_canvas.yview_moveto(1.0)
+
+    def _chat_on_enter(self, event):
+        """Send on Enter, allow Shift+Enter for newline."""
+        if event.state & 0x1:   # Shift held
+            return
+        self._chat_send()
+        return "break"
+
+    def _chat_send(self, prefill=None):
+        """Send a message to AgentMajesty and dispatch to agent logic."""
+        text = prefill or self._chat_input.get("1.0", tk.END).strip()
+        if not text: return
+        self._chat_input.delete("1.0", tk.END)
+        self._chat_push("You", text, role="user")
+
+        # Dispatch to local response logic in a thread
+        import threading
+        threading.Thread(target=self._chat_respond, args=(text,), daemon=True).start()
+
+    def _chat_respond(self, user_text):
+        """AgentMajesty response logic — runs in background thread."""
+        import time
+        t = user_text.lower()
+
+        # --- Quick-action responses ---
+        if "briefing" in t or "today" in t:
+            reply = self._chat_build_briefing()
+        elif "run status" in t or "status" in t:
+            reply = self._chat_build_run_status()
+        elif "flag" in t or "issue" in t or "blocker" in t:
+            reply = self._chat_build_blockers()
+        elif "priority" in t or "top" in t:
+            reply = self._chat_build_priorities()
+        elif "agent" in t and ("list" in t or "all" in t):
+            total = sum(len(v) for v in AGENT_REGISTRY.values())
+            reply = f"We have {len(AGENT_REGISTRY)} teams and {total} agents active across the portfolio."
+        elif "help" in t or "?" in t:
+            reply = ("I can brief you on the portfolio, surface blockers, list agent statuses, "
+                     "show top priorities, or relay any task to a specialist agent. Just ask.")
+        else:
+            reply = (f"Got it — I'll route '{user_text[:60]}' to the appropriate specialist. "
+                     f"Use the Run view to execute directly, or ask me for a specific team briefing.")
+
+        time.sleep(0.3)  # brief humanising delay
+        # Schedule UI update on main thread
+        self.after(0, lambda: self._chat_push("AgentMajesty", reply, role="agent"))
+        self.after(0, lambda: self._push_notif(f"💬 AgentMajesty replied.", ACCENT_LIGHT))
+
+    def _chat_build_briefing(self):
+        stats = db_agent_stats()
+        total_runs = sum(s["runs"] for s in stats.values())
+        flagged    = [a for a,s in stats.items() if s["runs"]>0 and s["avg"]<0.60]
+        teams      = len(AGENT_REGISTRY)
+        agents     = sum(len(v) for v in AGENT_REGISTRY.values())
+        lines = [
+            f"Good day. Portfolio snapshot:",
+            f"• {teams} teams / {agents} agents deployed",
+            f"• {total_runs} total agent runs logged",
+        ]
+        if flagged:
+            lines.append(f"• {len(flagged)} agent(s) flagged (score <0.60): {', '.join(flagged[:3])}")
+        else:
+            lines.append("• No agents currently flagged")
+        lines.append("Active automations: 9  |  Credits used today: 0.8")
+        return "\n".join(lines)
+
+    def _chat_build_run_status(self):
+        stats = db_agent_stats()
+        if not stats:
+            return "No runs logged yet this session. Head to the Run view to execute your first agent."
+        top = sorted(stats.items(), key=lambda x: x[1]["runs"], reverse=True)[:5]
+        lines = ["Most active agents:"]
+        for agent, s in top:
+            lines.append(f"  {agent}: {s['runs']}r  avg {s['avg']:.2f}")
+        return "\n".join(lines)
+
+    def _chat_build_blockers(self):
+        issues = [
+            "PBS site: Golf Tournament + Dues pages need payment links",
+            "XFTC Gmail: forwarding rule required for signup logger",
+            "Smith Capital LLC: reactivation filings overdue",
+            "Clarity Solar: TX SB 1036 GL insurance deadline Sep 1",
+            "Smith Capital Holdings: S-Corp election not yet filed",
+        ]
+        return "Current portfolio blockers:\n" + "\n".join(f"\u2022 {b}" for b in issues)
+
+    def _chat_build_priorities(self):
+        priorities = [
+            "1. Smith Capital Holdings LLC — file Certificate of Formation",
+            "2. XFTC Plugin Sprint 3 — Stripe live key + coach portal",
+            "3. PBS Website — finalize 3 remaining content pages",
+            "4. Clarity Solar — register claritysolarservices.com + GL insurance",
+            "5. YEPC — Hutto EDC follow-up (14-day mark passed)",
+        ]
+        return "Top 5 portfolio priorities:\n" + "\n".join(priorities)
+
 
     # ════════════════════════════════════════════════════════════════════════
     # VIEW: RUN — M365 Command/Detail split pane
