@@ -23,6 +23,7 @@
 | 13 | The Sigma Signal | sigma-signal-project-lead | 6 specialists | 🟢 Active |
 | 14 | Travel Division | travel-project-lead | 4 specialists + 1 helper | 🟢 Active |
 | 15 | Business Structure & Holdings | holdings-project-lead | 5 specialists | 🔴 Formation Pending |
+| 16 | Business Law Division | business-law-project-lead | 6 specialists | 🟢 Active |
 
 ---
 
@@ -540,6 +541,29 @@
 ### Files
 - `.agents/projects/holdings/MASTER-STRUCTURE.md`
 - `.agents/agents/projects/holdings/`
+
+
+---
+
+## PROJECT 16 — BUSINESS LAW DIVISION
+
+### Lead
+**business-law-project-lead** — General Counsel / Team Coordinator — triages all legal tasks, maintains Legal Action Log, routes to specialists
+
+### Specialist Agents
+| Agent | Practice Area | Key Responsibilities |
+|-------|--------------|---------------------|
+| business-law-entity-agent | Entity Formation & Corporate Structure | TX SOS filings, Operating Agreements, S-Corp elections, annual PIR |
+| business-law-contracts-agent | Contracts & Commercial Agreements | MSAs, ICAs, client service agreements, vendor contracts, sponsorships |
+| business-law-ip-agent | Intellectual Property & Brand Protection | Trademark searches, copyright strategy, domain protection |
+| business-law-employment-agent | Employment & Labor Law | Worker classification, ICAs, W-2 payroll compliance, non-competes |
+| business-law-realestate-agent | Real Estate & Property Law | YEPC acquisition, lease reviews, title research, SmithCap reactivation |
+| business-law-regulatory-agent | Regulatory, Licensing & Nonprofit Compliance | TDLR, TABC, TX Franchise Tax, 501(c)(3) compliance, annual filings |
+
+### Files
+- `.agents/agents/projects/business-law/`
+- `.agents/projects/business-law/PROJECT.md`
+- `.agents/projects/business-law/LEGAL-ACTION-LOG.md`
 
 
 ## 🤖 SHARED / CROSS-PROJECT AGENTS
