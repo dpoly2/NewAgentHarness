@@ -353,6 +353,28 @@ def build_legal_graph():
     g.set_entry_point("load_memory"); g.add_edge("load_memory","legal_analyze"); g.add_edge("legal_analyze","legal_draft"); g.add_edge("legal_draft","legal_review"); g.add_edge("legal_review","evaluate")
     g.add_conditional_edges("evaluate",should_revise,{"revise":"revise","save":"save_memory"}); g.add_edge("revise","legal_analyze"); g.add_edge("save_memory",END); return g.compile()
 
+
+# ════════════════════════════════════════════════════════════════════════════
+# LIGHT THEME TOKENS  (M365 Light mode)
+# ════════════════════════════════════════════════════════════════════════════
+LIGHT = {
+    "BG_CANVAS": "#f3f2f1", "BG_RAIL": "#ffffff", "BG_PANEL": "#ffffff",
+    "BG_CARD": "#faf9f8",   "BG_INPUT": "#f3f2f1", "BG_HOVER": "#edebe9",
+    "BG_SELECTED": "#e1dfdd","ACCENT": "#6264a7",   "ACCENT_LIGHT": "#444791",
+    "ACCENT_DARK": "#33367a","TEXT_PRIMARY": "#201f1e","TEXT_BODY": "#323130",
+    "TEXT_MUTED": "#605e5c", "TEXT_HINT": "#a19f9d", "DIVIDER": "#edebe9",
+    "BORDER_CARD": "#d2d0ce",
+}
+DARK = {
+    "BG_CANVAS": "#1f1f2e", "BG_RAIL": "#141422", "BG_PANEL": "#252535",
+    "BG_CARD": "#2d2d42",   "BG_INPUT": "#1a1a2e", "BG_HOVER": "#333350",
+    "BG_SELECTED": "#3a3a5c","ACCENT": "#6264a7",  "ACCENT_LIGHT": "#8b8cc7",
+    "ACCENT_DARK": "#4a4b8c","TEXT_PRIMARY": "#ffffff","TEXT_BODY": "#d6d6d6",
+    "TEXT_MUTED": "#8a8aaa", "TEXT_HINT": "#555570", "DIVIDER": "#3a3a5c",
+    "BORDER_CARD": "#404060",
+}
+_current_theme = "dark"
+
 GRAPH_BUILDERS = {"reflexion":build_reflexion_graph,"research":build_research_graph,"wordpress":build_wordpress_graph,"business-law":build_legal_graph}
 
 GRAPH_LAYOUTS = {
@@ -419,6 +441,10 @@ class AgentHarnessM365(tk.Tk):
         self._active_node = ""
         self._active_view = tk.StringVar(value="home")
         self._views       = {}
+        self._theme       = "dark"          # "dark" | "light"
+        self._notifs      = []              # list of {msg, color, ts}
+        self._notif_count = tk.IntVar(value=0)
+        self._notif_panel = None            # toplevel when open
 
         self._setup_fonts()
         self._setup_styles()
@@ -477,6 +503,25 @@ class AgentHarnessM365(tk.Tk):
             font=self.fSmall, bg=BG_RAIL,
             fg=SUCCESS if LANGGRAPH_OK else ERROR, padx=8)
         self._lg_pill.pack(side=tk.RIGHT)
+
+        # Theme toggle button
+        self._theme_btn = tk.Label(titlebar, text="☀", font=self.fSmall,
+                                   bg=BG_RAIL, fg=TEXT_MUTED, padx=6, cursor="hand2")
+        self._theme_btn.pack(side=tk.RIGHT, padx=2)
+        self._theme_btn.bind("<Button-1>", lambda e: self._toggle_theme())
+
+        # Bell notification button
+        self._bell_frame = tk.Frame(titlebar, bg=BG_RAIL, cursor="hand2")
+        self._bell_frame.pack(side=tk.RIGHT, padx=4)
+        self._bell_lbl = tk.Label(self._bell_frame, text="🔔", font=self.fSmall,
+                                  bg=BG_RAIL, fg=TEXT_MUTED, padx=4)
+        self._bell_lbl.pack(side=tk.LEFT)
+        self._badge_lbl = tk.Label(self._bell_frame, textvariable=self._notif_count,
+                                   font=tkfont.Font(family="Segoe UI",size=7,weight="bold"),
+                                   bg=ERROR, fg="white", padx=3, pady=1)
+        # badge hidden until there are notifs
+        self._bell_frame.bind("<Button-1>", lambda e: self._toggle_notif_panel())
+        self._bell_lbl.bind("<Button-1>",   lambda e: self._toggle_notif_panel())
 
         # ── Main body row ─────────────────────────────────────────────────
         body = tk.Frame(self, bg=BG_CANVAS)
@@ -928,6 +973,8 @@ class AgentHarnessM365(tk.Tk):
         self._score_pill.config(text=f"Score: {score:.2f}", fg=color)
         qlog(f"\n{'─'*60}", DIVIDER)
         qlog(f"  ✓ COMPLETE  score={score:.2f}  revisions={final.get('revision_count',0)}  skill_v={final.get('skill_version',1)}", SUCCESS, bold=True)
+        agent_name = final.get('agent_id','agent')
+        self._push_notif(f"✓ {agent_name} — score {score:.2f}  ({final.get('revision_count',0)} revisions)", color)
         if final.get("critique"): qlog(f"  Critique: {final['critique'][:120]}", TEXT_MUTED)
         qlog(f"{'─'*60}", DIVIDER)
         self._set_output(final.get("output","(no output)"))
@@ -935,6 +982,7 @@ class AgentHarnessM365(tk.Tk):
     def _on_error(self):
         self._running=False; self._run_btn.config(state=tk.NORMAL); self._stop_btn.config(state=tk.DISABLED)
         self._score_pill.config(text="Score: ERR", fg=ERROR)
+        self._push_notif("⚠ Agent run failed — check Live Log for details.", ERROR)
 
     def _stop_agent(self):
         qlog("⚠ Stop requested — will finish current node.", WARNING)
@@ -943,6 +991,131 @@ class AgentHarnessM365(tk.Tk):
     def _set_output(self, text):
         self._output.config(state=tk.NORMAL); self._output.delete("1.0",tk.END)
         self._output.insert("1.0",text); self._output.config(state=tk.DISABLED)
+
+
+    # ════════════════════════════════════════════════════════════════════════
+    # THEME TOGGLE
+    # ════════════════════════════════════════════════════════════════════════
+    def _toggle_theme(self):
+        self._theme = "light" if self._theme == "dark" else "dark"
+        palette = LIGHT if self._theme == "light" else DARK
+        self._theme_btn.config(text="🌙" if self._theme == "light" else "☀")
+        self._apply_theme_palette(palette)
+
+    def _apply_theme_palette(self, p):
+        """Recursively recolour all widgets that use our palette variables."""
+        bg_map = {
+            BG_CANVAS: p["BG_CANVAS"], BG_RAIL: p["BG_RAIL"],
+            BG_PANEL:  p["BG_PANEL"],  BG_CARD: p["BG_CARD"],
+            BG_INPUT:  p["BG_INPUT"],  BG_HOVER: p["BG_HOVER"],
+            BG_SELECTED: p["BG_SELECTED"],
+        }
+        fg_map = {
+            TEXT_PRIMARY: p["TEXT_PRIMARY"], TEXT_BODY: p["TEXT_BODY"],
+            TEXT_MUTED:   p["TEXT_MUTED"],   TEXT_HINT: p["TEXT_HINT"],
+        }
+        def _recolour(widget):
+            try:
+                bg = str(widget.cget("bg"))
+                if bg in bg_map: widget.config(bg=bg_map[bg])
+                fg = str(widget.cget("fg"))
+                if fg in fg_map: widget.config(fg=fg_map[fg])
+            except tk.TclError:
+                pass
+            for child in widget.winfo_children():
+                _recolour(child)
+        _recolour(self)
+        self.configure(bg=p["BG_CANVAS"])
+        # Update ttk styles
+        style = ttk.Style()
+        style.configure("Treeview", background=p["BG_PANEL"], foreground=p["TEXT_BODY"], fieldbackground=p["BG_PANEL"])
+        style.configure("Treeview.Heading", background=p["BG_CARD"], foreground=p["TEXT_MUTED"])
+
+    # ════════════════════════════════════════════════════════════════════════
+    # NOTIFICATION PANEL
+    # ════════════════════════════════════════════════════════════════════════
+    def _push_notif(self, msg: str, color: str = None):
+        """Add a notification. Called from _on_complete, errors, etc."""
+        if color is None: color = SUCCESS
+        ts = datetime.now().strftime("%H:%M")
+        self._notifs.insert(0, {"msg": msg, "color": color, "ts": ts})
+        if len(self._notifs) > 50: self._notifs = self._notifs[:50]
+        self._notif_count.set(len(self._notifs))
+        # Show badge
+        self._badge_lbl.pack(side=tk.LEFT)
+        # Refresh panel if open
+        if self._notif_panel and self._notif_panel.winfo_exists():
+            self._build_notif_contents()
+
+    def _toggle_notif_panel(self):
+        if self._notif_panel and self._notif_panel.winfo_exists():
+            self._notif_panel.destroy()
+            self._notif_panel = None
+            return
+        # Position panel under the bell
+        bx = self._bell_frame.winfo_rootx()
+        by = self._bell_frame.winfo_rooty() + self._bell_frame.winfo_height() + 2
+        panel = tk.Toplevel(self)
+        panel.overrideredirect(True)
+        panel.geometry(f"360x480+{bx-300}+{by}")
+        panel.configure(bg=BG_PANEL)
+        # Shadow border
+        panel.config(highlightbackground=DIVIDER, highlightthickness=1)
+        self._notif_panel = panel
+        self._notif_inner = panel
+        self._build_notif_contents()
+        # Close on focus-out
+        panel.bind("<FocusOut>", lambda e: panel.destroy() if panel.winfo_exists() else None)
+        panel.focus_set()
+
+    def _build_notif_contents(self):
+        for w in self._notif_inner.winfo_children(): w.destroy()
+
+        # Header row
+        hdr = tk.Frame(self._notif_inner, bg=BG_CARD)
+        hdr.pack(fill=tk.X)
+        tk.Label(hdr, text="🔔  Notifications", font=self.fH2,
+                 bg=BG_CARD, fg=TEXT_PRIMARY).pack(side=tk.LEFT, padx=12, pady=8)
+        if self._notifs:
+            tk.Button(hdr, text="Clear all", font=self.fSmall, bg=BG_CARD, fg=TEXT_MUTED,
+                      relief=tk.FLAT, cursor="hand2",
+                      command=self._clear_notifs).pack(side=tk.RIGHT, padx=10)
+        tk.Frame(self._notif_inner, bg=DIVIDER, height=1).pack(fill=tk.X)
+
+        # Scrollable list
+        outer = tk.Frame(self._notif_inner, bg=BG_PANEL)
+        outer.pack(fill=tk.BOTH, expand=True)
+        vsb = ttk.Scrollbar(outer, orient="vertical")
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas = tk.Canvas(outer, bg=BG_PANEL, highlightthickness=0, yscrollcommand=vsb.set)
+        canvas.pack(fill=tk.BOTH, expand=True)
+        vsb.configure(command=canvas.yview)
+        inner = tk.Frame(canvas, bg=BG_PANEL)
+        canvas.create_window((0,0), window=inner, anchor="nw")
+        inner.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+
+        if not self._notifs:
+            tk.Label(inner, text="No notifications yet.", font=self.fSmall,
+                     bg=BG_PANEL, fg=TEXT_MUTED).pack(pady=40)
+        else:
+            for n in self._notifs:
+                row = tk.Frame(inner, bg=BG_PANEL,
+                               highlightbackground=DIVIDER, highlightthickness=1)
+                row.pack(fill=tk.X, padx=8, pady=3, ipady=4)
+                # Colour strip on left
+                tk.Frame(row, bg=n["color"], width=4).pack(side=tk.LEFT, fill=tk.Y)
+                txt_f = tk.Frame(row, bg=BG_PANEL)
+                txt_f.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+                tk.Label(txt_f, text=n["msg"], font=self.fSmall, bg=BG_PANEL,
+                         fg=TEXT_BODY, wraplength=290, justify=tk.LEFT, anchor=tk.W).pack(anchor=tk.W)
+                tk.Label(txt_f, text=n["ts"], font=tkfont.Font(family="Segoe UI",size=8),
+                         bg=BG_PANEL, fg=TEXT_MUTED).pack(anchor=tk.W)
+
+    def _clear_notifs(self):
+        self._notifs.clear()
+        self._notif_count.set(0)
+        self._badge_lbl.pack_forget()
+        self._build_notif_contents()
 
     # ── Log poll ─────────────────────────────────────────────────────────────
     def _poll_log(self):
