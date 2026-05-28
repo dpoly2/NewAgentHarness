@@ -1,5 +1,5 @@
-# ============================================================
-#  AgentHarness Hub — Server Start Script (Windows)
+﻿# ============================================================
+#  AgentHarness Hub -- Server Start Script (Windows)
 #  Starts the Hub server as a background process.
 #
 #  Run from CMD (no policy issues):
@@ -22,15 +22,15 @@ $LogFile    = Join-Path $RepoRoot ".agents\data\logs\hub_$(Get-Date -Format 'yyy
 Set-Location $RepoRoot
 
 Write-Host ""
-Write-Host "  [Hub] AgentHarness Hub — Starting..." -ForegroundColor Cyan
+Write-Host "  [Hub] AgentHarness Hub -- Starting..." -ForegroundColor Cyan
 
-# ── Check venv ────────────────────────────────────────────────────────────────
+# -- Check venv ----------------------------------------------------------------
 if (-not (Test-Path $VenvPython)) {
     Write-Host "  [FAIL] .venv not found. Run install.ps1 first." -ForegroundColor Red
     exit 1
 }
 
-# ── Check if Hub already running ──────────────────────────────────────────────
+# -- Check if Hub already running ----------------------------------------------
 if (Test-Path $PidFile) {
     $existingPid = Get-Content $PidFile -ErrorAction SilentlyContinue
     if ($existingPid) {
@@ -45,19 +45,23 @@ if (Test-Path $PidFile) {
     Remove-Item $PidFile -Force
 }
 
-# ── Load .env into environment ────────────────────────────────────────────────
+# -- Load .env into environment ------------------------------------------------
 if (Test-Path $EnvFile) {
     Get-Content $EnvFile | ForEach-Object {
         if ($_ -match "^([A-Za-z_][A-Za-z0-9_]*)=(.+)$") {
             $k = $Matches[1].Trim()
-            $v = $Matches[2].Trim().Trim("'").Trim('"')
+            $v = $Matches[2].Trim()
+            # Strip bash $'...' quoting and plain quotes
+            if ($v -match "^\`$'(.+)'$") { $v = $Matches[1] }
+            elseif ($v -match "^'(.+)'$") { $v = $Matches[1] }
+            elseif ($v -match '^"(.+)"$')  { $v = $Matches[1] }
             [System.Environment]::SetEnvironmentVariable($k, $v, "Process")
         }
     }
     Write-Host "  [OK]  .env loaded" -ForegroundColor Green
 }
 
-# ── Start Hub as background process ──────────────────────────────────────────
+# -- Start Hub as background process ------------------------------------------
 Write-Host "  [..] Starting Hub server (logging to $LogFile)..." -ForegroundColor Yellow
 
 $psi = New-Object System.Diagnostics.ProcessStartInfo

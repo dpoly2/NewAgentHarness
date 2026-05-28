@@ -1,16 +1,16 @@
-# ============================================================
-#  AgentHarness Hub — Windows Service Installer (Phase 4)
+﻿# ============================================================
+#  AgentHarness Hub -- Windows Service Installer (Phase 4)
 #  Registers hub_server.py as a Windows Service using NSSM
-#  (Non-Sucking Service Manager — free, no pywin32 needed)
+#  (Non-Sucking Service Manager -- free, no pywin32 needed)
 #
 #  Run as Administrator:
 #    powershell.exe -ExecutionPolicy Bypass -File ".agents\agentharness\app\v3\hub_install_service.ps1"
 #
 #  Options:
-#    -Action install   (default) — install and start service
-#    -Action remove    — stop and remove service
-#    -Action restart   — restart service
-#    -Action status    — show current service status
+#    -Action install   (default) -- install and start service
+#    -Action remove    -- stop and remove service
+#    -Action restart   -- restart service
+#    -Action status    -- show current service status
 # ============================================================
 
 param(
@@ -21,7 +21,7 @@ $ErrorActionPreference = "Continue"
 
 $ServiceName = "AgentHarnessHub"
 $DisplayName = "AgentHarness Hub Server"
-$Description = "Always-on agent execution server for AgentHarness v3 — Smith Capital Portfolio"
+$Description = "Always-on agent execution server for AgentHarness v3 -- Smith Capital Portfolio"
 $ScriptDir   = $PSScriptRoot
 $RepoRoot    = (Resolve-Path (Join-Path $ScriptDir "../../../../")).Path.TrimEnd('\')
 $VenvPython  = Join-Path $RepoRoot ".venv\Scripts\python.exe"
@@ -31,20 +31,20 @@ $NssmDir     = Split-Path $NssmPath -Parent
 $LogDir      = Join-Path $RepoRoot ".agents\data\logs"
 
 Write-Host ""
-Write-Host "  [Hub Service] AgentHarness Hub — Windows Service Manager" -ForegroundColor Cyan
+Write-Host "  [Hub Service] AgentHarness Hub -- Windows Service Manager" -ForegroundColor Cyan
 Write-Host "  Action: $Action" -ForegroundColor DarkGray
 Write-Host ""
 
-# ── Check admin rights ────────────────────────────────────────────────────────
+# -- Check admin rights --------------------------------------------------------
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
            ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "  [ERROR] Must run as Administrator to manage Windows Services." -ForegroundColor Red
-    Write-Host "          Right-click PowerShell → 'Run as Administrator'" -ForegroundColor Yellow
+    Write-Host "          Right-click PowerShell -> 'Run as Administrator'" -ForegroundColor Yellow
     exit 1
 }
 
-# ── Download NSSM if not present ──────────────────────────────────────────────
+# -- Download NSSM if not present ----------------------------------------------
 if (-not (Test-Path $NssmPath)) {
     Write-Host "  [..] Downloading NSSM (Non-Sucking Service Manager)..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $NssmDir -Force | Out-Null
@@ -75,7 +75,7 @@ if (-not (Test-Path $NssmPath)) {
     }
 }
 
-# ════════════════════════════════════════════════════════════════════════════════
+# ================================================================================
 switch ($Action.ToLower()) {
 
     "install" {
@@ -95,7 +95,11 @@ switch ($Action.ToLower()) {
         if (Test-Path $envFile) {
             Get-Content $envFile | ForEach-Object {
                 if ($_ -match "^([A-Za-z_][A-Za-z0-9_]*)=(.+)$") {
-                    $envVars[$Matches[1].Trim()] = $Matches[2].Trim().Trim("'").Trim('"')
+                    $v = $Matches[2].Trim()
+                    if ($v -match "^`$'(.+)'`$") { $v = $Matches[1] }
+                    elseif ($v -match "^'(.+)'`$") { $v = $Matches[1] }
+                    elseif ($v -match '^"(.+)"`$')  { $v = $Matches[1] }
+                    $envVars[$Matches[1].Trim()] = $v
                 }
             }
         }
@@ -173,7 +177,7 @@ switch ($Action.ToLower()) {
             try {
                 $r = Invoke-WebRequest -Uri "http://localhost:8765/api/health" -TimeoutSec 2 -ErrorAction Stop
                 $h = $r.Content | ConvertFrom-Json
-                Write-Host "  Hub    : Online — uptime $($h.uptime_seconds)s  v$($h.version)" -ForegroundColor Green
+                Write-Host "  Hub    : Online -- uptime $($h.uptime_seconds)s  v$($h.version)" -ForegroundColor Green
             } catch {
                 Write-Host "  Hub    : Not responding on port 8765" -ForegroundColor Yellow
             }

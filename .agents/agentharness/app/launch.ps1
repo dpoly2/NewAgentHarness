@@ -1,4 +1,4 @@
-# AgentHarness v2 - GUI Launcher (Windows PowerShell)
+﻿# AgentHarness v2 - GUI Launcher (Windows PowerShell)
 # Run this from anywhere: .\launch.ps1
 
 param([switch]$install)

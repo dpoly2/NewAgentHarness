@@ -1,5 +1,5 @@
-# ============================================================
-#  AgentHarness v3 — Full Install Script (Windows PowerShell)
+﻿# ============================================================
+#  AgentHarness v3 -- Full Install Script (Windows PowerShell)
 #
 #  BLOCKED BY EXECUTION POLICY? Run this from CMD instead:
 #    powershell.exe -ExecutionPolicy Bypass -File ".agents\agentharness\app\v3\install.ps1"
@@ -24,7 +24,7 @@
 # Setting it to Stop causes pip stderr warnings to kill the script.
 $ErrorActionPreference = "Continue"
 
-# ── Resolve paths ────────────────────────────────────────────────────────────
+# -- Resolve paths ------------------------------------------------------------
 $ScriptDir  = $PSScriptRoot
 $RepoRoot   = (Resolve-Path (Join-Path $ScriptDir "../../../../")).Path.TrimEnd('\')
 $VenvDir    = Join-Path $RepoRoot ".venv"
@@ -36,7 +36,7 @@ $AppScript  = Join-Path $ScriptDir "main_m365.py"
 
 Set-Location $RepoRoot
 
-# ── Helper functions ─────────────────────────────────────────────────────────
+# -- Helper functions ---------------------------------------------------------
 function Step-Header($n, $msg) {
     Write-Host ""
     Write-Host "  [$n/10] $msg" -ForegroundColor Cyan
@@ -47,7 +47,7 @@ function WARN($msg) { Write-Host "    [WARN] $msg" -ForegroundColor Yellow }
 function FAIL($msg) { Write-Host "    [FAIL] $msg" -ForegroundColor Red }
 function INFO($msg) { Write-Host "           $msg" -ForegroundColor DarkGray }
 
-# ── Banner ───────────────────────────────────────────────────────────────────
+# -- Banner -------------------------------------------------------------------
 Write-Host ""
 Write-Host "  +----------------------------------------------------------+" -ForegroundColor Cyan
 Write-Host "  |   AgentHarness v3  --  Full Installer (Windows)         |" -ForegroundColor Cyan
@@ -58,9 +58,9 @@ Write-Host "  Repo root : $RepoRoot" -ForegroundColor DarkGray
 Write-Host "  App script: $AppScript" -ForegroundColor DarkGray
 Write-Host ""
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 1 — Python version check
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 1 -- Python version check
+# -----------------------------------------------------------------------------
 Step-Header 1 "Checking Python installation"
 
 $pythonCmd = $null
@@ -75,11 +75,11 @@ foreach ($cmd in @("python", "python3", "py")) {
                 OK "Found Python $major.$minor (command: '$cmd')"
                 break
             } else {
-                WARN "Found Python $major.$minor — need 3.10+. Trying next..."
+                WARN "Found Python $major.$minor -- need 3.10+. Trying next..."
             }
         }
     } catch {
-        # Command not found — try next
+        # Command not found -- try next
     }
 }
 
@@ -93,9 +93,9 @@ if (-not $pythonCmd) {
     exit 1
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 2 — tkinter check
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 2 -- tkinter check
+# -----------------------------------------------------------------------------
 Step-Header 2 "Checking tkinter (GUI framework)"
 
 $tkResult = & $pythonCmd -c "import tkinter; print(tkinter.TkVersion)" 2>&1
@@ -108,16 +108,16 @@ if ($LASTEXITCODE -eq 0 -and $tkResult -notmatch "Error") {
     INFO "Fix: Uninstall Python, re-download from https://python.org"
     INFO "     During install, click 'Modify' and check 'tcl/tk and IDLE'"
     INFO ""
-    WARN "Continuing without tkinter — GUI will NOT launch until fixed."
+    WARN "Continuing without tkinter -- GUI will NOT launch until fixed."
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 3 — Create virtual environment
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 3 -- Create virtual environment
+# -----------------------------------------------------------------------------
 Step-Header 3 "Setting up virtual environment"
 
 if (Test-Path $VenvPython) {
-    OK "Existing .venv found — skipping creation"
+    OK "Existing .venv found -- skipping creation"
 } else {
     INFO "Creating .venv at $VenvDir ..."
     & $pythonCmd -m venv $VenvDir
@@ -129,20 +129,20 @@ if (Test-Path $VenvPython) {
     OK "Virtual environment created at .venv"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 4 — Upgrade pip / wheel / setuptools
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 4 -- Upgrade pip / wheel / setuptools
+# -----------------------------------------------------------------------------
 Step-Header 4 "Upgrading pip, wheel, setuptools"
 
 & $VenvPython -m pip install --upgrade pip wheel setuptools --quiet 2>&1 | Out-Null
 OK "pip, wheel, setuptools upgraded"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 5 — Install packages
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 5 -- Install packages
+# -----------------------------------------------------------------------------
 Step-Header 5 "Installing Python packages"
 
-# Each entry is a separate string — no semicolons, no platform conditionals.
+# Each entry is a separate string -- no semicolons, no platform conditionals.
 # better-sqlite3 is a Node.js package and does NOT belong here (removed).
 $packages = @(
     "langgraph>=0.2.0"
@@ -192,12 +192,12 @@ if ($failedPkgs.Count -gt 0) {
     OK "All $($packages.Count) packages installed successfully"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 6 — Verify imports
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 6 -- Verify imports
+# -----------------------------------------------------------------------------
 Step-Header 6 "Verifying critical imports"
 
-# Write the verify script to a temp file — avoids pipe encoding issues on PS5
+# Write the verify script to a temp file -- avoids pipe encoding issues on PS5
 $verifyScriptPath = Join-Path $env:TEMP "ah_verify_$([System.IO.Path]::GetRandomFileName()).py"
 
 @"
@@ -254,13 +254,13 @@ Write-Host ""
 if ($verifyExit -eq 0) {
     OK "All imports verified"
 } else {
-    WARN "$verifyExit import(s) failed — review the list above"
+    WARN "$verifyExit import(s) failed -- review the list above"
     INFO "The app may still run if failed imports are non-critical"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 7 — Create / update .agents\.env
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 7 -- Create / update .agents\.env
+# -----------------------------------------------------------------------------
 Step-Header 7 "Environment configuration (.agents\.env)"
 
 $envDir = Split-Path $EnvFile -Parent
@@ -273,20 +273,25 @@ $existingEnv = @{}
 if (Test-Path $EnvFile) {
     Get-Content $EnvFile | ForEach-Object {
         if ($_ -match "^([A-Za-z_][A-Za-z0-9_]*)=(.*)$") {
-            $existingEnv[$Matches[1]] = $Matches[2]
+            # Strip bash $'...' quoting and plain quotes so PS does not misparse them
+            $rawVal = $Matches[2].Trim()
+            if ($rawVal -match "^\`$'(.+)'$") { $rawVal = $Matches[1] }
+            elseif ($rawVal -match "^'(.+)'$") { $rawVal = $Matches[1] }
+            elseif ($rawVal -match '^"(.+)"$')  { $rawVal = $Matches[1] }
+            $existingEnv[$Matches[1]] = $rawVal
         }
     }
     OK "Existing .env loaded ($($existingEnv.Count) keys)"
 } else {
-    INFO "No .env found — creating one"
+    INFO "No .env found -- creating one"
     "# AgentHarness v3 Environment Variables" | Set-Content $EnvFile -Encoding UTF8
 }
 
-# Keys to prompt for — using ordered list to guarantee sequence
+# Keys to prompt for -- using ordered list to guarantee sequence
 $keyDefs = [ordered]@{
-    "OPENAI_API_KEY"    = "OpenAI API key (sk-proj-...) — powers AgentMajesty LLM chat"
-    "GITHUB_PAT"        = "GitHub Personal Access Token — for git push/pull"
-    "ANTHROPIC_API_KEY" = "Anthropic API key — optional, for Claude provider"
+    "OPENAI_API_KEY"    = "OpenAI API key (sk-proj-...) -- powers AgentMajesty LLM chat"
+    "GITHUB_PAT"        = "GitHub Personal Access Token -- for git push/pull"
+    "ANTHROPIC_API_KEY" = "Anthropic API key -- optional, for Claude provider"
 }
 
 $newKeys = [ordered]@{}
@@ -312,7 +317,7 @@ foreach ($key in $keyDefs.Keys) {
             if ($isOptional) {
                 INFO "Skipped (optional)"
             } else {
-                WARN "Skipped — add $key to .agents\.env manually before launching"
+                WARN "Skipped -- add $key to .agents\.env manually before launching"
             }
         }
     }
@@ -330,9 +335,9 @@ if ($newKeys.Count -gt 0) {
     OK "$($newKeys.Count) key(s) written to .agents\.env"
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 8 — Create data directories and seed files
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 8 -- Create data directories and seed files
+# -----------------------------------------------------------------------------
 Step-Header 8 "Creating data directories"
 
 $dirsToCreate = @(
@@ -366,12 +371,12 @@ foreach ($path in $seedFiles.Keys) {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 9 — Write launch scripts
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 9 -- Write launch scripts
+# -----------------------------------------------------------------------------
 Step-Header 9 "Writing launch scripts"
 
-# ── start.ps1 (app directory — detailed launcher) ────────────────────────────
+# -- start.ps1 (app directory -- detailed launcher) ----------------------------
 $startPs1Path = Join-Path $ScriptDir "start.ps1"
 $startPs1Content = @"
 # AgentHarness v3 -- Launch Script
@@ -415,7 +420,7 @@ Write-Host ""
 $startPs1Content | Set-Content $startPs1Path -Encoding UTF8
 OK "Written: .agents\agentharness\app\v3\start.ps1"
 
-# ── launch_v3.ps1 (repo root — one-click launcher) ───────────────────────────
+# -- launch_v3.ps1 (repo root -- one-click launcher) ---------------------------
 $launchPs1Path = Join-Path $RepoRoot "launch_v3.ps1"
 $launchPs1Content = @"
 # AgentHarness v3 -- Root Launcher
@@ -434,14 +439,14 @@ if (Test-Path `$target) {
 $launchPs1Content | Set-Content $launchPs1Path -Encoding UTF8
 OK "Written: launch_v3.ps1 (repo root)"
 
-# ── Manual launch instructions ────────────────────────────────────────────────
+# -- Manual launch instructions ------------------------------------------------
 Write-Host ""
 INFO "To launch without any script policy issues, run from CMD:"
 INFO "  .venv\Scripts\python.exe .agents\agentharness\app\v3\main_m365.py"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STEP 10 — Final health report
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# STEP 10 -- Final health report
+# -----------------------------------------------------------------------------
 Step-Header 10 "Final health report"
 
 $appExists      = Test-Path $AppScript
