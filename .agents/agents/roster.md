@@ -1,5 +1,5 @@
 # Agent Roster — Master Registry
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-05-28
 **Coordinator:** AgentJames (main orchestrator — routes tasks, manages GitHub, tracks milestones)
 
 ---
@@ -22,6 +22,7 @@
 | 12 | Ministry & Preaching Team | ministry-project-lead | 4 specialists | 🟢 Active |
 | 13 | The Sigma Signal | sigma-signal-project-lead | 6 specialists | 🟢 Active |
 | 14 | Travel Division | travel-project-lead | 4 specialists + 1 helper | 🟢 Active |
+| 15 | Business Structure & Holdings | holdings-project-lead | 5 specialists | 🔴 Formation Pending |
 
 ---
 
@@ -507,6 +508,40 @@
 
 ---
 
+---
+
+## PROJECT 15 — BUSINESS STRUCTURE & HOLDINGS
+
+### Lead
+**holdings-project-lead** — Entity architecture design, formation queue, legal/tax/finance/compliance coordination
+
+### Specialist Agents
+| Agent | Role | Responsibilities |
+|-------|------|-----------------|
+| holdings-legal-agent | Legal & Entity Formation | TX LLC formations, operating agreements, TX SOS filings, nonprofit firewall |
+| holdings-tax-agent | Tax Strategy & Entity Elections | S-Corp elections, SE tax optimization, inter-entity distributions, QBI planning |
+| holdings-finance-agent | Finance & Capital Flows | Banking structure, management fee schedule, inter-entity loans, investor readiness |
+| holdings-compliance-agent | Compliance & Annual Filings | PIR/franchise tax calendar, license renewals, Smith Capital LLC reactivation |
+| holdings-investor-agent | Investor Relations & Capital Readiness | Cap table, CDFI pipeline, investor decks, SBA pre-qualification |
+
+### Entity Scope
+| Entity | Type | Priority |
+|--------|------|---------|
+| Smith Capital Holdings LLC | TX LLC (new) | 🔴 Form first |
+| S2T Designs LLC | TX LLC (new) | 🔴 Immediate |
+| The Elevation ATX LLC | TX LLC (new) | 🔴 ASAP |
+| Nutrue Apparel LLC | TX LLC (new) | 🔴 ASAP |
+| Smith Capital Properties LLC | TX LLC (reactivate) | 🟡 Week 3 |
+| Clarity Solar Services LLC | TX LLC (new) | 🟡 Q3 2026 |
+| YEPC Development LLC | TX LLC (new) | 🟡 Pre-acquisition |
+| XFTC 501(c)(3) | Nonprofit — independent | ✅ Active |
+| PBS Foundation 501(c)(3) | Nonprofit — independent | 🟡 Filing pending |
+
+### Files
+- `.agents/projects/holdings/MASTER-STRUCTURE.md`
+- `.agents/agents/projects/holdings/`
+
+
 ## 🤖 SHARED / CROSS-PROJECT AGENTS
 
 | Agent | Specialty | Projects Served |
@@ -537,6 +572,8 @@
 
 | Priority | Item | Project | Deadline |
 |----------|------|---------|----------|
+| 🔴 | Form Smith Capital Holdings LLC — anchors entire business structure | Project 15 | ASAP |
+| 🔴 | Form S2T Designs LLC + The Elevation LLC + Nutrue LLC ($900 total TX SOS) | Project 15 | Week 1 |
 | 🔴 | Smith Capital Properties LLC INACTIVE — file TX Comptroller + Form 811 | Project 6 | ASAP |
 | 🔴 | XFTC Gmail connector token invalid — re-authorize OAuth | Project 8 | ASAP |
 | 🔴 | PBS 1914 Golf Tournament payment gateway needed | Project 13 / S2T | June 1, 2026 |
