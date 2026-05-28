@@ -31,6 +31,7 @@ export default function Sidebar({ roster, connected, unreadCount, authUser, onLo
         <NavItem to="/" icon="🏠" label="Dashboard" exact />
         <NavItem to="/agents" icon="🤖" label="Agents" />
         <NavItem to="/clients" icon="👥" label="Clients" />
+        <NavItem to="/agent-runner" icon="🧠" label="Agent Runner" />
         <div className="border-t border-surface-border my-2" />
       </nav>
 

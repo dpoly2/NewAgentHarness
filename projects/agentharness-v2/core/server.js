@@ -93,6 +93,7 @@ app.use('/api/todos', require('./api/todos'))
 app.use('/api/projects', require('./api/projects'))
 app.use('/api/clients', require('./api/clients'))
 app.use('/api/settings', require('./api/settings'))
+app.use('/api/agent-runner', require('./api/agent-runner'))
 
 // ─── Chat Endpoint (streaming SSE) ───────────────────────────────
 app.post('/api/chat', chatLimiter, validateChat, async (req, res) => {

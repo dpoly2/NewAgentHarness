@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import ProjectPage from './pages/Project'
 import Agents from './pages/Agents'
 import Clients from './pages/Clients'
+import AgentRunner from './pages/AgentRunner'
 import Todos from './pages/Todos'
 import Tasks from './pages/Tasks'
 import Settings from './pages/Settings'
@@ -93,6 +94,7 @@ export default function App() {
             <Route path="/command" element={<Command roster={roster} />} />
             <Route path="/agents" element={<Agents roster={roster} />} />
             <Route path="/clients" element={<Clients />} />
+            <Route path="/agent-runner" element={<AgentRunner />} />
             <Route path="/project/:slug" element={<ProjectPage roster={roster} />} />
             <Route path="/todos" element={<Todos roster={roster} />} />
             <Route path="/tasks" element={<Tasks roster={roster} />} />
