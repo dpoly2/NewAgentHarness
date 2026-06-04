@@ -1,57 +1,63 @@
 # CKassions — Client Intake
 **Date:** 2026-06-04
 **Intake Method:** Direct (David Smith — S2T Project Lead)
-**Status:** 🟡 Fast-Add — Full intake pending
+**Status:** 🟢 Logos Confirmed — Discovery Call Pending
 
 ---
 
-## Fast-Add Responses
+## Confirmed Information
 
-| Question | Response |
-|----------|---------|
+| Field | Value |
+|-------|-------|
 | Client Name | CKassions |
-| Org Type | Apparel / Brand (Business) |
+| Org Type | Luxury Lifestyle & Apparel Brand |
 | Primary Goal | Logo/Branding + Apparel |
+| Brand Tier | Premium / Luxury |
+| Brand Personality | Elegant, magical, feminine, aspirational |
+| Logo Status | ✅ 3 logo variants delivered and documented |
 | E-commerce needed | TBD — likely yes (apparel sales) |
 | Social media management | TBD |
 | Budget range | TBD — pending discovery |
 
 ---
 
-## Full Intake (To Be Collected)
+## Logo Assets — CONFIRMED (2026-06-04)
 
-**To complete on discovery call with CKassions client:**
+| Logo | Description | URL |
+|------|-------------|-----|
+| Primary (Gold) | CK monogram circle + gold calligraphy script wordmark | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/aefdc1595_AD0291DE-8C1C-4B91-B9F3-CB0523203351.png |
+| Alternate (Black) | Same structure, solid black — for light garments and print | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/fb6815709_C0FBBD05-9FA9-47A8-9509-E018EC0D2F59.jpg |
+| Signature (Gold + Tinker Bell) | Gold logo + Tinker Bell fairy with pixie dust — hero/feature use | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/62433a776_7E35DAE2-80CE-46D2-94F4-D65E4E6C04AB.png |
+
+---
+
+## Brand Color (Confirmed from Logo)
+- **Primary:** Warm antique gold — HEX `#B8962E` / PMS 7551 C
+- **Alternate:** Rich black — HEX `#0D0D0D`
+- **Background:** White / Cream `#FAF6EE`
+
+---
+
+## Still Needed (Discovery Call)
 
 ```
-1. Business / Organization Name: CKassions
-2. Industry / Type: Apparel / Brand
-3. Location / Service Area: TBD
-4. Primary Contact Name + Email + Phone: TBD
-5. Existing website URL: TBD
-6. Social media accounts: TBD
-
-7. PRIMARY Goal: Logo/Branding + Apparel Design/Launch
-
-8. SECONDARY Goals (confirm on call):
-   [ ] Sell apparel online
-   [ ] Build brand identity (colors, typography, brand guide)
-   [ ] Social media launch/management
-   [ ] E-commerce storefront
-   [ ] Print-ready apparel files
-
-9. Tech comfort: TBD
-10. Budget: TBD
-11. Deadline: TBD
-12. Existing logo: TBD
-13. Existing photos: TBD
-14. Copy writer: TBD
-15. Post-launch management: TBD
-16-18. Reference sites + notes: TBD
+1. What does "CKassions" stand for or mean?
+2. Who is the target customer?
+3. Apparel items in scope (tees, hoodies, hats, joggers, etc.)
+4. Selling channel (online / pop-ups / boutiques)?
+5. Budget for design + production work
+6. Hard launch deadline?
+7. Vector source files (AI/EPS) for the logos — needed for screen print + embroidery
+8. Any existing social media accounts?
+9. POD preference (Printful / Printify / custom manufacturer)?
+10. Any other brand elements already created?
 ```
 
 ---
 
-## Notes
-- Added by David 2026-06-04 as fast-add
-- Scope confirmed: Logo/Branding + Apparel
-- Full discovery call needed to confirm platform, budget, and timeline
+## Communication Log
+
+| Date | Type | Notes |
+|------|------|-------|
+| 2026-06-04 | Initial Add | Added by David Smith — logo/branding + apparel scope confirmed |
+| 2026-06-04 | Logo Upload | Client provided 3 logo variants — all documented in BRAND-GUIDE.md |
