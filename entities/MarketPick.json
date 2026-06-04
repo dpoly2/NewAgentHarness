@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "properties": {
+    "ticker": {
+      "type": "string"
+    },
+    "company_name": {
+      "type": "string"
+    },
+    "pick_type": {
+      "type": "string",
+      "enum": [
+        "Long Equity",
+        "Covered Call",
+        "Cash-Secured Put",
+        "Bull Put Spread",
+        "Long Straddle",
+        "Protective Put",
+        "Macro ETF",
+        "Other"
+      ]
+    },
+    "entry_price": {
+      "type": "number"
+    },
+    "target_price": {
+      "type": "number"
+    },
+    "stop_price": {
+      "type": "number"
+    },
+    "thesis": {
+      "type": "string"
+    },
+    "timeframe": {
+      "type": "string"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "Low",
+        "Medium",
+        "High"
+      ]
+    },
+    "week_of": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Active",
+        "Closed - Win",
+        "Closed - Loss",
+        "Closed - Scratch",
+        "Watching"
+      ]
+    },
+    "analyst": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "name": "MarketPick"
+}
