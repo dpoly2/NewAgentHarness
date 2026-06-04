@@ -51,6 +51,8 @@
 8. Any existing social media accounts?
 9. POD preference (Printful / Printify / custom manufacturer)?
 10. Any other brand elements already created?
+
+**Note:** Vector files (AI/EPS/SVG) confirmed in client possession — David will add to project folder when received.
 ```
 
 ---

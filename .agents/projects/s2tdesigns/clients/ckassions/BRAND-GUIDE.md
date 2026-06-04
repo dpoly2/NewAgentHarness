@@ -229,7 +229,7 @@ Consistent with the luxury brand identity:
 | Logo — Gold + Tinker Bell | Signature/Hero | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/62433a776_7E35DAE2-80CE-46D2-94F4-D65E4E6C04AB.png | ✅ Confirmed |
 | Brand mood board (S2T generated) | Reference | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/7cd8e0b55_generated_image.png | Reference only |
 
-> **To do:** Obtain vector source files (AI/EPS/SVG) from the original logo designer for print production. PNG files confirmed — vector versions needed for screen print and embroidery.
+> **Note:** Vector source files (AI/EPS/SVG) are with the client — to be added to `assets/logo/` when provided. PNG files confirmed and documented.
 
 ---
 
