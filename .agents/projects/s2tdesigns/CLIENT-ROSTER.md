@@ -11,6 +11,7 @@
 | Psi Beta Sigma 1914 | newsite.psibetasigma1914.org | WordPress (Kadence) | s2t-project-lead | 🟡 Pre-Launch | David Smith — s2tdesignadmin account |
 | Little Ebenezer Baptist Church | littleebenezerbaptistchurch.com | WordPress (Kadence — rebuild) | s2t-project-lead | 🟡 Discovery | Rev. Arthur L. Spence (Pastor) |
 | CKassions | TBD | Shopify / POD (TBD) | s2t-project-lead | 🟡 Discovery | TBD — pending discovery call |
+| Kinorva | TBD | TBD | s2t-project-lead | 🟡 Discovery | hosie.waters@kinorva.com |
 
 ---
 
@@ -96,6 +97,26 @@
   - [ ] Confirm apparel items in scope
   - [ ] Confirm budget and timeline
 - **Docs:** `.agents/projects/s2tdesigns/clients/ckassions/`
+
+---
+
+### CLIENT 5 — Kinorva
+- **Client Type:** B2B Tech / AI Smart Coolers / Warehouse Solutions
+- **URL:** TBD
+- **Contact:** hosie.waters@kinorva.com
+- **Managing Lead:** s2t-project-lead
+- **Design Lead:** s2t-brand-designer-agent
+- **Scope:** Logo Redesign + Brand System (collateral TBD)
+- **Current Status:** Discovery — one-pager reviewed, brand audit complete
+- **Team Profile:** F — Professional Services / B2B Tech
+- **Estimated Value:** $875–$3,000 (Option A–C)
+- **Current Brand:** V-mark + "KINORVA" all-caps wordmark + "Smart Cooler Solutions" tagline in navy/teal
+- **Blockers:**
+  - [ ] Discovery call with Hosie Waters
+  - [ ] Confirm logo redesign scope (mark only vs. full system vs. collateral)
+  - [ ] Confirm budget and timeline
+  - [ ] Request current logo vector files
+- **Docs:** `.agents/projects/s2tdesigns/clients/kinorva/`
 
 ---
 
