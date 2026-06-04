@@ -10,6 +10,7 @@
 | Xtreme Force Track Club | xtremeforcetrackclub.org | WordPress (custom theme + plugin) | xftc-project-lead | 🟡 Sprint 3 | David Smith — dsmith@xtremeforcetrackclub.org |
 | Psi Beta Sigma 1914 | newsite.psibetasigma1914.org | WordPress (Kadence) | s2t-project-lead | 🟡 Pre-Launch | David Smith — s2tdesignadmin account |
 | Little Ebenezer Baptist Church | littleebenezerbaptistchurch.com | WordPress (Kadence — rebuild) | s2t-project-lead | 🟡 Discovery | Rev. Arthur L. Spence (Pastor) |
+| CKassions | TBD | Shopify / POD (TBD) | s2t-project-lead | 🟡 Discovery | TBD — pending discovery call |
 
 ---
 
@@ -73,6 +74,28 @@
 - **Estimated Scope:** 5–6 weeks, $1,500–$3,000
 - **Social Priority:** Google Business Profile setup + Facebook Live/Ads integration
 - **Docs:** `.agents/projects/s2tdesigns/clients/lebc/`
+
+---
+
+### CLIENT 4 — CKassions
+- **Client Type:** Apparel / Brand
+- **URL:** TBD
+- **Platform:** TBD — likely Shopify + Printful (POD)
+- **Hosting:** TBD
+- **Managing Lead:** s2t-project-lead
+- **Design Lead:** s2t-brand-designer-agent
+- **Social:** social-content-strategist + social-designer (standby)
+- **E-Commerce:** TBD — pending discovery
+- **Scope:** Logo/Branding + Apparel Design + (potential) E-commerce storefront
+- **Current Status:** Discovery — intake collected, full discovery call needed
+- **Team Profile:** D — Apparel / E-Commerce
+- **Estimated Value:** $1,500–$3,000
+- **Blockers:**
+  - [ ] Discovery call with CKassions client
+  - [ ] Confirm brand personality and target audience
+  - [ ] Confirm apparel items in scope
+  - [ ] Confirm budget and timeline
+- **Docs:** `.agents/projects/s2tdesigns/clients/ckassions/`
 
 ---
 
