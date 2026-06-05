@@ -140,3 +140,18 @@ Based on existing one-pager review:
 | Version | Date | Changes |
 |---------|------|---------|
 | DRAFT 1.0 | 2026-06-04 | Brand audit complete from one-pager. Redesign direction established. |
+
+---
+
+## Logo Concept Renders — Round 1 (2026-06-04)
+
+Generated from existing triad mark analysis. All 4 concepts evolve the three-pronged triad structure.
+
+| Concept | Name | Direction | URL |
+|---------|------|-----------|-----|
+| 1 | Precision Triad | Geometric refinement + data-line cuts across prongs, navy→teal gradient | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/87de1eb38_generated_image.png |
+| 2 | Cold Signal | Rounded prong tips + crystalline snowflake node at convergence point | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/faca264ec_generated_image.png |
+| 3 | Network Node | Prongs converge to a single teal AI node — data/sensor intelligence concept | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/86b969ff6_generated_image.png |
+| 4 | Elevated Triad | Squared prongs + horizontal gate bar at top, navy→teal vertical gradient, closest to current | https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/d7c011460_generated_image.png |
+
+**Current Logo Reference:** https://media.base44.com/images/public/6a0bce17b730c0de488b80fb/93c92f1d6_IMG_5372.jpeg
