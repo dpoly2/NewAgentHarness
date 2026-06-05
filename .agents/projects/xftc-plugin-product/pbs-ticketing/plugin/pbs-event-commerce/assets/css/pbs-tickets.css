@@ -1,0 +1,310 @@
+/*
+ * PBS Event Commerce — Stylesheet
+ * Inherits TEC tribe- CSS variables; adds PBS Royal Blue overrides
+ */
+
+:root {
+  --pbs-primary:      #164f90;
+  --pbs-primary-dark: #0F3765;
+  --pbs-accent:       #5C84B1;
+  --pbs-light:        #E8EDF4;
+  --pbs-white:        #ffffff;
+  --pbs-text:         #1a1a1a;
+  --pbs-border:       #D9D9D9;
+  --pbs-success:      #2e7d32;
+  --pbs-error:        #c62828;
+}
+
+/* ── Widget container (inherits .tribe-tickets) ─────────── */
+.pbs-ticket-widget,
+.pbs-donate-widget {
+  font-family: 'Open Sans', Arial, sans-serif;
+  max-width: 640px;
+  margin: 24px 0;
+}
+
+.tribe-tickets__title {
+  color: var(--pbs-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  border-bottom: 2px solid var(--pbs-primary);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+/* ── Ticket item cards ──────────────────────────────────── */
+.pbs-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tribe-tickets__ticket-item.pbs-ticket-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--pbs-light);
+  border: 1px solid var(--pbs-border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  gap: 16px;
+}
+
+.pbs-ticket-item.sold-out {
+  opacity: 0.55;
+}
+
+.tribe-tickets__ticket-item-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pbs-primary-dark);
+  margin: 0 0 4px;
+}
+
+.tribe-tickets__ticket-item-description {
+  font-size: 0.85rem;
+  color: #555;
+  margin: 0 0 4px;
+}
+
+.pbs-ticket-avail {
+  font-size: 0.78rem;
+  color: var(--pbs-accent);
+}
+
+.tribe-tickets__ticket-item-price {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pbs-primary);
+  display: block;
+  margin-bottom: 8px;
+}
+
+/* ── Qty control ────────────────────────────────────────── */
+.tribe-tickets__ticket-item-quantity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pbs-qty-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--pbs-border);
+  background: var(--pbs-white);
+  border-radius: 4px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  line-height: 1;
+  color: var(--pbs-primary);
+  font-weight: 700;
+}
+.pbs-qty-btn:hover { background: var(--pbs-primary); color: #fff; }
+
+.pbs-qty-input {
+  width: 48px;
+  text-align: center;
+  border: 1px solid var(--pbs-border);
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 1rem;
+}
+
+/* ── Order summary / footer ─────────────────────────────── */
+.tribe-tickets__footer.pbs-order-summary,
+.pbs-donate-summary {
+  background: var(--pbs-white);
+  border: 1px solid var(--pbs-border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-top: 16px;
+}
+
+.pbs-total-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--pbs-primary-dark);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pbs-border);
+}
+
+.pbs-order-total { color: var(--pbs-primary); }
+
+/* ── Attendee fields ────────────────────────────────────── */
+.pbs-attendee-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.pbs-attendee-fields h4 {
+  margin: 0 0 4px;
+  color: var(--pbs-primary-dark);
+  font-size: 0.95rem;
+}
+
+.tribe-tickets__input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--pbs-border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.tribe-tickets__input:focus {
+  outline: none;
+  border-color: var(--pbs-primary);
+  box-shadow: 0 0 0 3px rgba(22,79,144,0.12);
+}
+
+/* ── Gateway tabs ───────────────────────────────────────── */
+.pbs-gateway-select h4 {
+  margin: 0 0 10px;
+  color: var(--pbs-primary-dark);
+  font-size: 0.95rem;
+}
+
+.pbs-gateway-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.pbs-gateway-tab {
+  padding: 8px 20px;
+  border: 2px solid var(--pbs-border);
+  background: var(--pbs-white);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: var(--pbs-text);
+}
+.pbs-gateway-tab.active,
+.pbs-gateway-tab:hover {
+  border-color: var(--pbs-primary);
+  background: var(--pbs-primary);
+  color: #fff;
+}
+
+/* ── Stripe card element ────────────────────────────────── */
+.pbs-stripe-card-element {
+  border: 1px solid var(--pbs-border);
+  border-radius: 6px;
+  padding: 12px;
+  background: var(--pbs-white);
+  min-height: 44px;
+}
+
+.pbs-card-errors {
+  color: var(--pbs-error);
+  font-size: 0.85rem;
+  margin-top: 6px;
+  min-height: 20px;
+}
+
+/* ── Submit button (same class as TEC "Get Tickets") ───── */
+.tribe-tickets__buy.pbs-submit-btn {
+  display: block;
+  width: 100%;
+  background: var(--pbs-primary);
+  color: #fff;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+.tribe-tickets__buy.pbs-submit-btn:hover { background: var(--pbs-primary-dark); }
+.tribe-tickets__buy.pbs-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.pbs-spinner { color: var(--pbs-accent); margin-top: 10px; font-size: 0.9rem; }
+.pbs-error-msg { color: var(--pbs-error); margin-top: 8px; font-size: 0.9rem; font-weight: 600; }
+
+/* ── Donate widget ──────────────────────────────────────── */
+.pbs-goal-bar {
+  background: var(--pbs-light);
+  border-radius: 100px;
+  height: 10px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.pbs-goal-progress {
+  background: var(--pbs-primary);
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.6s;
+}
+.pbs-goal-label {
+  font-size: 0.9rem;
+  color: var(--pbs-accent);
+  margin-bottom: 16px;
+}
+
+.pbs-amount-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.tribe-tickets__ticket-item.pbs-amount-btn {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border: 2px solid var(--pbs-border);
+  background: var(--pbs-white);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--pbs-primary-dark);
+  transition: all 0.2s;
+}
+.pbs-amount-btn.active,
+.pbs-amount-btn:hover {
+  border-color: var(--pbs-primary);
+  background: var(--pbs-primary);
+  color: #fff;
+}
+
+.pbs-custom-amount-wrap { margin-bottom: 16px; }
+.pbs-custom-amount-wrap label { display: block; margin-bottom: 6px; font-size: 0.9rem; }
+
+.pbs-tax-note {
+  font-size: 0.78rem;
+  color: #888;
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* ── Sold-out notice ────────────────────────────────────── */
+.tribe-tickets__notice { color: var(--pbs-accent); font-style: italic; }
+.tribe-tickets__notice--sold-out { color: var(--pbs-error); font-weight: 700; font-size: 0.85rem; }
+
+/* ── Admin orders table ─────────────────────────────────── */
+.pbs-admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.pbs-admin-table th { background: var(--pbs-primary); color: #fff; padding: 10px 12px; text-align: left; }
+.pbs-admin-table td { padding: 8px 12px; border-bottom: 1px solid var(--pbs-border); }
+.pbs-admin-table tr:hover td { background: var(--pbs-light); }
+.pbs-status-complete { color: var(--pbs-success); font-weight: 700; }
+.pbs-status-pending  { color: #f57c00; font-weight: 700; }
+.pbs-status-failed   { color: var(--pbs-error); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .tribe-tickets__ticket-item.pbs-ticket-item { flex-direction: column; align-items: flex-start; }
+  .pbs-gateway-tabs { flex-wrap: wrap; }
+  .pbs-amount-grid { flex-wrap: wrap; }
+}
