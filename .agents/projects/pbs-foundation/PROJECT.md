@@ -1,10 +1,10 @@
-# Phi Beta Sigma Collegiate Pathways Foundation
+# Elevate Scholars Foundation
 ## Master Project File
 
 ---
 
 ## Project Overview
-- **Foundation Name:** Phi Beta Sigma Collegiate Pathways Foundation
+- **Foundation Name:** Elevate Scholars Foundation
 - **Parent Organization:** Psi Beta Sigma 1914 (existing nonprofit)
 - **Beneficiaries:** Collegiate members of Phi Beta Sigma Fraternity
 - **Purpose:** Offset conference travel costs and support educational/leadership development for collegiate members
@@ -22,7 +22,7 @@
 
 ### Phase 1 — Legal Formation
 - [ ] Decide: Standalone new 501(c)(3) OR fiscal sponsorship under Psi Beta Sigma 1914
-- [ ] Confirm name availability — "Phi Beta Sigma Collegiate Pathways Foundation"
+- [ ] Confirm name availability — "Elevate Scholars Foundation"
 - [ ] Draft Articles of Incorporation (nonprofit corporation)
 - [ ] File with Texas Secretary of State (or applicable state)
 - [ ] Obtain EIN from IRS
@@ -144,4 +144,4 @@
 - Psi Beta Sigma 1914 already exists as a nonprofit — explore whether foundation can operate as a program/fund under its umbrella first (faster path, lower cost) before forming separate entity
 - Form 1023-EZ is available if projected annual gross receipts ≤ $50K/year for first 3 years
 - IRS processing time for 1023: 3–6 months; 1023-EZ: 2–4 weeks
-- Foundation name confirmed: "Phi Beta Sigma Collegiate Pathways Foundation"
+- Foundation name confirmed: "Elevate Scholars Foundation"

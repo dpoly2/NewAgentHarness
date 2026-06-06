@@ -1,4 +1,4 @@
-# Foundation Charter: Phi Beta Sigma Collegiate Pathways Foundation
+# Foundation Charter: Elevate Scholars Foundation
 **Status:** Draft
 **Date:** 2026-05-19
 **Adopted:** Pending Board Formation
@@ -7,7 +7,7 @@
 
 ## Article I: Name
 
-The name of this foundation shall be the **Phi Beta Sigma Collegiate Pathways Foundation**, hereinafter referred to as the "Foundation".
+The name of this foundation shall be the **Elevate Scholars Foundation**, hereinafter referred to as the "Foundation".
 
 ---
 
