@@ -25,6 +25,8 @@ TEAL   = colors.HexColor('#00695C')
 LTEAL  = colors.HexColor('#E0F2F1')
 PURP   = colors.HexColor('#4A148C')
 LPURP  = colors.HexColor('#F3E5F5')
+INDIGO = colors.HexColor('#1A237E')
+LINDIGO= colors.HexColor('#E8EAF6')
 
 doc = SimpleDocTemplate(
     "/app/SmithCapGroup_Entity_Structure.pdf",
@@ -40,7 +42,6 @@ def S(name, **kw):
 BODY  = S('BODY',  fontSize=8.5, textColor=DGRAY, leading=13)
 SMALL = S('SMALL', fontSize=7.5, textColor=GRAY, leading=11)
 NOTE  = S('NOTE',  fontSize=7.5, textColor=GRAY, fontName='Helvetica-Oblique', leading=11)
-BOLD  = S('BOLD',  fontSize=8.5, textColor=NAVY, fontName='Helvetica-Bold', leading=13)
 
 story = []
 
@@ -70,18 +71,16 @@ sub.setStyle(TableStyle([
 story.append(sub)
 story.append(Spacer(1,12))
 
-# ── HOLDING COMPANY BOX ────────────────────────────────────────────
+# ── PARENT BOX ─────────────────────────────────────────────────────
 story.append(Paragraph("PARENT ENTITY", S('lbl', fontSize=7.5, textColor=GRAY, fontName='Helvetica-Bold', letterSpacing=1.5)))
 story.append(Spacer(1,3))
 
-parent = Table([[
-    Table([[
-        Paragraph("SMITH CAPITAL GROUP LLC", S('pe', fontSize=15, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
-        Paragraph("Parent Holding Company  ·  Texas LLC  ·  Tax Classification: Disregarded / Pass-Through", S('ps', fontSize=8.5, textColor=colors.HexColor('#A8C4E0'), alignment=TA_CENTER, leading=12)),
-        Spacer(1,4),
-        Paragraph("smithcapgroup.com  ·  CEO: David Smith", S('pu', fontSize=8, textColor=colors.HexColor('#7FA8D4'), alignment=TA_CENTER)),
-    ]], colWidths=[7.6*inch])
-]], colWidths=[7.6*inch])
+parent = Table([[Table([[
+    Paragraph("SMITH CAPITAL GROUP LLC", S('pe', fontSize=15, textColor=WHITE, fontName='Helvetica-Bold', alignment=TA_CENTER)),
+    Paragraph("Parent Holding Company  ·  Texas LLC  ·  Tax Classification: Pass-Through (Disregarded)", S('ps', fontSize=8.5, textColor=colors.HexColor('#A8C4E0'), alignment=TA_CENTER, leading=12)),
+    Spacer(1,4),
+    Paragraph("smithcapgroup.com  ·  CEO: David Smith", S('pu', fontSize=8, textColor=colors.HexColor('#7FA8D4'), alignment=TA_CENTER)),
+]], colWidths=[7.6*inch])]], colWidths=[7.6*inch])
 parent.setStyle(TableStyle([
     ('BACKGROUND',(0,0),(-1,-1),NAVY),
     ('LEFTPADDING',(0,0),(-1,-1),16),('RIGHTPADDING',(0,0),(-1,-1),16),
@@ -89,47 +88,42 @@ parent.setStyle(TableStyle([
     ('BOX',(0,0),(-1,-1),3,GOLD),
 ]))
 story.append(parent)
-story.append(Spacer(1,6))
+story.append(Spacer(1,5))
 
-# Arrow down
 arrow = Table([[Paragraph("▼  Owns membership interests in all operating entities below  ▼",
     S('ar', fontSize=8, textColor=GRAY, alignment=TA_CENTER))]], colWidths=[7.6*inch])
-arrow.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),2),('BOTTOMPADDING',(0,0),(-1,-1),2)]))
+arrow.setStyle(TableStyle([('TOPPADDING',(0,0),(-1,-1),1),('BOTTOMPADDING',(0,0),(-1,-1),1)]))
 story.append(arrow)
 story.append(Spacer(1,8))
 
-# ── OPERATING ENTITIES ─────────────────────────────────────────────
-story.append(Paragraph("OPERATING ENTITIES", S('lbl2', fontSize=7.5, textColor=GRAY, fontName='Helvetica-Bold', letterSpacing=1.5)))
-story.append(Spacer(1,5))
+# ── ENTITY CARD BUILDER ────────────────────────────────────────────
+def entity_card(name, entity_type, tax, domain, status, status_color, notes, bg, border):
+    status_bg = LGREEN if status_color=='green' else \
+                colors.HexColor('#FFEBEE') if status_color=='red' else \
+                colors.HexColor('#FFF8E1') if status_color=='amber' else LINDIGO
+    status_fc = DGREEN if status_color=='green' else \
+                RED if status_color=='red' else \
+                AMBER if status_color=='amber' else INDIGO
 
-def entity_card(label, name, entity_type, tax, domain, status, status_color, notes, bg, border, fg=None):
-    fg = fg or DGRAY
-    status_bg = colors.HexColor('#E8F5E9') if status_color == 'green' else \
-                colors.HexColor('#FFEBEE') if status_color == 'red' else \
-                colors.HexColor('#FFF8E1')
-    status_fc = DGREEN if status_color == 'green' else RED if status_color == 'red' else AMBER
-
-    inner = [
-        [Paragraph(f"<b>{name}</b>", S('cn', fontSize=10, textColor=NAVY, fontName='Helvetica-Bold', leading=13)),
-         Paragraph(status, S('cs', fontSize=7.5, textColor=status_fc, fontName='Helvetica-Bold', alignment=TA_RIGHT))],
-    ]
-    header = Table(inner, colWidths=[4.8*inch, 2.0*inch])
+    header = Table([[
+        Paragraph(f"<b>{name}</b>", S('cn', fontSize=10, textColor=NAVY, fontName='Helvetica-Bold', leading=13)),
+        Paragraph(status, S('cs', fontSize=7.5, textColor=status_fc, fontName='Helvetica-Bold', alignment=TA_RIGHT))
+    ]], colWidths=[4.8*inch, 2.0*inch])
     header.setStyle(TableStyle([
-        ('BACKGROUND',(0,0),(-1,-1), bg),
+        ('BACKGROUND',(0,0),(-1,-1),bg),
+        ('BACKGROUND',(1,0),(1,0),status_bg),
+        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
         ('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),
         ('TOPPADDING',(0,0),(-1,-1),7),('BOTTOMPADDING',(0,0),(-1,-1),4),
-        ('BACKGROUND',(1,0),(1,0), status_bg),
-        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
     ]))
 
-    detail_rows = [
-        [Paragraph(f"<b>Type:</b> {entity_type}", SMALL),
-         Paragraph(f"<b>Tax:</b> {tax}", SMALL),
-         Paragraph(f"<b>Domain:</b> {domain}", SMALL)],
-    ]
-    details = Table(detail_rows, colWidths=[2.53*inch, 2.53*inch, 2.54*inch])
+    details = Table([[
+        Paragraph(f"<b>Type:</b> {entity_type}", SMALL),
+        Paragraph(f"<b>Tax:</b> {tax}", SMALL),
+        Paragraph(f"<b>Domain:</b> {domain}", SMALL),
+    ]], colWidths=[2.53*inch, 2.53*inch, 2.54*inch])
     details.setStyle(TableStyle([
-        ('BACKGROUND',(0,0),(-1,-1), colors.HexColor('#FAFAFA')),
+        ('BACKGROUND',(0,0),(-1,-1),colors.HexColor('#FAFAFA')),
         ('LEFTPADDING',(0,0),(-1,-1),8),('RIGHTPADDING',(0,0),(-1,-1),8),
         ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),4),
         ('LINEBELOW',(0,0),(-1,-1),0.5,colors.HexColor('#E0E0E0')),
@@ -137,73 +131,67 @@ def entity_card(label, name, entity_type, tax, domain, status, status_color, not
 
     notes_row = Table([[Paragraph(f"📋  {notes}", NOTE)]], colWidths=[7.6*inch])
     notes_row.setStyle(TableStyle([
-        ('BACKGROUND',(0,0),(-1,-1), WHITE),
+        ('BACKGROUND',(0,0),(-1,-1),WHITE),
         ('LEFTPADDING',(0,0),(-1,-1),10),('RIGHTPADDING',(0,0),(-1,-1),10),
         ('TOPPADDING',(0,0),(-1,-1),4),('BOTTOMPADDING',(0,0),(-1,-1),6),
     ]))
 
     outer = Table([[header],[details],[notes_row]], colWidths=[7.6*inch])
     outer.setStyle(TableStyle([
-        ('BOX',(0,0),(-1,-1),1.5, border),
+        ('BOX',(0,0),(-1,-1),1.5,border),
         ('LEFTPADDING',(0,0),(-1,-1),0),('RIGHTPADDING',(0,0),(-1,-1),0),
         ('TOPPADDING',(0,0),(-1,-1),0),('BOTTOMPADDING',(0,0),(-1,-1),0),
     ]))
     return outer
 
+# ── FOR-PROFIT ENTITIES ────────────────────────────────────────────
+story.append(Paragraph("FOR-PROFIT OPERATING ENTITIES", S('sec', fontSize=9, textColor=NAVY, fontName='Helvetica-Bold', spaceAfter=4)))
+
 entities = [
-    dict(label="01", name="S2T Designs LLC", entity_type="Texas LLC", tax="S-Corp Election (when revenue ≥ $40K net)",
+    dict(name="SmithCap Ventures LLC", entity_type="Texas LLC", tax="Pass-Through / Deal-specific S-Corp per venture",
+         domain="smithcapventures.com", status="🚀 NEW — Form Now", status_color='indigo',
+         notes="Venture incubator arm. Tests and launches new business concepts before they become standalone LLCs. "
+               "Houses early-stage ideas, pilot programs, and partnership deals. First candidates: Rowdy Crown, EmbroidOS, new media properties.",
+         bg=LINDIGO, border=INDIGO),
+    dict(name="S2T Designs LLC", entity_type="Texas LLC", tax="S-Corp Election (when net profit ≥ $40K)",
          domain="s2tdesigns.com", status="⚡ ACTIVE — Form Now", status_color='green',
-         notes="Web & graphic design agency. Primary revenue-generating operating entity. S-Corp election saves SE tax once profitable.",
+         notes="Web & graphic design agency. Primary revenue-generating operating entity. S-Corp election saves SE tax once profitable. Active clients: Kinorva, LEBC, PBS, XFTC.",
          bg=LGREEN, border=DGREEN),
-    dict(label="02", name="Clarity Solar Services LLC", entity_type="Texas LLC", tax="S-Corp Election (when revenue ≥ $40K net)",
+    dict(name="Clarity Solar Services LLC", entity_type="Texas LLC", tax="S-Corp Election (when net profit ≥ $40K)",
          domain="claritysolarservices.com", status="⚡ ACTIVE — Form Now", status_color='green',
-         notes="Residential solar repair. Subcontract pipeline via Hert Renewables. TX SB 1036 GL insurance required by Sep 1, 2026.",
+         notes="Residential solar repair. Subcontract pipeline via Hert Renewables. TX SB 1036 GL insurance required by Sep 1, 2026. Brand: sky blue + white.",
          bg=LGREEN, border=DGREEN),
-    dict(label="03", name="Smith Capital Properties LLC", entity_type="Texas LLC", tax="Pass-Through (Disregarded)",
+    dict(name="Smith Capital Properties LLC", entity_type="Texas LLC", tax="Pass-Through (Disregarded)",
          domain="smithcapitalproperties.com", status="⚠️ INACTIVE — Reinstate", status_color='red',
-         notes="Real estate holding entity. Currently inactive with TX SOS. File past-due PIR + franchise tax reports + Form 811 to reinstate.",
+         notes="Real estate holding entity. Currently inactive with TX SOS. File past-due PIR + franchise tax reports + Form 811 to reinstate. Priority: 30 days.",
          bg=colors.HexColor('#FFEBEE'), border=RED),
-    dict(label="04", name="Nutrue Apparel LLC", entity_type="Texas LLC (or DBA)", tax="Pass-Through / Schedule C",
+    dict(name="Nutrue Apparel LLC", entity_type="Texas LLC (or DBA)", tax="Pass-Through / Schedule C",
          domain="nutrueapparel.com", status="🔧 FORM — Low Priority", status_color='amber',
-         notes="POD apparel brand via Printful/Shopify (hoodswag.shop). Form entity when revenue is consistent. DBA under SmithCap OK for now.",
+         notes="POD apparel brand via Printful/Shopify (hoodswag.shop). Form entity when revenue is consistent. DBA under SmithCap OK for now. Inbro embroidery machine retrofit in progress.",
          bg=LGOLD, border=GOLD),
-    dict(label="05", name="The Elevation ATX LLC", entity_type="Texas LLC", tax="Pass-Through / S-Corp if events scale",
+    dict(name="The Elevation ATX LLC", entity_type="Texas LLC", tax="Pass-Through / S-Corp if events scale",
          domain="theelevationatx.com", status="🔧 FORM — Medium Priority", status_color='amber',
-         notes="Upscale private hospitality event series. Form once first paid event is confirmed to protect liability.",
+         notes="Upscale private hospitality event series. Form LLC before first paid event to limit personal liability.",
          bg=LGOLD, border=GOLD),
-    dict(label="06", name="SmithCap FMO LLC", entity_type="Texas LLC", tax="Pass-Through",
+    dict(name="SmithCap FMO LLC", entity_type="Texas LLC", tax="Pass-Through",
          domain="smithcapfmo.com", status="🔧 FORM — As Needed", status_color='amber',
-         notes="Financial management office overseeing capital deployment, bookkeeping, and investment policy across all entities.",
+         notes="Financial management office overseeing capital deployment, bookkeeping, and investment policy across all SmithCap entities.",
          bg=LGOLD, border=GOLD),
 ]
-
-nonprofits = [
-    dict(label="N1", name="Xtreme Force Track Club (XFTC)", entity_type="Texas Nonprofit / 501(c)(3)",
-         tax="Tax-Exempt — NO income tax", domain="xtremeforcetrackclub.org",
-         status="✅ ACTIVE 501(c)(3)", status_color='green',
-         notes="Youth track nonprofit ages 6–18. Operates independently — SmithCap Group does NOT own XFTC. David serves as Executive Director.",
-         bg=LTEAL, border=TEAL),
-    dict(label="N2", name="Psi Beta Sigma Foundation (PBS)", entity_type="Texas Nonprofit / 501(c)(3) Pending",
-         tax="Tax-Exempt (pending IRS determination)", domain="psibetasigma1914.org",
-         status="🔄 501(c)(3) PENDING", status_color='amber',
-         notes="Collegiate pathways nonprofit. Fraternity-affiliated. SmithCap provides management support only — not an owner.",
-         bg=LTEAL, border=TEAL),
-]
-
-story.append(Paragraph("For-Profit Operating Entities", S('sec', fontSize=9, textColor=NAVY, fontName='Helvetica-Bold', spaceAfter=4)))
 
 for e in entities:
     story.append(entity_card(**e))
     story.append(Spacer(1,5))
 
-story.append(Spacer(1,6))
-story.append(Paragraph("Nonprofit / Tax-Exempt Entities  (Affiliated — NOT owned by SmithCap Group)", 
+# ── NONPROFITS ─────────────────────────────────────────────────────
+story.append(Spacer(1,4))
+story.append(Paragraph("NONPROFIT / TAX-EXEMPT AFFILIATES  (Not owned by SmithCap Group — Affiliated Only)",
     S('sec2', fontSize=9, textColor=TEAL, fontName='Helvetica-Bold', spaceAfter=4)))
 
 nbox = Table([[Paragraph(
     "These entities are 501(c)(3) nonprofits. David serves in a leadership/director role. "
     "Smith Capital Group does not hold ownership interest — they operate independently. "
-    "SmithCap may provide paid management services to these entities via a formal services agreement.",
+    "SmithCap may provide paid management services via a formal Management Services Agreement (MSA).",
     NOTE)]], colWidths=[7.6*inch])
 nbox.setStyle(TableStyle([
     ('BACKGROUND',(0,0),(-1,-1),LTEAL),('BOX',(0,0),(-1,-1),1,TEAL),
@@ -212,6 +200,19 @@ nbox.setStyle(TableStyle([
 ]))
 story.append(nbox)
 story.append(Spacer(1,4))
+
+nonprofits = [
+    dict(name="Xtreme Force Track Club (XFTC)", entity_type="Texas Nonprofit / 501(c)(3)",
+         tax="Tax-Exempt — No income tax", domain="xtremeforcetrackclub.org",
+         status="✅ ACTIVE 501(c)(3)", status_color='green',
+         notes="Youth track nonprofit ages 6–18. David serves as Executive Director. SmithCap does NOT own XFTC. Membership plugin + leaderboard platform in development.",
+         bg=LTEAL, border=TEAL),
+    dict(name="Psi Beta Sigma Foundation (PBS)", entity_type="Texas Nonprofit / 501(c)(3) Pending",
+         tax="Tax-Exempt (pending IRS determination)", domain="psibetasigma1914.org",
+         status="🔄 501(c)(3) PENDING", status_color='amber',
+         notes="Collegiate pathways nonprofit. Phi Beta Sigma affiliated. SmithCap provides management support only. Site live at psibetasigma1914.org.",
+         bg=LTEAL, border=TEAL),
+]
 
 for e in nonprofits:
     story.append(entity_card(**e))
@@ -224,39 +225,42 @@ story.append(Paragraph("FORMATION PRIORITY ROADMAP", S('lbl3', fontSize=7.5, tex
 story.append(Spacer(1,4))
 
 roadmap = [
-    ["Priority", "Entity", "Action", "Timeline", "Est. Cost"],
-    ["🔴 1", "Smith Capital Group LLC", "Form new TX LLC — file Articles of Organization", "Now", "~$300"],
-    ["🔴 2", "Smith Capital Properties LLC", "Reinstate — file PIR + franchise tax + Form 811", "30 days", "~$200–500"],
-    ["🟡 3", "Clarity Solar Services LLC", "Form TX LLC + S-Corp election (IRS Form 2553)", "60 days", "~$300"],
-    ["🟡 4", "S2T Designs LLC", "Form TX LLC + S-Corp election when net profit ≥ $40K", "60–90 days", "~$300"],
-    ["🟢 5", "The Elevation ATX LLC", "Form TX LLC before first paid event", "Before event", "~$300"],
-    ["🟢 6", "Nutrue Apparel LLC", "Form TX LLC or keep as DBA until revenue consistent", "When ready", "~$300"],
-    ["⚪ 7", "SmithCap FMO LLC", "Form when capital deployment activity begins", "Q4 2026", "~$300"],
+    ["#", "Entity", "Action Required", "Timeline", "Est. Cost"],
+    ["🔴 1", "Smith Capital Group LLC", "File Articles of Organization — TX SOS", "Now", "~$300"],
+    ["🔴 2", "SmithCap Ventures LLC", "File Articles of Organization — TX SOS", "Now", "~$300"],
+    ["🔴 3", "Smith Capital Properties LLC", "Reinstate: past-due PIR + franchise tax + Form 811", "30 days", "~$200–500"],
+    ["🟡 4", "Clarity Solar Services LLC", "Form TX LLC + S-Corp election (IRS Form 2553)", "60 days", "~$300"],
+    ["🟡 5", "S2T Designs LLC", "Form TX LLC + S-Corp election when net profit ≥ $40K", "60–90 days", "~$300"],
+    ["🟢 6", "The Elevation ATX LLC", "Form TX LLC before first paid event", "Before event", "~$300"],
+    ["🟢 7", "Nutrue Apparel LLC", "Form TX LLC or keep as DBA until revenue consistent", "When ready", "~$300"],
+    ["⚪ 8", "SmithCap FMO LLC", "Form when active capital deployment begins", "Q4 2026", "~$300"],
 ]
 
-rt = Table(roadmap, colWidths=[0.7*inch, 2.5*inch, 2.45*inch, 1.0*inch, 0.75*inch], repeatRows=1)
+rt = Table(roadmap, colWidths=[0.6*inch, 2.4*inch, 2.7*inch, 1.0*inch, 0.7*inch], repeatRows=1)
 rt.setStyle(TableStyle([
     ('BACKGROUND',(0,0),(-1,0),NAVY),('TEXTCOLOR',(0,0),(-1,0),WHITE),
     ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),('FONTSIZE',(0,0),(-1,-1),8),
     ('ALIGN',(0,0),(-1,-1),'LEFT'),('VALIGN',(0,0),(-1,-1),'MIDDLE'),
     ('ROWBACKGROUNDS',(0,1),(-1,-1),[WHITE,LGRAY]),
+    ('BACKGROUND',(0,1),(-1,3),colors.HexColor('#FFEBEE')),
+    ('BACKGROUND',(0,4),(-1,5),colors.HexColor('#FFF8E1')),
+    ('BACKGROUND',(0,1),(-1,2),LINDIGO),  # ventures rows get indigo tint
+    ('BACKGROUND',(0,1),(-1,1),colors.HexColor('#FFEBEE')),  # SmithCap Group = red priority
+    ('BACKGROUND',(0,2),(-1,2),LINDIGO),  # SmithCap Ventures = indigo
     ('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#CCCCCC')),
     ('LEFTPADDING',(0,0),(-1,-1),6),('RIGHTPADDING',(0,0),(-1,-1),6),
     ('TOPPADDING',(0,0),(-1,-1),5),('BOTTOMPADDING',(0,0),(-1,-1),5),
-    ('BACKGROUND',(0,1),(-1,2),colors.HexColor('#FFEBEE')),  # red priority rows
-    ('BACKGROUND',(0,3),(-1,4),colors.HexColor('#FFF8E1')),  # yellow
 ]))
 story.append(rt)
 story.append(Spacer(1,8))
 
 # ── TAX STRATEGY NOTE ──────────────────────────────────────────────
 tax_note = Table([[Paragraph(
-    "<b>💡 Tax Strategy Summary:</b>  Smith Capital Group LLC (parent) = pass-through, no payroll required. "
-    "Operating LLCs elect S-Corp status once net profit clears ~$40K/year — pay yourself a reasonable salary, "
-    "take the rest as distributions, save 15.3% SE tax on the distribution portion. "
+    "<b>💡 Tax Strategy:</b>  Smith Capital Group LLC (parent) = pass-through, no payroll required. "
+    "SmithCap Ventures LLC = pass-through at the incubator level; individual ventures can elect S-Corp status independently once profitable. "
+    "Operating LLCs elect S-Corp once net profit clears ~$40K/year to save 15.3% SE tax on distributions. "
     "Nonprofits (XFTC, PBS) file separately and are never included in SmithCap Group's tax return.",
-    S('tn', fontSize=8, textColor=DGRAY, leading=12)
-)]], colWidths=[7.6*inch])
+    S('tn', fontSize=8, textColor=DGRAY, leading=12))]], colWidths=[7.6*inch])
 tax_note.setStyle(TableStyle([
     ('BACKGROUND',(0,0),(-1,-1),LGOLD),('BOX',(0,0),(-1,-1),1,GOLD),
     ('LEFTPADDING',(0,0),(-1,-1),10),('RIGHTPADDING',(0,0),(-1,-1),10),
@@ -268,7 +272,7 @@ story.append(Spacer(1,8))
 # ── FOOTER ─────────────────────────────────────────────────────────
 story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor('#CCCCCC'), spaceAfter=4))
 story.append(Paragraph(
-    "Smith Capital Group LLC  ·  Pflugerville, TX  ·  Confidential — For Internal Use Only  ·  Prepared June 5, 2026",
+    "Smith Capital Group LLC  ·  Pflugerville, TX  ·  Confidential — For Internal Use Only  ·  Updated June 5, 2026",
     S('ft', fontSize=7.5, textColor=GRAY, alignment=TA_CENTER)
 ))
 
