@@ -43,7 +43,7 @@ add_action( 'plugins_loaded', function() {
 add_action( 'wp_enqueue_scripts', function() {
     wp_enqueue_style( 'pbs-tickets', PBS_EC_URL . 'assets/css/pbs-tickets.css', array(), PBS_EC_VERSION );
     wp_enqueue_script( 'pbs-checkout', PBS_EC_URL . 'assets/js/pbs-checkout.js', array( 'jquery' ), PBS_EC_VERSION, true );
-    wp_localize_script( 'pbs-checkout', 'PBS_EC', array(
+    wp_localize_script( 'pbs-checkout', 'PBS', array(
         'ajax_url'           => admin_url( 'admin-ajax.php' ),
         'rest_url'           => rest_url( 'pbs-ec/v1/' ),
         'nonce'              => wp_create_nonce( 'pbs_ec_nonce' ),
