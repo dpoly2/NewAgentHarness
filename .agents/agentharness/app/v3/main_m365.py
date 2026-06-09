@@ -145,6 +145,7 @@ NAV_ITEMS = [
     ("👥", "Clients", "show_clients"),
     ("✈", "Travel", "show_travel"),
     ("⚡", "Connect", "show_connectors"),
+    ("💬", "Chat", "show_chat"),
     ("🔑", "Admin", "show_admin"),
 ]
 GRAPH_LAYOUTS = {
@@ -347,6 +348,15 @@ class ArchonHubApp:
         self.admin_unlocked = False
         self.hub_process = None
         self.toast_label = None
+
+        # Chat state
+        self._chat_messages = []          # list of {role, content, agent_id, run_id, ts}
+        self._chat_run_frames = {}        # run_id -> thinking_frame widget
+        self._chat_run_step_labels = {}   # run_id -> list of step label widgets
+        self._chat_run_status_label = {}  # run_id -> status label widget
+        self._chat_dot_state = {}         # run_id -> int (animation tick)
+        self._chat_canvas = None          # scrollable canvas for bubbles
+        self._chat_bubbles_frame = None   # inner frame holding all bubbles
 
         self.quick_team_var = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
         self.quick_agent_var = tk.StringVar(value=AGENT_REGISTRY[self.quick_team_var.get()][0])
@@ -837,6 +847,10 @@ class ArchonHubApp:
         if hasattr(self, "runs_tree"):
             self._refresh_runs(select_run_id=run_id)
         self._refresh_home_status()
+
+        # Forward run events to chat if this is a chat-initiated run
+        if run_id in self._chat_run_frames:
+            self._chat_handle_run_event(event_type, data, run_id)
 
     def _get_runs(self):
         agent = None if self.run_filter_agent_var.get() == "all" else self.run_filter_agent_var.get()
@@ -2112,6 +2126,458 @@ class ArchonHubApp:
                 self.show_toast(f"Stop failed: {exc}", ERROR)
                 return
         self.show_toast("No managed hub server process.", WARNING)
+
+    # ── Chat ─────────────────────────────────────────────────────────────────
+
+    def show_chat(self):
+        self._clear_content()
+        self._set_active_nav("Chat")
+
+        # ── Top selector bar ──────────────────────────────────────────────
+        top = tk.Frame(self.content, bg=BG_PANEL, highlightbackground=BORDER_CARD, highlightthickness=1)
+        top.pack(fill="x", padx=0, pady=0)
+
+        tk.Label(top, text="💬  ArchonHub Chat", bg=BG_PANEL, fg=TEXT_PRIMARY,
+                 font=("Segoe UI", 13, "bold")).pack(side="left", padx=16, pady=10)
+
+        # Agent selector on right side of top bar
+        sel = tk.Frame(top, bg=BG_PANEL)
+        sel.pack(side="right", padx=12, pady=6)
+
+        self._chat_team_var  = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
+        self._chat_agent_var = tk.StringVar(value=AGENT_REGISTRY[self._chat_team_var.get()][0])
+        self._chat_proj_var  = tk.StringVar(value=PROJECTS[0])
+        self._chat_graph_var = tk.StringVar(value="reflexion")
+
+        def _on_team_change(*_):
+            agents = AGENT_REGISTRY.get(self._chat_team_var.get(), [])
+            self._chat_agent_var.set(agents[0] if agents else "")
+            agent_cb["values"] = agents
+
+        tk.Label(sel, text="Team", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=0, padx=(0,4))
+        team_cb = ttk.Combobox(sel, textvariable=self._chat_team_var,
+                               values=list(AGENT_REGISTRY.keys()), width=18, state="readonly")
+        team_cb.grid(row=0, column=1, padx=4)
+        team_cb.bind("<<ComboboxSelected>>", _on_team_change)
+
+        tk.Label(sel, text="Agent", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=2, padx=(8,4))
+        agent_cb = ttk.Combobox(sel, textvariable=self._chat_agent_var,
+                                values=AGENT_REGISTRY[self._chat_team_var.get()], width=28, state="readonly")
+        agent_cb.grid(row=0, column=3, padx=4)
+
+        tk.Label(sel, text="Graph", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=4, padx=(8,4))
+        ttk.Combobox(sel, textvariable=self._chat_graph_var,
+                     values=["reflexion","research","wordpress","business-law"], width=14, state="readonly"
+                     ).grid(row=0, column=5, padx=4)
+
+        tk.Label(sel, text="Project", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=6, padx=(8,4))
+        ttk.Combobox(sel, textvariable=self._chat_proj_var,
+                     values=PROJECTS, width=16, state="readonly").grid(row=0, column=7, padx=4)
+
+        # ── Chat bubble area ──────────────────────────────────────────────
+        bubble_outer = tk.Frame(self.content, bg=BG_CANVAS)
+        bubble_outer.pack(fill="both", expand=True)
+
+        _, self._chat_canvas, self._chat_bubbles_frame = self._scrollable_area(bubble_outer, bg=BG_CANVAS)
+        _, self._chat_canvas, self._chat_bubbles_frame = self._scrollable_area(bubble_outer, bg=BG_CANVAS)
+        self._chat_canvas.pack_forget()  # re-pack properly
+        # rebuild cleanly
+        for w in bubble_outer.winfo_children():
+            w.destroy()
+        chat_canvas = tk.Canvas(bubble_outer, bg=BG_CANVAS, highlightthickness=0, bd=0)
+        chat_sb = ttk.Scrollbar(bubble_outer, orient="vertical", command=chat_canvas.yview)
+        self._chat_bubbles_frame = tk.Frame(chat_canvas, bg=BG_CANVAS)
+        self._chat_canvas = chat_canvas
+        bw = chat_canvas.create_window((0,0), window=self._chat_bubbles_frame, anchor="nw")
+        def _on_cfg(e): chat_canvas.configure(scrollregion=chat_canvas.bbox("all"))
+        def _on_resize(e): chat_canvas.itemconfigure(bw, width=e.width)
+        self._chat_bubbles_frame.bind("<Configure>", _on_cfg)
+        chat_canvas.bind("<Configure>", _on_resize)
+        chat_canvas.configure(yscrollcommand=chat_sb.set)
+        chat_sb.pack(side="right", fill="y")
+        chat_canvas.pack(side="left", fill="both", expand=True)
+
+        # Render existing messages
+        for msg in self._chat_messages:
+            self._chat_render_bubble(msg)
+
+        # ── Input bar ─────────────────────────────────────────────────────
+        input_bar = tk.Frame(self.content, bg=BG_PANEL,
+                             highlightbackground=BORDER_CARD, highlightthickness=1)
+        input_bar.pack(fill="x", side="bottom")
+
+        self._chat_input = tk.Text(input_bar, height=3, bg=BG_INPUT, fg=TEXT_PRIMARY,
+                                   insertbackground=ACCENT, relief="flat", font=("Segoe UI", 11),
+                                   wrap="word", padx=10, pady=8)
+        self._chat_input.pack(side="left", fill="both", expand=True, padx=(12,0), pady=8)
+        self._chat_input.bind("<Return>", lambda e: (self._chat_send(), "break")[1])
+        self._chat_input.bind("<Shift-Return>", lambda e: None)  # allow newline with shift
+
+        send_btn = self._button(input_bar, "  ▶  Send", self._chat_send)
+        send_btn.pack(side="right", padx=12, pady=8, ipadx=10, ipady=6)
+
+        hint = tk.Label(input_bar, text="Enter to send  ·  Shift+Enter for newline",
+                        bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8))
+        hint.pack(side="right", padx=4)
+
+    def _chat_send(self):
+        task = (self._chat_input.get("1.0", "end") or "").strip()
+        if not task:
+            return
+        self._chat_input.delete("1.0", "end")
+
+        agent_id = self._chat_agent_var.get()
+        project  = self._chat_proj_var.get()
+        graph    = self._chat_graph_var.get()
+        ts       = datetime.now().strftime("%H:%M")
+
+        # Add user bubble
+        user_msg = {"role": "user", "content": task, "agent_id": "", "run_id": "", "ts": ts}
+        self._chat_messages.append(user_msg)
+        self._chat_render_bubble(user_msg)
+
+        # Add thinking bubble with run_id placeholder
+        run_id = str(uuid.uuid4())
+        think_msg = {
+            "role": "thinking", "content": task,
+            "agent_id": agent_id, "project": project,
+            "graph": graph, "run_id": run_id, "ts": ts,
+        }
+        self._chat_messages.append(think_msg)
+        self._chat_render_bubble(think_msg)
+
+        # Submit run
+        config = {
+            "agent_id": agent_id, "project": project,
+            "graph": graph, "task": task,
+            "max_revisions": 2, "run_id": run_id,
+        }
+        self._submit_chat_run(config, run_id)
+
+        # Start dot animation
+        self._chat_dot_state[run_id] = 0
+        self._chat_animate_dots(run_id)
+
+    def _submit_chat_run(self, config, run_id):
+        if getattr(self.hub, "online", False):
+            try:
+                self.hub.submit_run(
+                    agent_id=config["agent_id"], project=config["project"],
+                    graph=config["graph"], task=config["task"],
+                    max_revisions=config.get("max_revisions", 2),
+                )
+                return
+            except Exception:
+                pass
+        # Fallback: local execution in thread
+        cancel_flag = threading.Event()
+        self.cancel_flags[run_id] = cancel_flag
+
+        def _thread():
+            try:
+                from hub_nodes import run_graph
+                def emit(event_type, **kwargs):
+                    self._ui_queue.put(("run_event", event_type, {"run_id": run_id, **kwargs}))
+                run_graph({**config, "cancel_flag": cancel_flag}, emit=emit)
+            except Exception as exc:
+                self._ui_queue.put(("run_event", "run_failed",
+                                    {"run_id": run_id, "error": str(exc)}))
+        threading.Thread(target=_thread, daemon=True).start()
+
+    def _chat_render_bubble(self, msg):
+        if self._chat_bubbles_frame is None:
+            return
+        role    = msg.get("role", "user")
+        content = msg.get("content", "")
+        ts      = msg.get("ts", "")
+        run_id  = msg.get("run_id", "")
+
+        outer = tk.Frame(self._chat_bubbles_frame, bg=BG_CANVAS)
+        outer.pack(fill="x", padx=18, pady=6, anchor="e" if role == "user" else "w")
+
+        if role == "user":
+            self._chat_user_bubble(outer, content, ts)
+        elif role == "thinking":
+            self._chat_thinking_bubble(outer, msg)
+        elif role == "agent":
+            self._chat_agent_bubble(outer, msg)
+
+        self._chat_scroll_bottom()
+
+    def _chat_user_bubble(self, parent, content, ts):
+        wrap = tk.Frame(parent, bg=BG_CANVAS)
+        wrap.pack(anchor="e")
+        bubble = tk.Frame(wrap, bg=ACCENT_DARK,
+                          highlightbackground=ACCENT, highlightthickness=1)
+        bubble.pack(anchor="e")
+        tk.Label(bubble, text=content, bg=ACCENT_DARK, fg="#ffffff",
+                 font=("Segoe UI", 11), wraplength=520, justify="left",
+                 padx=14, pady=10).pack()
+        tk.Label(wrap, text=ts, bg=BG_CANVAS, fg=TEXT_MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="e", padx=4)
+
+    def _chat_thinking_bubble(self, parent, msg):
+        agent_id = msg.get("agent_id", "agent")
+        graph    = msg.get("graph", "reflexion")
+        run_id   = msg.get("run_id", "")
+        ts       = msg.get("ts", "")
+
+        wrap = tk.Frame(parent, bg=BG_CANVAS)
+        wrap.pack(anchor="w", fill="x")
+
+        # Agent avatar dot
+        av = tk.Canvas(wrap, width=32, height=32, bg=BG_CANVAS, highlightthickness=0)
+        av.create_oval(4, 4, 28, 28, fill=ACCENT, outline="")
+        av.create_text(16, 16, text="⚡", fill="white", font=("Segoe UI", 12))
+        av.pack(side="left", anchor="nw", pady=4)
+
+        bubble = tk.Frame(wrap, bg=BG_CARD,
+                          highlightbackground=BORDER_CARD, highlightthickness=1)
+        bubble.pack(side="left", anchor="nw", fill="x", expand=True, padx=6)
+
+        # Header — agent + graph
+        hdr = tk.Frame(bubble, bg=BG_CARD)
+        hdr.pack(fill="x", padx=12, pady=(10,4))
+        tk.Label(hdr, text=f"⚡  Deploying  ", bg=BG_CARD, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(side="left")
+        tk.Label(hdr, text=agent_id, bg=BG_CARD, fg=ACCENT,
+                 font=("Segoe UI", 9, "bold")).pack(side="left")
+        tk.Label(hdr, text=f"  ·  {graph}", bg=BG_CARD, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(side="left")
+
+        tk.Frame(bubble, bg=DIVIDER, height=1).pack(fill="x", padx=12)
+
+        # Steps container
+        steps_frame = tk.Frame(bubble, bg=BG_CARD)
+        steps_frame.pack(fill="x", padx=12, pady=6)
+        self._chat_run_step_labels[run_id] = []
+
+        # Show expected graph nodes as pending steps
+        nodes = GRAPH_LAYOUTS.get(graph, ["load_memory", "act", "evaluate", "save_memory"])
+        for node in nodes:
+            row = tk.Frame(steps_frame, bg=BG_CARD)
+            row.pack(anchor="w", pady=1)
+            dot = tk.Label(row, text="○", bg=BG_CARD, fg=TEXT_MUTED,
+                           font=("Segoe UI", 10))
+            dot.pack(side="left")
+            lbl = tk.Label(row, text=f"  {node}", bg=BG_CARD, fg=TEXT_MUTED,
+                           font=("Segoe UI Mono", 9))
+            lbl.pack(side="left")
+            self._chat_run_step_labels[run_id].append((node, dot, lbl))
+
+        tk.Frame(bubble, bg=DIVIDER, height=1).pack(fill="x", padx=12)
+
+        # Status / dots line
+        status_lbl = tk.Label(bubble, text="● Thinking...", bg=BG_CARD, fg=ACCENT,
+                              font=("Segoe UI", 9, "italic"), padx=12, pady=8)
+        status_lbl.pack(anchor="w")
+        self._chat_run_status_label[run_id] = status_lbl
+
+        tk.Label(wrap, text=ts, bg=BG_CANVAS, fg=TEXT_MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", padx=42)
+
+        # Store frame reference so we can replace it on completion
+        self._chat_run_frames[run_id] = (parent, wrap, bubble, steps_frame, status_lbl)
+
+    def _chat_agent_bubble(self, parent, msg):
+        agent_id = msg.get("agent_id", "agent")
+        content  = msg.get("content", "")
+        score    = msg.get("score", None)
+        graph    = msg.get("graph", "")
+        ts       = msg.get("ts", "")
+        run_id   = msg.get("run_id", "")
+
+        wrap = tk.Frame(parent, bg=BG_CANVAS)
+        wrap.pack(anchor="w", fill="x")
+
+        av = tk.Canvas(wrap, width=32, height=32, bg=BG_CANVAS, highlightthickness=0)
+        av.create_oval(4, 4, 28, 28, fill=SUCCESS, outline="")
+        av.create_text(16, 16, text="✓", fill="white", font=("Segoe UI", 12, "bold"))
+        av.pack(side="left", anchor="nw", pady=4)
+
+        bubble = tk.Frame(wrap, bg=BG_PANEL,
+                          highlightbackground=SUCCESS, highlightthickness=1)
+        bubble.pack(side="left", anchor="nw", fill="x", expand=True, padx=6)
+
+        # Header
+        hdr = tk.Frame(bubble, bg=BG_PANEL)
+        hdr.pack(fill="x", padx=12, pady=(8,4))
+        tk.Label(hdr, text=agent_id, bg=BG_PANEL, fg=SUCCESS,
+                 font=("Segoe UI", 9, "bold")).pack(side="left")
+        if graph:
+            tk.Label(hdr, text=f"  ·  {graph}", bg=BG_PANEL, fg=TEXT_MUTED,
+                     font=("Segoe UI", 9)).pack(side="left")
+        if score is not None:
+            sc = float(score)
+            sc_color = SUCCESS if sc >= 0.75 else WARNING if sc >= 0.5 else ERROR
+            tk.Label(hdr, text=f"  ·  score {sc:.2f}", bg=BG_PANEL, fg=sc_color,
+                     font=("Segoe UI", 9, "bold")).pack(side="left")
+
+        tk.Frame(bubble, bg=DIVIDER, height=1).pack(fill="x", padx=12)
+
+        # Content
+        tk.Label(bubble, text=content, bg=BG_PANEL, fg=TEXT_PRIMARY,
+                 font=("Segoe UI", 11), wraplength=580, justify="left",
+                 padx=14, pady=12, anchor="w").pack(fill="x")
+
+        tk.Label(wrap, text=ts, bg=BG_CANVAS, fg=TEXT_MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", padx=42)
+
+    def _chat_animate_dots(self, run_id):
+        if run_id not in self._chat_run_status_label:
+            return
+        if run_id not in self._chat_run_frames:
+            return
+        lbl = self._chat_run_status_label.get(run_id)
+        if lbl is None:
+            return
+        try:
+            lbl.winfo_exists()
+        except Exception:
+            return
+        if not lbl.winfo_exists():
+            return
+        tick = self._chat_dot_state.get(run_id, 0)
+        dots = "●" * (tick % 3 + 1) + "○" * (2 - tick % 3)
+        current_node = self.run_state.get(run_id, {}).get("current_node", "")
+        node_text = f"  Running {current_node}..." if current_node else "  Thinking..."
+        try:
+            lbl.configure(text=f"{dots}{node_text}")
+        except Exception:
+            return
+        self._chat_dot_state[run_id] = tick + 1
+        # Continue animating every 400ms while still in run_frames
+        self.root.after(400, lambda: self._chat_animate_dots(run_id))
+
+    def _chat_handle_run_event(self, event_type, data, run_id):
+        stamp = datetime.now().strftime("%H:%M:%S")
+
+        if event_type == "node_update":
+            node   = data.get("node", "")
+            status = data.get("status", "")
+            # Update step indicators
+            for (n, dot_lbl, name_lbl) in self._chat_run_step_labels.get(run_id, []):
+                try:
+                    if n == node:
+                        if status == "running":
+                            dot_lbl.configure(text="▶", fg=ACCENT)
+                            name_lbl.configure(fg=ACCENT)
+                        elif status in ("done", "complete"):
+                            dot_lbl.configure(text="✓", fg=SUCCESS)
+                            name_lbl.configure(fg=SUCCESS)
+                    elif self._node_is_done(run_id, n, node):
+                        dot_lbl.configure(text="✓", fg=SUCCESS)
+                        name_lbl.configure(fg=TEXT_BODY)
+                except Exception:
+                    pass
+            # Update status label
+            status_lbl = self._chat_run_status_label.get(run_id)
+            if status_lbl:
+                try:
+                    status_lbl.configure(
+                        text=f"▶  Running  {node}  ·  {stamp}",
+                        fg=ACCENT
+                    )
+                except Exception:
+                    pass
+
+        elif event_type in ("run_completed", "run_failed"):
+            # Mark all remaining steps done/failed
+            is_fail = event_type == "run_failed"
+            for (n, dot_lbl, name_lbl) in self._chat_run_step_labels.get(run_id, []):
+                try:
+                    cur_text = dot_lbl.cget("text")
+                    if cur_text not in ("✓", "✗"):
+                        if is_fail:
+                            dot_lbl.configure(text="✗", fg=ERROR)
+                            name_lbl.configure(fg=ERROR)
+                        else:
+                            dot_lbl.configure(text="✓", fg=SUCCESS)
+                            name_lbl.configure(fg=SUCCESS)
+                except Exception:
+                    pass
+
+            # Update status label
+            status_lbl = self._chat_run_status_label.get(run_id)
+            if status_lbl:
+                try:
+                    if is_fail:
+                        status_lbl.configure(text=f"✗  Failed  ·  {stamp}", fg=ERROR)
+                    else:
+                        score = float(data.get("score", 0) or 0)
+                        status_lbl.configure(
+                            text=f"✓  Complete  ·  score {score:.2f}  ·  {stamp}",
+                            fg=SUCCESS
+                        )
+                except Exception:
+                    pass
+
+            # Stop animation
+            self._chat_run_frames.pop(run_id, None)
+            self._chat_dot_state.pop(run_id, None)
+
+            # Add agent response bubble
+            if not is_fail:
+                output = data.get("output", "") or self._get_run_output(run_id)
+                if output:
+                    # Find corresponding chat message for agent/graph
+                    think_msg = next(
+                        (m for m in self._chat_messages
+                         if m.get("run_id") == run_id and m.get("role") == "thinking"),
+                        {}
+                    )
+                    agent_msg = {
+                        "role": "agent",
+                        "content": output,
+                        "agent_id": think_msg.get("agent_id", "agent"),
+                        "graph": think_msg.get("graph", ""),
+                        "score": data.get("score"),
+                        "run_id": run_id,
+                        "ts": datetime.now().strftime("%H:%M"),
+                    }
+                    self._chat_messages.append(agent_msg)
+                    if self.current_view == "Chat" and self._chat_bubbles_frame:
+                        outer = tk.Frame(self._chat_bubbles_frame, bg=BG_CANVAS)
+                        outer.pack(fill="x", padx=18, pady=6, anchor="w")
+                        self._chat_agent_bubble(outer, agent_msg)
+                        self._chat_scroll_bottom()
+
+            # Clean up step labels
+            self._chat_run_step_labels.pop(run_id, None)
+            self._chat_run_status_label.pop(run_id, None)
+
+    def _node_is_done(self, run_id, node, current_node):
+        """Return True if node comes before current_node in the graph layout."""
+        run_msg = next(
+            (m for m in self._chat_messages
+             if m.get("run_id") == run_id and m.get("role") == "thinking"), {}
+        )
+        graph = run_msg.get("graph", "reflexion")
+        layout = GRAPH_LAYOUTS.get(graph, [])
+        try:
+            return layout.index(node) < layout.index(current_node)
+        except ValueError:
+            return False
+
+    def _get_run_output(self, run_id):
+        try:
+            runs = hub_db.load_runs(limit=1, agent_id=None, project=None, status=None)
+            for r in runs:
+                if r.get("run_id") == run_id:
+                    return r.get("output", "")
+        except Exception:
+            pass
+        return ""
+
+    def _chat_scroll_bottom(self):
+        try:
+            if self._chat_canvas:
+                self._chat_canvas.update_idletasks()
+                self._chat_canvas.yview_moveto(1.0)
+        except Exception:
+            pass
+
+    # ── End Chat ──────────────────────────────────────────────────────────────
 
     def on_close(self):
         try:

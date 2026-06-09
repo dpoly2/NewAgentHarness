@@ -320,13 +320,18 @@ def _hash_password(password: str) -> str:
 def _verify_password(plain_password: str, hashed_password: str) -> bool:
     if not hashed_password:
         return False
-    try:
-        from passlib.context import CryptContext
-
-        if hashed_password.startswith("$2"):
+    # bcrypt hashes start with $2b$ or $2a$
+    if hashed_password.startswith("$2"):
+        try:
+            import bcrypt as _bcrypt
+            return _bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+        except Exception:
+            pass
+        try:
+            from passlib.context import CryptContext
             return CryptContext(schemes=["bcrypt"], deprecated="auto").verify(plain_password, hashed_password)
-    except Exception:
-        pass
+        except Exception:
+            return False
     if hashed_password.startswith("pbkdf2_sha256$"):
         try:
             _, iterations, salt_text, digest_text = hashed_password.split("$", 3)
