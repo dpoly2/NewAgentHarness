@@ -1,0 +1,551 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A152C2D328D5FB926038097E /* AppSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF194FE2B3D2B2B8B754465A /* AppSupport.swift */; };
+		DE0860AD24F14C273F8D2CF4 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9BD1D645D83D6EDEE57DC9B /* Models.swift */; };
+		C83A00E881A28F12113974C2 /* HubClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DD6DFAB5E30CC75A3B77FB /* HubClient.swift */; };
+		E0251FB89023F689673ECF09 /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D439B15E0985F3EF3D36496 /* AuthStore.swift */; };
+		CF6E4C2CDC46301E44160ACA /* ArchonHubApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620BA5A0A28EAD58ADE1CBE4 /* ArchonHubApp.swift */; };
+		0F0D44934381C0461594661A /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B342922F49747DB5F24296A /* ContentView.swift */; };
+		20C94E5892D7DC70C6CFF961 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EF8D94D1228E9E387528925 /* LoginView.swift */; };
+		780526D1DD5390BC316D6DEF /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C4F3A40ADE69E8165A1DC84 /* DashboardViewModel.swift */; };
+		14F6087C0A551B25762DAE2D /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86DFD24131EDAC25058D5B77 /* DashboardView.swift */; };
+		DC8279FA0E65982B50902D32 /* RunsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F3E66B2C909CA569336E24 /* RunsView.swift */; };
+		CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BDDABE83150280268D2370 /* RunDetailView.swift */; };
+		31F0EF3827318AF7925D406F /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F170BC8587417CB08D4A5A9 /* TodosView.swift */; };
+		5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D54A64EC08732004634ACF0B /* AddTodoView.swift */; };
+		CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EC205EAE234EA083230944 /* BriefingView.swift */; };
+		4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9C54540BA3996C6E2D263A /* ChatView.swift */; };
+		DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74562AA2B1927210B2149F24 /* SettingsView.swift */; };
+		904C7CA023B87571AFFAC6B6 /* AppSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF194FE2B3D2B2B8B754465A /* AppSupport.swift */; };
+		B2CC2CA6857A3C7E0AA50F56 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9BD1D645D83D6EDEE57DC9B /* Models.swift */; };
+		5DDD46379EB91D012150BCB1 /* HubClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6DD6DFAB5E30CC75A3B77FB /* HubClient.swift */; };
+		5FDBCCDD37FE3E6336B1E28C /* ArchonHubWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F21A6BFD4288741BC7D3245 /* ArchonHubWatchApp.swift */; };
+		8C263EE07AE22335C7C3718B /* WatchMainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74583EDAF865AC697917B031 /* WatchMainView.swift */; };
+		32AF17F6ECD0559CE1F89485 /* WatchStatusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 917AB062F029009FBA30360E /* WatchStatusView.swift */; };
+		587CE43D21794954A0E9032E /* WatchQuickRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D800940A37D0CD50B55A6A7 /* WatchQuickRunView.swift */; };
+		6ED45BAF73E0903D3B280E2F /* WatchNotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F5345BC09154536D287CA8 /* WatchNotificationsView.swift */; };
+		570979101AE80BDE4593A071 /* ArchonHubComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061FBB29EC6AB0A2D2D8143 /* ArchonHubComplication.swift */; };
+		E38D47BAF522846878516E8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5526FCF48A1460E9D18EF952 /* Assets.xcassets */; };
+		8A0B2150C9C9EAC248CD0049 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 305A8750CEE988883F8995AB /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		47453726860D1303CB909A16 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		5526FCF48A1460E9D18EF952 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		305A8750CEE988883F8995AB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		620BA5A0A28EAD58ADE1CBE4 /* ArchonHubApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchonHubApp.swift; sourceTree = "<group>"; };
+		2B342922F49747DB5F24296A /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0EF8D94D1228E9E387528925 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		CF194FE2B3D2B2B8B754465A /* AppSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSupport.swift; sourceTree = "<group>"; };
+		A9BD1D645D83D6EDEE57DC9B /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		C6DD6DFAB5E30CC75A3B77FB /* HubClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HubClient.swift; sourceTree = "<group>"; };
+		7D439B15E0985F3EF3D36496 /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
+		1C4F3A40ADE69E8165A1DC84 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		86DFD24131EDAC25058D5B77 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		76F3E66B2C909CA569336E24 /* RunsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunsView.swift; sourceTree = "<group>"; };
+		23BDDABE83150280268D2370 /* RunDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetailView.swift; sourceTree = "<group>"; };
+		0F170BC8587417CB08D4A5A9 /* TodosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodosView.swift; sourceTree = "<group>"; };
+		D54A64EC08732004634ACF0B /* AddTodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTodoView.swift; sourceTree = "<group>"; };
+		C6EC205EAE234EA083230944 /* BriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingView.swift; sourceTree = "<group>"; };
+		7C9C54540BA3996C6E2D263A /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		74562AA2B1927210B2149F24 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		6F21A6BFD4288741BC7D3245 /* ArchonHubWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchonHubWatchApp.swift; sourceTree = "<group>"; };
+		74583EDAF865AC697917B031 /* WatchMainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchMainView.swift; sourceTree = "<group>"; };
+		917AB062F029009FBA30360E /* WatchStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchStatusView.swift; sourceTree = "<group>"; };
+		3D800940A37D0CD50B55A6A7 /* WatchQuickRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchQuickRunView.swift; sourceTree = "<group>"; };
+		79F5345BC09154536D287CA8 /* WatchNotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNotificationsView.swift; sourceTree = "<group>"; };
+		2061FBB29EC6AB0A2D2D8143 /* ArchonHubComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchonHubComplication.swift; sourceTree = "<group>"; };
+		210678DFA6E8EA42EDD5361C /* ArchonHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3845A7A36A05BA55463A2FD8 /* ArchonHubWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHubWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		51FF487622B86F7C097DA642 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		74D751BCDE46D7F46D40C13A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		CB9F715B20FF2E32E6BC4BDC /* Main */ = {
+			isa = PBXGroup;
+			children = (
+				2C87E328420D836420934D7D,
+				CB8F44D4917E1AA274E8BFC7,
+				47453726860D1303CB909A16,
+				2F3A6B1E78F896718625FF06,
+			);
+			sourceTree = "<group>";
+		};
+		2F3A6B1E78F896718625FF06 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				210678DFA6E8EA42EDD5361C,
+				3845A7A36A05BA55463A2FD8,
+			);
+			sourceTree = "<group>";
+		};
+		2C87E328420D836420934D7D /* ArchonHub */ = {
+			isa = PBXGroup;
+			children = (
+				D3E71AB02D9B58EF81F7A0B5,
+				EB578AF2CB6B7154B6FA4AA7,
+				86ABAC2ADFE2EAD3E81C20E9,
+				315A11F65C14FFFF04AFD557,
+				227E806159E879CF9DC193A5,
+				42F1D5B5794FC9D7573514E7,
+			);
+			path = ArchonHub;
+			sourceTree = "<group>";
+		};
+		D3E71AB02D9B58EF81F7A0B5 /* ArchonHubApp */ = {
+			isa = PBXGroup;
+			children = (
+				620BA5A0A28EAD58ADE1CBE4,
+				2B342922F49747DB5F24296A,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		EB578AF2CB6B7154B6FA4AA7 /* ArchonHubModels */ = {
+			isa = PBXGroup;
+			children = (
+				A9BD1D645D83D6EDEE57DC9B,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		86ABAC2ADFE2EAD3E81C20E9 /* ArchonHubNetwork */ = {
+			isa = PBXGroup;
+			children = (
+				C6DD6DFAB5E30CC75A3B77FB,
+				7D439B15E0985F3EF3D36496,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		315A11F65C14FFFF04AFD557 /* ArchonHubShared */ = {
+			isa = PBXGroup;
+			children = (
+				CF194FE2B3D2B2B8B754465A,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		227E806159E879CF9DC193A5 /* ArchonHubViews */ = {
+			isa = PBXGroup;
+			children = (
+				DC50F64AE7186DCF43AB953D,
+				1D3B0695D5AA359290EA3B11,
+				1D24FA3173958EFFA9F25BAA,
+				74E158F053383D17818F1E74,
+				C2BA9557CF95145E3366EE80,
+				00B7868B5E59F3EB8ABFE057,
+				9FF79E57F616E4AB6B52CEE4,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		DC50F64AE7186DCF43AB953D /* ArchonHubViewsAuth */ = {
+			isa = PBXGroup;
+			children = (
+				0EF8D94D1228E9E387528925,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		1D3B0695D5AA359290EA3B11 /* ArchonHubViewsDashboard */ = {
+			isa = PBXGroup;
+			children = (
+				86DFD24131EDAC25058D5B77,
+				1C4F3A40ADE69E8165A1DC84,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		1D24FA3173958EFFA9F25BAA /* ArchonHubViewsRuns */ = {
+			isa = PBXGroup;
+			children = (
+				76F3E66B2C909CA569336E24,
+				23BDDABE83150280268D2370,
+			);
+			path = Runs;
+			sourceTree = "<group>";
+		};
+		74E158F053383D17818F1E74 /* ArchonHubViewsTodos */ = {
+			isa = PBXGroup;
+			children = (
+				0F170BC8587417CB08D4A5A9,
+				D54A64EC08732004634ACF0B,
+			);
+			path = Todos;
+			sourceTree = "<group>";
+		};
+		C2BA9557CF95145E3366EE80 /* ArchonHubViewsBriefing */ = {
+			isa = PBXGroup;
+			children = (
+				C6EC205EAE234EA083230944,
+			);
+			path = Briefing;
+			sourceTree = "<group>";
+		};
+		00B7868B5E59F3EB8ABFE057 /* ArchonHubViewsChat */ = {
+			isa = PBXGroup;
+			children = (
+				7C9C54540BA3996C6E2D263A,
+			);
+			path = Chat;
+			sourceTree = "<group>";
+		};
+		9FF79E57F616E4AB6B52CEE4 /* ArchonHubViewsSettings */ = {
+			isa = PBXGroup;
+			children = (
+				74562AA2B1927210B2149F24,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
+		42F1D5B5794FC9D7573514E7 /* ArchonHubResources */ = {
+			isa = PBXGroup;
+			children = (
+				5526FCF48A1460E9D18EF952,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		CB8F44D4917E1AA274E8BFC7 /* ArchonHubWatch */ = {
+			isa = PBXGroup;
+			children = (
+				F8C4476E8E248919D662E524,
+				7AD2921A4595D10DBD1877DD,
+				7546C825BCFE16217000ACD7,
+				F1541DDF6DD1DAC85428703C,
+			);
+			path = ArchonHubWatch;
+			sourceTree = "<group>";
+		};
+		F8C4476E8E248919D662E524 /* ArchonHubWatchApp */ = {
+			isa = PBXGroup;
+			children = (
+				6F21A6BFD4288741BC7D3245,
+				74583EDAF865AC697917B031,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7AD2921A4595D10DBD1877DD /* ArchonHubWatchViews */ = {
+			isa = PBXGroup;
+			children = (
+				917AB062F029009FBA30360E,
+				3D800940A37D0CD50B55A6A7,
+				79F5345BC09154536D287CA8,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7546C825BCFE16217000ACD7 /* ArchonHubWatchComplications */ = {
+			isa = PBXGroup;
+			children = (
+				2061FBB29EC6AB0A2D2D8143,
+			);
+			path = Complications;
+			sourceTree = "<group>";
+		};
+		F1541DDF6DD1DAC85428703C /* ArchonHubWatchResources */ = {
+			isa = PBXGroup;
+			children = (
+				305A8750CEE988883F8995AB,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9BBABAAB8B6FD51D96736CE1 /* ArchonHub */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9C198477EA86BC60A202108 /* Build configuration list for PBXNativeTarget "ArchonHub" */;
+			buildPhases = (
+				40ED3FB34A50CAE5E3BFDD07 /* Sources */,
+				51FF487622B86F7C097DA642 /* Frameworks */,
+				506C17248D31E3F73E46EC37 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ArchonHub;
+			productName = ArchonHub;
+			productReference = 210678DFA6E8EA42EDD5361C /* ArchonHub.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0EBF4FF58272479C5D44C77B /* ArchonHubWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E37ED2CFAA2B1B738727D3B1 /* Build configuration list for PBXNativeTarget "ArchonHubWatch" */;
+			buildPhases = (
+				E97A1745DCA6497327906814 /* Sources */,
+				74D751BCDE46D7F46D40C13A /* Frameworks */,
+				6285530585A8B00F349D44C0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ArchonHubWatch;
+			productName = ArchonHubWatch;
+			productReference = 3845A7A36A05BA55463A2FD8 /* ArchonHubWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F94A04051AE48A298593E28B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1530;
+				TargetAttributes = {
+					9BBABAAB8B6FD51D96736CE1 = {
+						CreatedOnToolsVersion = 15.3;
+					};
+					0EBF4FF58272479C5D44C77B = {
+						CreatedOnToolsVersion = 15.3;
+					};
+				};
+			};
+			buildConfigurationList = 1F4E3D13C2320EDA50221924 /* Build configuration list for PBXProject "ArchonHub" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = CB9F715B20FF2E32E6BC4BDC;
+			productRefGroup = 2F3A6B1E78F896718625FF06 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				9BBABAAB8B6FD51D96736CE1 /* ArchonHub */,
+				0EBF4FF58272479C5D44C77B /* ArchonHubWatch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		506C17248D31E3F73E46EC37 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E38D47BAF522846878516E8B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6285530585A8B00F349D44C0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8A0B2150C9C9EAC248CD0049 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		40ED3FB34A50CAE5E3BFDD07 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A152C2D328D5FB926038097E /* AppSupport.swift in Sources */,
+				DE0860AD24F14C273F8D2CF4 /* Models.swift in Sources */,
+				C83A00E881A28F12113974C2 /* HubClient.swift in Sources */,
+				E0251FB89023F689673ECF09 /* AuthStore.swift in Sources */,
+				CF6E4C2CDC46301E44160ACA /* ArchonHubApp.swift in Sources */,
+				0F0D44934381C0461594661A /* ContentView.swift in Sources */,
+				20C94E5892D7DC70C6CFF961 /* LoginView.swift in Sources */,
+				780526D1DD5390BC316D6DEF /* DashboardViewModel.swift in Sources */,
+				14F6087C0A551B25762DAE2D /* DashboardView.swift in Sources */,
+				DC8279FA0E65982B50902D32 /* RunsView.swift in Sources */,
+				CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */,
+				31F0EF3827318AF7925D406F /* TodosView.swift in Sources */,
+				5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */,
+				CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */,
+				4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */,
+				DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E97A1745DCA6497327906814 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				904C7CA023B87571AFFAC6B6 /* AppSupport.swift in Sources */,
+				B2CC2CA6857A3C7E0AA50F56 /* Models.swift in Sources */,
+				5DDD46379EB91D012150BCB1 /* HubClient.swift in Sources */,
+				5FDBCCDD37FE3E6336B1E28C /* ArchonHubWatchApp.swift in Sources */,
+				8C263EE07AE22335C7C3718B /* WatchMainView.swift in Sources */,
+				32AF17F6ECD0559CE1F89485 /* WatchStatusView.swift in Sources */,
+				587CE43D21794954A0E9032E /* WatchQuickRunView.swift in Sources */,
+				6ED45BAF73E0903D3B280E2F /* WatchNotificationsView.swift in Sources */,
+				570979101AE80BDE4593A071 /* ArchonHubComplication.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		92E165A9035A603BE73D2E62 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		E1D3BBA94590957B0374D6E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		CF4AE370C655640BFCD03D31 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B12EA6AA31CD3C221DB1494C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		BF8C7E0CF4405CB6619CDC40 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = $(PRODUCT_MODULE_NAME).ArchonHubComplication;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.archonhub.ios;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		76AB20C5F0DBD56E68BB7BE0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = $(PRODUCT_MODULE_NAME).ArchonHubComplication;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.archonhub.ios;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.watch;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1F4E3D13C2320EDA50221924 /* Build configuration list for PBXProject "ArchonHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				92E165A9035A603BE73D2E62 /* Debug */,
+				E1D3BBA94590957B0374D6E9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D9C198477EA86BC60A202108 /* Build configuration list for PBXNativeTarget "ArchonHub" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CF4AE370C655640BFCD03D31 /* Debug */,
+				B12EA6AA31CD3C221DB1494C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E37ED2CFAA2B1B738727D3B1 /* Build configuration list for PBXNativeTarget "ArchonHubWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BF8C7E0CF4405CB6619CDC40 /* Debug */,
+				76AB20C5F0DBD56E68BB7BE0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F94A04051AE48A298593E28B /* Project object */;
+}

@@ -1,42 +1,34 @@
-﻿# AgentHarness v3 -- Windows Startup Script
-# Run from repo root: .\\.agents\\agentharness\\app\\v3\\start.ps1
+# ArchonHub — Start Desktop App
+# Resolves repo root, activates .venv, loads .agents/.env, launches main_m365.py
 
 $ErrorActionPreference = "Stop"
-$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../../../../")
-Set-Location $repoRoot
 
-Write-Host "`n[H]  AgentHarness v3 -- Starting..." -ForegroundColor Cyan
+# Windows Unicode safety
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
 
-# Check Python
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    Write-Host "[X] Python not found. Install from https://python.org" -ForegroundColor Red
-    exit 1
-}
+# Resolve paths
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RepoRoot = (Get-Item $ScriptDir).Parent.Parent.Parent.Parent.FullName
+$VenvPython = Join-Path $RepoRoot ".venv\Scripts\python.exe"
+$FallbackPython = "python"
+$EnvFile = Join-Path $RepoRoot ".agents\.env"
 
-# Create/activate venv
-$venv = Join-Path $repoRoot ".venv"
-if (-not (Test-Path $venv)) {
-    Write-Host "[pkg] Creating virtual environment..." -ForegroundColor Yellow
-    python -m venv $venv
-}
-$activate = Join-Path $venv "Scripts\Activate.ps1"
-& $activate
-
-# Install dependencies
-Write-Host "[pkg] Installing dependencies..." -ForegroundColor Yellow
-pip install --quiet --upgrade langgraph langchain-openai langchain-core
-
-# Set OPENAI_API_KEY from .env if present
-$envFile = Join-Path $repoRoot ".agents\.env"
-if (Test-Path $envFile) {
-    Get-Content $envFile | ForEach-Object {
-        if ($_ -match "^OPENAI_API_KEY=(.+)$") {
-            $env:OPENAI_API_KEY = $Matches[1].Trim()
-            Write-Host "[OK] API key loaded from .env" -ForegroundColor Green
+# Load .env if it exists
+if (Test-Path $EnvFile) {
+    Get-Content $EnvFile | ForEach-Object {
+        if ($_ -match "^([^#][^=]*)=(.*)$") {
+            [System.Environment]::SetEnvironmentVariable($matches[1].Trim(), $matches[2].Trim(), "Process")
         }
     }
+    Write-Host "[ArchonHub] Loaded .env from $EnvFile"
 }
 
-# Launch the app
-Write-Host "`n[>>] Launching AgentHarness v3..." -ForegroundColor Green
-python (Join-Path $PSScriptRoot "main.py")
+# Pick Python
+$PythonExe = if (Test-Path $VenvPython) { $VenvPython } else { $FallbackPython }
+Write-Host "[ArchonHub] Python: $PythonExe"
+
+# Launch desktop app
+$MainScript = Join-Path $ScriptDir "main_m365.py"
+Write-Host "[ArchonHub] Starting desktop app..."
+& $PythonExe $MainScript

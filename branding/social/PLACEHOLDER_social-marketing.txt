@@ -1,0 +1,22 @@
+PLACEHOLDER — Social & Marketing Assets
+
+social/
+  linkedin-cover.png       → 1584×396 px
+  twitter-banner.png       → 1500×500 px
+  github-social-preview.png → 1280×640 px  ← Used as GitHub repo Open Graph image
+
+marketing/
+  website-hero-banner.png  → 1920×1080 px
+  product-overview.png     → 1200×800 px
+  app-store-preview.png    → 1290×2796 px (iPhone 14 Pro Max screenshots)
+  github-banner.png        → 1280×640 px
+
+Brand colors:
+  Electric Blue  : #00B8FF
+  Neon Blue      : #2DD4FF
+  Deep Space Blue: #0A1F44
+  Metallic Silver: #D9E3F0
+  Carbon Black   : #0B0F17
+  Dashboard BG   : #111827
+
+Tagline: AI Agent Harness

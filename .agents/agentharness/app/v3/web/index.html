@@ -1,0 +1,2797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ArchonHub v1.0.0</title>
+    <link rel="icon" type="image/x-icon" href="/web/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/web/favicon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/web/favicon-512.png" />
+    <style>
+        :root {
+            --bg: #0B0F17;
+            --bg-card: #111827;
+            --bg-panel: #0A1F44;
+            --accent: #00B8FF;
+            --accent-light: #2DD4FF;
+            --text: #D9E3F0;
+            --text-body: #D9E3F0;
+            --text-muted: #8899aa;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #1e3a5f;
+            --shadow: 0 18px 36px rgba(0,0,0,0.28);
+            --radius: 16px;
+            --sidebar-desktop: 220px;
+            --sidebar-collapsed: 56px;
+        }
+        * { box-sizing: border-box; }
+        html, body { width: 100%; }
+        body {
+            background: radial-gradient(circle at top right, rgba(0,184,255,0.12), transparent 28%), var(--bg);
+            color: var(--text);
+            font-family: Inter, 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
+        }
+        button, input, select, textarea { font: inherit; }
+        button { cursor: pointer; }
+        a { color: inherit; text-decoration: none; }
+        .hidden { display: none !important; }
+        .app-shell { height: 100vh; width: 100%; }
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-desktop);
+            background: linear-gradient(180deg, rgba(10,31,68,0.96), rgba(17,24,39,0.98));
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 40;
+            transition: width 0.25s ease, transform 0.25s ease;
+            box-shadow: var(--shadow);
+        }
+        body.sidebar-collapsed #sidebar { width: var(--sidebar-collapsed); }
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 16px;
+            gap: 12px;
+            min-height: 74px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-mark {
+            width: 32px;
+            height: 32px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            color: #04121f;
+            font-weight: 900;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 10px 28px rgba(0,184,255,0.28);
+            flex: 0 0 auto;
+        }
+        .brand-copy { min-width: 0; }
+        .brand-copy h1 {
+            margin: 0;
+            font-size: 16px;
+            line-height: 1.1;
+            color: var(--accent-light);
+            white-space: nowrap;
+        }
+        .brand-copy p {
+            margin: 3px 0 0;
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+        .collapse-btn,
+        .mobile-menu-btn,
+        .ghost-btn,
+        .icon-btn,
+        .action-btn,
+        .danger-btn,
+        .success-btn,
+        .secondary-btn {
+            border: 1px solid rgba(45,212,255,0.16);
+            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+        .collapse-btn:hover,
+        .mobile-menu-btn:hover,
+        .ghost-btn:hover,
+        .icon-btn:hover,
+        .action-btn:hover,
+        .secondary-btn:hover {
+            border-color: rgba(45,212,255,0.45);
+            background: rgba(45,212,255,0.08);
+        }
+        .danger-btn { border-color: rgba(239,68,68,0.22); color: #fecaca; }
+        .danger-btn:hover { border-color: rgba(239,68,68,0.48); background: rgba(239,68,68,0.12); }
+        .success-btn { border-color: rgba(34,197,94,0.24); color: #bbf7d0; }
+        .success-btn:hover { border-color: rgba(34,197,94,0.5); background: rgba(34,197,94,0.12); }
+        .collapse-btn, .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+        }
+        .mobile-menu-btn {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 55;
+            width: 40px;
+            height: 40px;
+            display: none;
+            place-items: center;
+            backdrop-filter: blur(12px);
+        }
+        .sidebar-nav {
+            padding: 12px 10px;
+            overflow: auto;
+            flex: 1;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 12px;
+            border-radius: 14px;
+            color: var(--text-body);
+            margin-bottom: 6px;
+            border: 1px solid transparent;
+        }
+        .nav-item:hover { background: rgba(45,212,255,0.06); border-color: rgba(45,212,255,0.16); }
+        .nav-item.active {
+            background: rgba(0,184,255,0.14);
+            border-color: rgba(45,212,255,0.42);
+            color: var(--accent-light);
+            box-shadow: inset 0 0 0 1px rgba(45,212,255,0.12);
+        }
+        .nav-icon { width: 22px; text-align: center; flex: 0 0 22px; font-size: 15px; }
+        .nav-label,
+        .brand-copy,
+        .sidebar-user-copy,
+        .sidebar-status-copy { transition: opacity 0.2s ease; }
+        body.sidebar-collapsed .nav-label,
+        body.sidebar-collapsed .brand-copy,
+        body.sidebar-collapsed .sidebar-user-copy,
+        body.sidebar-collapsed .sidebar-status-copy {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .sidebar-footer {
+            padding: 14px 10px 16px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: grid;
+            gap: 10px;
+        }
+        .sidebar-user,
+        .sidebar-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 14px;
+            padding: 10px 12px;
+            min-width: 0;
+        }
+        .avatar-dot,
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; }
+        .avatar-dot {
+            width: 12px;
+            height: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            box-shadow: 0 0 0 4px rgba(45,212,255,0.12);
+        }
+        .status-dot.online { background: var(--success); }
+        .status-dot.offline { background: var(--error); }
+        .status-dot.connecting { background: var(--warning); }
+        .sidebar-user-copy,
+        .sidebar-status-copy { min-width: 0; }
+        .sidebar-user-copy strong,
+        .sidebar-status-copy strong { display: block; font-size: 13px; }
+        .sidebar-user-copy span,
+        .sidebar-status-copy span {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #sidebarBackdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(4,11,23,0.72);
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+            z-index: 35;
+        }
+        body.mobile-nav-open #sidebarBackdrop { opacity: 1; pointer-events: auto; }
+        #main {
+            position: relative;
+            height: 100vh;
+            margin-left: var(--sidebar-desktop);
+            transition: margin-left 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        body.sidebar-collapsed #main { margin-left: var(--sidebar-collapsed); }
+        body.logged-out #main { margin-left: 0; }
+        #content { flex: 1; overflow: auto; padding: 28px; }
+        .status-bar {
+            height: 46px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            background: rgba(11,15,23,0.92);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 20px;
+            backdrop-filter: blur(12px);
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .status-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 0;
+        }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.03);
+            color: var(--text-body);
+            white-space: nowrap;
+        }
+        .page-shell,
+        .section-stack,
+        .list-stack,
+        .card-grid,
+        .notification-list,
+        .progress-list { display: grid; gap: 18px; }
+        .page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .page-title h2 {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: -0.02em;
+        }
+        .page-title p { margin: 6px 0 0; color: var(--text-muted); font-size: 14px; }
+        .header-actions, .toolbar, .form-actions, .table-actions, .chip-row, .tag-row, .meta-row, .status-row, .top-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .action-btn, .danger-btn, .success-btn, .secondary-btn, .ghost-btn {
+            padding: 10px 14px;
+            min-height: 40px;
+        }
+        .action-btn {
+            background: linear-gradient(135deg, rgba(0,184,255,0.18), rgba(45,212,255,0.08));
+            border-color: rgba(45,212,255,0.35);
+            color: var(--accent-light);
+        }
+        .action-btn:hover { box-shadow: 0 10px 24px rgba(0,184,255,0.14); }
+        .card,
+        .panel,
+        .table-wrap,
+        .login-card,
+        .chat-shell,
+        .stat-card,
+        .list-card,
+        .briefing-card,
+        .form-card,
+        .modal-card {
+            background: linear-gradient(180deg, rgba(17,24,39,0.98), rgba(10,16,29,0.98));
+            border: 1px solid rgba(30,58,95,0.95);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .card, .panel, .form-card, .briefing-card, .list-card, .table-wrap, .chat-shell { padding: 18px; }
+        .form-card h3, .panel h3, .card h3, .briefing-card h3, .list-card h3, .table-wrap h3 { margin: 0 0 14px; font-size: 16px; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 16px;
+        }
+        .stat-card { padding: 18px; display: grid; gap: 10px; }
+        .stat-label { font-size: 13px; color: var(--text-muted); }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -0.03em;
+        }
+        .stat-meta { font-size: 12px; color: var(--text-muted); }
+        .dashboard-grid, .split-grid, .content-grid { display: grid; gap: 18px; }
+        .dashboard-grid { grid-template-columns: 1.8fr 1fr; }
+        .split-grid { grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.9fr); }
+        .content-grid.cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .content-grid.cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .toolbar { align-items: flex-end; }
+        .toolbar .field,
+        .form-grid .field,
+        .inline-form .field { display: grid; gap: 8px; min-width: 0; }
+        .field label {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+        input, select, textarea {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(45,212,255,0.14);
+            background: rgba(4,11,23,0.82);
+            color: var(--text);
+            padding: 11px 12px;
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        textarea { min-height: 110px; resize: vertical; }
+        input:focus, select:focus, textarea:focus {
+            border-color: rgba(45,212,255,0.5);
+            box-shadow: 0 0 0 4px rgba(0,184,255,0.12);
+        }
+        .form-grid {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .form-grid .span-2 { grid-column: span 2; }
+        .form-actions { justify-content: flex-end; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-align: left;
+            vertical-align: middle;
+            font-size: 13px;
+        }
+        th {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        tr:hover td { background: rgba(45,212,255,0.03); }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(45,212,255,0.08);
+            color: var(--accent-light);
+            border: 1px solid rgba(45,212,255,0.2);
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+        }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+        .muted { color: var(--text-muted); }
+        .card-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+        .entity-card {
+            padding: 18px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(30,58,95,0.95);
+            background: linear-gradient(180deg, rgba(17,24,39,0.96), rgba(8,13,24,0.96));
+            box-shadow: var(--shadow);
+            display: grid;
+            gap: 12px;
+        }
+        .entity-card.clickable { cursor: pointer; }
+        .entity-card.clickable:hover { border-color: rgba(45,212,255,0.34); transform: translateY(-1px); }
+        .entity-card h4 { margin: 0; font-size: 17px; }
+        .entity-card p { margin: 0; font-size: 13px; color: var(--text-muted); }
+        .progress-track {
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light));
+        }
+        .notif-item, .progress-item, .summary-item {
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.03);
+        }
+        .summary-item strong, .notif-item strong, .progress-item strong { display: block; margin-bottom: 4px; font-size: 13px; }
+        .summary-item span, .notif-item span, .progress-item span { display: block; font-size: 12px; color: var(--text-muted); }
+        .empty-state, .loading-state {
+            padding: 40px 18px;
+            text-align: center;
+            color: var(--text-muted);
+            border: 1px dashed rgba(45,212,255,0.18);
+            border-radius: var(--radius);
+            background: rgba(45,212,255,0.04);
+        }
+        .empty-state strong, .loading-state strong { display: block; color: var(--text); margin-bottom: 6px; font-size: 16px; }
+        .login-screen {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+        .login-card { width: min(440px, 100%); padding: 28px; display: grid; gap: 18px; }
+        .login-logo {
+            display: grid;
+            gap: 8px;
+            justify-items: center;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .login-logo .brand-mark {
+            width: 58px;
+            height: 58px;
+            border-radius: 18px;
+            font-size: 20px;
+        }
+        .login-logo h2 {
+            margin: 0;
+            color: var(--accent-light);
+            font-size: 34px;
+            line-height: 1;
+            letter-spacing: -0.04em;
+        }
+        .login-logo p { margin: 0; color: var(--text-muted); }
+        .error-banner, .success-banner, .info-banner {
+            padding: 12px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+        .error-banner {
+            background: rgba(239,68,68,0.12);
+            color: #fecaca;
+            border: 1px solid rgba(239,68,68,0.24);
+        }
+        .success-banner {
+            background: rgba(34,197,94,0.12);
+            color: #bbf7d0;
+            border: 1px solid rgba(34,197,94,0.24);
+        }
+        .info-banner {
+            background: rgba(0,184,255,0.1);
+            color: #bae6fd;
+            border: 1px solid rgba(0,184,255,0.2);
+        }
+        .briefing-text {
+            white-space: pre-wrap;
+            line-height: 1.7;
+            font-size: 14px;
+            color: var(--text-body);
+            background: rgba(4,11,23,0.58);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 14px;
+            padding: 18px;
+        }
+        .chat-shell {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 0;
+            padding: 0;
+            overflow: hidden;
+            min-height: calc(100vh - 156px);
+        }
+        .chat-sidebar {
+            border-right: 1px solid rgba(255,255,255,0.06);
+            padding: 18px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 14px;
+            min-height: 0;
+        }
+        .chat-list { overflow: auto; display: grid; gap: 10px; }
+        .chat-convo {
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.03);
+            padding: 12px 14px;
+            cursor: pointer;
+        }
+        .chat-convo.active { border-color: rgba(45,212,255,0.38); background: rgba(45,212,255,0.09); }
+        .chat-main { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; }
+        .chat-header {
+            padding: 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .chat-messages {
+            padding: 20px;
+            overflow: auto;
+            display: grid;
+            align-content: start;
+            gap: 12px;
+            background: radial-gradient(circle at top, rgba(45,212,255,0.04), transparent 24%);
+        }
+        .bubble {
+            max-width: min(72%, 720px);
+            padding: 12px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            line-height: 1.55;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .bubble.agent { justify-self: start; background: rgba(255,255,255,0.05); }
+        .bubble.user { justify-self: end; background: rgba(0,184,255,0.12); border-color: rgba(45,212,255,0.24); }
+        .bubble small { display: block; margin-top: 8px; color: var(--text-muted); font-size: 11px; }
+        .chat-input {
+            border-top: 1px solid rgba(255,255,255,0.06);
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+        .chat-input textarea { min-height: 52px; max-height: 160px; }
+        .modal-root {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            z-index: 70;
+            background: rgba(3,8,16,0.74);
+            backdrop-filter: blur(6px);
+        }
+        .modal-root.open { display: flex; }
+        .modal-card {
+            width: min(760px, 100%);
+            max-height: min(90vh, 860px);
+            overflow: auto;
+            padding: 22px;
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .modal-header h3 { margin: 0; font-size: 20px; }
+        .toast-container {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            display: grid;
+            gap: 10px;
+            z-index: 85;
+        }
+        .toast {
+            min-width: 260px;
+            max-width: 360px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--text);
+            background: rgba(17,24,39,0.97);
+            box-shadow: var(--shadow);
+            animation: toastIn 0.22s ease;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast strong { display: block; margin-bottom: 4px; font-size: 13px; }
+        .toast span { font-size: 13px; color: var(--text-body); }
+        .kpi-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-body);
+            font-size: 13px;
+        }
+        @media (max-width: 1200px) {
+            .stats-grid, .content-grid.cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .dashboard-grid, .split-grid, .content-grid.cards-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 960px) {
+            .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .form-grid { grid-template-columns: 1fr; }
+            .form-grid .span-2 { grid-column: span 1; }
+            .chat-shell { grid-template-columns: 1fr; min-height: auto; }
+            .chat-sidebar { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+        }
+        @media (max-width: 760px) {
+            .mobile-menu-btn { display: grid; }
+            #sidebar { transform: translateX(-100%); width: min(320px, 86vw); }
+            body.mobile-nav-open #sidebar { transform: translateX(0); }
+            body.sidebar-collapsed #sidebar { width: min(320px, 86vw); }
+            #main, body.sidebar-collapsed #main { margin-left: 0; }
+            #content { padding: 68px 16px 16px; }
+            .status-bar {
+                flex-direction: column;
+                height: auto;
+                align-items: flex-start;
+                padding: 10px 16px;
+            }
+            .status-group { width: 100%; flex-wrap: wrap; }
+            .page-header { align-items: stretch; }
+            .header-actions, .toolbar, .form-actions, .table-actions { width: 100%; }
+            .header-actions > *, .toolbar > *, .form-actions > * { flex: 1 1 100%; }
+            .stats-grid { grid-template-columns: 1fr; }
+            th:nth-child(n+5), td:nth-child(n+5) { display: none; }
+        }
+    </style>
+</head>
+<body class="sidebar-expanded">
+    <button class="mobile-menu-btn hidden" id="mobileMenuBtn" aria-label="Open navigation">☰</button>
+    <div id="sidebarBackdrop"></div>
+    <div class="app-shell" id="appShell">
+        <aside id="sidebar">
+            <div class="sidebar-header">
+                <div class="brand">
+                    <img src="/web/logo.svg" alt="ArchonHub" style="height:32px;width:auto;flex-shrink:0;" onerror="this.style.display='none';document.getElementById('brandMarkFallback').style.display='flex';" />
+                    <div class="brand-mark" id="brandMarkFallback" style="display:none">AH</div>
+                    <div class="brand-copy">
+                        <h1>ArchonHub</h1>
+                        <p>v1.0.0 · Control Surface</p>
+                    </div>
+                </div>
+                <button class="collapse-btn" id="collapseBtn" aria-label="Toggle sidebar">☰</button>
+            </div>
+            <nav class="sidebar-nav" id="sidebarNav"></nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="avatar-dot"></div>
+                    <div class="sidebar-user-copy">
+                        <strong id="sidebarUsername">Guest</strong>
+                        <span id="sidebarRole">Authentication required</span>
+                    </div>
+                </div>
+                <div class="sidebar-status">
+                    <div class="status-dot offline" id="sidebarWsDot"></div>
+                    <div class="sidebar-status-copy">
+                        <strong id="sidebarHubLabel">Hub Offline</strong>
+                        <span id="sidebarWsLabel">WebSocket disconnected</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        <main id="main">
+            <div id="content"></div>
+            <div class="status-bar hidden" id="statusBar">
+                <div class="status-group">
+                    <div class="status-pill"><span class="status-dot offline" id="hubDot"></span><span id="hubLabel">Hub Offline</span></div>
+                    <div class="status-pill"><span class="status-dot offline" id="wsDot"></span><span id="wsLabel">WebSocket disconnected</span></div>
+                </div>
+                <div class="status-group">
+                    <div class="status-pill">User: <strong id="statusUsername">Guest</strong></div>
+                    <div class="status-pill">Page: <strong id="statusPage">Login</strong></div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <div class="modal-root" id="modalRoot"></div>
+
+    <script>
+        const API_BASE = '';
+        const APP_VERSION = 'v1.0.0';
+        const navItems = [
+            { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
+            { id: 'runs', icon: '▶', label: 'Runs' },
+            { id: 'queue', icon: '⏳', label: 'Queue' },
+            { id: 'todos', icon: '📋', label: 'Todos' },
+            { id: 'schedule', icon: '📅', label: 'Schedule' },
+            { id: 'clients', icon: '👥', label: 'Clients' },
+            { id: 'projects', icon: '📁', label: 'Projects' },
+            { id: 'connectors', icon: '✉', label: 'Connectors' },
+            { id: 'travel', icon: '✈', label: 'Travel' },
+            { id: 'briefing', icon: '📰', label: 'Briefing' },
+            { id: 'chat', icon: '💬', label: 'Chat' },
+            { id: 'settings', icon: '⚙', label: 'Settings' }
+        ];
+
+        const state = {
+            currentPage: 'login',
+            pageTimer: null,
+            wsReconnectTimer: null,
+            healthPulseTimer: null,
+            runsFilters: { agent_id: '', project: '', status: '' },
+            todos: [],
+            todoFilters: { priority: 'all', status: 'all', project: 'all' },
+            scheduler: [],
+            clients: [],
+            projects: [],
+            connectors: [],
+            trips: [],
+            briefing: null,
+            conversations: [],
+            messages: [],
+            currentConversationId: null,
+            notifications: [],
+            runProgress: {},
+            mobileNavOpen: false,
+            hubOnline: false,
+            wsState: 'offline',
+            health: null
+        };
+
+        let ws = null;
+
+        const $ = (selector, root = document) => root.querySelector(selector);
+        const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function decodeToken(token) {
+            try {
+                const payload = token.split('.')[1];
+                if (!payload) return null;
+                return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            } catch {
+                return null;
+            }
+        }
+
+        function getToken() {
+            return localStorage.getItem('archon_token') || '';
+        }
+
+        function getStoredUser() {
+            try {
+                return JSON.parse(localStorage.getItem('archon_user') || 'null');
+            } catch {
+                return null;
+            }
+        }
+
+        function setStoredUser(user) {
+            if (user) localStorage.setItem('archon_user', JSON.stringify(user));
+        }
+
+        function isTokenExpired(token = getToken()) {
+            if (!token) return true;
+            const decoded = decodeToken(token);
+            if (!decoded || !decoded.exp) return false;
+            return (decoded.exp * 1000) <= Date.now();
+        }
+
+        function isAuthenticated() {
+            return !!getToken() && !isTokenExpired();
+        }
+
+        function currentUser() {
+            const stored = getStoredUser();
+            if (stored?.username) return stored;
+            const decoded = decodeToken(getToken());
+            return decoded ? { username: decoded.sub || decoded.username || 'user', role: decoded.role || 'user' } : null;
+        }
+
+        function setShellVisibility(isAuth) {
+            $('#sidebar').classList.toggle('hidden', !isAuth);
+            $('#statusBar').classList.toggle('hidden', !isAuth);
+            $('#mobileMenuBtn').classList.toggle('hidden', !isAuth);
+            document.body.classList.toggle('logged-out', !isAuth);
+            if (!isAuth) closeMobileNav();
+        }
+
+        function updateUserUI() {
+            const user = currentUser();
+            const name = user?.username || 'Guest';
+            const role = user?.role || 'Authentication required';
+            $('#sidebarUsername').textContent = name;
+            $('#sidebarRole').textContent = role;
+            $('#statusUsername').textContent = name;
+        }
+
+        function setStatusPage(page) {
+            $('#statusPage').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+        }
+
+        function setHubStatus(online, text = online ? 'Hub Online' : 'Hub Offline') {
+            state.hubOnline = !!online;
+            const dotClass = online ? 'online' : 'offline';
+            $('#hubDot').className = `status-dot ${dotClass}`;
+            $('#hubLabel').textContent = text;
+            $('#sidebarHubLabel').textContent = text;
+        }
+
+        function setWSState(kind, text) {
+            state.wsState = kind;
+            const dotClass = kind === 'online' ? 'online' : kind === 'connecting' ? 'connecting' : 'offline';
+            $('#wsDot').className = `status-dot ${dotClass}`;
+            $('#wsLabel').textContent = text;
+            $('#sidebarWsDot').className = `status-dot ${dotClass}`;
+            $('#sidebarWsLabel').textContent = text;
+        }
+
+        function shortId(value, size = 10) {
+            const str = String(value || '—');
+            return str.length > size ? `${str.slice(0, size)}…` : str;
+        }
+
+        function fmtDate(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return escapeHtml(value);
+            return date.toLocaleDateString();
+        }
+
+        function fmtDateTime(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return escapeHtml(value);
+            return date.toLocaleString();
+        }
+
+        function fmtRelative(value) {
+            if (!value) return '—';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return escapeHtml(value);
+            const diff = Date.now() - date.getTime();
+            const mins = Math.floor(diff / 60000);
+            if (mins < 1) return 'just now';
+            if (mins < 60) return `${mins}m ago`;
+            const hours = Math.floor(mins / 60);
+            if (hours < 24) return `${hours}h ago`;
+            const days = Math.floor(hours / 24);
+            return `${days}d ago`;
+        }
+
+        function money(value) {
+            const num = Number(value || 0);
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(num);
+        }
+
+        function pct(value) {
+            const num = Number(value || 0);
+            return `${Math.round(num * 100)}%`;
+        }
+
+        function badge(text, color) {
+            return `<span style="background:${color}22;color:${color};padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600">${escapeHtml(text)}</span>`;
+        }
+
+        function statusColor(status) {
+            const map = {
+                active: 'var(--success)',
+                online: 'var(--success)',
+                connected: 'var(--success)',
+                running: 'var(--accent)',
+                queued: 'var(--warning)',
+                pending: 'var(--warning)',
+                planning: 'var(--warning)',
+                completed: 'var(--success)',
+                done: 'var(--success)',
+                success: 'var(--success)',
+                in_progress: 'var(--accent-light)',
+                paused: 'var(--warning)',
+                draft: 'var(--text-muted)',
+                inactive: 'var(--text-muted)',
+                offline: 'var(--error)',
+                failed: 'var(--error)',
+                cancelled: 'var(--error)',
+                canceled: 'var(--error)',
+                prospect: 'var(--accent)'
+            };
+            return map[String(status || '').toLowerCase()] || 'var(--text-muted)';
+        }
+
+        function priorityColor(priority) {
+            const map = {
+                urgent: 'var(--error)',
+                high: 'var(--warning)',
+                medium: 'var(--accent)',
+                low: 'var(--success)',
+                normal: 'var(--text-muted)'
+            };
+            return map[String(priority || '').toLowerCase()] || 'var(--text-muted)';
+        }
+
+        function scoreBadge(score) {
+            const num = Number(score || 0);
+            const color = num >= 0.75 ? 'var(--success)' : num >= 0.5 ? 'var(--warning)' : 'var(--error)';
+            return badge(pct(num), color);
+        }
+
+        function asArray(data, fallbackKeys = []) {
+            if (Array.isArray(data)) return data;
+            if (!data || typeof data !== 'object') return [];
+            const keys = ['items', 'data', ...fallbackKeys];
+            for (const key of keys) {
+                if (Array.isArray(data[key])) return data[key];
+            }
+            const firstArray = Object.values(data).find(Array.isArray);
+            return firstArray || [];
+        }
+
+        function buildQuery(path, params = {}) {
+            const qs = new URLSearchParams();
+            Object.entries(params).forEach(([key, value]) => {
+                if (value !== null && value !== undefined && value !== '' && value !== 'all') qs.append(key, value);
+            });
+            const query = qs.toString();
+            return query ? `${path}?${query}` : path;
+        }
+
+        async function api(method, path, body = null) {
+            const opts = {
+                method,
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }
+            };
+            if (body) opts.body = JSON.stringify(body);
+            const res = await fetch(API_BASE + path, opts);
+            if (res.status === 401) { logout(); return null; }
+            const text = await res.text();
+            if (!res.ok) throw new Error(text || `${res.status} ${res.statusText}`);
+            if (!text) return null;
+            try {
+                return JSON.parse(text);
+            } catch {
+                return text;
+            }
+        }
+
+        async function apiFallback(calls) {
+            let lastError = null;
+            for (const [method, path, body] of calls) {
+                try {
+                    return await api(method, path, body ?? null);
+                } catch (error) {
+                    lastError = error;
+                }
+            }
+            throw lastError || new Error('Request failed');
+        }
+
+        function showToast(text, color = 'var(--accent)') {
+            const container = $('#toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.borderLeft = `4px solid ${color}`;
+            toast.innerHTML = `<strong>ArchonHub</strong><span>${escapeHtml(text)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.2s ease';
+                setTimeout(() => toast.remove(), 220);
+            }, 4000);
+        }
+
+        function setLoading(title = 'Loading', message = 'Fetching live hub data…') {
+            $('#content').innerHTML = `<div class="loading-state"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;
+        }
+
+        function emptyState(title, message) {
+            return `<div class="empty-state"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(message)}</span></div>`;
+        }
+
+        function renderShell(title, subtitle, body, actions = '') {
+            $('#content').innerHTML = `
+                <div class="page-shell">
+                    <div class="page-header">
+                        <div class="page-title">
+                            <h2>${escapeHtml(title)}</h2>
+                            <p>${escapeHtml(subtitle)}</p>
+                        </div>
+                        <div class="header-actions">${actions}</div>
+                    </div>
+                    ${body}
+                </div>
+            `;
+        }
+
+        function openModal(title, content) {
+            const modalRoot = $('#modalRoot');
+            modalRoot.innerHTML = `
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <h3>${escapeHtml(title)}</h3>
+                        <button class="icon-btn" id="modalCloseBtn" aria-label="Close modal">✕</button>
+                    </div>
+                    ${content}
+                </div>
+            `;
+            modalRoot.classList.add('open');
+            $('#modalCloseBtn').addEventListener('click', closeModal);
+            modalRoot.onclick = (event) => {
+                if (event.target === modalRoot) closeModal();
+            };
+        }
+
+        function closeModal() {
+            const modalRoot = $('#modalRoot');
+            modalRoot.classList.remove('open');
+            modalRoot.innerHTML = '';
+        }
+
+        function renderSidebar() {
+            $('#sidebarNav').innerHTML = navItems.map((item) => `
+                <button class="nav-item ${state.currentPage === item.id ? 'active' : ''}" data-page="${item.id}">
+                    <span class="nav-icon">${item.icon}</span>
+                    <span class="nav-label">${escapeHtml(item.label)}</span>
+                </button>
+            `).join('') + `
+                <button class="nav-item" id="logoutNavBtn">
+                    <span class="nav-icon">⇦</span>
+                    <span class="nav-label">Logout</span>
+                </button>
+            `;
+            $$('.nav-item[data-page]').forEach((button) => {
+                button.addEventListener('click', () => navigate(button.dataset.page));
+            });
+            $('#logoutNavBtn')?.addEventListener('click', logout);
+        }
+
+        function setRefresh(callback, ms) {
+            clearRefresh();
+            state.pageTimer = setInterval(callback, ms);
+        }
+
+        function clearRefresh() {
+            if (state.pageTimer) clearInterval(state.pageTimer);
+            state.pageTimer = null;
+        }
+
+        async function refreshHubPulse() {
+            if (!isAuthenticated()) return;
+            try {
+                const health = await api('GET', '/api/health');
+                if (!health) return;
+                state.health = health;
+                setHubStatus(String(health.status || '').toLowerCase() !== 'offline', String(health.status || '').toLowerCase() === 'offline' ? 'Hub Offline' : 'Hub Online');
+            } catch {
+                setHubStatus(false, 'Hub Offline');
+            }
+        }
+
+        function connectWS() {
+            if (!isAuthenticated()) return;
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+            clearTimeout(state.wsReconnectTimer);
+            setWSState('connecting', 'WebSocket connecting');
+            ws = new WebSocket(`ws://${location.host}/ws`);
+            ws.onopen = () => {
+                setWSState('online', 'WebSocket connected');
+                ws.send(JSON.stringify({ type: 'auth', token: getToken() }));
+            };
+            ws.onmessage = (e) => {
+                try {
+                    handleWSEvent(JSON.parse(e.data));
+                } catch {
+                    showToast('Received malformed WebSocket event', 'var(--warning)');
+                }
+            };
+            ws.onclose = () => {
+                setWSState('offline', 'WebSocket disconnected');
+                clearTimeout(state.wsReconnectTimer);
+                state.wsReconnectTimer = setTimeout(connectWS, 5000);
+            };
+            ws.onerror = () => {
+                setWSState('offline', 'WebSocket error');
+            };
+        }
+
+        function updateRunProgress(event) {
+            const runId = event.run_id || event.job_id || 'unknown';
+            state.runProgress[runId] = {
+                run_id: runId,
+                node: event.node || event.step || event.stage || 'running',
+                text: event.text || event.message || 'Progress update received',
+                updated_at: event.updated_at || new Date().toISOString(),
+                progress: Number(event.progress ?? 0)
+            };
+            const container = $('#runProgressList');
+            if (container) {
+                container.innerHTML = Object.values(state.runProgress).slice(0, 6).map((item) => `
+                    <div class="progress-item">
+                        <strong>${escapeHtml(shortId(item.run_id, 14))} · ${escapeHtml(item.node)}</strong>
+                        <span>${escapeHtml(item.text)} · ${fmtRelative(item.updated_at)}</span>
+                        <div class="progress-track" style="margin-top:10px"><div class="progress-bar" style="width:${Math.max(8, Math.min(100, Math.round((item.progress || 0) * 100)))}%"></div></div>
+                    </div>
+                `).join('') || emptyState('No active node updates', 'Live run progress will appear here.');
+            }
+        }
+
+        function handleChatWS(event) {
+            const conversationId = event.conversation_id || event.id;
+            const message = event.message || event.data || event.payload;
+            if (!conversationId || !message) return;
+            if (state.currentConversationId === conversationId) {
+                const normalized = typeof message === 'string'
+                    ? { role: event.role || 'agent', content: message, created_at: event.created_at || new Date().toISOString(), agent_id: event.agent_id || '' }
+                    : message;
+                state.messages = [...state.messages, normalized];
+                renderMessages();
+            }
+        }
+
+        function handleWSEvent(event) {
+            if (event.type === 'node_update') { updateRunProgress(event); }
+            if (event.type === 'todo_update') { if (state.currentPage === 'todos') showTodos(); }
+            if (event.type === 'notif') {
+                state.notifications = [{ text: event.text, color: event.color, created_at: new Date().toISOString() }, ...state.notifications].slice(0, 10);
+                showToast(event.text, event.color || 'var(--accent)');
+            }
+            if (event.type === 'run_completed') { if (state.currentPage === 'runs') showRuns(); }
+            if (event.type === 'run_started' && state.currentPage === 'runs') showRuns();
+            if (event.type === 'run_failed' && state.currentPage === 'runs') showRuns();
+            if (event.type === 'run_cancelled' && state.currentPage === 'runs') showRuns();
+            if (event.type === 'run_completed' && state.currentPage === 'dashboard') showDashboard();
+            if (event.type === 'briefing_ready' && state.currentPage === 'briefing') showBriefing();
+            if (['message', 'chat_message', 'conversation_message'].includes(event.type)) handleChatWS(event);
+        }
+
+        function closeMobileNav() {
+            state.mobileNavOpen = false;
+            document.body.classList.remove('mobile-nav-open');
+        }
+
+        function openMobileNav() {
+            state.mobileNavOpen = true;
+            document.body.classList.add('mobile-nav-open');
+        }
+
+        function logout() {
+            localStorage.removeItem('archon_token');
+            localStorage.removeItem('archon_user');
+            clearRefresh();
+            if (ws) {
+                try { ws.close(); } catch {}
+            }
+            ws = null;
+            setHubStatus(false, 'Hub Offline');
+            setWSState('offline', 'WebSocket disconnected');
+            navigate('login', true);
+        }
+
+        async function navigate(page, replaceHash = false) {
+            clearRefresh();
+            closeMobileNav();
+            state.currentPage = page;
+            setStatusPage(page);
+            renderSidebar();
+            if (page !== 'login' && !isAuthenticated()) {
+                await showLogin();
+                return;
+            }
+            if (page !== 'login') {
+                setShellVisibility(true);
+                connectWS();
+            }
+            const route = `#/${page}`;
+            if (location.hash !== route) {
+                if (replaceHash) history.replaceState(null, '', route); else location.hash = route;
+            }
+            const pages = {
+                login: showLogin,
+                dashboard: showDashboard,
+                runs: showRuns,
+                queue: showQueue,
+                todos: showTodos,
+                schedule: showSchedule,
+                clients: showClients,
+                projects: showProjects,
+                connectors: showConnectors,
+                travel: showTravel,
+                briefing: showBriefing,
+                chat: showChat,
+                settings: showSettings
+            };
+            const fn = pages[page] || showDashboard;
+            await fn();
+        }
+
+        async function requireAuth() {
+            if (!isAuthenticated()) {
+                await navigate('login', true);
+                return false;
+            }
+            return true;
+        }
+
+        function statCard(label, value, meta) {
+            return `
+                <div class="stat-card">
+                    <div class="stat-label">${escapeHtml(label)}</div>
+                    <div class="stat-value">${escapeHtml(String(value ?? '0'))}</div>
+                    <div class="stat-meta">${escapeHtml(meta)}</div>
+                </div>
+            `;
+        }
+
+        function runRow(run) {
+            const runId = run.run_id || run.id || '—';
+            return `
+                <tr>
+                    <td class="mono" title="${escapeHtml(runId)}">${escapeHtml(shortId(runId, 12))}</td>
+                    <td>${escapeHtml(run.agent_id || '—')}</td>
+                    <td>${escapeHtml(run.project || '—')}</td>
+                    <td>${escapeHtml(run.graph || run.graph_type || '—')}</td>
+                    <td>${scoreBadge(run.score)}</td>
+                    <td>${badge(run.status || 'unknown', statusColor(run.status))}</td>
+                    <td>${fmtDateTime(run.created_at)}</td>
+                </tr>
+            `;
+        }
+
+        async function showLogin() {
+            state.currentPage = 'login';
+            renderSidebar();
+            setStatusPage('login');
+            setShellVisibility(false);
+            $('#content').innerHTML = `
+                <div class="login-screen">
+                    <div class="login-card">
+                        <div class="login-logo">
+                            <div class="brand-mark">AH</div>
+                            <h2>ArchonHub</h2>
+                            <p>v1.0.0 · Agent orchestration hub</p>
+                        </div>
+                        <div class="info-banner">Connect to the ArchonHub FastAPI server on localhost:8765.</div>
+                        <form id="loginForm" class="section-stack">
+                            <div class="field">
+                                <label for="loginUsername">Username</label>
+                                <input id="loginUsername" name="username" autocomplete="username" required />
+                            </div>
+                            <div class="field">
+                                <label for="loginPassword">Password</label>
+                                <input id="loginPassword" name="password" type="password" autocomplete="current-password" required />
+                            </div>
+                            <div id="loginError"></div>
+                            <button class="action-btn" type="submit">Sign In</button>
+                        </form>
+                    </div>
+                </div>
+            `;
+            $('#loginForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const form = new FormData(event.currentTarget);
+                const payload = { username: form.get('username'), password: form.get('password') };
+                $('#loginError').innerHTML = '';
+                try {
+                    const result = await fetch(API_BASE + '/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const text = await result.text();
+                    const data = text ? JSON.parse(text) : {};
+                    if (!result.ok) throw new Error(data.detail || data.message || text || 'Login failed');
+                    localStorage.setItem('archon_token', data.access_token || data.token || '');
+                    setStoredUser(data.user || { username: payload.username, role: 'user' });
+                    updateUserUI();
+                    showToast(`Welcome back, ${payload.username}`, 'var(--success)');
+                    await navigate('dashboard', true);
+                } catch (error) {
+                    $('#loginError').innerHTML = `<div class="error-banner">${escapeHtml(error.message || 'Login failed')}</div>`;
+                }
+            });
+        }
+
+        async function showDashboard() {
+            if (!(await requireAuth())) return;
+            setLoading('Dashboard', 'Gathering health, runs, and notifications…');
+            try {
+                const [health, runsResponse, notificationsResponse] = await Promise.all([
+                    api('GET', '/api/health'),
+                    api('GET', '/api/runs?limit=5'),
+                    api('GET', '/api/notifications')
+                ]);
+                state.health = health;
+                const runs = asArray(runsResponse, ['runs']).slice(0, 5);
+                const notifications = asArray(notificationsResponse, ['notifications']).slice(0, 6);
+                state.notifications = notifications;
+                setHubStatus(String(health?.status || '').toLowerCase() !== 'offline', String(health?.status || '').toLowerCase() === 'offline' ? 'Hub Offline' : 'Hub Online');
+                renderShell(
+                    'Dashboard',
+                    'Live operations overview for ArchonHub.',
+                    `
+                        <div class="stats-grid">
+                            ${statCard('Total Runs', health?.total_runs ?? runs.length, 'All-time execution history')}
+                            ${statCard('Active Runs', health?.active_runs ?? 0, 'Currently executing jobs')}
+                            ${statCard('Pending Todos', health?.pending_todos ?? 0, 'Outstanding work items')}
+                            ${statCard('Queue Depth', health?.queue_depth ?? 0, 'Queued jobs awaiting workers')}
+                            ${statCard('Connected Clients', health?.ws_clients ?? 0, 'Live WebSocket subscribers')}
+                        </div>
+                        <div class="dashboard-grid">
+                            <div class="section-stack">
+                                <div class="table-wrap">
+                                    <h3>Recent Runs</h3>
+                                    ${runs.length ? `
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Run</th>
+                                                    <th>Agent</th>
+                                                    <th>Project</th>
+                                                    <th>Graph</th>
+                                                    <th>Score</th>
+                                                    <th>Status</th>
+                                                    <th>Created</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${runs.map(runRow).join('')}
+                                            </tbody>
+                                        </table>
+                                    ` : emptyState('No runs yet', 'Launch an agent run to populate recent activity.')}
+                                </div>
+                                <div class="list-card">
+                                    <h3>Live Run Progress</h3>
+                                    <div class="progress-list" id="runProgressList">
+                                        ${Object.values(state.runProgress).length ? Object.values(state.runProgress).slice(0, 6).map((item) => `
+                                            <div class="progress-item">
+                                                <strong>${escapeHtml(shortId(item.run_id, 14))} · ${escapeHtml(item.node)}</strong>
+                                                <span>${escapeHtml(item.text)} · ${fmtRelative(item.updated_at)}</span>
+                                            </div>
+                                        `).join('') : emptyState('No active node updates', 'Progress updates appear here while runs execute.')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="section-stack">
+                                <div class="card">
+                                    <h3>Hub Status</h3>
+                                    <div class="summary-item">
+                                        <strong>${escapeHtml(String(health?.status || 'offline').toUpperCase())}</strong>
+                                        <span>${escapeHtml(health?.app || 'ArchonHub')} ${escapeHtml(health?.version || APP_VERSION)} · Uptime ${escapeHtml(health?.uptime || 'n/a')}</span>
+                                    </div>
+                                    <div class="top-summary" style="margin-top:14px">
+                                        <span class="kpi-inline">Scheduler Jobs <strong>${escapeHtml(String(health?.scheduler_jobs ?? '0'))}</strong></span>
+                                        <span class="kpi-inline">Thread Pool <strong>${escapeHtml(String(health?.thread_pool ?? '0'))}</strong></span>
+                                        <span class="kpi-inline">LangGraph <strong>${health?.langgraph_ok ? 'Ready' : 'Check'}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="list-card">
+                                    <h3>Recent Notifications</h3>
+                                    <div class="notification-list">
+                                        ${notifications.length ? notifications.map((note) => `
+                                            <div class="notif-item">
+                                                <strong>${escapeHtml(note.text || note.message || 'Notification')}</strong>
+                                                <span>${fmtDateTime(note.created_at)} · ${escapeHtml(note.category || 'system')}</span>
+                                            </div>
+                                        `).join('') : emptyState('No notifications', 'Incoming hub notifications will appear here.')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="dashboardRefreshBtn">Refresh Dashboard</button>`
+                );
+                $('#dashboardRefreshBtn').addEventListener('click', showDashboard);
+            } catch (error) {
+                renderShell('Dashboard', 'Live operations overview for ArchonHub.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load dashboard')}</div>`);
+            }
+        }
+
+        async function showRuns() {
+            if (!(await requireAuth())) return;
+            setLoading('Runs', 'Loading recent agent execution history…');
+            try {
+                const path = buildQuery('/api/runs', { limit: 100, agent_id: state.runsFilters.agent_id, project: state.runsFilters.project, status: state.runsFilters.status });
+                const response = await api('GET', path);
+                const runs = asArray(response, ['runs']);
+                const agents = [...new Set(runs.map((item) => item.agent_id).filter(Boolean))].sort();
+                const projects = [...new Set(runs.map((item) => item.project).filter(Boolean))].sort();
+                renderShell(
+                    'Runs',
+                    'Monitor execution history and cancel active runs.',
+                    `
+                        <div class="panel">
+                            <div class="toolbar" id="runsToolbar">
+                                <div class="field">
+                                    <label>Agent</label>
+                                    <select id="runsAgentFilter">
+                                        <option value="">All agents</option>
+                                        ${agents.map((agent) => `<option value="${escapeHtml(agent)}" ${state.runsFilters.agent_id === agent ? 'selected' : ''}>${escapeHtml(agent)}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Project</label>
+                                    <select id="runsProjectFilter">
+                                        <option value="">All projects</option>
+                                        ${projects.map((project) => `<option value="${escapeHtml(project)}" ${state.runsFilters.project === project ? 'selected' : ''}>${escapeHtml(project)}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Status</label>
+                                    <select id="runsStatusFilter">
+                                        <option value="">All statuses</option>
+                                        ${['running', 'completed', 'failed', 'cancelled', 'queued'].map((status) => `<option value="${status}" ${state.runsFilters.status === status ? 'selected' : ''}>${status.replace('_', ' ')}</option>`).join('')}
+                                    </select>
+                                </div>
+                                <button class="secondary-btn" id="applyRunsFilterBtn">Apply Filters</button>
+                                <button class="ghost-btn" id="clearRunsFilterBtn">Clear</button>
+                            </div>
+                        </div>
+                        <div class="split-grid">
+                            <div class="table-wrap">
+                                <h3>Run History</h3>
+                                ${runs.length ? `
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Run ID</th>
+                                                <th>Agent</th>
+                                                <th>Project</th>
+                                                <th>Graph</th>
+                                                <th>Score</th>
+                                                <th>Status</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${runs.map((run) => {
+                                                const runId = run.run_id || run.id || '—';
+                                                return `
+                                                    <tr>
+                                                        <td class="mono" title="${escapeHtml(runId)}">${escapeHtml(shortId(runId, 14))}</td>
+                                                        <td>${escapeHtml(run.agent_id || '—')}</td>
+                                                        <td>${escapeHtml(run.project || '—')}</td>
+                                                        <td>${escapeHtml(run.graph || run.graph_type || '—')}</td>
+                                                        <td>${scoreBadge(run.score)}</td>
+                                                        <td>${badge(run.status || 'unknown', statusColor(run.status))}</td>
+                                                        <td>${fmtDateTime(run.created_at)}</td>
+                                                        <td>
+                                                            <div class="table-actions">
+                                                                ${String(run.status).toLowerCase() === 'running' ? `<button class="danger-btn cancel-run-btn" data-run-id="${escapeHtml(runId)}">Cancel</button>` : `<span class="muted">—</span>`}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                ` : emptyState('No runs found', 'No runs matched the selected filters.')}
+                            </div>
+                            <div class="list-card">
+                                <h3>Active Progress Feed</h3>
+                                <div class="progress-list" id="runProgressList">
+                                    ${Object.values(state.runProgress).length ? Object.values(state.runProgress).slice(0, 8).map((item) => `
+                                        <div class="progress-item">
+                                            <strong>${escapeHtml(shortId(item.run_id, 14))} · ${escapeHtml(item.node)}</strong>
+                                            <span>${escapeHtml(item.text)} · ${fmtRelative(item.updated_at)}</span>
+                                            <div class="progress-track" style="margin-top:10px"><div class="progress-bar" style="width:${Math.max(8, Math.min(100, Math.round((item.progress || 0) * 100)))}%"></div></div>
+                                        </div>
+                                    `).join('') : emptyState('No active updates', 'Live node progress appears here during running jobs.')}
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="runsRefreshBtn">Refresh Runs</button>`
+                );
+
+                $('#runsRefreshBtn').addEventListener('click', showRuns);
+                $('#applyRunsFilterBtn').addEventListener('click', () => {
+                    state.runsFilters.agent_id = $('#runsAgentFilter').value;
+                    state.runsFilters.project = $('#runsProjectFilter').value;
+                    state.runsFilters.status = $('#runsStatusFilter').value;
+                    showRuns();
+                });
+                $('#clearRunsFilterBtn').addEventListener('click', () => {
+                    state.runsFilters = { agent_id: '', project: '', status: '' };
+                    showRuns();
+                });
+                $$('.cancel-run-btn').forEach((button) => button.addEventListener('click', async () => {
+                    if (!confirm(`Cancel run ${button.dataset.runId}?`)) return;
+                    try {
+                        await api('POST', `/api/runs/${encodeURIComponent(button.dataset.runId)}/cancel`);
+                        showToast('Run cancellation requested', 'var(--warning)');
+                        await showRuns();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to cancel run', 'var(--error)');
+                    }
+                }));
+                setRefresh(showRuns, 10000);
+            } catch (error) {
+                renderShell('Runs', 'Monitor execution history and cancel active runs.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load runs')}</div>`);
+            }
+        }
+
+        async function showQueue() {
+            if (!(await requireAuth())) return;
+            setLoading('Queue', 'Loading live queue state…');
+            try {
+                const response = await api('GET', '/api/queue');
+                const jobs = asArray(response, ['jobs', 'queue']);
+                renderShell(
+                    'Queue',
+                    'Pause, resume, and inspect queued jobs.',
+                    `
+                        <div class="panel">
+                            <div class="toolbar">
+                                <button class="secondary-btn" id="pauseQueueBtn">Pause Queue</button>
+                                <button class="success-btn" id="resumeQueueBtn">Resume Queue</button>
+                                <span class="kpi-inline">Jobs in view <strong>${jobs.length}</strong></span>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <h3>Job Queue</h3>
+                            ${jobs.length ? `
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Job ID</th>
+                                            <th>Agent</th>
+                                            <th>Project</th>
+                                            <th>Priority</th>
+                                            <th>Status</th>
+                                            <th>Queued</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${jobs.map((job) => {
+                                            const jobId = job.job_id || job.id || '—';
+                                            return `
+                                                <tr>
+                                                    <td class="mono" title="${escapeHtml(jobId)}">${escapeHtml(shortId(jobId, 14))}</td>
+                                                    <td>${escapeHtml(job.agent_id || '—')}</td>
+                                                    <td>${escapeHtml(job.project || '—')}</td>
+                                                    <td>${badge(job.priority || 'normal', priorityColor(job.priority || 'normal'))}</td>
+                                                    <td>${badge(job.status || 'unknown', statusColor(job.status))}</td>
+                                                    <td>${fmtDateTime(job.queued_at)}</td>
+                                                    <td>
+                                                        <div class="table-actions">
+                                                            ${['queued', 'running'].includes(String(job.status || '').toLowerCase()) ? `<button class="danger-btn cancel-job-btn" data-job-id="${escapeHtml(jobId)}">Cancel</button>` : `<span class="muted">—</span>`}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            ` : emptyState('Queue is clear', 'No queued jobs are waiting right now.')}
+                        </div>
+                    `,
+                    `<button class="action-btn" id="queueRefreshBtn">Refresh Queue</button>`
+                );
+                $('#queueRefreshBtn').addEventListener('click', showQueue);
+                $('#pauseQueueBtn').addEventListener('click', async () => {
+                    try {
+                        await api('POST', '/api/queue/pause');
+                        showToast('Queue paused', 'var(--warning)');
+                        showQueue();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to pause queue', 'var(--error)');
+                    }
+                });
+                $('#resumeQueueBtn').addEventListener('click', async () => {
+                    try {
+                        await api('POST', '/api/queue/resume');
+                        showToast('Queue resumed', 'var(--success)');
+                        showQueue();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to resume queue', 'var(--error)');
+                    }
+                });
+                $$('.cancel-job-btn').forEach((button) => button.addEventListener('click', async () => {
+                    if (!confirm(`Cancel job ${button.dataset.jobId}?`)) return;
+                    try {
+                        await apiFallback([
+                            ['POST', `/api/queue/${encodeURIComponent(button.dataset.jobId)}/cancel`],
+                            ['POST', `/api/runs/${encodeURIComponent(button.dataset.jobId)}/cancel`]
+                        ]);
+                        showToast('Queue cancellation requested', 'var(--warning)');
+                        showQueue();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to cancel job', 'var(--error)');
+                    }
+                }));
+                setRefresh(showQueue, 5000);
+            } catch (error) {
+                renderShell('Queue', 'Pause, resume, and inspect queued jobs.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load queue')}</div>`);
+            }
+        }
+
+        function openTodoModal(todo) {
+            openModal('Edit Todo', `
+                <form id="editTodoForm" class="form-grid">
+                    <div class="field span-2">
+                        <label>Title</label>
+                        <input name="title" value="${escapeHtml(todo.title || '')}" required />
+                    </div>
+                    <div class="field span-2">
+                        <label>Description</label>
+                        <textarea name="description">${escapeHtml(todo.description || '')}</textarea>
+                    </div>
+                    <div class="field">
+                        <label>Priority</label>
+                        <select name="priority">
+                            ${['urgent', 'high', 'medium', 'low'].map((item) => `<option value="${item}" ${todo.priority === item ? 'selected' : ''}>${item}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Status</label>
+                        <select name="status">
+                            ${['pending', 'in_progress', 'done'].map((item) => `<option value="${item}" ${todo.status === item ? 'selected' : ''}>${item.replace('_', ' ')}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Project</label>
+                        <input name="project" value="${escapeHtml(todo.project || '')}" />
+                    </div>
+                    <div class="field">
+                        <label>Due Date</label>
+                        <input name="due_date" type="date" value="${escapeHtml((todo.due_date || '').slice(0, 10))}" />
+                    </div>
+                    <div class="form-actions span-2">
+                        <button class="secondary-btn" type="button" id="closeTodoModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Save Changes</button>
+                    </div>
+                </form>
+            `);
+            $('#closeTodoModalBtn').addEventListener('click', closeModal);
+            $('#editTodoForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                try {
+                    await api('PUT', `/api/todos/${encodeURIComponent(todo.id)}`, payload);
+                    closeModal();
+                    showToast('Todo updated', 'var(--success)');
+                    showTodos();
+                } catch (error) {
+                    showToast(error.message || 'Unable to update todo', 'var(--error)');
+                }
+            });
+        }
+
+        async function showTodos() {
+            if (!(await requireAuth())) return;
+            setLoading('Todos', 'Loading task inventory…');
+            try {
+                const response = await api('GET', '/api/todos');
+                state.todos = asArray(response, ['todos']);
+                const projectOptions = [...new Set(state.todos.map((todo) => todo.project).filter(Boolean))].sort();
+                const filtered = state.todos.filter((todo) => {
+                    const priorityMatch = state.todoFilters.priority === 'all' || (todo.priority || 'medium') === state.todoFilters.priority;
+                    const statusMatch = state.todoFilters.status === 'all' || (todo.status || 'pending') === state.todoFilters.status;
+                    const projectMatch = state.todoFilters.project === 'all' || (todo.project || '') === state.todoFilters.project;
+                    return priorityMatch && statusMatch && projectMatch;
+                });
+                renderShell(
+                    'Todos',
+                    'Manage operational tasks across projects.',
+                    `
+                        <div class="split-grid">
+                            <div class="section-stack">
+                                <div class="panel">
+                                    <div class="toolbar">
+                                        <div class="field">
+                                            <label>Priority</label>
+                                            <select id="todoPriorityFilter">
+                                                ${['all', 'urgent', 'high', 'medium', 'low'].map((item) => `<option value="${item}" ${state.todoFilters.priority === item ? 'selected' : ''}>${item}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label>Status</label>
+                                            <select id="todoStatusFilter">
+                                                ${['all', 'pending', 'in_progress', 'done'].map((item) => `<option value="${item}" ${state.todoFilters.status === item ? 'selected' : ''}>${item.replace('_', ' ')}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label>Project</label>
+                                            <select id="todoProjectFilter">
+                                                <option value="all">All projects</option>
+                                                ${projectOptions.map((project) => `<option value="${escapeHtml(project)}" ${state.todoFilters.project === project ? 'selected' : ''}>${escapeHtml(project)}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <button class="secondary-btn" id="applyTodoFilterBtn">Apply Filters</button>
+                                    </div>
+                                </div>
+                                <div class="table-wrap">
+                                    <h3>Todo List</h3>
+                                    ${filtered.length ? `
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Title</th>
+                                                    <th>Project</th>
+                                                    <th>Priority</th>
+                                                    <th>Status</th>
+                                                    <th>Due</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${filtered.map((todo) => `
+                                                    <tr>
+                                                        <td>
+                                                            <strong>${escapeHtml(todo.title || 'Untitled')}</strong>
+                                                            <div class="muted">${escapeHtml(todo.description || 'No description')}</div>
+                                                        </td>
+                                                        <td>${escapeHtml(todo.project || '—')}</td>
+                                                        <td>${badge(todo.priority || 'medium', priorityColor(todo.priority || 'medium'))}</td>
+                                                        <td>${badge(todo.status || 'pending', statusColor(todo.status || 'pending'))}</td>
+                                                        <td>${fmtDate(todo.due_date)}</td>
+                                                        <td>
+                                                            <div class="table-actions">
+                                                                <button class="secondary-btn edit-todo-btn" data-id="${escapeHtml(todo.id)}">Edit</button>
+                                                                <button class="danger-btn delete-todo-btn" data-id="${escapeHtml(todo.id)}">Delete</button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    ` : emptyState('No todos match', 'Try changing the filters or add a new todo.')}
+                                </div>
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Todo</h3>
+                                <form id="addTodoForm" class="form-grid">
+                                    <div class="field span-2">
+                                        <label>Title</label>
+                                        <input name="title" required />
+                                    </div>
+                                    <div class="field span-2">
+                                        <label>Description</label>
+                                        <textarea name="description"></textarea>
+                                    </div>
+                                    <div class="field">
+                                        <label>Priority</label>
+                                        <select name="priority">
+                                            ${['urgent', 'high', 'medium', 'low'].map((item) => `<option value="${item}" ${item === 'medium' ? 'selected' : ''}>${item}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="field">
+                                        <label>Project</label>
+                                        <input name="project" />
+                                    </div>
+                                    <div class="field span-2">
+                                        <label>Due Date</label>
+                                        <input name="due_date" type="date" />
+                                    </div>
+                                    <div class="form-actions span-2">
+                                        <button class="action-btn" type="submit">Add Todo</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="todosRefreshBtn">Refresh Todos</button>`
+                );
+                $('#todosRefreshBtn').addEventListener('click', showTodos);
+                $('#applyTodoFilterBtn').addEventListener('click', () => {
+                    state.todoFilters.priority = $('#todoPriorityFilter').value;
+                    state.todoFilters.status = $('#todoStatusFilter').value;
+                    state.todoFilters.project = $('#todoProjectFilter').value;
+                    showTodos();
+                });
+                $('#addTodoForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const form = new FormData(event.currentTarget);
+                    const payload = Object.fromEntries(form.entries());
+                    try {
+                        await api('POST', '/api/todos', payload);
+                        showToast('Todo created', 'var(--success)');
+                        showTodos();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to create todo', 'var(--error)');
+                    }
+                });
+                $$('.edit-todo-btn').forEach((button) => button.addEventListener('click', () => {
+                    const todo = state.todos.find((item) => String(item.id) === button.dataset.id);
+                    if (todo) openTodoModal(todo);
+                }));
+                $$('.delete-todo-btn').forEach((button) => button.addEventListener('click', async () => {
+                    if (!confirm('Delete this todo?')) return;
+                    try {
+                        await api('DELETE', `/api/todos/${encodeURIComponent(button.dataset.id)}`);
+                        showToast('Todo deleted', 'var(--warning)');
+                        showTodos();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to delete todo', 'var(--error)');
+                    }
+                }));
+            } catch (error) {
+                renderShell('Todos', 'Manage operational tasks across projects.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load todos')}</div>`);
+            }
+        }
+
+        function normalizeTags(tags) {
+            if (Array.isArray(tags)) return tags;
+            if (!tags) return [];
+            try {
+                const parsed = JSON.parse(tags);
+                return Array.isArray(parsed) ? parsed : String(tags).split(',').map((item) => item.trim()).filter(Boolean);
+            } catch {
+                return String(tags).split(',').map((item) => item.trim()).filter(Boolean);
+            }
+        }
+
+        function normalizeTagString(value) {
+            return JSON.stringify(String(value || '').split(',').map((item) => item.trim()).filter(Boolean));
+        }
+
+        function openClientModal(client) {
+            openModal('Edit Client', `
+                <form id="editClientForm" class="form-grid">
+                    <div class="field"><label>Name</label><input name="name" value="${escapeHtml(client.name || '')}" required /></div>
+                    <div class="field"><label>Slug</label><input name="slug" value="${escapeHtml(client.slug || '')}" /></div>
+                    <div class="field"><label>Business Type</label><input name="business_type" value="${escapeHtml(client.business_type || '')}" /></div>
+                    <div class="field"><label>Service</label><input name="service" value="${escapeHtml(client.service || '')}" /></div>
+                    <div class="field"><label>Contact Name</label><input name="contact_name" value="${escapeHtml(client.contact_name || '')}" /></div>
+                    <div class="field"><label>Contact Email</label><input name="contact_email" type="email" value="${escapeHtml(client.contact_email || '')}" /></div>
+                    <div class="field"><label>Status</label><select name="status">${['active', 'inactive', 'prospect'].map((item) => `<option value="${item}" ${client.status === item ? 'selected' : ''}>${item}</option>`).join('')}</select></div>
+                    <div class="field"><label>Project Slug</label><input name="project_slug" value="${escapeHtml(client.project_slug || '')}" /></div>
+                    <div class="field span-2"><label>Notes</label><textarea name="notes">${escapeHtml(client.notes || '')}</textarea></div>
+                    <div class="form-actions span-2">
+                        <button class="danger-btn" type="button" id="deleteClientBtn">Delete</button>
+                        <button class="secondary-btn" type="button" id="closeClientModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Save Client</button>
+                    </div>
+                </form>
+            `);
+            $('#closeClientModalBtn').addEventListener('click', closeModal);
+            $('#deleteClientBtn').addEventListener('click', async () => {
+                if (!confirm('Delete this client?')) return;
+                try {
+                    await api('DELETE', `/api/clients/${encodeURIComponent(client.id)}`);
+                    closeModal();
+                    showToast('Client deleted', 'var(--warning)');
+                    showClients();
+                } catch (error) {
+                    showToast(error.message || 'Unable to delete client', 'var(--error)');
+                }
+            });
+            $('#editClientForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    await api('PUT', `/api/clients/${encodeURIComponent(client.id)}`, Object.fromEntries(new FormData(event.currentTarget).entries()));
+                    closeModal();
+                    showToast('Client updated', 'var(--success)');
+                    showClients();
+                } catch (error) {
+                    showToast(error.message || 'Unable to update client', 'var(--error)');
+                }
+            });
+        }
+
+        async function showClients() {
+            if (!(await requireAuth())) return;
+            setLoading('Clients', 'Loading client records…');
+            try {
+                const response = await api('GET', '/api/clients');
+                state.clients = asArray(response, ['clients']);
+                renderShell(
+                    'Clients',
+                    'Manage CRM records and service relationships.',
+                    `
+                        <div class="split-grid">
+                            <div class="card-grid">
+                                ${state.clients.length ? state.clients.map((client) => `
+                                    <div class="entity-card clickable client-card" data-id="${escapeHtml(client.id)}">
+                                        <div class="status-row">
+                                            <h4>${escapeHtml(client.name || 'Unnamed Client')}</h4>
+                                            ${badge(client.status || 'active', statusColor(client.status || 'active'))}
+                                        </div>
+                                        <p>${escapeHtml(client.business_type || 'Business type not set')} · ${escapeHtml(client.service || 'Service not set')}</p>
+                                        <div class="summary-item">
+                                            <strong>${escapeHtml(client.contact_name || 'No contact')}</strong>
+                                            <span>${escapeHtml(client.contact_email || 'No email')}</span>
+                                        </div>
+                                        <div class="chip-row">
+                                            <span class="chip">${escapeHtml(client.engagement || 'engagement')}</span>
+                                            ${client.project_slug ? `<span class="chip">${escapeHtml(client.project_slug)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `).join('') : emptyState('No clients yet', 'Add a client to begin managing CRM records.')}
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Client</h3>
+                                <form id="addClientForm" class="form-grid">
+                                    <div class="field"><label>Name</label><input name="name" required /></div>
+                                    <div class="field"><label>Slug</label><input name="slug" /></div>
+                                    <div class="field"><label>Business Type</label><input name="business_type" /></div>
+                                    <div class="field"><label>Service</label><input name="service" /></div>
+                                    <div class="field"><label>Contact Name</label><input name="contact_name" /></div>
+                                    <div class="field"><label>Contact Email</label><input name="contact_email" type="email" /></div>
+                                    <div class="field"><label>Status</label><select name="status">${['active', 'inactive', 'prospect'].map((item) => `<option value="${item}">${item}</option>`).join('')}</select></div>
+                                    <div class="field"><label>Project Slug</label><input name="project_slug" /></div>
+                                    <div class="field span-2"><label>Notes</label><textarea name="notes"></textarea></div>
+                                    <div class="form-actions span-2"><button class="action-btn" type="submit">Add Client</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="clientsRefreshBtn">Refresh Clients</button>`
+                );
+                $('#clientsRefreshBtn').addEventListener('click', showClients);
+                $('#addClientForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    try {
+                        await api('POST', '/api/clients', Object.fromEntries(new FormData(event.currentTarget).entries()));
+                        showToast('Client added', 'var(--success)');
+                        showClients();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to add client', 'var(--error)');
+                    }
+                });
+                $$('.client-card').forEach((card) => card.addEventListener('click', () => {
+                    const client = state.clients.find((item) => String(item.id) === card.dataset.id);
+                    if (client) openClientModal(client);
+                }));
+            } catch (error) {
+                renderShell('Clients', 'Manage CRM records and service relationships.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load clients')}</div>`);
+            }
+        }
+
+        function openProjectModal(project) {
+            openModal('Edit Project', `
+                <form id="editProjectForm" class="form-grid">
+                    <div class="field"><label>Name</label><input name="name" value="${escapeHtml(project.name || '')}" required /></div>
+                    <div class="field"><label>Slug</label><input name="slug" value="${escapeHtml(project.slug || '')}" required /></div>
+                    <div class="field span-2"><label>Description</label><textarea name="description">${escapeHtml(project.description || '')}</textarea></div>
+                    <div class="field"><label>Status</label><select name="status">${['active', 'planning', 'on_hold', 'completed'].map((item) => `<option value="${item}" ${project.status === item ? 'selected' : ''}>${item.replace('_', ' ')}</option>`).join('')}</select></div>
+                    <div class="field"><label>Lead Agent</label><input name="lead_agent" value="${escapeHtml(project.lead_agent || '')}" /></div>
+                    <div class="field span-2"><label>Tags</label><input name="tags" value="${escapeHtml(normalizeTags(project.tags).join(', '))}" /></div>
+                    <div class="form-actions span-2">
+                        <button class="danger-btn" type="button" id="deleteProjectBtn">Delete</button>
+                        <button class="secondary-btn" type="button" id="closeProjectModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Save Project</button>
+                    </div>
+                </form>
+            `);
+            $('#closeProjectModalBtn').addEventListener('click', closeModal);
+            $('#deleteProjectBtn').addEventListener('click', async () => {
+                if (!confirm('Delete this project?')) return;
+                try {
+                    await api('DELETE', `/api/projects/${encodeURIComponent(project.id)}`);
+                    closeModal();
+                    showToast('Project deleted', 'var(--warning)');
+                    showProjects();
+                } catch (error) {
+                    showToast(error.message || 'Unable to delete project', 'var(--error)');
+                }
+            });
+            $('#editProjectForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                payload.tags = normalizeTagString(payload.tags);
+                try {
+                    await api('PUT', `/api/projects/${encodeURIComponent(project.id)}`, payload);
+                    closeModal();
+                    showToast('Project updated', 'var(--success)');
+                    showProjects();
+                } catch (error) {
+                    showToast(error.message || 'Unable to update project', 'var(--error)');
+                }
+            });
+        }
+
+        async function showProjects() {
+            if (!(await requireAuth())) return;
+            setLoading('Projects', 'Loading project registry…');
+            try {
+                const response = await api('GET', '/api/projects');
+                state.projects = asArray(response, ['projects']);
+                renderShell(
+                    'Projects',
+                    'Track portfolio initiatives, ownership, and tags.',
+                    `
+                        <div class="split-grid">
+                            <div class="card-grid">
+                                ${state.projects.length ? state.projects.map((project) => `
+                                    <div class="entity-card clickable project-card" data-id="${escapeHtml(project.id)}">
+                                        <div class="status-row">
+                                            <h4>${escapeHtml(project.name || 'Untitled Project')}</h4>
+                                            ${badge(project.status || 'active', statusColor(project.status || 'active'))}
+                                        </div>
+                                        <p>${escapeHtml(project.slug || 'no-slug')}</p>
+                                        <p>${escapeHtml(project.description || 'No description provided')}</p>
+                                        <div class="meta-row muted">Lead Agent: ${escapeHtml(project.lead_agent || '—')}</div>
+                                        <div class="tag-row">
+                                            ${normalizeTags(project.tags).map((tag) => `<span class="chip">${escapeHtml(tag)}</span>`).join('') || '<span class="muted">No tags</span>'}
+                                        </div>
+                                    </div>
+                                `).join('') : emptyState('No projects yet', 'Add a project to build your portfolio registry.')}
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Project</h3>
+                                <form id="addProjectForm" class="form-grid">
+                                    <div class="field"><label>Name</label><input name="name" required /></div>
+                                    <div class="field"><label>Slug</label><input name="slug" required /></div>
+                                    <div class="field span-2"><label>Description</label><textarea name="description"></textarea></div>
+                                    <div class="field"><label>Status</label><select name="status">${['active', 'planning', 'on_hold', 'completed'].map((item) => `<option value="${item}">${item.replace('_', ' ')}</option>`).join('')}</select></div>
+                                    <div class="field"><label>Lead Agent</label><input name="lead_agent" /></div>
+                                    <div class="field span-2"><label>Tags (comma-separated)</label><input name="tags" placeholder="finance, grants, travel" /></div>
+                                    <div class="form-actions span-2"><button class="action-btn" type="submit">Add Project</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="projectsRefreshBtn">Refresh Projects</button>`
+                );
+                $('#projectsRefreshBtn').addEventListener('click', showProjects);
+                $('#addProjectForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    payload.tags = normalizeTagString(payload.tags);
+                    try {
+                        await api('POST', '/api/projects', payload);
+                        showToast('Project added', 'var(--success)');
+                        showProjects();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to add project', 'var(--error)');
+                    }
+                });
+                $$('.project-card').forEach((card) => card.addEventListener('click', () => {
+                    const project = state.projects.find((item) => String(item.id) === card.dataset.id);
+                    if (project) openProjectModal(project);
+                }));
+            } catch (error) {
+                renderShell('Projects', 'Track portfolio initiatives, ownership, and tags.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load projects')}</div>`);
+            }
+        }
+
+        function openConnectorModal(connector) {
+            openModal('Edit Connector', `
+                <form id="editConnectorForm" class="form-grid">
+                    <div class="field"><label>Label</label><input name="label" value="${escapeHtml(connector.label || '')}" required /></div>
+                    <div class="field"><label>Email</label><input name="email_address" type="email" value="${escapeHtml(connector.email_address || connector.email || '')}" required /></div>
+                    <div class="field"><label>Provider</label><input name="provider" value="${escapeHtml(connector.provider || 'imap')}" /></div>
+                    <div class="field"><label>Status</label><select name="status">${['pending', 'active', 'offline', 'failed'].map((item) => `<option value="${item}" ${connector.status === item ? 'selected' : ''}>${item}</option>`).join('')}</select></div>
+                    <div class="field"><label>IMAP Host</label><input name="imap_host" value="${escapeHtml(connector.imap_host || '')}" /></div>
+                    <div class="field"><label>IMAP Port</label><input name="imap_port" type="number" value="${escapeHtml(String(connector.imap_port || 993))}" /></div>
+                    <div class="field"><label>SMTP Host</label><input name="smtp_host" value="${escapeHtml(connector.smtp_host || '')}" /></div>
+                    <div class="field"><label>SMTP Port</label><input name="smtp_port" type="number" value="${escapeHtml(String(connector.smtp_port || 587))}" /></div>
+                    <div class="field"><label>Username</label><input name="username" value="${escapeHtml(connector.username || '')}" /></div>
+                    <div class="field"><label>Credentials</label><input name="credentials" placeholder="Leave blank to keep current" /></div>
+                    <div class="form-actions span-2">
+                        <button class="danger-btn" type="button" id="deleteConnectorBtn">Delete</button>
+                        <button class="secondary-btn" type="button" id="closeConnectorModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Save Connector</button>
+                    </div>
+                </form>
+            `);
+            $('#closeConnectorModalBtn').addEventListener('click', closeModal);
+            $('#deleteConnectorBtn').addEventListener('click', async () => {
+                if (!confirm('Delete this connector?')) return;
+                try {
+                    await api('DELETE', `/api/connectors/${encodeURIComponent(connector.id)}`);
+                    closeModal();
+                    showToast('Connector deleted', 'var(--warning)');
+                    showConnectors();
+                } catch (error) {
+                    showToast(error.message || 'Unable to delete connector', 'var(--error)');
+                }
+            });
+            $('#editConnectorForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                payload.imap_port = Number(payload.imap_port || 993);
+                payload.smtp_port = Number(payload.smtp_port || 587);
+                if (payload.credentials) payload.credentials = JSON.stringify({ secret: payload.credentials }); else delete payload.credentials;
+                try {
+                    await api('PUT', `/api/connectors/${encodeURIComponent(connector.id)}`, payload);
+                    closeModal();
+                    showToast('Connector updated', 'var(--success)');
+                    showConnectors();
+                } catch (error) {
+                    showToast(error.message || 'Unable to update connector', 'var(--error)');
+                }
+            });
+        }
+
+        async function showConnectors() {
+            if (!(await requireAuth())) return;
+            setLoading('Connectors', 'Loading email connector inventory…');
+            try {
+                const response = await api('GET', '/api/connectors');
+                state.connectors = asArray(response, ['connectors']);
+                renderShell(
+                    'Connectors',
+                    'Manage IMAP and SMTP integrations.',
+                    `
+                        <div class="split-grid">
+                            <div class="card-grid">
+                                ${state.connectors.length ? state.connectors.map((connector) => `
+                                    <div class="entity-card clickable connector-card" data-id="${escapeHtml(connector.id)}">
+                                        <div class="status-row">
+                                            <h4>${escapeHtml(connector.label || 'Unnamed Connector')}</h4>
+                                            ${badge(connector.status || 'pending', statusColor(connector.status || 'pending'))}
+                                        </div>
+                                        <p>${escapeHtml(connector.email_address || connector.email || 'No email')}</p>
+                                        <div class="chip-row">
+                                            <span class="chip">${escapeHtml(connector.provider || 'imap')}</span>
+                                            <span class="chip">${escapeHtml(connector.auth_type || 'password')}</span>
+                                        </div>
+                                        <div class="table-actions">
+                                            <button class="secondary-btn test-connector-btn" data-id="${escapeHtml(connector.id)}">Test Connection</button>
+                                        </div>
+                                    </div>
+                                `).join('') : emptyState('No connectors yet', 'Add a connector to enable inbox and SMTP integrations.')}
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Connector</h3>
+                                <form id="addConnectorForm" class="form-grid">
+                                    <div class="field"><label>Label</label><input name="label" required /></div>
+                                    <div class="field"><label>Email</label><input name="email_address" type="email" required /></div>
+                                    <div class="field"><label>Provider</label><input name="provider" value="imap" /></div>
+                                    <div class="field"><label>Auth Type</label><select name="auth_type"><option value="password">password</option><option value="oauth">oauth</option></select></div>
+                                    <div class="field"><label>IMAP Host</label><input name="imap_host" /></div>
+                                    <div class="field"><label>IMAP Port</label><input name="imap_port" type="number" value="993" /></div>
+                                    <div class="field"><label>SMTP Host</label><input name="smtp_host" /></div>
+                                    <div class="field"><label>SMTP Port</label><input name="smtp_port" type="number" value="587" /></div>
+                                    <div class="field"><label>Username</label><input name="username" /></div>
+                                    <div class="field"><label>Password / Credential</label><input name="credentials" type="password" /></div>
+                                    <div class="form-actions span-2"><button class="action-btn" type="submit">Add Connector</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="connectorsRefreshBtn">Refresh Connectors</button>`
+                );
+                $('#connectorsRefreshBtn').addEventListener('click', showConnectors);
+                $('#addConnectorForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    payload.imap_port = Number(payload.imap_port || 993);
+                    payload.smtp_port = Number(payload.smtp_port || 587);
+                    payload.credentials = payload.credentials ? JSON.stringify({ secret: payload.credentials }) : '{}';
+                    try {
+                        await api('POST', '/api/connectors', payload);
+                        showToast('Connector added', 'var(--success)');
+                        showConnectors();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to add connector', 'var(--error)');
+                    }
+                });
+                $$('.connector-card').forEach((card) => card.addEventListener('click', (event) => {
+                    if (event.target.closest('.test-connector-btn')) return;
+                    const connector = state.connectors.find((item) => String(item.id) === card.dataset.id);
+                    if (connector) openConnectorModal(connector);
+                }));
+                $$('.test-connector-btn').forEach((button) => button.addEventListener('click', async (event) => {
+                    event.stopPropagation();
+                    try {
+                        await api('POST', `/api/connectors/${encodeURIComponent(button.dataset.id)}/test`);
+                        showToast('Connector test requested', 'var(--success)');
+                    } catch (error) {
+                        showToast(error.message || 'Unable to test connector', 'var(--error)');
+                    }
+                }));
+            } catch (error) {
+                renderShell('Connectors', 'Manage IMAP and SMTP integrations.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load connectors')}</div>`);
+            }
+        }
+
+        function openTripModal(trip) {
+            openModal('Edit Trip', `
+                <form id="editTripForm" class="form-grid">
+                    <div class="field"><label>Name</label><input name="name" value="${escapeHtml(trip.name || '')}" required /></div>
+                    <div class="field"><label>Destination</label><input name="destination" value="${escapeHtml(trip.destination || '')}" required /></div>
+                    <div class="field"><label>Depart Date</label><input name="depart_date" type="date" value="${escapeHtml((trip.depart_date || '').slice(0, 10))}" /></div>
+                    <div class="field"><label>Return Date</label><input name="return_date" type="date" value="${escapeHtml((trip.return_date || '').slice(0, 10))}" /></div>
+                    <div class="field"><label>Status</label><select name="status">${['planning', 'booked', 'in_transit', 'completed', 'cancelled'].map((item) => `<option value="${item}" ${trip.status === item ? 'selected' : ''}>${item.replace('_', ' ')}</option>`).join('')}</select></div>
+                    <div class="field"><label>Budget</label><input name="budget" type="number" min="0" step="0.01" value="${escapeHtml(String(trip.budget || 0))}" /></div>
+                    <div class="field"><label>Spent</label><input name="spent" type="number" min="0" step="0.01" value="${escapeHtml(String(trip.spent || 0))}" /></div>
+                    <div class="field span-2"><label>Notes</label><textarea name="notes">${escapeHtml(trip.notes || '')}</textarea></div>
+                    <div class="form-actions span-2">
+                        <button class="danger-btn" type="button" id="deleteTripBtn">Delete</button>
+                        <button class="secondary-btn" type="button" id="closeTripModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Save Trip</button>
+                    </div>
+                </form>
+            `);
+            $('#closeTripModalBtn').addEventListener('click', closeModal);
+            $('#deleteTripBtn').addEventListener('click', async () => {
+                if (!confirm('Delete this trip?')) return;
+                try {
+                    await api('DELETE', `/api/trips/${encodeURIComponent(trip.id)}`);
+                    closeModal();
+                    showToast('Trip deleted', 'var(--warning)');
+                    showTravel();
+                } catch (error) {
+                    showToast(error.message || 'Unable to delete trip', 'var(--error)');
+                }
+            });
+            $('#editTripForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                payload.budget = Number(payload.budget || 0);
+                payload.spent = Number(payload.spent || 0);
+                try {
+                    await api('PUT', `/api/trips/${encodeURIComponent(trip.id)}`, payload);
+                    closeModal();
+                    showToast('Trip updated', 'var(--success)');
+                    showTravel();
+                } catch (error) {
+                    showToast(error.message || 'Unable to update trip', 'var(--error)');
+                }
+            });
+        }
+
+        async function showTravel() {
+            if (!(await requireAuth())) return;
+            setLoading('Travel', 'Loading trip plans…');
+            try {
+                const response = await api('GET', '/api/trips');
+                state.trips = asArray(response, ['trips']);
+                renderShell(
+                    'Travel',
+                    'Track trips, budgets, and travel execution status.',
+                    `
+                        <div class="split-grid">
+                            <div class="card-grid">
+                                ${state.trips.length ? state.trips.map((trip) => {
+                                    const budget = Number(trip.budget || 0);
+                                    const spent = Number(trip.spent || 0);
+                                    const progress = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+                                    return `
+                                        <div class="entity-card clickable trip-card" data-id="${escapeHtml(trip.id)}">
+                                            <div class="status-row">
+                                                <h4>${escapeHtml(trip.name || 'Untitled Trip')}</h4>
+                                                ${badge(trip.status || 'planning', statusColor(trip.status || 'planning'))}
+                                            </div>
+                                            <p>${escapeHtml(trip.destination || 'Destination pending')}</p>
+                                            <div class="muted">${fmtDate(trip.depart_date)} → ${fmtDate(trip.return_date)}</div>
+                                            <div>
+                                                <div class="meta-row" style="justify-content:space-between"><span>${money(spent)} spent</span><span>${money(budget)} budget</span></div>
+                                                <div class="progress-track" style="margin-top:8px"><div class="progress-bar" style="width:${progress}%"></div></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('') : emptyState('No trips yet', 'Add a trip to manage travel planning.')}
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Trip</h3>
+                                <form id="addTripForm" class="form-grid">
+                                    <div class="field"><label>Name</label><input name="name" required /></div>
+                                    <div class="field"><label>Destination</label><input name="destination" required /></div>
+                                    <div class="field"><label>Depart Date</label><input name="depart_date" type="date" /></div>
+                                    <div class="field"><label>Return Date</label><input name="return_date" type="date" /></div>
+                                    <div class="field"><label>Status</label><select name="status">${['planning', 'booked', 'in_transit', 'completed', 'cancelled'].map((item) => `<option value="${item}">${item.replace('_', ' ')}</option>`).join('')}</select></div>
+                                    <div class="field"><label>Budget</label><input name="budget" type="number" min="0" step="0.01" value="0" /></div>
+                                    <div class="field"><label>Spent</label><input name="spent" type="number" min="0" step="0.01" value="0" /></div>
+                                    <div class="field span-2"><label>Notes</label><textarea name="notes"></textarea></div>
+                                    <div class="form-actions span-2"><button class="action-btn" type="submit">Add Trip</button></div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="travelRefreshBtn">Refresh Trips</button>`
+                );
+                $('#travelRefreshBtn').addEventListener('click', showTravel);
+                $('#addTripForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    payload.budget = Number(payload.budget || 0);
+                    payload.spent = Number(payload.spent || 0);
+                    try {
+                        await api('POST', '/api/trips', payload);
+                        showToast('Trip added', 'var(--success)');
+                        showTravel();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to add trip', 'var(--error)');
+                    }
+                });
+                $$('.trip-card').forEach((card) => card.addEventListener('click', () => {
+                    const trip = state.trips.find((item) => String(item.id) === card.dataset.id);
+                    if (trip) openTripModal(trip);
+                }));
+            } catch (error) {
+                renderShell('Travel', 'Track trips, budgets, and travel execution status.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load trips')}</div>`);
+            }
+        }
+
+        async function showBriefing() {
+            if (!(await requireAuth())) return;
+            setLoading('Briefing', 'Loading daily briefing…');
+            try {
+                const response = await api('GET', '/api/briefing');
+                state.briefing = response;
+                const content = response?.content || response?.text || response?.briefing || 'No briefing content available.';
+                const updated = response?.updated_at || response?.created_at || response?.last_updated;
+                renderShell(
+                    'Briefing',
+                    'View the latest generated portfolio briefing.',
+                    `
+                        <div class="briefing-card">
+                            <h3>Daily Briefing</h3>
+                            <div class="meta-row muted" style="margin-bottom:14px">Last updated: ${fmtDateTime(updated)}</div>
+                            <div class="briefing-text">${escapeHtml(content)}</div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="refreshBriefingBtn">Refresh</button>`
+                );
+                $('#refreshBriefingBtn').addEventListener('click', showBriefing);
+            } catch (error) {
+                renderShell('Briefing', 'View the latest generated portfolio briefing.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load briefing')}</div>`);
+            }
+        }
+
+        function renderMessagesMarkup() {
+            if (!state.currentConversationId) return emptyState('No conversation selected', 'Create or select a conversation to see messages.');
+            if (!state.messages.length) return emptyState('No messages yet', 'Send the first message to start the conversation.');
+            return state.messages.map((message) => {
+                const role = message.role === 'user' ? 'user' : 'agent';
+                return `
+                    <div class="bubble ${role}">
+                        ${escapeHtml(message.content || '')}
+                        <small>${escapeHtml(role === 'user' ? 'You' : (message.agent_id || 'Agent'))} · ${fmtDateTime(message.created_at)}</small>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderMessages() {
+            const container = $('#chatMessages');
+            if (!container) return;
+            container.innerHTML = renderMessagesMarkup();
+            scrollChatToBottom();
+        }
+
+        function scrollChatToBottom() {
+            const container = $('#chatMessages');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        function openConversationModal() {
+            openModal('New Conversation', `
+                <form id="newConversationForm" class="form-grid">
+                    <div class="field span-2"><label>Title</label><input name="title" required /></div>
+                    <div class="field span-2"><label>Slug</label><input name="slug" placeholder="optional-slug" /></div>
+                    <div class="form-actions span-2">
+                        <button class="secondary-btn" type="button" id="closeConversationModalBtn">Close</button>
+                        <button class="action-btn" type="submit">Create Conversation</button>
+                    </div>
+                </form>
+            `);
+            $('#closeConversationModalBtn').addEventListener('click', closeModal);
+            $('#newConversationForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                try {
+                    const created = await api('POST', '/api/conversations', Object.fromEntries(new FormData(event.currentTarget).entries()));
+                    state.currentConversationId = created?.id || created?.conversation_id || state.currentConversationId;
+                    closeModal();
+                    showToast('Conversation created', 'var(--success)');
+                    showChat();
+                } catch (error) {
+                    showToast(error.message || 'Unable to create conversation', 'var(--error)');
+                }
+            });
+        }
+
+        async function showChat() {
+            if (!(await requireAuth())) return;
+            setLoading('Chat', 'Loading conversations…');
+            try {
+                const convoResponse = await api('GET', '/api/conversations');
+                state.conversations = asArray(convoResponse, ['conversations']);
+                if (!state.currentConversationId && state.conversations.length) state.currentConversationId = state.conversations[0].id;
+                if (state.currentConversationId) {
+                    const msgResponse = await api('GET', `/api/conversations/${encodeURIComponent(state.currentConversationId)}/messages`);
+                    state.messages = asArray(msgResponse, ['messages']);
+                } else {
+                    state.messages = [];
+                }
+                renderShell(
+                    'Chat',
+                    'Collaborate with agents in real time.',
+                    `
+                        <div class="chat-shell">
+                            <div class="chat-sidebar">
+                                <div class="toolbar">
+                                    <button class="action-btn" id="newConversationBtn">New Conversation</button>
+                                </div>
+                                <div class="chat-list" id="chatList">
+                                    ${state.conversations.length ? state.conversations.map((conversation) => `
+                                        <div class="chat-convo ${conversation.id === state.currentConversationId ? 'active' : ''}" data-id="${escapeHtml(conversation.id)}">
+                                            <strong>${escapeHtml(conversation.title || 'Untitled Conversation')}</strong>
+                                            <div class="muted">${fmtRelative(conversation.updated_at || conversation.created_at)}</div>
+                                        </div>
+                                    `).join('') : emptyState('No conversations', 'Create a conversation to start chatting.')}
+                                </div>
+                            </div>
+                            <div class="chat-main">
+                                <div class="chat-header">
+                                    <div>
+                                        <strong>${escapeHtml(state.conversations.find((item) => item.id === state.currentConversationId)?.title || 'No conversation selected')}</strong>
+                                        <div class="muted">Real-time updates sync through WebSocket.</div>
+                                    </div>
+                                    <div class="chip-row">
+                                        <span class="chip">${escapeHtml(state.currentConversationId || 'None')}</span>
+                                    </div>
+                                </div>
+                                <div class="chat-messages" id="chatMessages">${renderMessagesMarkup()}</div>
+                                <form class="chat-input" id="chatForm">
+                                    <textarea id="chatMessageInput" placeholder="Send a message to ArchonHub…" ${state.currentConversationId ? '' : 'disabled'}></textarea>
+                                    <button class="action-btn" type="submit" ${state.currentConversationId ? '' : 'disabled'}>Send</button>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="chatRefreshBtn">Refresh Chat</button>`
+                );
+                $('#chatRefreshBtn').addEventListener('click', showChat);
+                $('#newConversationBtn').addEventListener('click', openConversationModal);
+                $$('.chat-convo').forEach((item) => item.addEventListener('click', async () => {
+                    state.currentConversationId = item.dataset.id;
+                    await showChat();
+                }));
+                $('#chatForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const input = $('#chatMessageInput');
+                    const content = input.value.trim();
+                    if (!content || !state.currentConversationId) return;
+                    try {
+                        await api('POST', `/api/conversations/${encodeURIComponent(state.currentConversationId)}/messages`, { role: 'user', content });
+                        input.value = '';
+                        await showChat();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to send message', 'var(--error)');
+                    }
+                });
+                requestAnimationFrame(scrollChatToBottom);
+            } catch (error) {
+                renderShell('Chat', 'Collaborate with agents in real time.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load chat')}</div>`);
+            }
+        }
+
+        async function showSchedule() {
+            if (!(await requireAuth())) return;
+            setLoading('Schedule', 'Loading scheduled jobs…');
+            try {
+                const response = await api('GET', '/api/scheduler');
+                state.scheduler = asArray(response, ['jobs', 'scheduler']);
+                renderShell(
+                    'Schedule',
+                    'Inspect built-in jobs and manage user-defined automations.',
+                    `
+                        <div class="split-grid">
+                            <div class="table-wrap">
+                                <h3>Scheduled Jobs</h3>
+                                ${state.scheduler.length ? `
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Job ID</th>
+                                                <th>Agent</th>
+                                                <th>Project</th>
+                                                <th>Type</th>
+                                                <th>Schedule</th>
+                                                <th>Next Fire</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${state.scheduler.map((job) => {
+                                                const type = job.run_type || (job.interval_sec ? 'interval' : 'cron');
+                                                const schedule = type === 'interval' ? `${job.interval_sec || '—'}s` : (job.cron_expr || job.schedule || '—');
+                                                const isBuiltin = !job.user_defined && ['daily_briefing', 'daily_reflexion', 'grant_research_sweep', 'hutto_planning_monitor', 'weekly_fare_alert', 'sigma_signal_check', 'nightly_db_cleanup'].includes(job.id || job.job_id);
+                                                return `
+                                                    <tr>
+                                                        <td class="mono">${escapeHtml(job.id || job.job_id || '—')}</td>
+                                                        <td>${escapeHtml(job.agent_id || 'system')}</td>
+                                                        <td>${escapeHtml(job.project || '—')}</td>
+                                                        <td>${badge(type, type === 'interval' ? 'var(--warning)' : 'var(--accent)')}</td>
+                                                        <td>${escapeHtml(schedule)}</td>
+                                                        <td>${fmtDateTime(job.next_fire || job.next_run_time)}</td>
+                                                        <td>${badge(job.status || 'active', statusColor(job.status || 'active'))}</td>
+                                                        <td>
+                                                            <div class="table-actions">
+                                                                ${isBuiltin ? `<button class="secondary-btn trigger-job-btn" data-id="${escapeHtml(job.id || job.job_id)}">Trigger Now</button>` : `<button class="danger-btn delete-schedule-btn" data-id="${escapeHtml(job.id || job.job_id)}">Delete</button>`}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                `;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>
+                                ` : emptyState('No scheduled jobs', 'Built-in and user jobs will appear here.')}
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Job</h3>
+                                <form id="addScheduleForm" class="form-grid">
+                                    <div class="field">
+                                        <label>Job ID</label>
+                                        <input name="id" required />
+                                    </div>
+                                    <div class="field">
+                                        <label>Agent</label>
+                                        <input name="agent_id" required />
+                                    </div>
+                                    <div class="field">
+                                        <label>Project</label>
+                                        <input name="project" />
+                                    </div>
+                                    <div class="field">
+                                        <label>Type</label>
+                                        <select name="run_type" id="jobTypeSelect">
+                                            <option value="cron">cron</option>
+                                            <option value="interval">interval</option>
+                                        </select>
+                                    </div>
+                                    <div class="field span-2">
+                                        <label>Task</label>
+                                        <textarea name="task"></textarea>
+                                    </div>
+                                    <div class="field" id="cronField">
+                                        <label>Cron Expression</label>
+                                        <input name="cron_expr" placeholder="0 7 * * 1-5" />
+                                    </div>
+                                    <div class="field" id="intervalField">
+                                        <label>Interval Seconds</label>
+                                        <input name="interval_sec" type="number" min="30" value="3600" />
+                                    </div>
+                                    <div class="field span-2">
+                                        <label>Graph</label>
+                                        <select name="graph">
+                                            ${['reflexion', 'research', 'wordpress', 'business-law'].map((item) => `<option value="${item}">${item}</option>`).join('')}
+                                        </select>
+                                    </div>
+                                    <div class="form-actions span-2">
+                                        <button class="action-btn" type="submit">Add Job</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="scheduleRefreshBtn">Refresh Schedule</button>`
+                );
+                $('#scheduleRefreshBtn').addEventListener('click', showSchedule);
+                const syncScheduleType = () => {
+                    const interval = $('#jobTypeSelect').value === 'interval';
+                    $('#cronField').classList.toggle('hidden', interval);
+                    $('#intervalField').classList.toggle('hidden', !interval);
+                };
+                syncScheduleType();
+                $('#jobTypeSelect').addEventListener('change', syncScheduleType);
+                $('#addScheduleForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    if (payload.run_type === 'interval' && payload.interval_sec) payload.interval_sec = Number(payload.interval_sec);
+                    try {
+                        await api('POST', '/api/scheduler', payload);
+                        showToast('Scheduled job created', 'var(--success)');
+                        showSchedule();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to create scheduled job', 'var(--error)');
+                    }
+                });
+                $$('.trigger-job-btn').forEach((button) => button.addEventListener('click', async () => {
+                    try {
+                        await apiFallback([
+                            ['POST', `/api/scheduler/${encodeURIComponent(button.dataset.id)}/trigger`],
+                            ['POST', `/api/scheduler/${encodeURIComponent(button.dataset.id)}/run`]
+                        ]);
+                        showToast('Job trigger requested', 'var(--success)');
+                    } catch (error) {
+                        showToast(error.message || 'Unable to trigger job', 'var(--error)');
+                    }
+                }));
+                $$('.delete-schedule-btn').forEach((button) => button.addEventListener('click', async () => {
+                    if (!confirm('Delete this scheduled job?')) return;
+                    try {
+                        await api('DELETE', `/api/scheduler/${encodeURIComponent(button.dataset.id)}`);
+                        showToast('Scheduled job deleted', 'var(--warning)');
+                        showSchedule();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to delete job', 'var(--error)');
+                    }
+                }));
+            } catch (error) {
+                renderShell('Schedule', 'Inspect built-in jobs and manage user-defined automations.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load scheduler')}</div>`);
+            }
+        }
+
+        async function showSettings() {
+            if (!(await requireAuth())) return;
+            setLoading('Settings', 'Loading admin configuration…');
+            try {
+                const [config, usersResponse] = await Promise.all([
+                    api('GET', '/api/config'),
+                    api('GET', '/api/users')
+                ]);
+                const users = asArray(usersResponse, ['users']);
+                renderShell(
+                    'Settings',
+                    'Admin controls for hub configuration and user access.',
+                    `
+                        <div class="split-grid">
+                            <div class="section-stack">
+                                <div class="form-card">
+                                    <h3>Hub Config</h3>
+                                    <form id="configForm" class="form-grid">
+                                        <div class="field">
+                                            <label>LLM Model</label>
+                                            <select name="llm_model">
+                                                ${['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-5-sonnet'].map((item) => `<option value="${item}" ${(config?.llm_model || config?.OPENAI_MODEL || 'gpt-4o-mini') === item ? 'selected' : ''}>${item}</option>`).join('')}
+                                            </select>
+                                        </div>
+                                        <div class="field">
+                                            <label>Thread Pool Size</label>
+                                            <input name="thread_pool_size" type="number" min="1" max="16" value="${escapeHtml(String(config?.thread_pool_size || config?.thread_pool || 3))}" />
+                                        </div>
+                                        <div class="field span-2">
+                                            <label>API Token</label>
+                                            <input name="api_token" value="${escapeHtml(config?.api_token || '••••••••••••••••')}" readonly />
+                                        </div>
+                                        <div class="form-actions span-2">
+                                            <button class="action-btn" type="submit">Save Config</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="form-card">
+                                    <h3>Change Password</h3>
+                                    <form id="changePasswordForm" class="form-grid">
+                                        <div class="field"><label>Current Password</label><input name="current_password" type="password" required /></div>
+                                        <div class="field"><label>New Password</label><input name="new_password" type="password" required /></div>
+                                        <div class="field span-2"><label>Confirm Password</label><input name="confirm_password" type="password" required /></div>
+                                        <div class="form-actions span-2"><button class="action-btn" type="submit">Change Password</button></div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="table-wrap">
+                                <h3>User Management</h3>
+                                ${users.length ? `
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Username</th>
+                                                <th>Email</th>
+                                                <th>Role</th>
+                                                <th>Active</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${users.map((user) => `
+                                                <tr>
+                                                    <td>${escapeHtml(user.username || '—')}</td>
+                                                    <td>${escapeHtml(user.email || '—')}</td>
+                                                    <td>${badge(user.role || 'user', user.role === 'admin' ? 'var(--accent)' : 'var(--text-muted)')}</td>
+                                                    <td>${badge(user.is_active ? 'active' : 'disabled', user.is_active ? 'var(--success)' : 'var(--error)')}</td>
+                                                    <td>
+                                                        <div class="table-actions">
+                                                            <button class="secondary-btn toggle-user-btn" data-id="${escapeHtml(String(user.id))}" data-active="${user.is_active ? '1' : '0'}">${user.is_active ? 'Disable' : 'Enable'}</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                ` : emptyState('No users found', 'User records will appear here for admin management.')}
+                            </div>
+                        </div>
+                    `,
+                    `<button class="action-btn" id="settingsRefreshBtn">Refresh Settings</button>`
+                );
+                $('#settingsRefreshBtn').addEventListener('click', showSettings);
+                $('#configForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    payload.thread_pool_size = Number(payload.thread_pool_size || 3);
+                    try {
+                        await api('PUT', '/api/config', payload);
+                        showToast('Configuration updated', 'var(--success)');
+                    } catch (error) {
+                        showToast(error.message || 'Unable to save config', 'var(--error)');
+                    }
+                });
+                $('#changePasswordForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    if (payload.new_password !== payload.confirm_password) {
+                        showToast('New password confirmation does not match', 'var(--warning)');
+                        return;
+                    }
+                    delete payload.confirm_password;
+                    try {
+                        await apiFallback([
+                            ['POST', '/api/auth/change-password', payload],
+                            ['POST', '/api/users/change-password', payload]
+                        ]);
+                        showToast('Password changed', 'var(--success)');
+                        event.currentTarget.reset();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to change password', 'var(--error)');
+                    }
+                });
+                $$('.toggle-user-btn').forEach((button) => button.addEventListener('click', async () => {
+                    try {
+                        await api('PUT', `/api/users/${encodeURIComponent(button.dataset.id)}`, { is_active: button.dataset.active !== '1' });
+                        showToast('User status updated', 'var(--success)');
+                        showSettings();
+                    } catch (error) {
+                        showToast(error.message || 'Unable to update user', 'var(--error)');
+                    }
+                }));
+            } catch (error) {
+                renderShell('Settings', 'Admin controls for hub configuration and user access.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load settings')}</div>`);
+            }
+        }
+
+        async function bootstrapAuth() {
+            updateUserUI();
+            if (!isAuthenticated()) {
+                await showLogin();
+                return;
+            }
+            try {
+                const me = await api('GET', '/api/auth/me');
+                if (me) setStoredUser(me);
+                updateUserUI();
+                await refreshHubPulse();
+                connectWS();
+                const page = (location.hash || '#/dashboard').replace(/^#\//, '') || 'dashboard';
+                await navigate(page, true);
+            } catch {
+                logout();
+            }
+        }
+
+        window.addEventListener('hashchange', () => {
+            const page = (location.hash || '#/dashboard').replace(/^#\//, '') || 'dashboard';
+            if (page !== state.currentPage) navigate(page, true);
+        });
+
+        $('#collapseBtn').addEventListener('click', () => {
+            if (window.innerWidth <= 760) {
+                state.mobileNavOpen ? closeMobileNav() : openMobileNav();
+            } else {
+                document.body.classList.toggle('sidebar-collapsed');
+            }
+        });
+        $('#mobileMenuBtn').addEventListener('click', () => state.mobileNavOpen ? closeMobileNav() : openMobileNav());
+        $('#sidebarBackdrop').addEventListener('click', closeMobileNav);
+        window.addEventListener('resize', () => { if (window.innerWidth > 760) closeMobileNav(); });
+
+        renderSidebar();
+        updateUserUI();
+        setHubStatus(false, 'Hub Offline');
+        setWSState('offline', 'WebSocket disconnected');
+        if (!state.healthPulseTimer) state.healthPulseTimer = setInterval(refreshHubPulse, 30000);
+        bootstrapAuth();
+    </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+# AgentHarness v3 — Full Requirements
+# Covers both desktop client (main_m365.py) and Hub server (hub_server.py)
+# Install: pip install -r requirements.txt
+
+# ── AI / Agent Engine ─────────────────────────────────────────────────────────
+langgraph>=0.2.0
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-openai>=0.1.0
+langchain-community>=0.3.0
+openai>=1.0.0
+
+# ── Hub Server ────────────────────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+apscheduler>=3.10.0
+websockets>=12.0
+httpx>=0.27.0
+
+# ── Data / Validation ─────────────────────────────────────────────────────────
+pydantic>=2.0.0
+sqlite-utils>=3.35.0
+
+# ── Utilities ─────────────────────────────────────────────────────────────────
+requests>=2.31.0
+python-dotenv>=1.0.0
+python-dateutil>=2.8.0
+markdown>=3.5
+
+# ── Windows Service (optional — Phase 4) ──────────────────────────────────────
+# Uncomment when ready to register Hub as a Windows Service:
+# pywin32>=306
+
+# ── NOTE: tkinter (desktop GUI) ───────────────────────────────────────────────
+# tkinter is bundled with the official Python installer on Windows.
+# On macOS: brew install python-tk@3.11  (match your Python version)
+# On Ubuntu/Debian: sudo apt-get install python3-tk
+# Do NOT pip install tk — it does not provide the required _tkinter C extension.

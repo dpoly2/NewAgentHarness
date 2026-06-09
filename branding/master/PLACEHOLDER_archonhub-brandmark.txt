@@ -1,0 +1,4 @@
+PLACEHOLDER — archonhub-brandmark.png / .svg
+Replace with: Helmet/guardian symbol only (no text)
+1024×1024 px source, transparent background
+Used for: app icons, favicon, watch face, tray icon

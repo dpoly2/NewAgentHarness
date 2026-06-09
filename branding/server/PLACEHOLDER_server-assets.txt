@@ -1,0 +1,10 @@
+PLACEHOLDER — server-agent-icon.png
+Replace with: Helmet icon, dark background (#0B0F17), enterprise appearance
+Size: 256×256 px PNG
+
+PLACEHOLDER — service-icon.ico
+Replace with: 256×256 .ico (multi-size: 16,32,48,64,128,256)
+Used by Windows Services panel for cloudflared / hub service
+
+PLACEHOLDER — monitoring-banner.png
+Replace with: 1200×300 px dark banner for server monitoring dashboard header
