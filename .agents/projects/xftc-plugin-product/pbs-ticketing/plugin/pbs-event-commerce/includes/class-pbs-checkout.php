@@ -12,7 +12,9 @@ class PBS_Checkout {
 
     /** AJAX: process_order */
     public static function ajax_process_order() {
-        if ( ! check_ajax_referer( 'pbs_ec_nonce', 'nonce', false ) ) {
+        // Accept nonce from either JS-injected 'nonce' field OR form's 'pbs_nonce' field
+        $nonce = $_POST['nonce'] ?? $_POST['pbs_nonce'] ?? '';
+        if ( ! wp_verify_nonce( $nonce, 'pbs_ec_nonce' ) ) {
             wp_send_json_error( [ 'message' => 'Security check failed.' ] );
         }
 
@@ -48,7 +50,6 @@ class PBS_Checkout {
                 $result = PBS_Square::charge( $order_id, $data );
                 break;
             case 'paypal':
-                // PayPal is handled client-side; this confirms the capture
                 $result = PBS_PayPal::capture( $order_id, $data );
                 break;
         }
@@ -101,7 +102,7 @@ class PBS_Checkout {
         $email       = sanitize_email( $post['email'] ?? '' );
         $phone       = sanitize_text_field( $post['phone'] ?? '' );
         $gateway     = sanitize_key( $post['gateway'] ?? '' );
-        $token       = sanitize_text_field( $post['payment_token'] ?? '' ); // stripe/square token
+        $token       = sanitize_text_field( $post['payment_token'] ?? '' );
 
         if ( ! $event_id )             return new WP_Error( 'missing', 'Event not specified.' );
         if ( ! $name )                 return new WP_Error( 'missing', 'Name is required.' );
