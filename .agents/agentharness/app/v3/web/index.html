@@ -563,6 +563,35 @@
             align-items: end;
         }
         .chat-input textarea { min-height: 52px; max-height: 160px; }
+        /* Inez */
+        .inez-shell { display: grid; grid-template-rows: auto 1fr auto; height: calc(100vh - 120px); padding: 0; overflow: hidden; }
+        .inez-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 1px solid rgba(124,58,237,0.25); background: rgba(124,58,237,0.06); }
+        .inez-avatar { width: 44px; height: 44px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .inez-name { font-weight: 700; color: #c4b5fd; font-size: 15px; }
+        .inez-subtitle { color: var(--text-muted); font-size: 12px; }
+        .inez-messages { padding: 20px; overflow: auto; display: grid; align-content: start; gap: 16px; }
+        .inez-bubble-row { display: flex; align-items: flex-start; gap: 12px; }
+        .inez-bubble-row.user { flex-direction: row-reverse; }
+        .inez-mini-avatar { width: 30px; height: 30px; border-radius: 50%; background: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .inez-bubble { max-width: min(70%, 700px); padding: 12px 16px; border-radius: 16px; line-height: 1.55; font-size: 14px; white-space: pre-wrap; word-break: break-word; }
+        .inez-bubble.inez { background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.35); }
+        .inez-bubble.user { background: rgba(0,184,255,0.12); border: 1px solid rgba(45,212,255,0.24); }
+        .inez-bubble small { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+        .inez-thinking { display: flex; align-items: center; gap: 8px; color: #c4b5fd; font-size: 13px; font-style: italic; padding: 10px 16px; background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2); border-radius: 16px; }
+        .dispatch-cards { display: grid; gap: 6px; margin-top: 10px; }
+        .dispatch-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(0,184,255,0.06); border: 1px solid rgba(0,184,255,0.18); border-radius: 10px; font-size: 12px; }
+        .dispatch-card .agent-name { color: var(--accent); font-weight: 600; }
+        .dispatch-card .agent-proj { color: var(--text-muted); }
+        .dispatch-card .agent-graph { color: var(--text-muted); margin-left: auto; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+        .inez-input { border-top: 1px solid rgba(124,58,237,0.2); padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; background: rgba(124,58,237,0.04); }
+        .inez-input textarea { min-height: 52px; max-height: 160px; }
+        .inez-send-btn { background: #7c3aed; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+        .inez-send-btn:hover { background: #6d28d9; }
+        .inez-send-btn:disabled { background: rgba(124,58,237,0.4); cursor: not-allowed; }
+        @keyframes inez-dot { 0%,80%,100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+        .inez-dots span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #c4b5fd; margin: 0 2px; animation: inez-dot 1.2s infinite ease-in-out; }
+        .inez-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .inez-dots span:nth-child(3) { animation-delay: 0.4s; }
         .modal-root {
             position: fixed;
             inset: 0;
@@ -724,6 +753,7 @@
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
             { id: 'chat', icon: '💬', label: 'Chat' },
+            { id: 'inez', icon: '👑', label: 'Inez' },
             { id: 'settings', icon: '⚙', label: 'Settings' }
         ];
 
@@ -744,6 +774,9 @@
             conversations: [],
             messages: [],
             currentConversationId: null,
+            inezMessages: [],
+            inezConversationId: null,
+            inezThinking: false,
             notifications: [],
             runProgress: {},
             mobileNavOpen: false,
@@ -1221,6 +1254,7 @@
                 travel: showTravel,
                 briefing: showBriefing,
                 chat: showChat,
+                inez: showInez,
                 settings: showSettings
             };
             const fn = pages[page] || showDashboard;
@@ -2474,6 +2508,154 @@
             } catch (error) {
                 renderShell('Chat', 'Collaborate with agents in real time.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load chat')}</div>`);
             }
+        }
+
+        // ── Inez ─────────────────────────────────────────────────────────────────
+
+        function renderInezMessages() {
+            if (!state.inezMessages.length) return '';
+            return state.inezMessages.map(msg => {
+                const isUser = msg.role === 'user';
+                const ts = `<small>${escapeHtml(msg.ts || '')}</small>`;
+
+                if (isUser) {
+                    return `<div class="inez-bubble-row user">
+                        <div class="inez-bubble user">${escapeHtml(msg.content)}${ts}</div>
+                    </div>`;
+                }
+
+                const dispatches = (msg.dispatches || []).map(d => `
+                    <div class="dispatch-card">
+                        <span>⚡</span>
+                        <span class="agent-name">${escapeHtml(d.agent_id || d.agentId || '')}</span>
+                        <span class="agent-proj">${escapeHtml(d.project || '')}</span>
+                        ${d.graph ? `<span class="agent-graph">${escapeHtml(d.graph)}</span>` : ''}
+                    </div>`).join('');
+
+                return `<div class="inez-bubble-row">
+                    <div class="inez-mini-avatar">👑</div>
+                    <div>
+                        <div class="inez-bubble inez">${escapeHtml(msg.content)}${ts}</div>
+                        ${dispatches ? `<div class="dispatch-cards">${dispatches}</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderInezThinking() {
+            if (!state.inezThinking) return '';
+            return `<div class="inez-bubble-row">
+                <div class="inez-mini-avatar">👑</div>
+                <div class="inez-thinking">
+                    <div class="inez-dots"><span></span><span></span><span></span></div>
+                    Inez is thinking...
+                </div>
+            </div>`;
+        }
+
+        function scrollInezToBottom() {
+            const el = $('#inezMessages');
+            if (el) el.scrollTop = el.scrollHeight;
+        }
+
+        async function showInez() {
+            if (!(await requireAuth())) return;
+            const hubOnlineBadge = state.hubOnline
+                ? `<span style="color:var(--success);font-size:12px;">● Hub connected</span>`
+                : `<span style="color:var(--warning);font-size:12px;">● Local mode</span>`;
+
+            renderShell('Inez', 'Chief of Staff — Smith Capital Portfolio', `
+                <div class="inez-shell">
+                    <div class="inez-header">
+                        <div class="inez-avatar">👑</div>
+                        <div>
+                            <div class="inez-name">Inez</div>
+                            <div class="inez-subtitle">Chief of Staff · Smith Capital Portfolio</div>
+                        </div>
+                        <div style="margin-left:auto;">${hubOnlineBadge}</div>
+                    </div>
+                    <div class="inez-messages" id="inezMessages">
+                        ${renderInezMessages()}
+                        ${renderInezThinking()}
+                    </div>
+                    <form class="inez-input" id="inezForm">
+                        <textarea id="inezInput" placeholder="Ask Inez anything..." rows="2"></textarea>
+                        <button type="submit" class="inez-send-btn" id="inezSendBtn">Send</button>
+                    </form>
+                </div>
+            `);
+
+            if (!state.inezMessages.length) {
+                state.inezMessages.push({
+                    role: 'inez',
+                    content: "Good to see you. I'm Inez — your Chief of Staff. What do you need?",
+                    dispatches: [],
+                    ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                $('#inezMessages').innerHTML = renderInezMessages() + renderInezThinking();
+            }
+
+            requestAnimationFrame(scrollInezToBottom);
+
+            $('#inezForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const input = $('#inezInput');
+                const content = (input.value || '').trim();
+                if (!content || state.inezThinking) return;
+
+                input.value = '';
+                const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                state.inezMessages.push({ role: 'user', content, dispatches: [], ts });
+                state.inezThinking = true;
+                const btn = $('#inezSendBtn');
+                if (btn) btn.disabled = true;
+
+                // Re-render
+                const msgEl = $('#inezMessages');
+                if (msgEl) {
+                    msgEl.innerHTML = renderInezMessages() + renderInezThinking();
+                    scrollInezToBottom();
+                }
+
+                try {
+                    const result = await api('POST', '/api/inez/chat', {
+                        message: content,
+                        conversation_id: state.inezConversationId || null
+                    });
+                    state.inezConversationId = result.conversation_id || state.inezConversationId;
+                    state.inezThinking = false;
+                    const rts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    state.inezMessages.push({
+                        role: 'inez',
+                        content: result.inez_message || '',
+                        dispatches: result.dispatches || [],
+                        ts: rts
+                    });
+                } catch (err) {
+                    state.inezThinking = false;
+                    state.inezMessages.push({
+                        role: 'inez',
+                        content: `I ran into an issue: ${err.message || 'Unknown error'}`,
+                        dispatches: [],
+                        ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+                }
+
+                const msgEl2 = $('#inezMessages');
+                if (msgEl2) {
+                    msgEl2.innerHTML = renderInezMessages() + renderInezThinking();
+                    scrollInezToBottom();
+                }
+                if (btn) btn.disabled = false;
+            });
+
+            // Allow Enter to submit (Shift+Enter = newline)
+            $('#inezInput').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    $('#inezForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }
+            });
         }
 
         async function showSchedule() {

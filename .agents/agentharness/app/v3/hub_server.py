@@ -1343,6 +1343,11 @@ class MemoryUpdate(BaseModel):
     data: dict
 
 
+class InezChatRequest(BaseModel):
+    message: str
+    conversation_id: Optional[str] = None
+
+
 if FASTAPI_OK:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -1966,6 +1971,131 @@ if FASTAPI_OK:
     async def update_memory(agent_id: str, body: MemoryUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
         return {"agent_id": agent_id, "data": _upsert_memory(agent_id, body.data)}
+
+
+    # ── Inez Chief of Staff ───────────────────────────────────────────────────
+
+    @app.post("/api/inez/chat")
+    async def inez_chat(body: InezChatRequest, current_user: dict = Depends(get_current_user)):
+        """Send a message to Inez and receive her structured response."""
+        del current_user
+        import asyncio
+
+        try:
+            from inez_agent import think
+        except ImportError:
+            raise HTTPException(503, "Inez agent module not available")
+
+        # Resolve or create conversation
+        conv_id = body.conversation_id
+        if not conv_id:
+            conv_id = uuid.uuid4().hex
+            _create_record("conversations", {
+                "id": conv_id,
+                "title": body.message[:60],
+                "slug": "inez",
+                "created_at": _now_iso(),
+                "updated_at": _now_iso(),
+            })
+        else:
+            if not _get_record("conversations", conv_id):
+                conv_id = uuid.uuid4().hex
+                _create_record("conversations", {
+                    "id": conv_id,
+                    "title": body.message[:60],
+                    "slug": "inez",
+                    "created_at": _now_iso(),
+                    "updated_at": _now_iso(),
+                })
+
+        # Store user message
+        _create_record("messages", {
+            "id": uuid.uuid4().hex,
+            "conversation_id": conv_id,
+            "role": "user",
+            "content": body.message,
+            "agent_id": None,
+            "created_at": _now_iso(),
+        })
+
+        # Load conversation history for context
+        history_rows = _list_records(
+            "messages",
+            where=["conversation_id = ?"],
+            params=[conv_id],
+            order_by="created_at ASC",
+        )
+        history = [
+            {"role": r.get("role", "user"), "content": r.get("content", "")}
+            for r in (history_rows or [])
+        ]
+
+        # Call Inez in executor (blocking LLM call)
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            hub._executor,
+            lambda: think(body.message, history),
+        )
+
+        inez_message = result.get("inez_message", "")
+        dispatches = result.get("dispatches", [])
+        needs_agents = result.get("needs_agents", False)
+        error = result.get("error")
+
+        # Store Inez response
+        _create_record("messages", {
+            "id": uuid.uuid4().hex,
+            "conversation_id": conv_id,
+            "role": "assistant",
+            "content": inez_message,
+            "agent_id": "inez-chief-of-staff",
+            "created_at": _now_iso(),
+        })
+        _update_record("conversations", conv_id, {"updated_at": _now_iso()})
+
+        # Enqueue dispatched agent runs
+        queued_runs = []
+        for dispatch in dispatches:
+            agent_id = dispatch.get("agent_id", "")
+            project = dispatch.get("project", "")
+            graph = dispatch.get("graph", "reflexion")
+            task = dispatch.get("task", "")
+            if agent_id and task:
+                run_id = await hub.submit_job({
+                    "agent_id": agent_id,
+                    "project": project,
+                    "graph": graph,
+                    "task": task,
+                    "max_revisions": 2,
+                    "priority": "high",
+                })
+                queued_runs.append({"run_id": run_id, "agent_id": agent_id, "project": project})
+
+        return {
+            "conversation_id": conv_id,
+            "inez_message": inez_message,
+            "dispatches": dispatches,
+            "needs_agents": needs_agents,
+            "queued_runs": queued_runs,
+            "error": error,
+        }
+
+    @app.get("/api/inez/brief")
+    async def inez_morning_brief(current_user: dict = Depends(get_current_user)):
+        """Generate a morning briefing from Inez."""
+        del current_user
+        import asyncio
+        try:
+            from inez_agent import generate_morning_brief
+        except ImportError:
+            raise HTTPException(503, "Inez agent module not available")
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            hub._executor,
+            lambda: generate_morning_brief(),
+        )
+        return result
 
 
     @app.get("/api/briefs")

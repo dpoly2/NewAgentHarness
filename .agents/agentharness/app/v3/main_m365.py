@@ -145,7 +145,7 @@ NAV_ITEMS = [
     ("👥", "Clients", "show_clients"),
     ("✈", "Travel", "show_travel"),
     ("⚡", "Connect", "show_connectors"),
-    ("💬", "Chat", "show_chat"),
+    ("👑", "Inez", "show_inez"),
     ("🔑", "Admin", "show_admin"),
 ]
 GRAPH_LAYOUTS = {
@@ -180,6 +180,9 @@ class LocalHubClient:
         return {"status": "offline", "mode": "local"}
 
     def submit_run(self, **kwargs):
+        return None
+
+    def post_json(self, path, data):
         return None
 
     def list_runs(self, limit=100, agent_id=None, project=None, status=None):
@@ -357,6 +360,10 @@ class ArchonHubApp:
         self._chat_dot_state = {}         # run_id -> int (animation tick)
         self._chat_canvas = None          # scrollable canvas for bubbles
         self._chat_bubbles_frame = None   # inner frame holding all bubbles
+
+        # Inez state
+        self._inez_history = []           # list of {role, content} for LLM context
+        self._inez_conv_id = None         # current conversation_id (for Hub persistence)
 
         self.quick_team_var = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
         self.quick_agent_var = tk.StringVar(value=AGENT_REGISTRY[self.quick_team_var.get()][0])
@@ -771,6 +778,10 @@ class ArchonHubApp:
                 self._handle_hub_event(item[1])
             elif kind == "run_event":
                 self._handle_run_event(item[1], item[2])
+            elif kind == "inez_result":
+                think_run_id = item[1]
+                result       = item[2]
+                self._inez_handle_result(think_run_id, result)
             elif kind == "refresh_runs":
                 if hasattr(self, "runs_tree"):
                     self._refresh_runs()
@@ -2129,66 +2140,47 @@ class ArchonHubApp:
 
     # ── Chat ─────────────────────────────────────────────────────────────────
 
-    def show_chat(self):
+    def show_inez(self):
         self._clear_content()
-        self._set_active_nav("Chat")
+        self._set_active_nav("Inez")
 
-        # ── Top selector bar ──────────────────────────────────────────────
-        top = tk.Frame(self.content, bg=BG_PANEL, highlightbackground=BORDER_CARD, highlightthickness=1)
+        # ── Inez header ───────────────────────────────────────────────────
+        top = tk.Frame(self.content, bg=BG_PANEL,
+                       highlightbackground=BORDER_CARD, highlightthickness=1)
         top.pack(fill="x", padx=0, pady=0)
 
-        tk.Label(top, text="💬  ArchonHub Chat", bg=BG_PANEL, fg=TEXT_PRIMARY,
-                 font=("Segoe UI", 13, "bold")).pack(side="left", padx=16, pady=10)
+        # Avatar
+        av = tk.Canvas(top, width=38, height=38, bg=BG_PANEL, highlightthickness=0)
+        av.create_oval(4, 4, 34, 34, fill="#7c3aed", outline="")
+        av.create_text(19, 19, text="👑", font=("Segoe UI", 16))
+        av.pack(side="left", padx=(14,6), pady=6)
 
-        # Agent selector on right side of top bar
-        sel = tk.Frame(top, bg=BG_PANEL)
-        sel.pack(side="right", padx=12, pady=6)
+        name_col = tk.Frame(top, bg=BG_PANEL)
+        name_col.pack(side="left", pady=8)
+        tk.Label(name_col, text="Inez", bg=BG_PANEL, fg="#c4b5fd",
+                 font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        tk.Label(name_col, text="Chief of Staff — Smith Capital Portfolio",
+                 bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
 
-        self._chat_team_var  = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
-        self._chat_agent_var = tk.StringVar(value=AGENT_REGISTRY[self._chat_team_var.get()][0])
-        self._chat_proj_var  = tk.StringVar(value=PROJECTS[0])
-        self._chat_graph_var = tk.StringVar(value="reflexion")
-
-        def _on_team_change(*_):
-            agents = AGENT_REGISTRY.get(self._chat_team_var.get(), [])
-            self._chat_agent_var.set(agents[0] if agents else "")
-            agent_cb["values"] = agents
-
-        tk.Label(sel, text="Team", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=0, padx=(0,4))
-        team_cb = ttk.Combobox(sel, textvariable=self._chat_team_var,
-                               values=list(AGENT_REGISTRY.keys()), width=18, state="readonly")
-        team_cb.grid(row=0, column=1, padx=4)
-        team_cb.bind("<<ComboboxSelected>>", _on_team_change)
-
-        tk.Label(sel, text="Agent", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=2, padx=(8,4))
-        agent_cb = ttk.Combobox(sel, textvariable=self._chat_agent_var,
-                                values=AGENT_REGISTRY[self._chat_team_var.get()], width=28, state="readonly")
-        agent_cb.grid(row=0, column=3, padx=4)
-
-        tk.Label(sel, text="Graph", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=4, padx=(8,4))
-        ttk.Combobox(sel, textvariable=self._chat_graph_var,
-                     values=["reflexion","research","wordpress","business-law"], width=14, state="readonly"
-                     ).grid(row=0, column=5, padx=4)
-
-        tk.Label(sel, text="Project", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).grid(row=0, column=6, padx=(8,4))
-        ttk.Combobox(sel, textvariable=self._chat_proj_var,
-                     values=PROJECTS, width=16, state="readonly").grid(row=0, column=7, padx=4)
+        # Status indicator
+        status_frame = tk.Frame(top, bg=BG_PANEL)
+        status_frame.pack(side="right", padx=16)
+        hub_online = getattr(self.hub, "online", False)
+        dot_color = SUCCESS if hub_online else WARNING
+        dot_text  = "● Hub connected" if hub_online else "● Local mode"
+        tk.Label(status_frame, text=dot_text, bg=BG_PANEL, fg=dot_color,
+                 font=("Segoe UI", 9)).pack()
 
         # ── Chat bubble area ──────────────────────────────────────────────
         bubble_outer = tk.Frame(self.content, bg=BG_CANVAS)
         bubble_outer.pack(fill="both", expand=True)
 
-        _, self._chat_canvas, self._chat_bubbles_frame = self._scrollable_area(bubble_outer, bg=BG_CANVAS)
-        _, self._chat_canvas, self._chat_bubbles_frame = self._scrollable_area(bubble_outer, bg=BG_CANVAS)
-        self._chat_canvas.pack_forget()  # re-pack properly
-        # rebuild cleanly
-        for w in bubble_outer.winfo_children():
-            w.destroy()
         chat_canvas = tk.Canvas(bubble_outer, bg=BG_CANVAS, highlightthickness=0, bd=0)
         chat_sb = ttk.Scrollbar(bubble_outer, orient="vertical", command=chat_canvas.yview)
         self._chat_bubbles_frame = tk.Frame(chat_canvas, bg=BG_CANVAS)
         self._chat_canvas = chat_canvas
-        bw = chat_canvas.create_window((0,0), window=self._chat_bubbles_frame, anchor="nw")
+        bw = chat_canvas.create_window((0, 0), window=self._chat_bubbles_frame, anchor="nw")
+
         def _on_cfg(e): chat_canvas.configure(scrollregion=chat_canvas.bbox("all"))
         def _on_resize(e): chat_canvas.itemconfigure(bw, width=e.width)
         self._chat_bubbles_frame.bind("<Configure>", _on_cfg)
@@ -2201,62 +2193,145 @@ class ArchonHubApp:
         for msg in self._chat_messages:
             self._chat_render_bubble(msg)
 
+        # Welcome message on first open
+        if not self._chat_messages:
+            welcome = {
+                "role": "inez",
+                "content": "Good to see you. I'm Inez — your Chief of Staff. What do you need?",
+                "ts": datetime.now().strftime("%H:%M"),
+            }
+            self._chat_messages.append(welcome)
+            self._chat_render_bubble(welcome)
+
         # ── Input bar ─────────────────────────────────────────────────────
         input_bar = tk.Frame(self.content, bg=BG_PANEL,
                              highlightbackground=BORDER_CARD, highlightthickness=1)
         input_bar.pack(fill="x", side="bottom")
 
         self._chat_input = tk.Text(input_bar, height=3, bg=BG_INPUT, fg=TEXT_PRIMARY,
-                                   insertbackground=ACCENT, relief="flat", font=("Segoe UI", 11),
-                                   wrap="word", padx=10, pady=8)
-        self._chat_input.pack(side="left", fill="both", expand=True, padx=(12,0), pady=8)
-        self._chat_input.bind("<Return>", lambda e: (self._chat_send(), "break")[1])
-        self._chat_input.bind("<Shift-Return>", lambda e: None)  # allow newline with shift
+                                   insertbackground=ACCENT, relief="flat",
+                                   font=("Segoe UI", 11), wrap="word", padx=10, pady=8)
+        self._chat_input.pack(side="left", fill="both", expand=True, padx=(12, 0), pady=8)
+        self._chat_input.bind("<Return>", lambda e: (self._inez_send(), "break")[1])
+        self._chat_input.bind("<Shift-Return>", lambda e: None)
 
-        send_btn = self._button(input_bar, "  ▶  Send", self._chat_send)
+        send_btn = self._button(input_bar, "  Send  ", self._inez_send)
         send_btn.pack(side="right", padx=12, pady=8, ipadx=10, ipady=6)
 
         hint = tk.Label(input_bar, text="Enter to send  ·  Shift+Enter for newline",
                         bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8))
         hint.pack(side="right", padx=4)
 
-    def _chat_send(self):
+    def _inez_send(self):
         task = (self._chat_input.get("1.0", "end") or "").strip()
         if not task:
             return
         self._chat_input.delete("1.0", "end")
 
-        agent_id = self._chat_agent_var.get()
-        project  = self._chat_proj_var.get()
-        graph    = self._chat_graph_var.get()
-        ts       = datetime.now().strftime("%H:%M")
+        ts = datetime.now().strftime("%H:%M")
 
         # Add user bubble
-        user_msg = {"role": "user", "content": task, "agent_id": "", "run_id": "", "ts": ts}
+        user_msg = {"role": "user", "content": task, "ts": ts}
         self._chat_messages.append(user_msg)
         self._chat_render_bubble(user_msg)
+        self._inez_history.append({"role": "user", "content": task})
 
-        # Add thinking bubble with run_id placeholder
-        run_id = str(uuid.uuid4())
-        think_msg = {
-            "role": "thinking", "content": task,
-            "agent_id": agent_id, "project": project,
-            "graph": graph, "run_id": run_id, "ts": ts,
+        # Add Inez thinking bubble
+        think_run_id = "inez-think-" + str(uuid.uuid4())[:8]
+        inez_think_msg = {
+            "role": "inez_thinking",
+            "content": "Inez is analyzing your request...",
+            "run_id": think_run_id,
+            "ts": ts,
         }
-        self._chat_messages.append(think_msg)
-        self._chat_render_bubble(think_msg)
+        self._chat_messages.append(inez_think_msg)
+        self._chat_render_bubble(inez_think_msg)
 
-        # Submit run
-        config = {
-            "agent_id": agent_id, "project": project,
-            "graph": graph, "task": task,
-            "max_revisions": 2, "run_id": run_id,
-        }
-        self._submit_chat_run(config, run_id)
+        def _on_inez_result(result):
+            """Called in background thread when Inez finishes thinking."""
+            self._ui_queue.put(("inez_result", think_run_id, result))
 
-        # Start dot animation
-        self._chat_dot_state[run_id] = 0
-        self._chat_animate_dots(run_id)
+        # Try Hub first, fall back to local inez_agent
+        if getattr(self.hub, "online", False):
+            def _hub_think():
+                try:
+                    resp = self.hub.post_json("/api/inez/chat", {
+                        "message": task,
+                        "conversation_id": self._inez_conv_id,
+                    })
+                    if resp:
+                        self._inez_conv_id = resp.get("conversation_id", self._inez_conv_id)
+                    _on_inez_result(resp or {})
+                except Exception as exc:
+                    _on_inez_result({"inez_message": str(exc), "dispatches": [], "needs_agents": False, "error": str(exc)})
+            threading.Thread(target=_hub_think, daemon=True).start()
+        else:
+            try:
+                from inez_agent import think_async
+                think_async(task, self._inez_history, _on_inez_result)
+            except ImportError:
+                self._ui_queue.put(("inez_result", think_run_id, {
+                    "inez_message": "Inez agent module not available. Check that inez_agent.py is in the app/v3 folder.",
+                    "dispatches": [],
+                    "needs_agents": False,
+                    "error": "ImportError",
+                }))
+
+    def _inez_handle_result(self, think_run_id, result):
+        """Process Inez's decision on the main thread (called from _poll_queue)."""
+        inez_message = result.get("inez_message", "")
+        dispatches   = result.get("dispatches", [])
+        ts = datetime.now().strftime("%H:%M")
+
+        # Remove Inez thinking bubble from run_frames so animation stops
+        self._chat_run_frames.pop(think_run_id, None)
+        self._chat_dot_state.pop(think_run_id, None)
+
+        # Finalize thinking bubble
+        status_lbl = self._chat_run_status_label.pop(think_run_id, None)
+        if status_lbl:
+            try:
+                status_lbl.configure(text="✓  Done", fg=SUCCESS)
+            except Exception:
+                pass
+
+        # Add Inez response bubble
+        if inez_message:
+            inez_msg = {"role": "inez", "content": inez_message, "ts": ts}
+            self._chat_messages.append(inez_msg)
+            self._inez_history.append({"role": "inez", "content": inez_message})
+            self._chat_render_bubble(inez_msg)
+
+        # Dispatch agent runs
+        for dispatch in dispatches:
+            agent_id = dispatch.get("agent_id", "")
+            project  = dispatch.get("project", "")
+            graph    = dispatch.get("graph", "reflexion")
+            task_txt = dispatch.get("task", "")
+            if not agent_id or not task_txt:
+                continue
+
+            run_id = str(uuid.uuid4())
+            deploy_msg = {
+                "role": "thinking",
+                "content": task_txt,
+                "agent_id": agent_id,
+                "project": project,
+                "graph": graph,
+                "run_id": run_id,
+                "ts": ts,
+            }
+            self._chat_messages.append(deploy_msg)
+            self._chat_render_bubble(deploy_msg)
+
+            config = {
+                "agent_id": agent_id, "project": project,
+                "graph": graph, "task": task_txt,
+                "max_revisions": 2, "run_id": run_id,
+            }
+            self._submit_chat_run(config, run_id)
+            self._chat_dot_state[run_id] = 0
+            self._chat_animate_dots(run_id)
 
     def _submit_chat_run(self, config, run_id):
         if getattr(self.hub, "online", False):
@@ -2299,7 +2374,9 @@ class ArchonHubApp:
             self._chat_user_bubble(outer, content, ts)
         elif role == "thinking":
             self._chat_thinking_bubble(outer, msg)
-        elif role == "agent":
+        elif role == "inez_thinking":
+            self._inez_thinking_bubble(outer, msg)
+        elif role in ("agent", "inez"):
             self._chat_agent_bubble(outer, msg)
 
         self._chat_scroll_bottom()
@@ -2379,6 +2456,45 @@ class ArchonHubApp:
         # Store frame reference so we can replace it on completion
         self._chat_run_frames[run_id] = (parent, wrap, bubble, steps_frame, status_lbl)
 
+
+    def _inez_thinking_bubble(self, parent, msg):
+        """Inez's own thinking bubble — purple themed."""
+        run_id = msg.get("run_id", "")
+        ts     = msg.get("ts", "")
+
+        wrap = tk.Frame(parent, bg=BG_CANVAS)
+        wrap.pack(anchor="w", fill="x")
+
+        av = tk.Canvas(wrap, width=32, height=32, bg=BG_CANVAS, highlightthickness=0)
+        av.create_oval(4, 4, 28, 28, fill="#7c3aed", outline="")
+        av.create_text(16, 16, text="👑", font=("Segoe UI", 12))
+        av.pack(side="left", anchor="nw", pady=4)
+
+        bubble = tk.Frame(wrap, bg=BG_CARD,
+                          highlightbackground="#7c3aed", highlightthickness=1)
+        bubble.pack(side="left", anchor="nw", fill="x", expand=True, padx=6)
+
+        hdr = tk.Frame(bubble, bg=BG_CARD)
+        hdr.pack(fill="x", padx=12, pady=(10, 4))
+        tk.Label(hdr, text="Inez", bg=BG_CARD, fg="#c4b5fd",
+                 font=("Segoe UI", 9, "bold")).pack(side="left")
+        tk.Label(hdr, text="  ·  analyzing request", bg=BG_CARD, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(side="left")
+
+        tk.Frame(bubble, bg=DIVIDER, height=1).pack(fill="x", padx=12)
+
+        status_lbl = tk.Label(bubble, text="● Thinking...", bg=BG_CARD, fg="#c4b5fd",
+                              font=("Segoe UI", 9, "italic"), padx=12, pady=8)
+        status_lbl.pack(anchor="w")
+        self._chat_run_status_label[run_id] = status_lbl
+
+        tk.Label(wrap, text=ts, bg=BG_CANVAS, fg=TEXT_MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="w", padx=42)
+
+        self._chat_run_frames[run_id] = (parent, wrap, bubble, None, status_lbl)
+        self._chat_dot_state[run_id] = 0
+        self._chat_animate_dots(run_id)
+
     def _chat_agent_bubble(self, parent, msg):
         agent_id = msg.get("agent_id", "agent")
         content  = msg.get("content", "")
@@ -2386,40 +2502,44 @@ class ArchonHubApp:
         graph    = msg.get("graph", "")
         ts       = msg.get("ts", "")
         run_id   = msg.get("run_id", "")
+        is_inez  = agent_id in ("inez", "inez-chief-of-staff") or msg.get("role") == "inez"
 
         wrap = tk.Frame(parent, bg=BG_CANVAS)
         wrap.pack(anchor="w", fill="x")
 
         av = tk.Canvas(wrap, width=32, height=32, bg=BG_CANVAS, highlightthickness=0)
-        av.create_oval(4, 4, 28, 28, fill=SUCCESS, outline="")
-        av.create_text(16, 16, text="✓", fill="white", font=("Segoe UI", 12, "bold"))
+        if is_inez:
+            av.create_oval(4, 4, 28, 28, fill="#7c3aed", outline="")
+            av.create_text(16, 16, text="👑", font=("Segoe UI", 12))
+        else:
+            av.create_oval(4, 4, 28, 28, fill=SUCCESS, outline="")
+            av.create_text(16, 16, text="✓", fill="white", font=("Segoe UI", 12, "bold"))
         av.pack(side="left", anchor="nw", pady=4)
 
+        border_color = "#7c3aed" if is_inez else SUCCESS
         bubble = tk.Frame(wrap, bg=BG_PANEL,
-                          highlightbackground=SUCCESS, highlightthickness=1)
+                          highlightbackground=border_color, highlightthickness=1)
         bubble.pack(side="left", anchor="nw", fill="x", expand=True, padx=6)
 
-        # Header
         hdr = tk.Frame(bubble, bg=BG_PANEL)
-        hdr.pack(fill="x", padx=12, pady=(8,4))
-        tk.Label(hdr, text=agent_id, bg=BG_PANEL, fg=SUCCESS,
+        hdr.pack(fill="x", padx=12, pady=(8, 4))
+        name_color = "#c4b5fd" if is_inez else SUCCESS
+        display_name = "Inez" if is_inez else agent_id
+        tk.Label(hdr, text=display_name, bg=BG_PANEL, fg=name_color,
                  font=("Segoe UI", 9, "bold")).pack(side="left")
-        if graph:
+        if graph and not is_inez:
             tk.Label(hdr, text=f"  ·  {graph}", bg=BG_PANEL, fg=TEXT_MUTED,
                      font=("Segoe UI", 9)).pack(side="left")
-        if score is not None:
+        if score is not None and not is_inez:
             sc = float(score)
             sc_color = SUCCESS if sc >= 0.75 else WARNING if sc >= 0.5 else ERROR
             tk.Label(hdr, text=f"  ·  score {sc:.2f}", bg=BG_PANEL, fg=sc_color,
                      font=("Segoe UI", 9, "bold")).pack(side="left")
 
         tk.Frame(bubble, bg=DIVIDER, height=1).pack(fill="x", padx=12)
-
-        # Content
         tk.Label(bubble, text=content, bg=BG_PANEL, fg=TEXT_PRIMARY,
                  font=("Segoe UI", 11), wraplength=580, justify="left",
                  padx=14, pady=12, anchor="w").pack(fill="x")
-
         tk.Label(wrap, text=ts, bg=BG_CANVAS, fg=TEXT_MUTED,
                  font=("Segoe UI", 8)).pack(anchor="w", padx=42)
 
@@ -2536,7 +2656,7 @@ class ArchonHubApp:
                         "ts": datetime.now().strftime("%H:%M"),
                     }
                     self._chat_messages.append(agent_msg)
-                    if self.current_view == "Chat" and self._chat_bubbles_frame:
+                    if self.current_view in ("Chat", "Inez") and self._chat_bubbles_frame:
                         outer = tk.Frame(self._chat_bubbles_frame, bg=BG_CANVAS)
                         outer.pack(fill="x", padx=18, pady=6, anchor="w")
                         self._chat_agent_bubble(outer, agent_msg)

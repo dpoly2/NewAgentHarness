@@ -122,6 +122,35 @@ struct RunRequest: Codable {
     let priority: String
 }
 
+struct InezChatRequest: Codable {
+    let message: String
+    let conversationId: String?
+}
+
+struct InezDispatch: Codable, Identifiable, Hashable {
+    var id: String { (agentId ?? "") + (project ?? "") }
+    let agentId: String?
+    let project: String?
+    let graph: String?
+    let task: String?
+}
+
+struct InezChatResponse: Codable {
+    let conversationId: String?
+    let inezMessage: String
+    let dispatches: [InezDispatch]
+    let needsAgents: Bool
+    let queuedRuns: [QueuedRun]?
+    let error: String?
+}
+
+struct QueuedRun: Codable, Identifiable, Hashable {
+    let runId: String
+    let agentId: String
+    let project: String
+    var id: String { runId }
+}
+
 struct LoginRequest: Codable {
     let username: String
     let password: String

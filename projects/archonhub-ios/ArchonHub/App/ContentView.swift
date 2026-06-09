@@ -25,6 +25,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                InezView()
+            }
+            .tabItem {
+                Label("Inez", systemImage: "crown.fill")
+            }
+
+            NavigationStack {
                 BriefingView()
             }
             .tabItem {
