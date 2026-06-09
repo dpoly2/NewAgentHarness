@@ -273,3 +273,17 @@ The AgentHarness nightly automation sync integrates with **AcronHub** for cron j
 
 *AgentHarness v3.0 — Built by David Smith on Base44 Superagent*
 *Last updated: June 7, 2026*
+
+---
+
+## PBS Event Commerce Plugin — Deploy Status (2026-06-08)
+
+| Item | Status |
+|------|--------|
+| Plugin Version | v2.0.0 (local source) |
+| Fixed ZIP | `pbs-event-commerce-fixed.zip` (42KB) |
+| Key Fix | `wp_localize_script` object renamed `PBS_EC` → `PBS` |
+| Live Site | psibetasigma1914.org — **PENDING UPLOAD** |
+| FTP Blocker | iPage FTP creds returning 530 — needs cPanel access |
+| Upload Method | iPage cPanel File Manager → wp-content/plugins/ OR correct FTP creds |
+
