@@ -549,10 +549,11 @@ class OrgChartTab(tk.Frame):
         ]
         outline_w = 3 if selected else (2 if match_search else 1)
         outline_c = ACCENT if selected else ("#fff" if match_search else border)
-        tag = f"node_{nid}"
+        tag     = f"node_{nid}"
+        box_tag = f"box_{nid}"   # polygon-only tag for outline hover
         self._canvas.create_polygon(
             pts, fill=fill, outline=outline_c, width=outline_w,
-            smooth=True, tags=(tag, "node"),
+            smooth=True, tags=(tag, box_tag, "node"),
         )
 
         # Status dot for agents
@@ -584,9 +585,9 @@ class OrgChartTab(tk.Frame):
         self._canvas.tag_bind(tag, "<Button-1>",
                                lambda e, n=node: self._on_node_click(n))
         self._canvas.tag_bind(tag, "<Enter>",
-                               lambda e, t=tag: self._canvas.itemconfigure(t, outline=ACCENT))
+                               lambda e, t=box_tag: self._canvas.itemconfigure(t, outline=ACCENT))
         self._canvas.tag_bind(tag, "<Leave>",
-                               lambda e, t=tag, n=node, s=search: self._canvas.itemconfigure(
+                               lambda e, t=box_tag, n=node, s=search: self._canvas.itemconfigure(
                                    t, outline=ACCENT if n["id"]==self._selected_id else
                                    ("#fff" if s and s in n["label"].lower() else
                                     DIV_COLORS.get(n.get("division","agent"), DIV_COLORS["agent"])[1])))
