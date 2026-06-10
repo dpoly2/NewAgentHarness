@@ -614,6 +614,166 @@ def import_documents_from_files() -> int:
     return count
 
 
+def import_todos_from_files() -> int:
+    """
+    Parse all PROJECT.md, SPRINT-*.md, and checklist files for unchecked
+    `- [ ]` tasks and seed them into the todos table.
+    Completed `- [x]` tasks are skipped (they're already done).
+    """
+    count = 0
+    now = _now()
+
+    # Map directory names to project slugs (overrides where dir name differs)
+    dir_to_slug = {
+        "xftc-redevelopment":        "xftc",
+        "xftc-plugin-product":       "xftc",
+        "wordpress-membership-plugin":"xftc",
+        "rowdy-crown":               "elevation",
+        "pbs-foundation":            "pbs-foundation",
+        "smithcap":                  "smithcap",
+        "smithcap-finance":          "smithcap-finance",
+        "s2tdesigns":                "s2tdesigns",
+        "sigma-signal":              "sigma-signal",
+        "social-media":              "social-media",
+        "solar-repair":              "solar",
+        "yepc":                      "yepc",
+        "travel":                    "travel",
+        "holdings":                  "holdings",
+        "business-law":              "business-law",
+        "markets":                   "markets",
+        "ministry":                  "ministry",
+        "nightking":                 "nightking",
+        "grants":                    "yepc",
+        "agentharness":              "",
+        "local-dev-setup":           "",
+    }
+
+    # Priority keywords in section headers
+    def _priority_from_header(header: str) -> str:
+        h = header.lower()
+        if any(w in h for w in ("urgent", "immediate", "blocker", "critical", "asap")):
+            return "urgent"
+        if any(w in h for w in ("phase 1", "sprint 3", "current", "next", "high")):
+            return "high"
+        if any(w in h for w in ("phase 2", "sprint", "backlog", "medium")):
+            return "medium"
+        return "low"
+
+    def _extract_tasks(text: str, project_slug: str, file_label: str) -> list[dict]:
+        """Extract unchecked tasks from markdown text."""
+        tasks = []
+        current_section = ""
+        current_h2 = ""
+        lines = text.splitlines()
+        for line in lines:
+            # Track section headers
+            h_match = re.match(r"^(#{1,4})\s+(.+)$", line)
+            if h_match:
+                level = len(h_match.group(1))
+                header_text = h_match.group(2).strip()
+                if level <= 2:
+                    current_h2 = header_text
+                    current_section = header_text
+                else:
+                    current_section = f"{current_h2} › {header_text}"
+                continue
+
+            # Match unchecked tasks only
+            task_match = re.match(r"^\s*-\s+\[ \]\s+(.+)$", line)
+            if not task_match:
+                continue
+
+            title = task_match.group(1).strip()
+            # Strip markdown formatting
+            title = re.sub(r"`([^`]+)`", r"\1", title)
+            title = re.sub(r"\*\*([^*]+)\*\*", r"\1", title)
+            title = title[:200]
+
+            if not title:
+                continue
+
+            priority = _priority_from_header(current_section)
+            tasks.append({
+                "title": title,
+                "description": f"From: {file_label} › {current_section}",
+                "priority": priority,
+                "project": project_slug,
+                "source": "import",
+            })
+        return tasks
+
+    def _upsert_todo(title: str, description: str, priority: str, project: str) -> bool:
+        nonlocal count
+        with _conn() as conn:
+            # Avoid duplicates by title+project
+            existing = conn.execute(
+                "SELECT id FROM todos WHERE title = ? AND project = ?",
+                (title, project)
+            ).fetchone()
+            if existing:
+                return False
+            conn.execute(
+                """INSERT INTO todos
+                   (id, title, description, priority, status, project,
+                    due_date, tags, source, created_at, updated_at)
+                   VALUES (?,?,?,?,'pending',?,'','[]',?,?,?)""",
+                (_uid(), title, description, priority, project, "import", now, now),
+            )
+            count += 1
+            return True
+
+    # Files to scan (in priority order)
+    scan_patterns = [
+        ("PROJECT.md", "project"),
+        ("SPRINT-3.md", "sprint"),
+        ("SPRINT-2.md", "sprint"),
+        ("SPRINT-1.md", "sprint"),
+        ("*CHECKLIST*.md", "checklist"),
+        ("*BACKLOG*.md", "backlog"),
+        ("*ROADMAP*.md", "roadmap"),
+    ]
+
+    for project_dir in PROJECTS_DIR.iterdir():
+        if not project_dir.is_dir() or project_dir.name.startswith("."):
+            continue
+        dir_name = project_dir.name
+        project_slug = dir_to_slug.get(dir_name, dir_name)
+        if not project_slug:
+            continue
+
+        # Scan matching files
+        scanned: set[Path] = set()
+        for pattern, label in scan_patterns:
+            for md_file in project_dir.rglob(pattern):
+                if md_file in scanned:
+                    continue
+                scanned.add(md_file)
+                try:
+                    content = md_file.read_text(encoding="utf-8")
+                    file_label = f"{dir_name}/{md_file.name}"
+                    tasks = _extract_tasks(content, project_slug, file_label)
+                    for t in tasks:
+                        _upsert_todo(t["title"], t["description"], t["priority"], t["project"])
+                except Exception:
+                    pass
+
+    # Also scan the formation checklists in holdings/rowdy-crown
+    for extra_dir in [PROJECTS_DIR / "holdings", PROJECTS_DIR / "rowdy-crown"]:
+        if not extra_dir.exists():
+            continue
+        slug = dir_to_slug.get(extra_dir.name, extra_dir.name)
+        for md_file in extra_dir.rglob("*.md"):
+            try:
+                content = md_file.read_text(encoding="utf-8")
+                tasks = _extract_tasks(content, slug, f"{extra_dir.name}/{md_file.name}")
+                for t in tasks:
+                    _upsert_todo(t["title"], t["description"], t["priority"], t["project"])
+            except Exception:
+                pass
+
+    return count
+
+
 def import_all(verbose: bool = False) -> dict[str, int]:
     """Run all importers. Returns counts of records created."""
     db.init_schema()
@@ -626,6 +786,7 @@ def import_all(verbose: bool = False) -> dict[str, int]:
     results["clients"]    = import_clients()
     results["knowledge"]  = import_knowledge_from_files()
     results["documents"]  = import_documents_from_files()
+    results["todos"]      = import_todos_from_files()
 
     if verbose:
         print("ArchonHub Data Import Complete:")
@@ -648,6 +809,7 @@ if __name__ == "__main__":
         if "--agents"      in args: print(f"Agents:      {import_agents()}")
         if "--automations" in args: print(f"Automations: {import_automations()}")
         if "--clients"     in args: print(f"Clients:     {import_clients()}")
+        if "--todos"       in args: print(f"Todos:       {import_todos_from_files()}")
         if "--docs"        in args:
             print(f"Knowledge:   {import_knowledge_from_files()}")
             print(f"Documents:   {import_documents_from_files()}")
