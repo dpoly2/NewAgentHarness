@@ -3,7 +3,7 @@
  * Plugin Name: PBS Event Commerce
  * Plugin URI:  https://psibetasigma1914.org
  * Description: Native ticketing and donation system for Psi Beta Sigma 1914 - Square, Stripe, and PayPal checkout.
- * Version:     2.1.8
+ * Version:     2.1.9
  * Author:      S2T Designs
  * Author URI:  https://s2tdesigns.com
  * License:     GPL-2.0+
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'PBS_EC_VERSION',  '2.1.8' );
+define( 'PBS_EC_VERSION',  '2.1.9' );
 define( 'PBS_EC_PATH',     plugin_dir_path( __FILE__ ) );
 define( 'PBS_EC_URL',      plugin_dir_url( __FILE__ ) );
 define( 'PBS_EC_BASENAME', plugin_basename( __FILE__ ) );
