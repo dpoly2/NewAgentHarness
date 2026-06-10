@@ -74,6 +74,8 @@ class PBS_Square_OAuth {
         if ( ! $state ) {
             $state = wp_generate_password( 32, false );
             set_transient( 'pbs_square_oauth_state', $state, 10 * MINUTE_IN_SECONDS );
+            // Option fallback for object-cached hosts where transients may not persist across redirects
+            update_option( 'pbs_square_oauth_state_fallback', $state );
         }
         return $state;
     }
@@ -88,53 +90,76 @@ class PBS_Square_OAuth {
         if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'pbs-commerce-settings' ) return;
         if ( ! current_user_can( 'manage_options' ) ) return;
 
+        // Record this attempt for diagnostics regardless of outcome
+        $attempt = [
+            'time'  => current_time( 'mysql' ),
+            'has_code'  => isset( $_GET['code'] ),
+            'has_state' => isset( $_GET['state'] ),
+            'has_error' => isset( $_GET['error'] ),
+        ];
+
         // Handle error response from Square
         if ( isset( $_GET['error'] ) ) {
             $error   = sanitize_text_field( $_GET['error'] );
             $message = sanitize_text_field( $_GET['error_description'] ?? 'Authorization denied.' );
-            add_settings_error( 'pbs_square_oauth', $error, "Square OAuth error: {$message}", 'error' );
-            set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => "Square OAuth error: {$message}" ], 60 );
-            return;
+            $attempt['result'] = 'square_error';
+            update_option( 'pbs_square_last_oauth', $attempt );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&square_msg=error&square_err=' . rawurlencode( $message ) ) );
+            exit;
         }
 
         // Validate state (CSRF check)
         $saved_state = get_transient( 'pbs_square_oauth_state' );
+        // Also check option fallback (for object-cached hosts where transients are unreliable)
+        if ( ! $saved_state ) {
+            $saved_state = get_option( 'pbs_square_oauth_state_fallback', '' );
+        }
         $given_state = sanitize_text_field( $_GET['state'] ?? '' );
+
         if ( empty( $saved_state ) || ! hash_equals( $saved_state, $given_state ) ) {
-            set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => 'OAuth state mismatch — possible CSRF. Please try again.' ], 60 );
-            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+            $attempt['result'] = 'state_mismatch';
+            $attempt['saved_state_empty'] = empty( $saved_state );
+            update_option( 'pbs_square_last_oauth', $attempt );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&square_msg=state_mismatch' ) );
             exit;
         }
         delete_transient( 'pbs_square_oauth_state' );
+        delete_option( 'pbs_square_oauth_state_fallback' );
 
         // Exchange authorization code for access token
         $code = sanitize_text_field( $_GET['code'] ?? '' );
         if ( empty( $code ) ) {
-            set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => 'No authorization code received from Square.' ], 60 );
-            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+            $attempt['result'] = 'no_code';
+            update_option( 'pbs_square_last_oauth', $attempt );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&square_msg=no_code' ) );
             exit;
         }
 
         $result = self::exchange_code_for_token( $code );
 
         if ( is_wp_error( $result ) ) {
-            set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => 'Token exchange failed: ' . $result->get_error_message() ], 60 );
-        } else {
-            // Save tokens and merchant info
-            update_option( 'pbs_square_access_token',   $result['access_token'] );
-            update_option( 'pbs_square_refresh_token',  $result['refresh_token'] ?? '' );
-            update_option( 'pbs_square_token_expires',  $result['expires_at'] ?? '' );
-            update_option( 'pbs_square_merchant_id',    $result['merchant_id'] ?? '' );
-            // Auto-enable Square gateway now that it's connected
-            update_option( 'pbs_square_enabled', 1 );
-            // Fetch and save location ID if not set
-            if ( empty( get_option( 'pbs_square_location_id' ) ) ) {
-                PBS_Square::fetch_location( $result['access_token'] );
-            }
-            set_transient( 'pbs_square_oauth_notice', [ 'type' => 'success', 'message' => '✅ Square connected successfully! Gateway is now active.' ], 60 );
+            $attempt['result'] = 'exchange_failed';
+            $attempt['error']  = $result->get_error_message();
+            update_option( 'pbs_square_last_oauth', $attempt );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&square_msg=error&square_err=' . rawurlencode( 'Token exchange failed: ' . $result->get_error_message() ) ) );
+            exit;
         }
 
-        wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+        // Save tokens and merchant info
+        update_option( 'pbs_square_access_token',  $result['access_token'] );
+        update_option( 'pbs_square_refresh_token', $result['refresh_token'] ?? '' );
+        update_option( 'pbs_square_token_expires', $result['expires_at'] ?? '' );
+        update_option( 'pbs_square_merchant_id',   $result['merchant_id'] ?? '' );
+        update_option( 'pbs_square_enabled', 1 );
+
+        if ( empty( get_option( 'pbs_square_location_id' ) ) ) {
+            PBS_Square::fetch_location( $result['access_token'] );
+        }
+
+        $attempt['result'] = 'success';
+        update_option( 'pbs_square_last_oauth', $attempt );
+
+        wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&square_msg=connected' ) );
         exit;
     }
 

@@ -35,7 +35,21 @@ $paypal_verified    = get_option( 'pbs_paypal_merchant_email', '' );
 <p style="color:#666;margin-top:0;">Configure payment gateways, email notifications, and checkout behavior.</p>
 
 <?php
-foreach ( [ 'pbs_square_oauth_notice', 'pbs_stripe_oauth_notice' ] as $t_key ) {
+// URL-param based notices (more reliable than transients across redirects)
+$square_msg = isset( $_GET['square_msg'] ) ? sanitize_text_field( $_GET['square_msg'] ) : '';
+$square_err = isset( $_GET['square_err'] ) ? sanitize_text_field( $_GET['square_err'] ) : '';
+if ( $square_msg === 'connected' ) {
+    echo '<div class="notice notice-success is-dismissible"><p>✅ <strong>Square connected successfully!</strong> Gateway is now active.</p></div>';
+} elseif ( $square_msg === 'state_mismatch' ) {
+    echo '<div class="notice notice-error is-dismissible"><p>❌ <strong>Square OAuth failed:</strong> Security state mismatch. This usually means the OAuth session expired. Please try connecting again.</p></div>';
+} elseif ( $square_msg === 'no_code' ) {
+    echo '<div class="notice notice-error is-dismissible"><p>❌ <strong>Square OAuth failed:</strong> No authorization code received. Make sure your Redirect URL in Square Developer matches exactly.</p></div>';
+} elseif ( $square_msg === 'error' && $square_err ) {
+    echo '<div class="notice notice-error is-dismissible"><p>❌ <strong>Square OAuth error:</strong> ' . esc_html( $square_err ) . '</p></div>';
+}
+
+// Legacy transient notices (Stripe OAuth still uses these)
+foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
     $notice = get_transient( $t_key );
     if ( $notice ) {
         delete_transient( $t_key );
@@ -612,6 +626,38 @@ foreach ( [ 'pbs_square_oauth_notice', 'pbs_stripe_oauth_notice' ] as $t_key ) {
 </div>
 
 </form>
+
+<?php
+// Diagnostics panel — shows last OAuth attempt details
+$last_oauth = get_option( 'pbs_square_last_oauth', [] );
+$show_diag  = ! empty( $last_oauth ) || current_user_can( 'manage_options' );
+if ( $show_diag ) : ?>
+<details style="margin-top:24px;border:1px solid #ddd;border-radius:6px;padding:12px 16px;background:#fafafa;font-size:12px;">
+  <summary style="cursor:pointer;font-weight:600;color:#555;">🔍 Square OAuth Diagnostics</summary>
+  <table style="margin-top:10px;border-collapse:collapse;width:100%;">
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Redirect URI registered in Square</th>
+        <td style="padding:4px 8px;font-family:monospace;"><?php echo esc_html( PBS_Square_OAuth::get_redirect_uri() ); ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">App ID saved</th>
+        <td style="padding:4px 8px;"><?php echo $pbs_key_set( 'pbs_square_app_id' ) ? '<span style="color:green">✓ Yes</span>' : '<span style="color:red">✗ No</span>'; ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">App Secret saved</th>
+        <td style="padding:4px 8px;"><?php echo $pbs_key_set( 'pbs_square_app_secret' ) ? '<span style="color:green">✓ Yes</span>' : '<span style="color:red">✗ No</span>'; ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Access token saved</th>
+        <td style="padding:4px 8px;"><?php echo $pbs_key_set( 'pbs_square_access_token' ) ? '<span style="color:green">✓ Yes</span>' : '<span style="color:red">✗ No</span>'; ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Environment</th>
+        <td style="padding:4px 8px;"><?php echo esc_html( get_option( 'pbs_square_env', 'sandbox' ) ); ?></td></tr>
+    <?php if ( ! empty( $last_oauth ) ) : ?>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Last OAuth attempt</th>
+        <td style="padding:4px 8px;"><?php echo esc_html( $last_oauth['time'] ?? '—' ); ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Result</th>
+        <td style="padding:4px 8px;font-weight:600;color:<?php echo ( $last_oauth['result'] ?? '' ) === 'success' ? 'green' : 'red'; ?>">
+          <?php echo esc_html( $last_oauth['result'] ?? '—' ); ?>
+          <?php if ( ! empty( $last_oauth['error'] ) ) echo ' — ' . esc_html( $last_oauth['error'] ); ?>
+          <?php if ( ! empty( $last_oauth['saved_state_empty'] ) ) echo ' (no saved state — try connecting again)'; ?>
+        </td></tr>
+    <?php endif; ?>
+  </table>
+</details>
+<?php endif; ?>
 
 <script>
 document.querySelectorAll('.pbs-toggle input[type=checkbox]').forEach(function(cb) {
