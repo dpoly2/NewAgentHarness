@@ -329,7 +329,7 @@ foreach ( [ 'pbs_square_oauth_notice', 'pbs_stripe_oauth_notice' ] as $t_key ) {
         </span>
         <button type="submit" class="pbs-oauth-btn square-btn" form="pbs-square-disconnect-form"><?php echo esc_html( 'Disconnect' ); ?></button>
       <?php else : ?>
-        <a href="<?php echo esc_url( PBS_Square_OAuth::get_auth_url() ); ?>" class="pbs-oauth-btn square-btn" <?php echo $square_can_connect ? '' : 'style="opacity:.5;pointer-events:none;" title="Enter App ID and App Secret first"'; ?>>
+        <a id="pbs-square-oauth-btn" href="<?php echo esc_url( PBS_Square_OAuth::get_auth_url() ); ?>" class="pbs-oauth-btn square-btn" <?php echo $square_can_connect ? '' : 'style="opacity:.5;pointer-events:none;" title="Enter App ID and App Secret first"'; ?>>
           <?php echo esc_html( '🔗 Connect with Square OAuth' ); ?>
         </a>
         <span style="margin-left:8px;color:#888;font-size:12px;"><?php echo esc_html( '— or enter access token manually below' ); ?></span>
@@ -681,6 +681,31 @@ document.getElementById('pbs-settings-form').addEventListener('submit', function
             });
         });
     }
+    // Square OAuth button — enable live as App ID / App Secret are typed
+    (function() {
+        var oauthBtn  = document.getElementById('pbs-square-oauth-btn');
+        var appIdIn   = document.querySelector('input[name="pbs_square_app_id"]');
+        var appSecIn  = document.getElementById('pbs_square_app_secret');
+        if (!oauthBtn || !appIdIn || !appSecIn) return;
+
+        function syncSquareBtn() {
+            var ready = appIdIn.value.trim() !== '' && appSecIn.value.trim() !== '';
+            if (ready) {
+                oauthBtn.style.opacity = '1';
+                oauthBtn.style.pointerEvents = 'auto';
+                oauthBtn.removeAttribute('title');
+            } else {
+                oauthBtn.style.opacity = '0.5';
+                oauthBtn.style.pointerEvents = 'none';
+                oauthBtn.title = 'Enter App ID and App Secret first';
+            }
+        }
+
+        appIdIn.addEventListener('input', syncSquareBtn);
+        appSecIn.addEventListener('input', syncSquareBtn);
+        syncSquareBtn(); // run on page load too
+    })();
+
 })();
 </script>
 </div>
