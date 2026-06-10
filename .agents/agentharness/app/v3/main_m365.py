@@ -419,6 +419,33 @@ class ArchonHubApp:
         self.style.configure("Accent.Horizontal.TProgressbar", troughcolor=BG_INPUT, bordercolor=BORDER_CARD, background=ACCENT, lightcolor=ACCENT, darkcolor=ACCENT)
 
     def _build_shell(self):
+        # Status bar must be packed FIRST so it anchors to the bottom
+        # before the shell claims all remaining space with expand=True
+        self.status_bar = tk.Frame(self.root, bg=BG_PANEL, height=32,
+                                   highlightbackground=BORDER_CARD, highlightthickness=1)
+        self.status_bar.pack(fill="x", side="bottom")
+        self.status_bar.pack_propagate(False)
+        self.status_canvas = tk.Canvas(self.status_bar, width=18, height=18,
+                                       bg=BG_PANEL, highlightthickness=0)
+        self.status_canvas.pack(side="left", padx=(10, 0), pady=6)
+        self.status_dot = self.status_canvas.create_oval(4, 4, 14, 14, fill=ERROR, outline="")
+        self.status_label = tk.Label(self.status_bar, text="Hub offline",
+                                     fg=TEXT_BODY, bg=BG_PANEL)
+        self.status_label.pack(side="left", padx=8)
+        self.user_label = tk.Label(self.status_bar, text=f"User: {self.username}",
+                                   fg=TEXT_MUTED, bg=BG_PANEL)
+        self.user_label.pack(side="left", padx=12)
+        langgraph_text = "LangGraph ready" if LANGGRAPH_OK else "LangGraph offline"
+        self.langgraph_label = tk.Label(self.status_bar, text=langgraph_text,
+                                        fg=TEXT_MUTED, bg=BG_PANEL)
+        self.langgraph_label.pack(side="left", padx=12)
+        self.llm_label = tk.Label(self.status_bar, text="⬡ …", fg=ACCENT,
+                                  bg=BG_PANEL, font=("Segoe UI", 9))
+        self.llm_label.pack(side="left", padx=12)
+        self.clock_label = tk.Label(self.status_bar, text="", fg=TEXT_MUTED, bg=BG_PANEL)
+        self.clock_label.pack(side="right", padx=10)
+
+        # Main shell — expands into remaining space above the status bar
         self.shell = tk.Frame(self.root, bg=BG_CANVAS)
         self.shell.pack(fill="both", expand=True)
 
@@ -464,23 +491,6 @@ class ArchonHubApp:
 
         self.content = tk.Frame(self.shell, bg=BG_CANVAS)
         self.content.pack(side="left", fill="both", expand=True)
-
-        self.status_bar = tk.Frame(self.root, bg=BG_PANEL, height=32, highlightbackground=BORDER_CARD, highlightthickness=1)
-        self.status_bar.pack(fill="x", side="bottom")
-        self.status_canvas = tk.Canvas(self.status_bar, width=18, height=18, bg=BG_PANEL, highlightthickness=0)
-        self.status_canvas.pack(side="left", padx=(10, 0), pady=6)
-        self.status_dot = self.status_canvas.create_oval(4, 4, 14, 14, fill=ERROR, outline="")
-        self.status_label = tk.Label(self.status_bar, text="Hub offline", fg=TEXT_BODY, bg=BG_PANEL)
-        self.status_label.pack(side="left", padx=8)
-        self.user_label = tk.Label(self.status_bar, text=f"User: {self.username}", fg=TEXT_MUTED, bg=BG_PANEL)
-        self.user_label.pack(side="left", padx=12)
-        langgraph_text = "LangGraph ready" if LANGGRAPH_OK else "LangGraph offline"
-        self.langgraph_label = tk.Label(self.status_bar, text=langgraph_text, fg=TEXT_MUTED, bg=BG_PANEL)
-        self.langgraph_label.pack(side="left", padx=12)
-        self.llm_label = tk.Label(self.status_bar, text="⬡ …", fg=ACCENT, bg=BG_PANEL, font=("Segoe UI", 9))
-        self.llm_label.pack(side="left", padx=12)
-        self.clock_label = tk.Label(self.status_bar, text="", fg=TEXT_MUTED, bg=BG_PANEL)
-        self.clock_label.pack(side="right", padx=10)
 
     def _update_clock(self):
         self.clock_label.configure(text=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -970,75 +980,137 @@ class ArchonHubApp:
         self._clear_content()
         self._section_header(self.content, "ArchonHub", "Microsoft 365-inspired control surface for teams, runs, and workflows.")
 
-        paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
-        paned.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        left = tk.Frame(paned, bg=BG_CANVAS, width=400)
-        right = tk.Frame(paned, bg=BG_CANVAS)
-        paned.add(left, minsize=380)
-        paned.add(right)
+        paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6,
+                               bg=BG_CANVAS, relief="flat")
+        paned.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+        # ── Left panel: Quick Run + Hub Status ───────────────────────────
+        left = tk.Frame(paned, bg=BG_CANVAS, width=340)
+        paned.add(left, minsize=300)
 
         quick = self._card(left, "Quick Run", "Submit a run to Hub or local LangGraph fallback.")
-        quick.pack(fill="x", pady=(0, 14))
+        quick.pack(fill="x", pady=(0, 10))
         form = tk.Frame(quick, bg=BG_PANEL)
-        form.pack(fill="x", padx=14, pady=(0, 14))
+        form.pack(fill="x", padx=14, pady=(0, 12))
 
-        tk.Label(form, text="Team", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Team", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=2)
         self.quick_team_combo = self._combo(form, self.quick_team_var, list(AGENT_REGISTRY.keys()))
-        self.quick_team_combo.grid(row=1, column=0, sticky="ew", pady=(0, 8))
+        self.quick_team_combo.grid(row=1, column=0, sticky="ew", pady=(0, 6))
         self.quick_team_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
 
-        tk.Label(form, text="Agent", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Agent", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=2)
         self.quick_agent_combo = self._combo(form, self.quick_agent_var, AGENT_REGISTRY[self.quick_team_var.get()])
-        self.quick_agent_combo.grid(row=3, column=0, sticky="ew", pady=(0, 8))
+        self.quick_agent_combo.grid(row=3, column=0, sticky="ew", pady=(0, 6))
 
-        tk.Label(form, text="Project", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=4)
-        self._combo(form, self.quick_project_var, PROJECTS).grid(row=5, column=0, sticky="ew", pady=(0, 8))
+        tk.Label(form, text="Project", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=2)
+        self._combo(form, self.quick_project_var, PROJECTS).grid(row=5, column=0, sticky="ew", pady=(0, 6))
 
-        tk.Label(form, text="Graph", bg=BG_PANEL, fg=TEXT_BODY).grid(row=6, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Graph", bg=BG_PANEL, fg=TEXT_BODY).grid(row=6, column=0, sticky="w", pady=2)
         graph_combo = self._combo(form, self.quick_graph_var, GRAPH_NAMES)
-        graph_combo.grid(row=7, column=0, sticky="ew", pady=(0, 8))
+        graph_combo.grid(row=7, column=0, sticky="ew", pady=(0, 6))
         graph_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
 
-        tk.Label(form, text="Max Revisions", bg=BG_PANEL, fg=TEXT_BODY).grid(row=8, column=0, sticky="w", pady=4)
-        tk.Spinbox(form, from_=0, to=10, textvariable=self.quick_max_rev_var, bg=BG_INPUT, fg=TEXT_PRIMARY, insertbackground=TEXT_PRIMARY, relief="flat").grid(row=9, column=0, sticky="ew", pady=(0, 8))
-
-        tk.Label(form, text="Task", bg=BG_PANEL, fg=TEXT_BODY).grid(row=10, column=0, sticky="w", pady=4)
-        self.quick_task_text = self._text_widget(form, height=8)
-        self.quick_task_text.grid(row=11, column=0, sticky="nsew", pady=(0, 12))
+        tk.Label(form, text="Task", bg=BG_PANEL, fg=TEXT_BODY).grid(row=8, column=0, sticky="w", pady=2)
+        self.quick_task_text = self._text_widget(form, height=5)
+        self.quick_task_text.grid(row=9, column=0, sticky="nsew", pady=(0, 8))
         form.grid_columnconfigure(0, weight=1)
-
-        self._button(form, "▶ Run Agent", self._submit_quick_run, accent=True).grid(row=12, column=0, sticky="ew")
+        self._button(form, "▶ Run Agent", self._submit_quick_run, accent=True).grid(row=10, column=0, sticky="ew")
 
         hub_card = self._card(left, "Hub Status")
         hub_card.pack(fill="x")
         grid = tk.Frame(hub_card, bg=BG_PANEL)
-        grid.pack(fill="x", padx=14, pady=(0, 14))
-        tk.Label(grid, text="Connection", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=0, column=0, sticky="w", pady=4)
-        self.home_status_value = tk.Label(grid, text="Offline", bg=BG_PANEL, fg=ERROR, font=("Segoe UI", 11, "bold"))
-        self.home_status_value.grid(row=0, column=1, sticky="e", pady=4)
-        tk.Label(grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=1, column=0, sticky="w", pady=4)
+        grid.pack(fill="x", padx=14, pady=(0, 12))
+        tk.Label(grid, text="Connection", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=0, column=0, sticky="w", pady=3)
+        self.home_status_value = tk.Label(grid, text="Offline", bg=BG_PANEL, fg=ERROR,
+                                          font=("Segoe UI", 11, "bold"))
+        self.home_status_value.grid(row=0, column=1, sticky="e", pady=3)
+        tk.Label(grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=1, column=0, sticky="w", pady=3)
         self.home_uptime_value = tk.Label(grid, text="—", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=4)
-        tk.Label(grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=2, column=0, sticky="w", pady=4)
+        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=3)
+        tk.Label(grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=2, column=0, sticky="w", pady=3)
         self.home_active_runs_value = tk.Label(grid, text="0", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=4)
+        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=3)
         grid.grid_columnconfigure(1, weight=1)
 
-        right_header = tk.Frame(right, bg=BG_CANVAS)
-        right_header.pack(fill="x", pady=(0, 10))
-        tk.Label(right_header, text="Agent Teams", bg=BG_CANVAS, fg=TEXT_PRIMARY, font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        # ── Right panel: Inez Chat ────────────────────────────────────────
+        right = tk.Frame(paned, bg=BG_CANVAS)
+        paned.add(right)
+        self._build_inez_chat_panel(right)
 
-        cards_wrapper, _cards_canvas, self.agent_cards_container = self._scrollable_area(right, bg=BG_CANVAS)
-        cards_wrapper.pack(fill="both", expand=True)
-        self._render_agent_cards()
-
-        graph_card = self._card(right, "Graph Visualizer", "Selected graph layout")
-        graph_card.pack(fill="x", pady=(12, 0))
-        self.home_graph_canvas = tk.Canvas(graph_card, height=170, bg=BG_PANEL, highlightthickness=0)
-        self.home_graph_canvas.pack(fill="x", padx=14, pady=(0, 14))
-        self.home_graph_canvas.bind("<Configure>", lambda _e: self.draw_graph_canvas(self.home_graph_canvas, self.quick_graph_var.get()))
-        self.draw_graph_canvas(self.home_graph_canvas, self.quick_graph_var.get())
         self._refresh_home_status()
+
+    def _build_inez_chat_panel(self, parent):
+        """Embed the full Inez chat interface into any parent frame (used on Home + Inez tab)."""
+        # Header
+        top = tk.Frame(parent, bg=BG_PANEL,
+                       highlightbackground=BORDER_CARD, highlightthickness=1)
+        top.pack(fill="x")
+
+        av = tk.Canvas(top, width=34, height=34, bg=BG_PANEL, highlightthickness=0)
+        av.create_oval(3, 3, 31, 31, fill="#7c3aed", outline="")
+        av.create_text(17, 17, text="👑", font=("Segoe UI", 14))
+        av.pack(side="left", padx=(12, 6), pady=6)
+
+        name_col = tk.Frame(top, bg=BG_PANEL)
+        name_col.pack(side="left", pady=6)
+        tk.Label(name_col, text="Inez", bg=BG_PANEL, fg="#c4b5fd",
+                 font=("Segoe UI", 12, "bold")).pack(anchor="w")
+        tk.Label(name_col, text="Chief of Staff — Smith Capital Portfolio",
+                 bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
+
+        hub_online = getattr(self.hub, "online", False)
+        dot_color = SUCCESS if hub_online else WARNING
+        dot_text  = "● Hub connected" if hub_online else "● Local mode"
+        tk.Label(top, text=dot_text, bg=BG_PANEL, fg=dot_color,
+                 font=("Segoe UI", 9)).pack(side="right", padx=14)
+
+        # Bubble area
+        bubble_outer = tk.Frame(parent, bg=BG_CANVAS)
+        bubble_outer.pack(fill="both", expand=True)
+
+        chat_canvas = tk.Canvas(bubble_outer, bg=BG_CANVAS, highlightthickness=0, bd=0)
+        chat_sb = ttk.Scrollbar(bubble_outer, orient="vertical", command=chat_canvas.yview)
+        self._chat_bubbles_frame = tk.Frame(chat_canvas, bg=BG_CANVAS)
+        self._chat_canvas = chat_canvas
+        bw = chat_canvas.create_window((0, 0), window=self._chat_bubbles_frame, anchor="nw")
+
+        def _on_cfg(e): chat_canvas.configure(scrollregion=chat_canvas.bbox("all"))
+        def _on_resize(e): chat_canvas.itemconfigure(bw, width=e.width)
+        self._chat_bubbles_frame.bind("<Configure>", _on_cfg)
+        chat_canvas.bind("<Configure>", _on_resize)
+        chat_canvas.configure(yscrollcommand=chat_sb.set)
+        chat_sb.pack(side="right", fill="y")
+        chat_canvas.pack(side="left", fill="both", expand=True)
+
+        for msg in self._chat_messages:
+            self._chat_render_bubble(msg)
+
+        if not self._chat_messages:
+            welcome = {
+                "role": "inez",
+                "content": "Good to see you. I'm Inez — your Chief of Staff. What do you need?",
+                "ts": datetime.now().strftime("%H:%M"),
+            }
+            self._chat_messages.append(welcome)
+            self._chat_render_bubble(welcome)
+
+        # Input bar
+        input_bar = tk.Frame(parent, bg=BG_PANEL,
+                             highlightbackground=BORDER_CARD, highlightthickness=1)
+        input_bar.pack(fill="x", side="bottom")
+
+        self._chat_input = tk.Text(input_bar, height=3, bg=BG_INPUT, fg=TEXT_PRIMARY,
+                                   insertbackground=ACCENT, relief="flat",
+                                   font=("Segoe UI", 11), wrap="word", padx=10, pady=8)
+        self._chat_input.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=8)
+        self._chat_input.bind("<Return>", lambda e: (self._inez_send(), "break")[1])
+        self._chat_input.bind("<Shift-Return>", lambda e: None)
+
+        send_btn = self._button(input_bar, "  Send  ", self._inez_send)
+        send_btn.pack(side="right", padx=10, pady=8, ipadx=10, ipady=6)
+        tk.Label(input_bar, text="Enter ↵ send  ·  ⇧Enter newline",
+                 bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8)).pack(side="right", padx=4)
+
 
     def show_runs(self):
         self._set_active_nav("Runs")
@@ -2507,84 +2579,8 @@ class ArchonHubApp:
     def show_inez(self):
         self._clear_content()
         self._set_active_nav("Inez")
+        self._build_inez_chat_panel(self.content)
 
-        # ── Inez header ───────────────────────────────────────────────────
-        top = tk.Frame(self.content, bg=BG_PANEL,
-                       highlightbackground=BORDER_CARD, highlightthickness=1)
-        top.pack(fill="x", padx=0, pady=0)
-
-        # Avatar
-        av = tk.Canvas(top, width=38, height=38, bg=BG_PANEL, highlightthickness=0)
-        av.create_oval(4, 4, 34, 34, fill="#7c3aed", outline="")
-        av.create_text(19, 19, text="👑", font=("Segoe UI", 16))
-        av.pack(side="left", padx=(14,6), pady=6)
-
-        name_col = tk.Frame(top, bg=BG_PANEL)
-        name_col.pack(side="left", pady=8)
-        tk.Label(name_col, text="Inez", bg=BG_PANEL, fg="#c4b5fd",
-                 font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        tk.Label(name_col, text="Chief of Staff — Smith Capital Portfolio",
-                 bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
-
-        # Status indicator
-        status_frame = tk.Frame(top, bg=BG_PANEL)
-        status_frame.pack(side="right", padx=16)
-        hub_online = getattr(self.hub, "online", False)
-        dot_color = SUCCESS if hub_online else WARNING
-        dot_text  = "● Hub connected" if hub_online else "● Local mode"
-        tk.Label(status_frame, text=dot_text, bg=BG_PANEL, fg=dot_color,
-                 font=("Segoe UI", 9)).pack()
-
-        # ── Chat bubble area ──────────────────────────────────────────────
-        bubble_outer = tk.Frame(self.content, bg=BG_CANVAS)
-        bubble_outer.pack(fill="both", expand=True)
-
-        chat_canvas = tk.Canvas(bubble_outer, bg=BG_CANVAS, highlightthickness=0, bd=0)
-        chat_sb = ttk.Scrollbar(bubble_outer, orient="vertical", command=chat_canvas.yview)
-        self._chat_bubbles_frame = tk.Frame(chat_canvas, bg=BG_CANVAS)
-        self._chat_canvas = chat_canvas
-        bw = chat_canvas.create_window((0, 0), window=self._chat_bubbles_frame, anchor="nw")
-
-        def _on_cfg(e): chat_canvas.configure(scrollregion=chat_canvas.bbox("all"))
-        def _on_resize(e): chat_canvas.itemconfigure(bw, width=e.width)
-        self._chat_bubbles_frame.bind("<Configure>", _on_cfg)
-        chat_canvas.bind("<Configure>", _on_resize)
-        chat_canvas.configure(yscrollcommand=chat_sb.set)
-        chat_sb.pack(side="right", fill="y")
-        chat_canvas.pack(side="left", fill="both", expand=True)
-
-        # Render existing messages
-        for msg in self._chat_messages:
-            self._chat_render_bubble(msg)
-
-        # Welcome message on first open
-        if not self._chat_messages:
-            welcome = {
-                "role": "inez",
-                "content": "Good to see you. I'm Inez — your Chief of Staff. What do you need?",
-                "ts": datetime.now().strftime("%H:%M"),
-            }
-            self._chat_messages.append(welcome)
-            self._chat_render_bubble(welcome)
-
-        # ── Input bar ─────────────────────────────────────────────────────
-        input_bar = tk.Frame(self.content, bg=BG_PANEL,
-                             highlightbackground=BORDER_CARD, highlightthickness=1)
-        input_bar.pack(fill="x", side="bottom")
-
-        self._chat_input = tk.Text(input_bar, height=3, bg=BG_INPUT, fg=TEXT_PRIMARY,
-                                   insertbackground=ACCENT, relief="flat",
-                                   font=("Segoe UI", 11), wrap="word", padx=10, pady=8)
-        self._chat_input.pack(side="left", fill="both", expand=True, padx=(12, 0), pady=8)
-        self._chat_input.bind("<Return>", lambda e: (self._inez_send(), "break")[1])
-        self._chat_input.bind("<Shift-Return>", lambda e: None)
-
-        send_btn = self._button(input_bar, "  Send  ", self._inez_send)
-        send_btn.pack(side="right", padx=12, pady=8, ipadx=10, ipady=6)
-
-        hint = tk.Label(input_bar, text="Enter to send  ·  Shift+Enter for newline",
-                        bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8))
-        hint.pack(side="right", padx=4)
 
     def _inez_send(self):
         task = (self._chat_input.get("1.0", "end") or "").strip()
