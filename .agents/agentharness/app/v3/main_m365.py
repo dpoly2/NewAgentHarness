@@ -485,10 +485,18 @@ class ArchonHubApp:
         self.root.after(1000, self._update_clock)
 
     def _update_status_bar(self):
+        try:
+            if not self.status_canvas.winfo_exists():
+                return
+        except Exception:
+            return
         online = bool(getattr(self.hub, "online", False))
         color = SUCCESS if online else ERROR
-        self.status_canvas.itemconfigure(self.status_dot, fill=color)
-        self.status_label.configure(text="Hub online" if online else "Hub offline", fg=TEXT_PRIMARY if online else TEXT_BODY)
+        try:
+            self.status_canvas.itemconfigure(self.status_dot, fill=color)
+            self.status_label.configure(text="Hub online" if online else "Hub offline", fg=TEXT_PRIMARY if online else TEXT_BODY)
+        except Exception:
+            return
         # Refresh LLM model pill
         try:
             from hub_nodes import _load_ai_config
@@ -904,7 +912,13 @@ class ArchonHubApp:
         return rows
 
     def _refresh_home_status(self):
+        # Guard: widget must exist and not have been destroyed
         if not hasattr(self, "home_status_value"):
+            return
+        try:
+            if not self.home_status_value.winfo_exists():
+                return
+        except Exception:
             return
         online = bool(getattr(self.hub, "online", False))
         health = {}
@@ -916,10 +930,13 @@ class ArchonHubApp:
         runs = self._get_runs()
         running = [r for r in runs if r.get("status") in {"running", "queued"}]
         status_text = "Online" if online else "Offline"
-        self.home_status_value.configure(text=status_text, fg=SUCCESS if online else ERROR)
-        uptime = health.get("uptime") or health.get("uptime_seconds") or ("—" if not online else "Connected")
-        self.home_uptime_value.configure(text=str(uptime))
-        self.home_active_runs_value.configure(text=str(len(running)))
+        try:
+            self.home_status_value.configure(text=status_text, fg=SUCCESS if online else ERROR)
+            uptime = health.get("uptime") or health.get("uptime_seconds") or ("—" if not online else "Connected")
+            self.home_uptime_value.configure(text=str(uptime))
+            self.home_active_runs_value.configure(text=str(len(running)))
+        except Exception:
+            pass
 
     def _render_agent_cards(self):
         for child in self.agent_cards_container.winfo_children():
