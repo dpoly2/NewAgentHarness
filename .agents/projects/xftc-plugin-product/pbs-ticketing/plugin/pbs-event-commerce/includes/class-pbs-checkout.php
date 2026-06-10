@@ -89,7 +89,7 @@ class PBS_Checkout {
         PBS_Email::send_confirmation( $order );
 
         // Build confirmation URL
-        $token       = substr( md5( $order['order_number'] . get_site_url() ), 0, 12 );
+        $token       = substr( wp_hash( $order['order_number'] ), 0, 12 );
         $confirm_url = add_query_arg( [
             'order_id' => $order_id,
             'token'    => $token,
@@ -143,7 +143,7 @@ class PBS_Checkout {
         PBS_DB::update_order_status( $order_id, 'complete', $payment_intent_id );
         PBS_Email::send_confirmation( PBS_DB::get_order( $order_id ) );
 
-        $token       = substr( md5( $order['order_number'] . get_site_url() ), 0, 12 );
+        $token       = substr( wp_hash( $order['order_number'] ), 0, 12 );
         $confirm_url = add_query_arg( [
             'order_id' => $order_id,
             'token'    => $token,

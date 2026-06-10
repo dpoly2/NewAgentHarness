@@ -67,8 +67,8 @@ class PBS_Shortcodes {
         $order = PBS_DB::get_order( $order_id );
         if ( ! $order ) return '<p>Order not found.</p>';
 
-        // Verify token (md5 of order_number + site_url as simple auth)
-        $expected = substr( md5( $order['order_number'] . get_site_url() ), 0, 12 );
+        // Verify token — wp_hash uses AUTH_KEY from wp-config, immune to HTTP/HTTPS URL differences
+        $expected = substr( wp_hash( $order['order_number'] ), 0, 12 );
         if ( $token !== $expected ) return '<p>Invalid order link.</p>';
 
         ob_start();
