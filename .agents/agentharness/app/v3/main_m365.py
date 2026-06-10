@@ -137,16 +137,17 @@ PRIORITY_COLORS = {
     "low": SUCCESS,
 }
 NAV_ITEMS = [
-    ("🏠", "Home", "show_home"),
-    ("▶", "Runs", "show_runs"),
-    ("✓", "Todos", "show_todos"),
-    ("📰", "Digest", "show_digest"),
+    ("🏠", "Home",     "show_home"),
+    ("▶",  "Runs",     "show_runs"),
+    ("✓",  "Todos",    "show_todos"),
+    ("📰", "Digest",   "show_digest"),
+    ("📊", "Reports",  "show_reports"),
     ("📅", "Schedule", "show_schedule"),
-    ("👥", "Clients", "show_clients"),
-    ("✈", "Travel", "show_travel"),
-    ("⚡", "Connect", "show_connectors"),
-    ("👑", "Inez", "show_inez"),
-    ("🔑", "Admin", "show_admin"),
+    ("👥", "Clients",  "show_clients"),
+    ("✈",  "Travel",   "show_travel"),
+    ("⚡", "Connect",  "show_connectors"),
+    ("👑", "Inez",     "show_inez"),
+    ("🔑", "Admin",    "show_admin"),
 ]
 GRAPH_LAYOUTS = {
     "reflexion": ["load_memory", "act", "evaluate", "revise", "save_memory", "END"],
@@ -833,6 +834,9 @@ class ArchonHubApp:
             elif kind == "refresh_travel":
                 if hasattr(self, "travel_cards_container"):
                     self._refresh_travel()
+            elif kind == "refresh_reports":
+                if hasattr(self, "reports_container"):
+                    self._refresh_reports()
             elif kind == "refresh_connectors":
                 if hasattr(self, "connectors_tree"):
                     self._refresh_connectors()
@@ -1722,6 +1726,207 @@ class ArchonHubApp:
     def _delete_client(self, client_id):
         hub_db.delete_client(client_id)
         self._refresh_clients()
+
+    # ── Reports ───────────────────────────────────────────────────────────────
+
+    def show_reports(self):
+        self._set_active_nav("Reports")
+        self._clear_content()
+        self._section_header(
+            self.content, "Reports", "Daily briefings, research, and automation reports.",
+            actions=[
+                ("Run Briefing", lambda: self._run_report_job("daily_briefing")),
+                ("Run Reflexion", lambda: self._run_report_job("daily_reflexion")),
+            ],
+        )
+        # Filter bar
+        filter_bar = tk.Frame(self.content, bg=BG_CANVAS)
+        filter_bar.pack(fill="x", padx=20, pady=(0, 8))
+        tk.Label(filter_bar, text="Type:", bg=BG_CANVAS, fg=TEXT_BODY,
+                 font=("Segoe UI", 10)).pack(side="left")
+        self._report_filter_var = tk.StringVar(value="all")
+        types = ["all", "briefing", "reflexion", "research", "travel", "operations",
+                 "automation", "project_status"]
+        combo = self._combo(filter_bar, self._report_filter_var, types)
+        combo.pack(side="left", padx=(6, 16))
+        self._button(filter_bar, "🔄 Refresh", self._refresh_reports).pack(side="left")
+
+        wrapper, _canvas, self.reports_container = self._scrollable_area(self.content, bg=BG_CANVAS)
+        wrapper.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        # Detail pane below
+        self.report_detail_frame = tk.Frame(self.content, bg=BG_PANEL,
+                                            highlightbackground=BORDER_CARD, highlightthickness=1)
+        self.report_detail_frame.pack(fill="x", padx=20, pady=(0, 16))
+        self.report_detail_text = None
+
+        self._refresh_reports()
+
+    def _refresh_reports(self):
+        if not hasattr(self, "reports_container"):
+            return
+        try:
+            if not self.reports_container.winfo_exists():
+                return
+        except Exception:
+            return
+        for child in self.reports_container.winfo_children():
+            child.destroy()
+
+        rtype = getattr(self, "_report_filter_var", None)
+        filter_val = rtype.get() if rtype else "all"
+        try:
+            reports = hub_db.list_reports(
+                report_type=None if filter_val == "all" else filter_val,
+                limit=80,
+            )
+        except Exception:
+            reports = []
+
+        if not reports:
+            tk.Label(self.reports_container, text="No reports yet. Reports are generated daily by the scheduler.",
+                     bg=BG_CANVAS, fg=TEXT_MUTED, wraplength=700).pack(anchor="w", padx=10, pady=20)
+            return
+
+        # Group by report_type for visual separation
+        from collections import defaultdict
+        by_type: dict = defaultdict(list)
+        for r in reports:
+            by_type[r.get("report_type", "other")].append(r)
+
+        TYPE_EMOJI = {
+            "briefing":      "🌅",
+            "reflexion":     "🔄",
+            "research":      "🔬",
+            "travel":        "✈",
+            "operations":    "⚙️",
+            "automation":    "⚡",
+            "project_status":"📋",
+            "daily":         "📰",
+        }
+
+        STATUS_BADGE = {
+            "complete":   ("#00C864", "✓ Complete"),
+            "generating": (ACCENT,    "⏳ Generating"),
+            "partial":    ("#F5A623", "⚠ Partial"),
+            "failed":     (ERROR,     "✗ Failed"),
+        }
+
+        for rtype_key, rtype_reports in sorted(by_type.items()):
+            emoji = TYPE_EMOJI.get(rtype_key, "📄")
+            header = tk.Label(
+                self.reports_container,
+                text=f"{emoji}  {rtype_key.replace('_', ' ').title()} ({len(rtype_reports)})",
+                bg=BG_CANVAS, fg=TEXT_PRIMARY, font=("Segoe UI", 11, "bold"),
+            )
+            header.pack(anchor="w", padx=10, pady=(14, 4))
+
+            for report in rtype_reports:
+                self._render_report_card(report, STATUS_BADGE)
+
+    def _render_report_card(self, report: dict, status_badge: dict):
+        card = tk.Frame(self.reports_container, bg=BG_PANEL,
+                        highlightbackground=BORDER_CARD, highlightthickness=1)
+        card.pack(fill="x", padx=10, pady=4)
+
+        top = tk.Frame(card, bg=BG_PANEL)
+        top.pack(fill="x", padx=14, pady=(10, 4))
+
+        tk.Label(top, text=report.get("title", "Untitled Report"),
+                 bg=BG_PANEL, fg=TEXT_PRIMARY,
+                 font=("Segoe UI", 11, "bold")).pack(side="left")
+
+        status = report.get("status", "complete")
+        badge_color, badge_text = status_badge.get(status, (ACCENT, status))
+        self._status_badge(top, badge_text, badge_color).pack(side="right")
+
+        # Meta row
+        gen_at = report.get("generated_at", "")[:16].replace("T", " ")
+        by = report.get("generated_by", "")[:40]
+        project = report.get("project_slug", "")
+        meta_parts = [p for p in [gen_at, f"by {by}" if by else "", project] if p]
+        tk.Label(card, text="  •  ".join(meta_parts),
+                 bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(anchor="w", padx=14)
+
+        # Summary
+        summary = report.get("summary", "")
+        if summary and summary != "Generating..." and summary != "Running...":
+            tk.Label(card, text=summary, bg=BG_PANEL, fg=TEXT_BODY,
+                     wraplength=900, justify="left",
+                     font=("Segoe UI", 10)).pack(anchor="w", padx=14, pady=(4, 2))
+
+        # Action buttons
+        btn_row = tk.Frame(card, bg=BG_PANEL)
+        btn_row.pack(fill="x", padx=14, pady=(6, 10))
+        self._button(btn_row, "View Full Report",
+                     lambda r=report: self._view_report(r)).pack(side="left", padx=4)
+        job_id = report.get("job_id", "")
+        if job_id:
+            self._button(btn_row, "Re-run",
+                         lambda j=job_id: self._run_report_job(j)).pack(side="left", padx=4)
+        self._button(btn_row, "Delete",
+                     lambda rid=report["id"]: self._delete_report(rid)).pack(side="left", padx=4)
+
+    def _view_report(self, report: dict):
+        """Open report content in a scrollable popup."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title(report.get("title", "Report"))
+        dialog.configure(bg=BG_PANEL)
+        dialog.geometry("900x700")
+        dialog.transient(self.root)
+
+        header = tk.Frame(dialog, bg=BG_PANEL)
+        header.pack(fill="x", padx=16, pady=(12, 0))
+        tk.Label(header, text=report.get("title",""), bg=BG_PANEL,
+                 fg=TEXT_PRIMARY, font=("Segoe UI", 13, "bold")).pack(side="left")
+
+        gen_at = report.get("generated_at","")[:16].replace("T"," ")
+        tk.Label(header, text=gen_at, bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(side="right")
+
+        tk.Frame(dialog, bg=BORDER_CARD, height=1).pack(fill="x", padx=16, pady=8)
+
+        text_frame = tk.Frame(dialog, bg=BG_PANEL)
+        text_frame.pack(fill="both", expand=True, padx=16, pady=(0,12))
+        scrollbar = tk.Scrollbar(text_frame)
+        scrollbar.pack(side="right", fill="y")
+        txt = tk.Text(text_frame, bg=BG_CANVAS, fg=TEXT_BODY,
+                      font=("Consolas", 10), relief="flat", wrap="word",
+                      yscrollcommand=scrollbar.set, padx=12, pady=8)
+        txt.pack(fill="both", expand=True)
+        scrollbar.config(command=txt.yview)
+        content = report.get("content","") or report.get("summary","No content available.")
+        txt.insert("1.0", content)
+        txt.configure(state="disabled")
+
+        self._button(dialog, "Close", dialog.destroy, accent=True).pack(pady=(0,12))
+
+    def _run_report_job(self, job_id: str):
+        """Trigger a report job immediately via the API."""
+        def _do():
+            try:
+                token = self.hub.get_token() if hasattr(self.hub, "get_token") else None
+                headers = {"Authorization": f"Bearer {token}"} if token else {}
+                import urllib.request, json as _json
+                body = _json.dumps({"job_id": job_id}).encode()
+                req = urllib.request.Request(
+                    "http://localhost:8765/api/reports/run",
+                    data=body, method="POST",
+                    headers={**headers, "Content-Type": "application/json"},
+                )
+                urllib.request.urlopen(req, timeout=10)
+                self._ui_queue.put(("notification", f"Report '{job_id}' queued", SUCCESS))
+                self.root.after(5000, self._refresh_reports)
+            except Exception as e:
+                self._ui_queue.put(("notification", f"Report trigger failed: {e}", ERROR))
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _delete_report(self, report_id: str):
+        hub_db.delete_report(report_id)
+        self._refresh_reports()
+
+    # ── Travel ────────────────────────────────────────────────────────────────
 
     def show_travel(self):
         self._set_active_nav("Travel")

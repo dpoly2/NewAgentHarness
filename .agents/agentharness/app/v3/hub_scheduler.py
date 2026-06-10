@@ -158,12 +158,17 @@ async def _submit_via_hub(hub, config: dict, logger, notification_text: str | No
 async def job_daily_briefing_compute(hub):
     logger = get_logger("scheduler")
     config = {
-        "agent_id": "grants-research-agent",
+        "agent_id": "inez-chief-of-staff",
         "project": "archonhub",
         "graph": "reflexion",
         "task": "Generate a comprehensive daily briefing covering all portfolio projects, pending todos, active runs, and key priorities for today.",
     }
     await _submit_via_hub(hub, config, logger, "Daily briefing computed")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("daily_briefing")
+    except Exception:
+        logger.exception("Daily briefing report generation failed")
 
 
 async def job_daily_reflexion_report(hub):
@@ -175,6 +180,11 @@ async def job_daily_reflexion_report(hub):
         "task": "Generate daily reflexion report: review yesterday's agent runs, identify patterns, flag issues, suggest improvements.",
     }
     await _submit_via_hub(hub, config, logger, "Daily reflexion report queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("daily_reflexion")
+    except Exception:
+        logger.exception("Daily reflexion report generation failed")
 
 
 async def job_grant_research_sweep(hub):
@@ -213,6 +223,11 @@ async def job_grant_research_sweep(hub):
 
     if submitted:
         _notify("Grant research sweep queued (4 agents)", logger)
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("grant_research_sweep")
+    except Exception:
+        logger.exception("Grant research report generation failed")
 
 
 async def job_hutto_planning_monitor(hub):
@@ -224,17 +239,27 @@ async def job_hutto_planning_monitor(hub):
         "task": "Monitor Hutto TX city and county planning commission agendas, new developments, zoning changes, and real estate opportunities relevant to YEPC mission.",
     }
     await _submit_via_hub(hub, config, logger, "Hutto planning monitor queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("hutto_planning_monitor")
+    except Exception:
+        logger.exception("Hutto planning report generation failed")
 
 
 async def job_weekly_fare_alert(hub):
     logger = get_logger("scheduler")
     config = {
-        "agent_id": "finance-advisor",
+        "agent_id": "travel-flights-agent",
         "project": "travel",
         "graph": "research",
         "task": "Research current travel fare deals from Austin-Bergstrom (AUS) airport. Find best deals for upcoming 60 days. Include airlines, prices, and booking links.",
     }
     await _submit_via_hub(hub, config, logger, "Weekly fare alert queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("weekly_fare_alert")
+    except Exception:
+        logger.exception("Fare alert report generation failed")
 
 
 async def job_sigma_signal_check(hub):
@@ -246,6 +271,11 @@ async def job_sigma_signal_check(hub):
         "task": "Check and process Sigma Signal newsletter submission inbox. Review pending submissions, draft responses, prepare content pipeline update.",
     }
     await _submit_via_hub(hub, config, logger, "Sigma Signal check queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("sigma_signal_check")
+    except Exception:
+        logger.exception("Sigma Signal report generation failed")
 
 
 async def job_nightly_db_cleanup(hub):

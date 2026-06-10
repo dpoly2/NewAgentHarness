@@ -526,6 +526,26 @@ def init_schema() -> None:
         "CREATE INDEX IF NOT EXISTS idx_documents_doc_type ON documents(doc_type)",
         "CREATE INDEX IF NOT EXISTS idx_events_log_event_type ON events_log(event_type)",
         "CREATE INDEX IF NOT EXISTS idx_events_log_created_at ON events_log(created_at)",
+        """
+        CREATE TABLE IF NOT EXISTS reports (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            report_type TEXT DEFAULT 'daily',
+            content TEXT DEFAULT '',
+            summary TEXT DEFAULT '',
+            project_slug TEXT DEFAULT '',
+            generated_by TEXT DEFAULT '',
+            job_id TEXT DEFAULT '',
+            status TEXT DEFAULT 'complete',
+            generated_at TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_reports_report_type ON reports(report_type)",
+        "CREATE INDEX IF NOT EXISTS idx_reports_generated_at ON reports(generated_at)",
+        "CREATE INDEX IF NOT EXISTS idx_reports_project_slug ON reports(project_slug)",
+        "CREATE INDEX IF NOT EXISTS idx_reports_job_id ON reports(job_id)",
     ]
 
     default_config = {
@@ -1105,6 +1125,87 @@ def update_trip(id: str, **kwargs: Any) -> dict[str, Any] | None:
 def delete_trip(id: str) -> bool:
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM travel_trips WHERE id = ?", (id,))
+    return cur.rowcount > 0
+
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+
+def create_report(
+    title: str,
+    content: str = "",
+    report_type: str = "daily",
+    summary: str = "",
+    project_slug: str = "",
+    generated_by: str = "",
+    job_id: str = "",
+    status: str = "complete",
+    id: str | None = None,
+) -> dict[str, Any]:
+    rid = id or str(uuid.uuid4())
+    now = _now_iso()
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO reports
+               (id, title, report_type, content, summary, project_slug,
+                generated_by, job_id, status, generated_at, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (rid, title, report_type, content, summary, project_slug,
+             generated_by, job_id, status, now, now, now),
+        )
+    return get_report(rid) or {}
+
+
+def get_report(id: str) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM reports WHERE id = ?", (id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_reports(
+    report_type: str | None = None,
+    project_slug: str | None = None,
+    job_id: str | None = None,
+    limit: int = 100,
+) -> list[dict[str, Any]]:
+    sql = "SELECT * FROM reports WHERE 1=1"
+    params: list[Any] = []
+    if report_type:
+        sql += " AND report_type = ?"
+        params.append(report_type)
+    if project_slug:
+        sql += " AND project_slug = ?"
+        params.append(project_slug)
+    if job_id:
+        sql += " AND job_id = ?"
+        params.append(job_id)
+    sql += " ORDER BY generated_at DESC LIMIT ?"
+    params.append(limit)
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_report(id: str, **kwargs: Any) -> dict[str, Any] | None:
+    allowed = {"title", "content", "summary", "report_type", "project_slug",
+               "generated_by", "job_id", "status"}
+    assignments, params = [], []
+    for k, v in kwargs.items():
+        if k in allowed:
+            assignments.append(f"{k} = ?")
+            params.append(v)
+    if not assignments:
+        return get_report(id)
+    assignments.append("updated_at = ?")
+    params.append(_now_iso())
+    params.append(id)
+    with get_conn() as conn:
+        conn.execute(f"UPDATE reports SET {', '.join(assignments)} WHERE id = ?", params)
+    return get_report(id)
+
+
+def delete_report(id: str) -> bool:
+    with get_conn() as conn:
+        cur = conn.execute("DELETE FROM reports WHERE id = ?", (id,))
     return cur.rowcount > 0
 
 
