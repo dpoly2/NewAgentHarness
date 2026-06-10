@@ -322,6 +322,22 @@ foreach ( [ 'pbs_square_oauth_notice', 'pbs_stripe_oauth_notice' ] as $t_key ) {
       <a href="https://developer.squareup.com/apps" target="_blank" rel="noopener noreferrer">Square Developer Dashboard ↗</a>
     </p>
 
+    <?php if ( ! $pbs_key_set( 'pbs_square_access_token' ) ) : ?>
+    <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px;">
+      <strong>⚙️ Setup required:</strong>
+      <ol style="margin:8px 0 0 16px;padding:0;line-height:1.9;">
+        <li>Open <a href="https://developer.squareup.com/apps" target="_blank">Square Developer Dashboard</a> → your app → <strong>OAuth</strong> tab</li>
+        <li>Add this <strong>Redirect URL</strong>:
+          <br><code id="pbs-square-redirect-uri" style="background:#f1f1f1;padding:3px 8px;border-radius:3px;font-size:12px;user-select:all;"><?php echo esc_html( PBS_Square_OAuth::get_redirect_uri() ); ?></code>
+          <button type="button" onclick="var u=document.getElementById('pbs-square-redirect-uri');navigator.clipboard.writeText(u.textContent);this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000);" style="margin-left:6px;font-size:11px;padding:2px 8px;cursor:pointer;">📋 Copy</button>
+        </li>
+        <li>Copy your <strong>Application ID</strong> and <strong>Application Secret</strong> from the <strong>Credentials</strong> tab</li>
+        <li>Paste them in the fields below, then click <strong>Save Settings</strong></li>
+        <li>Click <strong>🔗 Connect with Square OAuth</strong></li>
+      </ol>
+    </div>
+    <?php endif; ?>
+
     <div style="margin-bottom:16px;">
       <?php if ( $pbs_key_set( 'pbs_square_access_token' ) ) : ?>
         <span style="font-weight:600;color:<?php echo ! empty( $square_status['expired'] ) ? '#c62828' : '#4caf50'; ?>;">
