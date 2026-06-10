@@ -252,6 +252,225 @@ def _format_conversation_history(history: list[dict]) -> str:
     return "\n".join(lines)
 
 
+# ── Travel tools ─────────────────────────────────────────────────────────────
+
+import urllib.request as _urllib_req
+import urllib.parse as _urllib_parse
+
+_TRAVEL_PATTERNS = [
+    r"(?:plan|create|add|book|start|set up)\s+(?:a\s+)?trip",
+    r"trip\s+(?:from|to)\s+\w+",
+    r"travel(?:l?ing)?\s+(?:from|to)\s+\w+",
+    r"fly(?:ing)?\s+(?:from|to)\s+\w+",
+    r"(?:going|headed|heading)\s+to\s+[A-Z]",
+    r"hotels?\s+(?:in|near|at)\s+\w+",
+    r"(?:find|search|look up)\s+hotels?",
+]
+
+
+def _is_travel_request(msg: str) -> bool:
+    ml = msg.lower()
+    return any(re.search(p, ml, re.IGNORECASE) for p in _TRAVEL_PATTERNS)
+
+
+def _geocode(place: str) -> tuple[float, float] | None:
+    """Geocode a place name to (lat, lon) via Nominatim (free, no key)."""
+    try:
+        url = "https://nominatim.openstreetmap.org/search?" + _urllib_parse.urlencode(
+            {"q": place, "format": "json", "limit": 1}
+        )
+        req = _urllib_req.Request(url, headers={"User-Agent": "ArchonHub/1.0 (travel-research)"})
+        with _urllib_req.urlopen(req, timeout=6) as r:
+            data = json.loads(r.read())
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception as e:
+        logger.debug("Geocode failed for %r: %s", place, e)
+    return None
+
+
+def _hotels_near(lat: float, lon: float, radius: int = 5000) -> list[dict]:
+    """Query Overpass API for hotels within radius meters of lat/lon."""
+    query = (
+        f"[out:json][timeout:15];"
+        f"("
+        f"  node['tourism'='hotel'](around:{radius},{lat},{lon});"
+        f"  way['tourism'='hotel'](around:{radius},{lat},{lon});"
+        f"  node['tourism'='motel'](around:{radius},{lat},{lon});"
+        f"  node['tourism'='guest_house'](around:{radius},{lat},{lon});"
+        f");"
+        f"out body;"
+    )
+    try:
+        data = _urllib_parse.urlencode({"data": query}).encode()
+        req = _urllib_req.Request(
+            "https://overpass-api.de/api/interpreter",
+            data=data,
+            headers={"User-Agent": "ArchonHub/1.0"},
+        )
+        with _urllib_req.urlopen(req, timeout=16) as r:
+            result = json.loads(r.read())
+        hotels = []
+        for el in result.get("elements", []):
+            tags = el.get("tags", {})
+            name = tags.get("name", "")
+            if not name:
+                continue
+            stars_raw = tags.get("stars", "")
+            stars = ("★" * int(stars_raw)) if stars_raw.isdigit() else ""
+            hotels.append({
+                "name": name,
+                "stars": stars,
+                "website": tags.get("website", tags.get("contact:website", "")),
+                "phone": tags.get("phone", tags.get("contact:phone", "")),
+                "address": " ".join(filter(None, [
+                    tags.get("addr:housenumber", ""),
+                    tags.get("addr:street", ""),
+                    tags.get("addr:city", ""),
+                ])),
+            })
+            if len(hotels) >= 12:
+                break
+        return hotels
+    except Exception as e:
+        logger.debug("Overpass hotel search failed: %s", e)
+        return []
+
+
+_MONTH_MAP = {
+    "jan": "01", "feb": "02", "mar": "03", "apr": "04", "may": "05", "jun": "06",
+    "jul": "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12",
+}
+
+
+def _extract_trip_info(msg: str) -> dict:
+    """Extract source, destination, and dates from a natural-language message."""
+    result = {"source": "", "destination": "", "depart_date": "", "return_date": "", "purpose": ""}
+
+    # "from X to Y" pattern
+    m = re.search(
+        r"from\s+([A-Za-z][A-Za-z\s,]+?)\s+to\s+([A-Za-z][A-Za-z\s,]+?)(?=\s+(?:on|in|june|july|aug|jan|feb|mar|apr|may|sep|oct|nov|dec|\d{4})|[,.]|$)",
+        msg, re.IGNORECASE
+    )
+    if m:
+        result["source"] = m.group(1).strip().rstrip(",")
+        result["destination"] = m.group(2).strip().rstrip(",")
+    else:
+        # "trip/travel/fly to X"
+        m2 = re.search(
+            r"(?:trip|travel|fly|going|headed|heading)\s+to\s+([A-Za-z][A-Za-z\s,]+?)(?=\s+(?:on|in|june|july|\d{4})|[,.]|$)",
+            msg, re.IGNORECASE
+        )
+        if m2:
+            result["destination"] = m2.group(1).strip().rstrip(",")
+
+    # "June 20-25, 2026" or "Jun 20 – 25 2026"
+    range_m = re.search(
+        r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
+        r"aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+        r"\s+(\d{1,2})\s*[–—\-]\s*(\d{1,2}),?\s*(\d{4})",
+        msg, re.IGNORECASE
+    )
+    if range_m:
+        month = _MONTH_MAP.get(range_m.group(1).lower()[:3], "01")
+        year = range_m.group(4)
+        result["depart_date"] = f"{year}-{month}-{range_m.group(2).zfill(2)}"
+        result["return_date"]  = f"{year}-{month}-{range_m.group(3).zfill(2)}"
+    else:
+        # "June 20, 2026" single date → depart only
+        single_m = re.search(
+            r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
+            r"aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+            r"\s+(\d{1,2}),?\s*(\d{4})",
+            msg, re.IGNORECASE
+        )
+        if single_m:
+            month = _MONTH_MAP.get(single_m.group(1).lower()[:3], "01")
+            result["depart_date"] = f"{single_m.group(3)}-{month}-{single_m.group(2).zfill(2)}"
+
+    # ISO date fallback "2026-06-20"
+    if not result["depart_date"]:
+        iso_dates = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", msg)
+        if iso_dates:
+            result["depart_date"] = iso_dates[0]
+            if len(iso_dates) > 1:
+                result["return_date"] = iso_dates[1]
+
+    return result
+
+
+def _handle_trip_creation(user_message: str) -> str:
+    """
+    Core travel tool: extract trip params, create DB record, geocode destination,
+    search nearby hotels. Returns a context block injected into the LLM prompt.
+    """
+    if not DB_OK:
+        return ""
+
+    info = _extract_trip_info(user_message)
+    dest = info.get("destination", "").strip()
+    if not dest:
+        return ""
+
+    source = info.get("source", "").strip() or "Austin, TX"
+    trip_name = f"{source} \u2192 {dest}"
+
+    # Create the trip in DB (idempotent by name)
+    trip_created = False
+    try:
+        existing_names = {t.get("name", "") for t in db.list_trips()}
+        if trip_name not in existing_names:
+            db.create_trip(
+                name=trip_name,
+                destination=dest,
+                depart_date=info.get("depart_date", ""),
+                return_date=info.get("return_date", ""),
+                status="planning",
+                notes=f"Created by Inez. Purpose: {info.get('purpose') or 'TBD'}",
+            )
+            trip_created = True
+    except Exception as e:
+        logger.warning("Trip DB create failed: %s", e)
+
+    # Geocode + hotel search
+    hotel_lines: list[str] = []
+    coords = _geocode(dest)
+    if coords:
+        lat, lon = coords
+        hotels = _hotels_near(lat, lon)
+        if hotels:
+            hotel_lines.append(f"HOTELS NEAR {dest.upper()} (OpenStreetMap data, sorted by proximity):")
+            for h in hotels:
+                parts = [f"  • {h['name']}"]
+                if h.get("stars"):
+                    parts[0] += f" {h['stars']}"
+                if h.get("address"):
+                    parts[0] += f" — {h['address']}"
+                if h.get("website"):
+                    parts[0] += f" | {h['website']}"
+                if h.get("phone"):
+                    parts[0] += f" | {h['phone']}"
+                hotel_lines.append(parts[0])
+        else:
+            hotel_lines.append(
+                f"No hotels found via Overpass within 5km of {dest}. "
+                "Recommend searching Booking.com, Hotels.com, or Google Hotels."
+            )
+    else:
+        hotel_lines.append(
+            f"Could not geocode '{dest}'. Provide a more specific city/address for hotel search."
+        )
+
+    action = "created" if trip_created else "already exists"
+    return (
+        f"[TRIP TOOL RESULT]\n"
+        f"Trip '{trip_name}' {action} in Travel tab.\n"
+        f"Departure: {info.get('depart_date') or 'TBD'}  |  Return: {info.get('return_date') or 'TBD'}\n"
+        f"Status: planning\n\n"
+        + "\n".join(hotel_lines)
+    )
+
+
 def _build_system_prompt(history: list[dict]) -> str:
     """Build Inez's full system prompt with live context injected from DB."""
     skill = _load_skill()
@@ -265,12 +484,21 @@ def _build_system_prompt(history: list[dict]) -> str:
 
     full_memory = "\n\n".join(filter(None, [portfolio, client_roster, memory])) or "No prior memory."
 
-    return (
+    travel_tools_note = (
+        "\n\nTRAVEL TOOLS: When the user asks to plan/create a trip or find hotels, "
+        "a pre-execution tool has already geocoded the destination and searched for nearby hotels via OpenStreetMap. "
+        "The results will appear in [TOOL RESULTS] in the user message. "
+        "Present the hotel list clearly, note which ones have websites/phone numbers, "
+        "and confirm the trip has been saved to the Travel tab."
+    )
+
+    base = (
         skill
         .replace("{todos_context}", todos)
         .replace("{memory_context}", full_memory)
         .replace("{conversation_history}", conv)
     )
+    return base + travel_tools_note
 
 
 def _parse_inez_response(raw: str) -> dict:
@@ -340,13 +568,20 @@ def think(
     """
     Inez analyzes the user message and returns a structured response.
 
+    Flow:
+      1. Inez analyzes request → produces inez_message + dispatches list
+      2. Each dispatch runs through agent_runner.run_agent() (skill + LLM + DB writes)
+      3. Agent results are synthesized: Inez calls LLM again with all agent outputs
+      4. Final synthesized response returned to user
+
     Returns:
         {
-            "inez_message": str,         # What Inez says to the user
-            "dispatches": list[dict],    # Agents to deploy
+            "inez_message": str,         # Inez's final synthesized response
+            "dispatches": list[dict],    # Agents that were dispatched
+            "agent_results": list[dict], # Raw results from each agent
             "needs_agents": bool,
-            "todos": list[dict],         # Todos to create
-            "tasks": list[dict],         # Tasks to enqueue (v2 compat)
+            "todos": list[dict],
+            "tasks": list[dict],
             "error": str | None,
         }
     """
@@ -354,6 +589,7 @@ def think(
         return {
             "inez_message": INEZ_FALLBACK,
             "dispatches": [],
+            "agent_results": [],
             "needs_agents": False,
             "todos": [],
             "tasks": [],
@@ -363,21 +599,109 @@ def think(
     if emit:
         emit("inez_thinking", message="Inez is analyzing your request...")
 
+    # ── Step 1: Travel pre-fetch (geocode + hotel data → passed as context to agent) ──
+    travel_tool_data = ""
+    if _is_travel_request(user_message):
+        try:
+            trip_info = _extract_trip_info(user_message)
+            dest = trip_info.get("destination", "")
+            if dest:
+                if emit:
+                    emit("inez_thinking", message=f"Looking up hotels near {dest}...")
+                coords = _geocode(dest)
+                if coords:
+                    hotels = _hotels_near(*coords)
+                    if hotels:
+                        lines = [f"Hotels near {dest} (OpenStreetMap):"]
+                        for h in hotels:
+                            parts = [f"  • {h['name']}"]
+                            if h.get("stars"):
+                                parts[0] += f" {h['stars']}"
+                            if h.get("address"):
+                                parts[0] += f" — {h['address']}"
+                            if h.get("website"):
+                                parts[0] += f" | {h['website']}"
+                            lines.append(parts[0])
+                        travel_tool_data = "\n".join(lines)
+        except Exception as _te:
+            logger.warning("Travel pre-fetch error: %s", _te)
+
     system_prompt = _build_system_prompt(history)
+
+    # ── Step 2: Inez analysis — determines what to say and who to dispatch ────
+    dispatch_instructions = (
+        "\n\nDISPATCH INSTRUCTIONS: When you need agents to do work, include a JSON block:\n"
+        "```json\n"
+        '{"inez_message": "...", "dispatches": [{"agent_id": "agent-id", "task": "specific task description", '
+        '"project": "project-slug", "context": "any extra context the agent needs"}]}\n'
+        "```\n"
+        "For travel requests, dispatch to: travel-project-lead (orchestrator), "
+        "travel-hotel-agent (lodging), travel-flights-agent (flights), travel-budget-helper (budget).\n"
+        "For project work, dispatch the relevant specialist agent.\n"
+        "Agents will execute the task, write results to the database, and report back."
+    )
+
+    augmented_message = user_message
+    if travel_tool_data:
+        augmented_message = (
+            f"{user_message}\n\n"
+            f"[PRE-FETCHED TOOL DATA — pass this to the travel agent as context]:\n"
+            f"{travel_tool_data}"
+        )
 
     try:
         model = _llm(temperature=0.3)
         messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=user_message),
+            SystemMessage(content=system_prompt + dispatch_instructions),
+            HumanMessage(content=augmented_message),
         ]
         response = model.invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
 
         result = _parse_inez_response(raw)
         result["error"] = None
+        result.setdefault("agent_results", [])
 
-        # Persist todos to DB
+        # ── Step 3: Execute dispatches through agent_runner ───────────────────
+        dispatches = result.get("dispatches", [])
+        if dispatches:
+            if emit:
+                emit("inez_thinking", message=f"Dispatching {len(dispatches)} agent(s)...")
+            try:
+                from agent_runner import run_dispatches, build_synthesis_context
+                # Inject travel tool data as context for travel agents
+                for d in dispatches:
+                    if travel_tool_data and "travel" in d.get("agent_id", "").lower():
+                        d["context"] = (d.get("context", "") + "\n\n" + travel_tool_data).strip()
+                agent_results = run_dispatches(dispatches, emit=emit)
+                result["agent_results"] = agent_results
+
+                # ── Step 4: Synthesis — Inez reads all agent outputs ──────────
+                synthesis_context = build_synthesis_context(agent_results)
+                if synthesis_context:
+                    if emit:
+                        emit("inez_thinking", message="Synthesizing agent results...")
+                    synth_messages = [
+                        SystemMessage(content=system_prompt),
+                        HumanMessage(content=(
+                            f"Original request: {user_message}\n\n"
+                            f"{synthesis_context}\n\n"
+                            "Now provide your final synthesized response to the user. "
+                            "Be concise and actionable. Reference what was saved to the database."
+                        )),
+                    ]
+                    synth_response = model.invoke(synth_messages)
+                    synth_raw = synth_response.content if hasattr(synth_response, "content") else str(synth_response)
+                    # Use synthesis as final message, keep original as fallback
+                    synth_parsed = _parse_inez_response(synth_raw)
+                    if synth_parsed.get("inez_message"):
+                        result["inez_message"] = synth_parsed["inez_message"]
+            except ImportError:
+                logger.warning("agent_runner not available — dispatches not executed")
+            except Exception as de:
+                logger.error("Dispatch execution error: %s", de)
+
+        # ── Persist todos Inez created directly ──────────────────────────────
         if DB_OK and result.get("todos"):
             for todo in result["todos"]:
                 try:
@@ -385,7 +709,7 @@ def think(
                         title=todo.get("title", ""),
                         description=todo.get("description", ""),
                         priority=todo.get("priority", "medium"),
-                        project=todo.get("projectSlug", ""),
+                        project=todo.get("projectSlug", todo.get("project", "")),
                         due_date=todo.get("dueDate"),
                         tags=todo.get("tags", []),
                         source="inez",
@@ -393,15 +717,17 @@ def think(
                 except Exception:
                     pass
 
-        # Save exchange to Inez's memory
+        # ── Save exchange to Inez's memory ────────────────────────────────────
         if DB_OK:
             try:
                 db.save_memory(
                     INEZ_AGENT_ID,
                     f"exchange_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     json.dumps({
-                        "user": user_message[:200],
-                        "inez": result["inez_message"][:200],
+                        "user":       user_message[:200],
+                        "inez":       result["inez_message"][:200],
+                        "agents":     [r.get("agent_id") for r in result.get("agent_results", [])],
+                        "db_writes":  sum(r.get("db_writes_applied", 0) for r in result.get("agent_results", [])),
                     }),
                 )
             except Exception:
@@ -417,7 +743,6 @@ def think(
     except Exception as exc:
         err_str = str(exc)
         logger.error("Inez LLM error: %s", exc)
-        # Give a friendly message for common config errors
         if "api_key" in err_str.lower() or "credentials" in err_str.lower() or "OPENAI_API_KEY" in err_str:
             msg = (
                 f"{INEZ_FALLBACK}\n\n"
@@ -432,12 +757,13 @@ def think(
         else:
             msg = f"I ran into a problem: {err_str[:200]}"
         return {
-            "inez_message": msg,
-            "dispatches": [],
-            "needs_agents": False,
-            "todos": [],
-            "tasks": [],
-            "error": err_str,
+            "inez_message":  msg,
+            "dispatches":    [],
+            "agent_results": [],
+            "needs_agents":  False,
+            "todos":         [],
+            "tasks":         [],
+            "error":         err_str,
         }
 
 
