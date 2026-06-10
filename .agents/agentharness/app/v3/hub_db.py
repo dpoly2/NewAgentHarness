@@ -546,6 +546,90 @@ def init_schema() -> None:
         "CREATE INDEX IF NOT EXISTS idx_reports_generated_at ON reports(generated_at)",
         "CREATE INDEX IF NOT EXISTS idx_reports_project_slug ON reports(project_slug)",
         "CREATE INDEX IF NOT EXISTS idx_reports_job_id ON reports(job_id)",
+        """
+        CREATE TABLE IF NOT EXISTS market_positions (
+            id TEXT PRIMARY KEY,
+            ticker TEXT NOT NULL,
+            name TEXT DEFAULT '',
+            position_type TEXT DEFAULT 'equity',
+            action TEXT DEFAULT 'long',
+            shares REAL DEFAULT 0,
+            entry_price REAL DEFAULT 0,
+            current_price REAL DEFAULT 0,
+            target_price REAL DEFAULT 0,
+            stop_price REAL DEFAULT 0,
+            pnl REAL DEFAULT 0,
+            pnl_pct REAL DEFAULT 0,
+            notes TEXT DEFAULT '',
+            status TEXT DEFAULT 'open',
+            project_slug TEXT DEFAULT 'markets',
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS market_watchlist (
+            id TEXT PRIMARY KEY,
+            ticker TEXT NOT NULL UNIQUE,
+            name TEXT DEFAULT '',
+            category TEXT DEFAULT 'watchlist',
+            target_price REAL DEFAULT 0,
+            notes TEXT DEFAULT '',
+            added_at TEXT
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_market_positions_ticker ON market_positions(ticker)",
+        "CREATE INDEX IF NOT EXISTS idx_market_positions_status ON market_positions(status)",
+        """
+        CREATE TABLE IF NOT EXISTS market_trade_theories (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT DEFAULT '',
+            hypothesis TEXT DEFAULT '',
+            starting_balance REAL DEFAULT 100000,
+            current_balance REAL DEFAULT 100000,
+            status TEXT DEFAULT 'active',
+            win_count INTEGER DEFAULT 0,
+            loss_count INTEGER DEFAULT 0,
+            total_trades INTEGER DEFAULT 0,
+            total_pnl REAL DEFAULT 0,
+            agent_id TEXT DEFAULT '',
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS market_paper_trades (
+            id TEXT PRIMARY KEY,
+            theory_id TEXT DEFAULT '',
+            ticker TEXT NOT NULL,
+            name TEXT DEFAULT '',
+            position_type TEXT DEFAULT 'equity',
+            direction TEXT DEFAULT 'long',
+            shares REAL DEFAULT 0,
+            entry_price REAL DEFAULT 0,
+            exit_price REAL DEFAULT 0,
+            current_price REAL DEFAULT 0,
+            target_price REAL DEFAULT 0,
+            stop_price REAL DEFAULT 0,
+            capital_used REAL DEFAULT 0,
+            pnl REAL DEFAULT 0,
+            pnl_pct REAL DEFAULT 0,
+            status TEXT DEFAULT 'open',
+            source TEXT DEFAULT 'manual',
+            agent_id TEXT DEFAULT '',
+            thesis TEXT DEFAULT '',
+            analysis TEXT DEFAULT '',
+            opened_at TEXT,
+            closed_at TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_paper_trades_theory_id ON market_paper_trades(theory_id)",
+        "CREATE INDEX IF NOT EXISTS idx_paper_trades_status ON market_paper_trades(status)",
+        "CREATE INDEX IF NOT EXISTS idx_paper_trades_ticker ON market_paper_trades(ticker)",
+        "CREATE INDEX IF NOT EXISTS idx_theories_status ON market_trade_theories(status)",
     ]
 
     default_config = {
@@ -1207,6 +1291,364 @@ def delete_report(id: str) -> bool:
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM reports WHERE id = ?", (id,))
     return cur.rowcount > 0
+
+
+# ── Market Positions ──────────────────────────────────────────────────────────
+
+def upsert_position(
+    ticker: str,
+    shares: float = 0,
+    entry_price: float = 0,
+    target_price: float = 0,
+    stop_price: float = 0,
+    position_type: str = "equity",
+    action: str = "long",
+    name: str = "",
+    notes: str = "",
+    status: str = "open",
+    id: str | None = None,
+) -> dict[str, Any]:
+    now = _now_iso()
+    with get_conn() as conn:
+        existing = conn.execute("SELECT id FROM market_positions WHERE ticker=? AND status='open'", (ticker,)).fetchone()
+        if existing:
+            conn.execute(
+                """UPDATE market_positions
+                   SET shares=?,entry_price=?,target_price=?,stop_price=?,
+                       position_type=?,action=?,name=?,notes=?,updated_at=?
+                   WHERE id=?""",
+                (shares, entry_price, target_price, stop_price,
+                 position_type, action, name, notes, now, existing["id"]),
+            )
+            rid = existing["id"]
+        else:
+            rid = id or str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO market_positions
+                   (id,ticker,name,position_type,action,shares,entry_price,current_price,
+                    target_price,stop_price,pnl,pnl_pct,notes,status,project_slug,created_at,updated_at)
+                   VALUES (?,?,?,?,?,?,?,0,?,?,0,0,?,'open','markets',?,?)""",
+                (rid, ticker, name, position_type, action, shares, entry_price,
+                 target_price, stop_price, notes, now, now),
+            )
+    return get_position(rid) or {}
+
+
+def get_position(id: str) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM market_positions WHERE id=?", (id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_positions(status: str = "open") -> list[dict[str, Any]]:
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT * FROM market_positions WHERE status=? ORDER BY created_at DESC",
+            (status,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_position_price(ticker: str, current_price: float) -> None:
+    """Update current_price and recalculate P&L for all open positions in a ticker."""
+    now = _now_iso()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, shares, entry_price, action FROM market_positions WHERE ticker=? AND status='open'",
+            (ticker,)
+        ).fetchall()
+        for row in rows:
+            shares = row["shares"]
+            entry = row["entry_price"] or 0
+            multiplier = 1 if row["action"] == "long" else -1
+            pnl = multiplier * shares * (current_price - entry)
+            pnl_pct = (multiplier * (current_price - entry) / entry * 100) if entry else 0
+            conn.execute(
+                "UPDATE market_positions SET current_price=?,pnl=?,pnl_pct=?,updated_at=? WHERE id=?",
+                (current_price, round(pnl, 2), round(pnl_pct, 2), now, row["id"]),
+            )
+
+
+def close_position(id: str) -> bool:
+    now = _now_iso()
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE market_positions SET status='closed',updated_at=? WHERE id=?", (now, id)
+        )
+    return cur.rowcount > 0
+
+
+def delete_position(id: str) -> bool:
+    with get_conn() as conn:
+        cur = conn.execute("DELETE FROM market_positions WHERE id=?", (id,))
+    return cur.rowcount > 0
+
+
+# ── Market Watchlist ──────────────────────────────────────────────────────────
+
+def upsert_watchlist(
+    ticker: str,
+    name: str = "",
+    category: str = "watchlist",
+    target_price: float = 0,
+    notes: str = "",
+) -> dict[str, Any]:
+    now = _now_iso()
+    with get_conn() as conn:
+        existing = conn.execute("SELECT id FROM market_watchlist WHERE ticker=?", (ticker,)).fetchone()
+        if existing:
+            conn.execute(
+                "UPDATE market_watchlist SET name=?,category=?,target_price=?,notes=? WHERE ticker=?",
+                (name, category, target_price, notes, ticker),
+            )
+            rid = existing["id"]
+        else:
+            rid = str(uuid.uuid4())
+            conn.execute(
+                """INSERT INTO market_watchlist (id,ticker,name,category,target_price,notes,added_at)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (rid, ticker, name, category, target_price, notes, now),
+            )
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM market_watchlist WHERE id=?", (rid,)).fetchone()
+    return dict(row) if row else {}
+
+
+def list_watchlist() -> list[dict[str, Any]]:
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM market_watchlist ORDER BY category, ticker").fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_from_watchlist(ticker: str) -> bool:
+    with get_conn() as conn:
+        cur = conn.execute("DELETE FROM market_watchlist WHERE ticker=?", (ticker,))
+    return cur.rowcount > 0
+
+
+# ── Paper Trading — Theories ──────────────────────────────────────────────────
+
+def create_theory(
+    name: str,
+    hypothesis: str = "",
+    description: str = "",
+    starting_balance: float = 100_000.0,
+    agent_id: str = "markets-project-lead",
+    id: str | None = None,
+) -> dict[str, Any]:
+    rid = id or str(uuid.uuid4())
+    now = _now_iso()
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO market_trade_theories
+               (id,name,description,hypothesis,starting_balance,current_balance,
+                status,win_count,loss_count,total_trades,total_pnl,agent_id,created_at,updated_at)
+               VALUES (?,?,?,?,?,?,?,0,0,0,0,?,?,?)""",
+            (rid, name, description, hypothesis, starting_balance, starting_balance,
+             "active", agent_id, now, now),
+        )
+    return get_theory(rid) or {}
+
+
+def get_theory(id: str) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM market_trade_theories WHERE id=?", (id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_theories(status: str | None = None) -> list[dict[str, Any]]:
+    sql = "SELECT * FROM market_trade_theories"
+    params: list[Any] = []
+    if status:
+        sql += " WHERE status=?"
+        params.append(status)
+    sql += " ORDER BY created_at DESC"
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_theory(id: str, **kwargs: Any) -> dict[str, Any] | None:
+    allowed = {"name","description","hypothesis","status","starting_balance",
+               "current_balance","win_count","loss_count","total_trades","total_pnl","agent_id"}
+    sets, vals = [], []
+    for k, v in kwargs.items():
+        if k in allowed:
+            sets.append(f"{k}=?")
+            vals.append(v)
+    if not sets:
+        return get_theory(id)
+    vals += [_now_iso(), id]
+    with get_conn() as conn:
+        conn.execute(f"UPDATE market_trade_theories SET {','.join(sets)},updated_at=? WHERE id=?", vals)
+    return get_theory(id)
+
+
+def delete_theory(id: str) -> bool:
+    with get_conn() as conn:
+        conn.execute("DELETE FROM market_paper_trades WHERE theory_id=?", (id,))
+        cur = conn.execute("DELETE FROM market_trade_theories WHERE id=?", (id,))
+    return cur.rowcount > 0
+
+
+# ── Paper Trading — Trades ────────────────────────────────────────────────────
+
+def open_paper_trade(
+    theory_id: str,
+    ticker: str,
+    shares: float,
+    entry_price: float,
+    target_price: float = 0,
+    stop_price: float = 0,
+    direction: str = "long",
+    position_type: str = "equity",
+    thesis: str = "",
+    agent_id: str = "",
+    source: str = "manual",
+    name: str = "",
+    id: str | None = None,
+) -> dict[str, Any]:
+    rid = id or str(uuid.uuid4())
+    now = _now_iso()
+    capital = shares * entry_price
+    with get_conn() as conn:
+        conn.execute(
+            """INSERT INTO market_paper_trades
+               (id,theory_id,ticker,name,position_type,direction,shares,entry_price,
+                exit_price,current_price,target_price,stop_price,capital_used,
+                pnl,pnl_pct,status,source,agent_id,thesis,analysis,opened_at,created_at,updated_at)
+               VALUES (?,?,?,?,?,?,?,?,0,?,?,?,?,0,0,'open',?,?,?,?,?,?,?)""",
+            (rid, theory_id, ticker, name, position_type, direction, shares,
+             entry_price, entry_price, target_price, stop_price, capital,
+             source, agent_id, thesis, "", now, now, now),
+        )
+        # Deduct capital from theory balance
+        conn.execute(
+            "UPDATE market_trade_theories SET current_balance=current_balance-?,updated_at=? WHERE id=?",
+            (capital, now, theory_id),
+        )
+    return get_paper_trade(rid) or {}
+
+
+def get_paper_trade(id: str) -> dict[str, Any] | None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT * FROM market_paper_trades WHERE id=?", (id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_paper_trades(theory_id: str | None = None, status: str | None = None) -> list[dict[str, Any]]:
+    sql = "SELECT * FROM market_paper_trades WHERE 1=1"
+    params: list[Any] = []
+    if theory_id:
+        sql += " AND theory_id=?"
+        params.append(theory_id)
+    if status:
+        sql += " AND status=?"
+        params.append(status)
+    sql += " ORDER BY opened_at DESC"
+    with get_conn() as conn:
+        rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def close_paper_trade(
+    id: str,
+    exit_price: float,
+    analysis: str = "",
+) -> dict[str, Any] | None:
+    now = _now_iso()
+    trade = get_paper_trade(id)
+    if not trade:
+        return None
+    shares    = trade.get("shares", 0)
+    entry     = trade.get("entry_price", 0)
+    direction = trade.get("direction", "long")
+    mult      = 1 if direction == "long" else -1
+    pnl       = mult * shares * (exit_price - entry)
+    pnl_pct   = (mult * (exit_price - entry) / entry * 100) if entry else 0
+    capital   = trade.get("capital_used", shares * entry)
+    theory_id = trade.get("theory_id", "")
+    won       = pnl > 0
+    status    = "closed_win" if won else ("closed_loss" if pnl < 0 else "closed_flat")
+
+    with get_conn() as conn:
+        conn.execute(
+            """UPDATE market_paper_trades
+               SET exit_price=?,pnl=?,pnl_pct=?,status=?,analysis=?,closed_at=?,updated_at=?
+               WHERE id=?""",
+            (exit_price, round(pnl,2), round(pnl_pct,2), status, analysis, now, now, id),
+        )
+        if theory_id:
+            # Return capital + P&L to theory balance; update stats
+            conn.execute(
+                """UPDATE market_trade_theories
+                   SET current_balance=current_balance+?,
+                       total_pnl=total_pnl+?,
+                       total_trades=total_trades+1,
+                       win_count=win_count+?,
+                       loss_count=loss_count+?,
+                       updated_at=?
+                   WHERE id=?""",
+                (capital + pnl, round(pnl,2),
+                 1 if won else 0, 0 if won else 1,
+                 now, theory_id),
+            )
+    return get_paper_trade(id)
+
+
+def update_paper_trade_price(ticker: str, current_price: float) -> None:
+    """Update current_price and live P&L on all open paper trades for ticker."""
+    now = _now_iso()
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id,shares,entry_price,direction FROM market_paper_trades WHERE ticker=? AND status='open'",
+            (ticker,)
+        ).fetchall()
+        for row in rows:
+            mult    = 1 if row["direction"] == "long" else -1
+            entry   = row["entry_price"] or 0
+            pnl     = mult * row["shares"] * (current_price - entry)
+            pnl_pct = (mult * (current_price - entry) / entry * 100) if entry else 0
+            conn.execute(
+                "UPDATE market_paper_trades SET current_price=?,pnl=?,pnl_pct=?,updated_at=? WHERE id=?",
+                (current_price, round(pnl,2), round(pnl_pct,2), now, row["id"]),
+            )
+
+
+def theory_stats(theory_id: str) -> dict[str, Any]:
+    """Compute summary stats for a theory."""
+    theory = get_theory(theory_id)
+    if not theory:
+        return {}
+    trades = list_paper_trades(theory_id=theory_id)
+    closed = [t for t in trades if t.get("status","").startswith("closed")]
+    open_trades = [t for t in trades if t.get("status") == "open"]
+    win_pnls  = [t["pnl"] for t in closed if t.get("pnl",0) > 0]
+    loss_pnls = [t["pnl"] for t in closed if t.get("pnl",0) < 0]
+    avg_win   = sum(win_pnls)  / len(win_pnls)  if win_pnls  else 0
+    avg_loss  = sum(loss_pnls) / len(loss_pnls) if loss_pnls else 0
+    win_rate  = (len(win_pnls) / len(closed) * 100) if closed else 0
+    r_r       = abs(avg_win / avg_loss) if avg_loss else 0
+    starting  = theory.get("starting_balance", 100_000)
+    total_pnl = theory.get("total_pnl", 0)
+    return {
+        "theory_id":       theory_id,
+        "name":            theory.get("name",""),
+        "starting_balance": starting,
+        "current_balance": theory.get("current_balance", starting),
+        "total_pnl":       total_pnl,
+        "total_return_pct": (total_pnl / starting * 100) if starting else 0,
+        "total_trades":    theory.get("total_trades", 0),
+        "open_trades":     len(open_trades),
+        "win_count":       theory.get("win_count", 0),
+        "loss_count":      theory.get("loss_count", 0),
+        "win_rate_pct":    round(win_rate, 1),
+        "avg_win":         round(avg_win, 2),
+        "avg_loss":        round(avg_loss, 2),
+        "risk_reward":     round(r_r, 2),
+        "largest_win":     round(max(win_pnls), 2)  if win_pnls  else 0,
+        "largest_loss":    round(min(loss_pnls), 2) if loss_pnls else 0,
+    }
 
 
 def create_connector(

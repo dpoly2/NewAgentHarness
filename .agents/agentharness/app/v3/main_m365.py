@@ -145,6 +145,7 @@ NAV_ITEMS = [
     ("📅", "Schedule", "show_schedule"),
     ("👥", "Clients",  "show_clients"),
     ("✈",  "Travel",   "show_travel"),
+    ("📈", "Markets",  "show_markets"),
     ("⚡", "Connect",  "show_connectors"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
@@ -352,6 +353,7 @@ class ArchonHubApp:
         self.admin_unlocked = False
         self.hub_process = None
         self.toast_label = None
+        self._markets_tab = None   # MarketsTab instance (if live feed is running)
 
         # Chat state
         self._chat_messages = []          # list of {role, content, agent_id, run_id, ts}
@@ -524,6 +526,13 @@ class ArchonHubApp:
                 widget.configure(bg=BG_RAIL, fg=TEXT_BODY)
 
     def _clear_content(self):
+        # Stop markets feed before destroying widgets
+        if hasattr(self, "_markets_tab") and self._markets_tab is not None:
+            try:
+                self._markets_tab.stop_feed()
+            except Exception:
+                pass
+            self._markets_tab = None
         for child in self.content.winfo_children():
             child.destroy()
 
@@ -1726,6 +1735,22 @@ class ArchonHubApp:
     def _delete_client(self, client_id):
         hub_db.delete_client(client_id)
         self._refresh_clients()
+
+    # ── Markets ───────────────────────────────────────────────────────────────
+
+    def show_markets(self):
+        self._set_active_nav("Markets")
+        self._clear_content()
+        try:
+            from markets_tab import MarketsTab
+        except Exception as e:
+            tk.Label(self.content, text=f"Markets tab failed to load:\n{e}",
+                     bg=BG_CANVAS, fg=ERROR, font=("Segoe UI", 11)).pack(expand=True)
+            return
+        tab = MarketsTab(self.content)
+        tab.pack(fill="both", expand=True)
+        self._markets_tab = tab
+        tab.start_feed()
 
     # ── Reports ───────────────────────────────────────────────────────────────
 
