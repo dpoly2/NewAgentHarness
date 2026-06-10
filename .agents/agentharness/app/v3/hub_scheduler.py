@@ -70,13 +70,16 @@ SCHEDULE_FIELD_NAMES = {
     "second",
 }
 BUILT_IN_JOBS = (
-    ("daily_briefing", "Daily Briefing", {"hour": 6, "minute": 50}, "Compute morning briefing"),
-    ("daily_reflexion", "Daily Reflexion", {"hour": 7, "minute": 0}, "Daily reflexion report"),
-    ("grant_research_sweep", "Grant Research Sweep", {"day_of_week": "mon", "hour": 8, "minute": 0}, "Grant research across 4 orgs"),
-    ("hutto_planning_monitor", "Hutto Planning Monitor", {"day_of_week": "mon", "hour": 8, "minute": 30}, "Hutto city planning monitor"),
-    ("weekly_fare_alert", "Weekly Fare Alert", {"day_of_week": "mon", "hour": 13, "minute": 30}, "Travel fare alerts from AUS"),
-    ("sigma_signal_check", "Sigma Signal Check", {"hour": 14, "minute": 0}, "Sigma Signal inbox check"),
-    ("nightly_db_cleanup", "Nightly DB Cleanup", {"hour": 2, "minute": 0}, "Remove runs older than 90 days"),
+    ("daily_briefing",                "Daily Briefing",                {"hour": 6,  "minute": 50},                              "Compute morning briefing"),
+    ("daily_reflexion",               "Daily Reflexion",               {"hour": 7,  "minute": 0},                               "Daily reflexion report"),
+    ("grant_research_sweep",          "Grant Research Sweep",          {"day_of_week": "mon", "hour": 8,  "minute": 0},         "Grant research across 4 orgs"),
+    ("hutto_planning_monitor",        "Hutto Planning Monitor",        {"day_of_week": "mon", "hour": 8,  "minute": 30},        "Hutto city planning monitor"),
+    ("weekly_fare_alert",             "Weekly Fare Alert",             {"day_of_week": "mon", "hour": 13, "minute": 30},        "Travel fare alerts from AUS"),
+    ("sigma_signal_check",            "Sigma Signal Check",            {"hour": 14, "minute": 0},                               "Sigma Signal inbox check"),
+    ("markets_daily_premarket_brief", "Markets Pre-Market Brief",      {"day_of_week": "mon-fri", "hour": 8, "minute": 30},     "Markets daily pre-market intelligence"),
+    ("markets_weekly_picks_digest",   "Markets Weekly Picks Digest",   {"day_of_week": "mon", "hour": 7,  "minute": 0},         "Markets weekly actionable picks"),
+    ("markets_monthly_portfolio_review", "Markets Monthly P&L Review", {"day":  "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}, "Markets monthly portfolio review"),
+    ("nightly_db_cleanup",            "Nightly DB Cleanup",            {"hour": 2,  "minute": 0},                               "Remove runs older than 90 days"),
 )
 BUILT_IN_JOB_IDS = {job_id for job_id, _, _, _ in BUILT_IN_JOBS}
 
@@ -298,6 +301,54 @@ async def job_nightly_db_cleanup(hub):
     logger.info("Nightly DB cleanup removed %s runs older than 90 days", deleted)
 
 
+async def job_markets_daily_premarket_brief(hub):
+    logger = get_logger("scheduler")
+    config = {
+        "agent_id": "markets-project-lead",
+        "project": "markets",
+        "graph": "research",
+        "task": "Generate daily pre-market brief: futures, key levels, catalysts, macro watch, top setups.",
+    }
+    await _submit_via_hub(hub, config, logger, "Markets pre-market brief queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("markets_daily_premarket_brief")
+    except Exception:
+        logger.exception("Markets pre-market report generation failed")
+
+
+async def job_markets_weekly_picks_digest(hub):
+    logger = get_logger("scheduler")
+    config = {
+        "agent_id": "markets-project-lead",
+        "project": "markets",
+        "graph": "research",
+        "task": "Compile weekly markets picks digest: top 3-5 equity and options setups with entry/exit criteria.",
+    }
+    await _submit_via_hub(hub, config, logger, "Markets weekly picks digest queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("markets_weekly_picks_digest")
+    except Exception:
+        logger.exception("Markets weekly picks report generation failed")
+
+
+async def job_markets_monthly_portfolio_review(hub):
+    logger = get_logger("scheduler")
+    config = {
+        "agent_id": "markets-project-lead",
+        "project": "markets",
+        "graph": "reflexion",
+        "task": "Generate monthly portfolio review: P&L summary, position assessment, risk metrics, strategy adjustment.",
+    }
+    await _submit_via_hub(hub, config, logger, "Markets monthly portfolio review queued")
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("markets_monthly_portfolio_review")
+    except Exception:
+        logger.exception("Markets monthly portfolio review generation failed")
+
+
 async def _run_user_job(hub, job_config: dict):
     logger = get_logger("scheduler")
     submit_config = {k: v for k, v in dict(job_config).items() if k not in SCHEDULE_FIELD_NAMES}
@@ -320,19 +371,22 @@ class HubScheduler:
         self.logger = get_logger("scheduler")
 
     def build(self):
-        """Register all 7 built-in jobs"""
+        """Register all built-in jobs"""
         if CronTrigger is None:
             raise RuntimeError("APScheduler CronTrigger is not available")
 
         tz = _get_timezone()
         job_specs = {
-            "daily_briefing": (job_daily_briefing_compute, "Daily Briefing", {"hour": 6, "minute": 50}),
-            "daily_reflexion": (job_daily_reflexion_report, "Daily Reflexion", {"hour": 7, "minute": 0}),
-            "grant_research_sweep": (job_grant_research_sweep, "Grant Research Sweep", {"day_of_week": "mon", "hour": 8, "minute": 0}),
-            "hutto_planning_monitor": (job_hutto_planning_monitor, "Hutto Planning Monitor", {"day_of_week": "mon", "hour": 8, "minute": 30}),
-            "weekly_fare_alert": (job_weekly_fare_alert, "Weekly Fare Alert", {"day_of_week": "mon", "hour": 13, "minute": 30}),
-            "sigma_signal_check": (job_sigma_signal_check, "Sigma Signal Check", {"hour": 14, "minute": 0}),
-            "nightly_db_cleanup": (job_nightly_db_cleanup, "Nightly DB Cleanup", {"hour": 2, "minute": 0}),
+            "daily_briefing":                  (job_daily_briefing_compute,             "Daily Briefing",                {"hour": 6,  "minute": 50}),
+            "daily_reflexion":                 (job_daily_reflexion_report,             "Daily Reflexion",               {"hour": 7,  "minute": 0}),
+            "grant_research_sweep":            (job_grant_research_sweep,               "Grant Research Sweep",          {"day_of_week": "mon", "hour": 8,  "minute": 0}),
+            "hutto_planning_monitor":          (job_hutto_planning_monitor,             "Hutto Planning Monitor",        {"day_of_week": "mon", "hour": 8,  "minute": 30}),
+            "weekly_fare_alert":               (job_weekly_fare_alert,                  "Weekly Fare Alert",             {"day_of_week": "mon", "hour": 13, "minute": 30}),
+            "sigma_signal_check":              (job_sigma_signal_check,                 "Sigma Signal Check",            {"hour": 14, "minute": 0}),
+            "markets_daily_premarket_brief":   (job_markets_daily_premarket_brief,      "Markets Pre-Market Brief",      {"day_of_week": "mon-fri", "hour": 8, "minute": 30}),
+            "markets_weekly_picks_digest":     (job_markets_weekly_picks_digest,        "Markets Weekly Picks Digest",   {"day_of_week": "mon", "hour": 7,  "minute": 0}),
+            "markets_monthly_portfolio_review":(job_markets_monthly_portfolio_review,   "Markets Monthly P&L Review",    {"day": "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}),
+            "nightly_db_cleanup":              (job_nightly_db_cleanup,                 "Nightly DB Cleanup",            {"hour": 2,  "minute": 0}),
         }
 
         for job_id, (func, name, cron_kwargs) in job_specs.items():

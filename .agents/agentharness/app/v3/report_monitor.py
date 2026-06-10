@@ -202,6 +202,128 @@ REPORT_JOBS: dict[str, dict] = {
             },
         ],
     },
+
+    "markets_daily_premarket_brief": {
+        "report_type": "daily",
+        "title_template": "Markets Pre-Market Brief — {date}",
+        "project_slug": "markets",
+        "agents": [
+            {
+                "agent_id": "markets-macro-analyst",
+                "project": "markets",
+                "task": (
+                    "Pre-market intelligence report:\n"
+                    "1. Overnight futures (S&P, Nasdaq, Dow, Russell)\n"
+                    "2. International market closes (Europe, Asia)\n"
+                    "3. Key economic data releases today and this week\n"
+                    "4. Fed speakers or FOMC events\n"
+                    "5. Major earnings reports today\n"
+                    "6. Pre-market movers >3% with catalyst\n"
+                    "7. Key technical levels: S&P support/resistance\n"
+                    "Format as concise intelligence brief. Save to knowledge_base category=markets."
+                ),
+            },
+            {
+                "agent_id": "markets-project-lead",
+                "project": "markets",
+                "task": (
+                    "Based on the macro analyst pre-market data, synthesize the daily pre-market brief:\n"
+                    "1. Overall market posture (risk-on / risk-off / neutral)\n"
+                    "2. Top 3 opportunities or setups to watch today\n"
+                    "3. Key risks or events to avoid\n"
+                    "4. Watchlist updates\n"
+                    "Format as actionable morning brief. Save summary to knowledge_base."
+                ),
+            },
+        ],
+    },
+
+    "markets_weekly_picks_digest": {
+        "report_type": "research",
+        "title_template": "Markets Weekly Picks Digest — {date}",
+        "project_slug": "markets",
+        "agents": [
+            {
+                "agent_id": "markets-equity-analyst",
+                "project": "markets",
+                "task": (
+                    "Weekly equity research sweep:\n"
+                    "1. Top 3 stock setups — earnings plays, technical breakouts, fundamentals\n"
+                    "2. For each: ticker, thesis, entry zone, target, stop-loss, catalyst\n"
+                    "3. Sector rotation — which sectors are leading/lagging?\n"
+                    "4. Earnings calendar highlights for the week\n"
+                    "Save findings to knowledge_base category=markets."
+                ),
+            },
+            {
+                "agent_id": "markets-options-strategist",
+                "project": "markets",
+                "task": (
+                    "Weekly options income opportunities:\n"
+                    "1. Top 2-3 covered call candidates (high IV, liquid chains)\n"
+                    "2. Top 2 cash-secured put candidates for premium capture\n"
+                    "3. Any defined-risk spread setups with favorable R/R\n"
+                    "4. For each: ticker, strike, expiry, premium, max risk, thesis\n"
+                    "Never risk more than 2% of account per position."
+                ),
+            },
+            {
+                "agent_id": "markets-project-lead",
+                "project": "markets",
+                "task": (
+                    "Compile the Weekly Picks Digest from equity and options research:\n"
+                    "1. Top 3-5 actionable ideas ranked by conviction\n"
+                    "2. Each with: entry, target, stop, position sizing per risk framework\n"
+                    "3. Overall portfolio allocation guidance\n"
+                    "4. What to avoid this week\n"
+                    "Format as clean structured digest. Save as document type=research."
+                ),
+            },
+        ],
+    },
+
+    "markets_monthly_portfolio_review": {
+        "report_type": "reflexion",
+        "title_template": "Markets Monthly Portfolio Review — {date}",
+        "project_slug": "markets",
+        "agents": [
+            {
+                "agent_id": "markets-equity-analyst",
+                "project": "markets",
+                "task": (
+                    "Monthly equity position review:\n"
+                    "1. All open positions — is the thesis still valid?\n"
+                    "2. Any positions that triggered stops or need to be closed?\n"
+                    "3. New positions to add based on current market conditions\n"
+                    "4. P&L breakdown by position"
+                ),
+            },
+            {
+                "agent_id": "markets-options-strategist",
+                "project": "markets",
+                "task": (
+                    "Monthly options portfolio review:\n"
+                    "1. All open options positions — roll, close, or let expire?\n"
+                    "2. Overall options P&L this month\n"
+                    "3. Adjustments needed based on delta/theta profile\n"
+                    "4. Next month income generation plan"
+                ),
+            },
+            {
+                "agent_id": "markets-project-lead",
+                "project": "markets",
+                "task": (
+                    "Monthly Portfolio Review Report:\n"
+                    "1. Total P&L summary (equity + options)\n"
+                    "2. Risk metrics vs framework limits (10% max position, 25% sector, 2% options risk)\n"
+                    "3. Drawdown analysis — were any weekly 5% limits approached?\n"
+                    "4. Strategy adjustments for next month\n"
+                    "5. Capital allocation changes\n"
+                    "Format as executive P&L report. Save as document type=reflexion."
+                ),
+            },
+        ],
+    },
 }
 
 # ---------------------------------------------------------------------------

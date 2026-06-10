@@ -241,6 +241,53 @@ AUTOMATIONS = [
         "trigger_config": {"cron": "30 8 * * 1", "timezone": "America/Chicago"},
         "status": "active",
     },
+    {
+        "slug": "markets-daily-premarket-brief",
+        "name": "Markets Daily Pre-Market Brief",
+        "description": "Weekday pre-market intelligence: futures, key levels, catalysts, macro watch.",
+        "project_slug": "markets",
+        "agent_id": "markets-project-lead",
+        "trigger_type": "schedule",
+        "trigger_config": {"cron": "30 8 * * 1-5", "timezone": "America/Chicago", "description": "Weekdays 8:30am CT"},
+        "steps": [
+            "markets-macro-analyst: pull overnight futures, pre-market movers, key economic releases today",
+            "markets-project-lead: synthesize into pre-market brief with levels and action items",
+            "save report to reports table as type=daily",
+        ],
+        "status": "active",
+    },
+    {
+        "slug": "markets-weekly-picks-digest",
+        "name": "Markets Weekly Picks Digest",
+        "description": "Monday morning: top 3-5 actionable stock/options ideas with entry/exit criteria.",
+        "project_slug": "markets",
+        "agent_id": "markets-project-lead",
+        "trigger_type": "schedule",
+        "trigger_config": {"cron": "0 7 * * 1", "timezone": "America/Chicago", "description": "Mondays 7:00am CT"},
+        "steps": [
+            "markets-equity-analyst: screen for top 3-5 equity setups",
+            "markets-options-strategist: identify income-generating options trades",
+            "markets-macro-analyst: macro backdrop and sector rotation",
+            "markets-project-lead: compile Weekly Picks Digest",
+        ],
+        "status": "active",
+    },
+    {
+        "slug": "markets-monthly-portfolio-review",
+        "name": "Markets Monthly Portfolio Review",
+        "description": "First Monday of month: full P&L review, position assessment, strategy adjustment.",
+        "project_slug": "markets",
+        "agent_id": "markets-project-lead",
+        "trigger_type": "schedule",
+        "trigger_config": {"cron": "0 9 1-7 * 1", "timezone": "America/Chicago", "description": "First Monday of each month 9:00am CT"},
+        "steps": [
+            "markets-equity-analyst: review all open positions",
+            "markets-options-strategist: review all options positions",
+            "markets-cio: P&L summary and risk metrics",
+            "markets-project-lead: Monthly Portfolio Review report",
+        ],
+        "status": "active",
+    },
 ]
 
 # Client registry
