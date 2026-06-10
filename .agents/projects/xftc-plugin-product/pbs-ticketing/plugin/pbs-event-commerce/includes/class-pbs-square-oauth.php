@@ -274,7 +274,7 @@ class PBS_Square_OAuth {
         $location = get_option( 'pbs_square_location_id', '' );
 
         if ( empty( $token ) ) {
-            return [ 'connected' => false, 'label' => 'Not connected', 'color' => '#e0e0e0' ];
+            return [ 'connected' => false, 'expired' => false, 'merchant_id' => '', 'location_id' => '', 'expires_at' => '', 'label' => 'Not connected', 'color' => '#e0e0e0' ];
         }
 
         $exp_ts  = $expires ? strtotime( $expires ) : 0;
