@@ -56,9 +56,10 @@ class PBS_Admin {
     /** Helper: return array of enabled gateway slugs */
     public static function enabled_gateways() {
         $gateways = [];
-        if ( get_option('pbs_stripe_enabled') && get_option('pbs_stripe_secret_key') )       $gateways[] = 'stripe';
-        if ( get_option('pbs_square_enabled') && get_option('pbs_square_access_token') )      $gateways[] = 'square';
-        if ( get_option('pbs_paypal_enabled') && get_option('pbs_paypal_client_id') )         $gateways[] = 'paypal';
+        if ( get_option('pbs_stripe_enabled') && get_option('pbs_stripe_secret_key') )    $gateways[] = 'stripe';
+        if ( get_option('pbs_square_enabled') && PBS_Square::get_valid_token()
+             && ( get_option('pbs_square_location_id') || true ) )                         $gateways[] = 'square';
+        if ( get_option('pbs_paypal_enabled') && get_option('pbs_paypal_client_id') )     $gateways[] = 'paypal';
         return $gateways;
     }
 

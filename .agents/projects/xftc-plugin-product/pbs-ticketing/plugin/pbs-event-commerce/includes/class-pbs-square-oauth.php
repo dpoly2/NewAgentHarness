@@ -129,7 +129,7 @@ class PBS_Square_OAuth {
             update_option( 'pbs_square_enabled', 1 );
             // Fetch and save location ID if not set
             if ( empty( get_option( 'pbs_square_location_id' ) ) ) {
-                self::fetch_and_save_location( $result['access_token'] );
+                PBS_Square::fetch_location( $result['access_token'] );
             }
             set_transient( 'pbs_square_oauth_notice', [ 'type' => 'success', 'message' => '✅ Square connected successfully! Gateway is now active.' ], 60 );
         }
@@ -221,31 +221,6 @@ class PBS_Square_OAuth {
         }
 
         return new WP_Error( 'refresh_failed', $body['errors'][0]['detail'] ?? 'Refresh failed.' );
-    }
-
-    /**
-     * Fetch first active location and save location ID automatically.
-     */
-    private static function fetch_and_save_location( $access_token ) {
-        $environment = get_option( 'pbs_square_env', 'sandbox' );
-        $base_url    = ( $environment === 'sandbox' ) ? 'https://connect.squareupsandbox.com' : 'https://connect.squareup.com';
-
-        $response = wp_remote_get( $base_url . '/v2/locations', [
-            'headers' => [
-                'Authorization'  => 'Bearer ' . $access_token,
-                'Square-Version' => '2024-10-17',
-                'Content-Type'   => 'application/json',
-            ],
-            'timeout' => 10,
-        ] );
-
-        if ( is_wp_error( $response ) ) return;
-
-        $body = json_decode( wp_remote_retrieve_body( $response ), true );
-
-        if ( ! empty( $body['locations'][0]['id'] ) ) {
-            update_option( 'pbs_square_location_id', $body['locations'][0]['id'] );
-        }
     }
 
     /**
