@@ -47,7 +47,12 @@ class PBS_Webhooks {
         $payload        = $request->get_body();
         $sig_header     = $request->get_header( 'x-stripe-signature' );
 
-        if ( $signing_secret && ! self::verify_stripe_signature( $payload, $sig_header, $signing_secret ) ) {
+        // Fail closed: if no secret configured, reject all requests.
+        if ( ! $signing_secret ) {
+            return new WP_REST_Response( [ 'error' => 'Stripe webhook secret not configured.' ], 401 );
+        }
+
+        if ( ! self::verify_stripe_signature( $payload, $sig_header, $signing_secret ) ) {
             return new WP_REST_Response( [ 'error' => 'Invalid Stripe signature.' ], 401 );
         }
 
@@ -99,16 +104,23 @@ class PBS_Webhooks {
             case 'payment_intent.succeeded':
                 $order_id = self::find_order_by_payment_id( $object['id'] ?? '' );
                 if ( $order_id ) {
-                    PBS_DB::update_order_status( $order_id, 'complete', $object['id'] );
-                    do_action( 'pbs_stripe_payment_succeeded', $order_id, $object );
+                    $order = PBS_DB::get_order( $order_id );
+                    // Idempotency: only advance to 'complete' from a non-terminal state
+                    if ( $order && in_array( $order['status'], [ 'pending', 'processing' ], true ) ) {
+                        PBS_DB::update_order_status( $order_id, 'complete', $object['id'] );
+                        do_action( 'pbs_stripe_payment_succeeded', $order_id, $object );
+                    }
                 }
                 break;
 
             case 'payment_intent.payment_failed':
                 $order_id = self::find_order_by_payment_id( $object['id'] ?? '' );
-                if ( $order_id && PBS_DB::get_order( $order_id )['status'] === 'pending' ) {
-                    PBS_DB::update_order_status( $order_id, 'failed' );
-                    do_action( 'pbs_stripe_payment_failed', $order_id, $object );
+                if ( $order_id ) {
+                    $order = PBS_DB::get_order( $order_id );
+                    if ( $order && $order['status'] === 'pending' ) {
+                        PBS_DB::update_order_status( $order_id, 'failed' );
+                        do_action( 'pbs_stripe_payment_failed', $order_id, $object );
+                    }
                 }
                 break;
 
@@ -116,13 +128,15 @@ class PBS_Webhooks {
                 $pi_id    = $object['payment_intent'] ?? '';
                 $order_id = self::find_order_by_payment_id( $pi_id );
                 if ( $order_id ) {
-                    $new_status = $object['amount_refunded'] >= $object['amount'] ? 'refunded' : 'partial_refund';
-                    PBS_DB::update_order_status( $order_id, $new_status );
+                    $order = PBS_DB::get_order( $order_id );
+                    if ( $order && $order['status'] === 'complete' ) {
+                        $new_status = $object['amount_refunded'] >= $object['amount'] ? 'refunded' : 'partial_refund';
+                        PBS_DB::update_order_status( $order_id, $new_status );
+                    }
                 }
                 break;
 
             default:
-                // Unhandled event type — acknowledged but ignored per spec §8.3
                 return new WP_REST_Response( [ 'status' => 'ignored', 'type' => $type ], 200 );
         }
 
@@ -139,7 +153,12 @@ class PBS_Webhooks {
         $payload     = $request->get_body();
         $sig_header  = $request->get_header( 'x-square-hmacsha256-signature' );
 
-        if ( $signing_key && ! self::verify_square_signature( $payload, $sig_header, $signing_key, $request->get_route() ) ) {
+        // Fail closed: if no key configured, reject all requests.
+        if ( ! $signing_key ) {
+            return new WP_REST_Response( [ 'error' => 'Square webhook signature key not configured.' ], 401 );
+        }
+
+        if ( ! self::verify_square_signature( $payload, $sig_header, $signing_key, $request->get_route() ) ) {
             return new WP_REST_Response( [ 'error' => 'Invalid Square signature.' ], 401 );
         }
 
@@ -230,9 +249,9 @@ class PBS_Webhooks {
     private static function verify_paypal_signature( WP_REST_Request $request ): bool {
         $webhook_id = get_option( 'pbs_paypal_webhook_id', '' );
         if ( ! $webhook_id ) {
-            // No webhook ID configured — skip verification but log it
-            error_log( 'PBS_Webhooks: PayPal webhook_id not configured; skipping signature verification.' );
-            return true;
+            // Fail closed: webhook ID must be configured to verify signatures.
+            error_log( 'PBS_Webhooks: pbs_paypal_webhook_id not configured — rejecting webhook.' );
+            return false;
         }
 
         $client_id = get_option( 'pbs_paypal_client_id', '' );
@@ -285,10 +304,17 @@ class PBS_Webhooks {
         $type     = $event['event_type'];
         $resource = $event['resource'] ?? [];
 
+        // Resolve PBS order ID: try custom_id first, then transient map by PayPal order ID.
+        $paypal_order_id = $resource['supplementary_data']['related_ids']['order_id']
+            ?? $resource['id']
+            ?? '';
+        $custom_id = $resource['custom_id'] ?? '';
+
         switch ( $type ) {
             case 'PAYMENT.CAPTURE.COMPLETED':
-                $custom_id = $resource['custom_id'] ?? $resource['invoice_id'] ?? '';
-                $order_id  = (int) $custom_id;
+                $order_id = $custom_id
+                    ? (int) $custom_id
+                    : (int) get_transient( 'pbs_paypal_order_map_' . sanitize_key( $paypal_order_id ) );
                 if ( $order_id && PBS_DB::get_order( $order_id ) ) {
                     PBS_DB::update_order_status( $order_id, 'complete', $resource['id'] ?? '' );
                     do_action( 'pbs_paypal_capture_completed', $order_id, $resource );
@@ -297,8 +323,9 @@ class PBS_Webhooks {
 
             case 'PAYMENT.CAPTURE.DENIED':
             case 'PAYMENT.CAPTURE.DECLINED':
-                $custom_id = $resource['custom_id'] ?? $resource['invoice_id'] ?? '';
-                $order_id  = (int) $custom_id;
+                $order_id = $custom_id
+                    ? (int) $custom_id
+                    : (int) get_transient( 'pbs_paypal_order_map_' . sanitize_key( $paypal_order_id ) );
                 if ( $order_id ) {
                     PBS_DB::update_order_status( $order_id, 'failed' );
                     do_action( 'pbs_paypal_capture_failed', $order_id, $resource );
@@ -306,7 +333,9 @@ class PBS_Webhooks {
                 break;
 
             case 'PAYMENT.CAPTURE.REFUNDED':
-                $order_id = (int) ( $resource['custom_id'] ?? 0 );
+                $order_id = $custom_id
+                    ? (int) $custom_id
+                    : (int) get_transient( 'pbs_paypal_order_map_' . sanitize_key( $paypal_order_id ) );
                 if ( $order_id ) {
                     PBS_DB::update_order_status( $order_id, 'refunded' );
                 }

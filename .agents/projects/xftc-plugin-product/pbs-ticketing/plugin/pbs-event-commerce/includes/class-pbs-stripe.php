@@ -31,7 +31,8 @@ class PBS_Stripe {
         $body = [];
 
         // Stripe refunds accept either a charge or payment_intent ID.
-        if ( str_starts_with( $payment_id, 'pi_' ) ) {
+        // Use strpos for PHP 7.4 compatibility (str_starts_with requires PHP 8.0+).
+        if ( 0 === strpos( $payment_id, 'pi_' ) ) {
             $body['payment_intent'] = $payment_id;
         } else {
             $body['charge'] = $payment_id;

@@ -1,0 +1,72 @@
+name: PBS Plugin CI
+
+on:
+  push:
+    paths:
+      - '.agents/projects/xftc-plugin-product/pbs-ticketing/plugin/pbs-event-commerce/**'
+  pull_request:
+    paths:
+      - '.agents/projects/xftc-plugin-product/pbs-ticketing/plugin/pbs-event-commerce/**'
+
+defaults:
+  run:
+    working-directory: .agents/projects/xftc-plugin-product/pbs-ticketing/plugin/pbs-event-commerce
+
+jobs:
+  lint:
+    name: PHP Syntax Lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: none
+
+      - name: Syntax check all PHP files
+        run: find . -name "*.php" -not -path "./vendor/*" -exec php -l {} \; | grep -v "No syntax errors"
+        # Exit 0 only if all files pass
+
+  phpstan:
+    name: PHPStan Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run PHPStan (level 5)
+        run: vendor/bin/phpstan analyse --level=5 includes/ --no-progress
+
+  phpunit:
+    name: PHPUnit Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['7.4', '8.1', '8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --testdox

@@ -1,0 +1,17 @@
+{
+    "core": "WordPress/WordPress#6.5",
+    "plugins": [
+        "./plugin/pbs-event-commerce"
+    ],
+    "themes": [],
+    "port": 8888,
+    "testsPort": 8889,
+    "config": {
+        "WP_DEBUG": true,
+        "WP_DEBUG_LOG": true,
+        "SCRIPT_DEBUG": true
+    },
+    "mappings": {
+        "wp-content/uploads": "./uploads"
+    }
+}

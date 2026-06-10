@@ -49,6 +49,10 @@ class PBS_PayPal {
             return new WP_Error( 'amount', 'Invalid order amount.' );
         }
 
+        // The PBS order is created later (at checkout submit) so we cannot embed
+        // the PBS order ID in custom_id yet. We use a short-lived transient keyed
+        // by the PayPal order ID — the checkout AJAX sets it once the PBS order
+        // is created, and the webhook reads it.
         $response = wp_remote_post( self::base_url() . '/v2/checkout/orders', [
             'headers' => [
                 'Authorization' => 'Bearer ' . $access_token,

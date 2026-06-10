@@ -1,0 +1,27 @@
+{
+    "name": "pbs/pbs-event-commerce",
+    "description": "PBS Event Commerce WordPress Plugin",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "phpstan/phpstan": "^1.10",
+        "brain/monkey": "^2.6",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PBS\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test":   "phpunit --testdox",
+        "lint":   "find includes -name '*.php' -exec php -l {} \\;",
+        "phpstan": "phpstan analyse --level=5 includes/"
+    },
+    "config": {
+        "allow-plugins": {}
+    }
+}

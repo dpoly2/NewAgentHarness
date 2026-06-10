@@ -52,6 +52,15 @@ class PBS_Checkout {
                 $result = PBS_Square::charge( $order_id, $data );
                 break;
             case 'paypal':
+                // Store PBS order ID → PayPal order ID mapping before capture,
+                // so the webhook handler can look up the PBS order by PayPal order ID.
+                if ( ! empty( $data['paypal_order_id'] ) ) {
+                    set_transient(
+                        'pbs_paypal_order_map_' . sanitize_key( $data['paypal_order_id'] ),
+                        $order_id,
+                        DAY_IN_SECONDS
+                    );
+                }
                 $result = PBS_PayPal::capture( $order_id, $data );
                 break;
         }
@@ -191,11 +200,17 @@ class PBS_Checkout {
                 $amount = round( (float) $ticket['price'] * $quantity, 2 );
             }
         } else {
-            // Fallback when ticket type is not found (e.g. free RSVP with no type set)
-            $amount = (float) ( $post['amount'] ?? 0 );
-            if ( $amount < 0 ) {
-                return new WP_Error( 'amount', 'Invalid amount.' );
+            // No ticket_type sent at all — only allow $0 free orders; reject otherwise
+            $client_amount = (float) ( $post['amount'] ?? 0 );
+            if ( $ticket_type !== '' ) {
+                // A ticket type was specified but it's inactive/not found — reject to prevent
+                // an attacker bypassing price lookup with a bogus ticket_type.
+                return new WP_Error( 'amount', 'Ticket type not found or not available.' );
             }
+            if ( $client_amount > 0 ) {
+                return new WP_Error( 'amount', 'Cannot process a paid order without a valid ticket type.' );
+            }
+            $amount = 0.00;
         }
 
         return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
