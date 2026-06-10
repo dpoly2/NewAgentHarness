@@ -1,0 +1,52 @@
+name: ArchonHub iOS — Bump Build Number
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'projects/archonhub-ios/**'
+
+# Prevent concurrent runs from clobbering each other's build number commits
+concurrency:
+  group: archonhub-build-bump
+  cancel-in-progress: false
+
+jobs:
+  bump-build:
+    name: Increment CURRENT_PROJECT_VERSION
+    runs-on: ubuntu-latest
+    # Skip if this commit was itself a build-bump (prevent infinite loop)
+    if: "!contains(github.event.head_commit.message, '[build-bump]')"
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read current build number
+        id: current
+        run: |
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION' projects/archonhub-ios/ArchonHub.xcodeproj/project.pbxproj \
+                  | head -1 | grep -oE '[0-9]+')
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Current build: $BUILD"
+
+      - name: Increment build number in pbxproj
+        run: |
+          NEW=$(( ${{ steps.current.outputs.build }} + 1 ))
+          sed -i "s/CURRENT_PROJECT_VERSION = [0-9]\+;/CURRENT_PROJECT_VERSION = ${NEW};/g" \
+            projects/archonhub-ios/ArchonHub.xcodeproj/project.pbxproj
+          echo "New build: $NEW"
+
+      - name: Commit incremented build number
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          NEW=$(grep 'CURRENT_PROJECT_VERSION' projects/archonhub-ios/ArchonHub.xcodeproj/project.pbxproj \
+                | head -1 | grep -oE '[0-9]+')
+          git add projects/archonhub-ios/ArchonHub.xcodeproj/project.pbxproj
+          git commit -m "chore(archonhub): bump build to ${NEW} [build-bump]
+
+          Auto-incremented CURRENT_PROJECT_VERSION on push to main.
+          Marketing version unchanged: $(grep 'MARKETING_VERSION' projects/archonhub-ios/ArchonHub.xcodeproj/project.pbxproj | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          git push
