@@ -1,4 +1,27 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
+<?php if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! isset( $orders ) ) {
+    $event_id  = isset( $_GET['event_id'] ) ? (int) $_GET['event_id'] : 0;
+    $status    = isset( $_GET['status'] ) ? sanitize_text_field( $_GET['status'] ) : 'complete';
+    $search    = isset( $_GET['s'] ) ? sanitize_text_field( $_GET['s'] ) : '';
+    $args      = [ 'status' => $status, 'limit' => 500 ];
+    if ( $event_id ) $args['event_id'] = $event_id;
+    $orders    = PBS_DB::get_orders( $args ) ?: [];
+    if ( $search ) {
+        $orders = array_filter( $orders, function( $o ) use ( $search ) {
+            return stripos( $o['attendee_name'], $search ) !== false
+                || stripos( $o['attendee_email'], $search ) !== false
+                || stripos( $o['order_number'], $search ) !== false;
+        } );
+    }
+    global $wpdb;
+    $event_ids = $wpdb->get_col( "SELECT DISTINCT event_id FROM {$wpdb->prefix}pbs_orders ORDER BY event_id DESC" );
+}
+$event_id  = $event_id ?? 0;
+$status    = $status ?? 'complete';
+$search    = $search ?? '';
+$orders    = is_array( $orders ) ? array_values( $orders ) : [];
+$event_ids = $event_ids ?? [];
+?>
 <div class="wrap">
 <h1>Attendees<?php echo $event_id ? ' — ' . esc_html( get_the_title( $event_id ) ) : ''; ?></h1>
 
@@ -23,7 +46,6 @@
   <?php endif; ?>
 </form>
 
-<?php $orders = is_array( $orders ) ? array_values( $orders ) : []; ?>
 <p style="color:#888;font-size:13px;"><?php echo count( $orders ); ?> attendee<?php echo count($orders) !== 1 ? 's' : ''; ?> found.</p>
 
 <table class="pbs-admin-table widefat striped">

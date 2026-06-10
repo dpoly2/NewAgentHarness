@@ -1,4 +1,20 @@
-<?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
+<?php if ( ! defined( 'ABSPATH' ) ) exit;
+// Self-initialize variables in case called without the admin handler setting them
+// (e.g. opcode cache still serving old class-pbs-admin.php)
+if ( ! isset( $event_id ) ) {
+    $edit_id      = isset( $_GET['edit'] ) ? (int) $_GET['edit'] : 0;
+    $edit_tt      = $edit_id ? PBS_DB::get_ticket_type( $edit_id ) : null;
+    $event_id     = $edit_tt ? (int) $edit_tt['event_id'] : ( isset( $_GET['event_id'] ) ? (int) $_GET['event_id'] : 0 );
+    $msg          = isset( $_GET['msg'] ) ? sanitize_key( $_GET['msg'] ) : '';
+    $ticket_types = PBS_DB::get_all_ticket_types( $event_id );
+    global $wpdb;
+    $tt_event_ids = $wpdb->get_col( "SELECT DISTINCT event_id FROM {$wpdb->prefix}pbs_ticket_types ORDER BY event_id DESC" );
+}
+$edit_tt      = $edit_tt ?? null;
+$msg          = $msg ?? '';
+$ticket_types = $ticket_types ?? [];
+$tt_event_ids = $tt_event_ids ?? [];
+?>
 <div class="wrap">
 <h1>Ticket Types <?php if ( $event_id ) echo '— ' . esc_html( get_the_title( $event_id ) ); ?></h1>
 
