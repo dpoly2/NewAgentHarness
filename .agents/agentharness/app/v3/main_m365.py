@@ -146,6 +146,7 @@ NAV_ITEMS = [
     ("👥", "Clients",  "show_clients"),
     ("✈",  "Travel",   "show_travel"),
     ("📈", "Markets",  "show_markets"),
+    ("🏢", "Org",      "show_org"),
     ("⚡", "Connect",  "show_connectors"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
@@ -1807,6 +1808,20 @@ class ArchonHubApp:
     def _delete_client(self, client_id):
         hub_db.delete_client(client_id)
         self._refresh_clients()
+
+    # ── Org Chart ─────────────────────────────────────────────────────────────
+
+    def show_org(self):
+        self._set_active_nav("Org")
+        self._clear_content()
+        try:
+            from org_chart import OrgChartTab
+        except Exception as e:
+            tk.Label(self.content, text=f"Org chart failed to load:\n{e}",
+                     bg=BG_CANVAS, fg=ERROR, font=("Segoe UI", 11)).pack(expand=True)
+            return
+        tab = OrgChartTab(self.content)
+        tab.pack(fill="both", expand=True)
 
     # ── Markets ───────────────────────────────────────────────────────────────
 
