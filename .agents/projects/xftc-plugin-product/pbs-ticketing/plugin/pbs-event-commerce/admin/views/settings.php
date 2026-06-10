@@ -35,6 +35,16 @@ $paypal_verified    = get_option( 'pbs_paypal_merchant_email', '' );
 <p style="color:#666;margin-top:0;">Configure payment gateways, email notifications, and checkout behavior.</p>
 
 <?php
+$conf_msg = isset( $_GET['conf_page'] ) ? sanitize_text_field( $_GET['conf_page'] ) : '';
+if ( $conf_msg === 'created' ) {
+    $conf_id = (int) get_option( 'pbs_confirmation_page_id', 0 );
+    echo '<div class="notice notice-success is-dismissible"><p>✅ <strong>Confirmation page created!</strong> <a href="' . esc_url( get_permalink( $conf_id ) ) . '" target="_blank">View page ↗</a></p></div>';
+} elseif ( $conf_msg === 'exists' ) {
+    echo '<div class="notice notice-info is-dismissible"><p>ℹ️ Confirmation page already exists.</p></div>';
+} elseif ( $conf_msg === 'error' ) {
+    echo '<div class="notice notice-error is-dismissible"><p>❌ Could not create confirmation page. Please create it manually with the <code>[pbs_order_summary]</code> shortcode.</p></div>';
+}
+
 // URL-param based notices (more reliable than transients across redirects)
 $square_msg = isset( $_GET['square_msg'] ) ? sanitize_text_field( $_GET['square_msg'] ) : '';
 $square_err = isset( $_GET['square_err'] ) ? sanitize_text_field( $_GET['square_err'] ) : '';
@@ -614,6 +624,29 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
         <td>
           <input type="text" name="pbs_org_ein" value="<?php echo esc_attr( get_option( 'pbs_org_ein', '' ) ); ?>" class="regular-text" placeholder="XX-XXXXXXX">
           <p class="description">Shown on tax-deductible donation receipts.</p>
+        </td>
+      </tr>
+      <tr>
+        <th>Confirmation Page</th>
+        <td>
+          <?php
+          $conf_id   = (int) get_option( 'pbs_confirmation_page_id', 0 );
+          $conf_page = $conf_id ? get_post( $conf_id ) : null;
+          if ( $conf_page && $conf_page->post_status === 'publish' ) :
+          ?>
+            <span style="color:#4caf50;font-weight:600;">✅ <?php echo esc_html( $conf_page->post_title ); ?></span>
+            <a href="<?php echo esc_url( get_permalink( $conf_id ) ); ?>" target="_blank" style="margin-left:8px;">View ↗</a>
+            <a href="<?php echo esc_url( get_edit_post_link( $conf_id ) ); ?>" style="margin-left:8px;">Edit</a>
+            <input type="hidden" name="pbs_confirmation_page_id" value="<?php echo esc_attr( $conf_id ); ?>">
+          <?php else : ?>
+            <span style="color:#e65100;font-weight:600;">⚠️ Not configured</span>
+            <form method="post" style="display:inline;margin-left:12px;" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>">
+              <?php wp_nonce_field( 'pbs_create_confirmation_page' ); ?>
+              <input type="hidden" name="action" value="pbs_create_confirmation_page">
+              <button type="submit" class="button button-primary">Create Confirmation Page</button>
+            </form>
+            <p class="description" style="margin-top:4px;">Click to auto-create a "Order Confirmation" page with the <code>[pbs_order_summary]</code> shortcode.</p>
+          <?php endif; ?>
         </td>
       </tr>
     </table>

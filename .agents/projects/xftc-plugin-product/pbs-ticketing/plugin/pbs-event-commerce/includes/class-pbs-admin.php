@@ -7,6 +7,40 @@ class PBS_Admin {
         add_action( 'admin_menu',             [ __CLASS__, 'register_menu' ] );
         add_action( 'admin_init',             [ __CLASS__, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts',  [ __CLASS__, 'enqueue_admin_assets' ] );
+        add_action( 'admin_post_pbs_create_confirmation_page', [ __CLASS__, 'create_confirmation_page' ] );
+    }
+
+    /**
+     * Auto-create the Order Confirmation page with [pbs_order_summary] shortcode.
+     * Called by the "Create Confirmation Page" button in Settings.
+     */
+    public static function create_confirmation_page() {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorized' );
+        check_admin_referer( 'pbs_create_confirmation_page' );
+
+        // Don't create if already exists
+        $existing = (int) get_option( 'pbs_confirmation_page_id', 0 );
+        if ( $existing && get_post( $existing ) ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&conf_page=exists' ) );
+            exit;
+        }
+
+        $page_id = wp_insert_post( [
+            'post_title'   => 'Order Confirmation',
+            'post_name'    => 'order-confirmation',
+            'post_content' => '<!-- wp:shortcode -->[pbs_order_summary]<!-- /wp:shortcode -->',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_author'  => get_current_user_id(),
+        ] );
+
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_option( 'pbs_confirmation_page_id', $page_id );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&conf_page=created' ) );
+        } else {
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings&conf_page=error' ) );
+        }
+        exit;
     }
 
     public static function register_menu() {
