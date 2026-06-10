@@ -614,6 +614,167 @@ def import_documents_from_files() -> int:
     return count
 
 
+def import_trips_from_files() -> int:
+    """
+    Scan .agents/projects/travel/trips/*.md and seed travel_trips table.
+    Parses: trip name, destination, depart/return dates, status, budget, notes.
+    Idempotent — skips existing trips by name.
+    """
+    trips_dir = PROJECTS_DIR / "travel" / "trips"
+    if not trips_dir.exists():
+        return 0
+
+    # Map markdown status emoji → DB status
+    status_map = {
+        "researching": "planning",
+        "planning":    "planning",
+        "booked":      "booked",
+        "confirmed":   "booked",
+        "in progress": "in_progress",
+        "in_progress": "in_progress",
+        "active":      "in_progress",
+        "complete":    "complete",
+        "completed":   "complete",
+        "done":        "complete",
+        "cancelled":   "cancelled",
+    }
+
+    def _parse_date(raw: str) -> str:
+        """Try to parse partial dates like 'June 2, 2026' or '2026-06-02'."""
+        raw = raw.strip().strip("*").rstrip(")")
+        for fmt in ("%Y-%m-%d", "%B %d, %Y", "%b %d, %Y", "%B %d %Y"):
+            try:
+                return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+        return raw
+
+    def _parse_trip_file(path: Path) -> dict | None:
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            return None
+
+        data: dict[str, Any] = {
+            "name":        "",
+            "destination": "",
+            "depart_date": "",
+            "return_date": "",
+            "status":      "planning",
+            "budget":      0.0,
+            "notes":       "",
+        }
+
+        # --- Name: first H1 line ---
+        m = re.search(r"^#\s+(.+)$", text, re.MULTILINE)
+        if m:
+            name = m.group(1).strip()
+            # "Trip Brief — Austin (AUS) → Atlanta (ATL)" → clean it
+            name = re.sub(r"Trip Brief\s*[—–-]\s*", "", name).strip()
+            data["name"] = name or path.stem
+
+        # --- Destination: extract arrow-separated cities or "Destination:" field ---
+        dest_m = re.search(r"→\s*(.+?)(?:\s*\(|$)", data["name"])
+        if dest_m:
+            data["destination"] = dest_m.group(1).strip()
+
+        # Fallback: look for "Destination:" line
+        dest_line = re.search(r"\*\*Destination\*\*[:\s]+(.+)", text)
+        if dest_line:
+            data["destination"] = dest_line.group(1).strip()
+
+        # --- Dates: "**Dates:** June 2–7, 2026 (5 nights)" ---
+        date_line = re.search(r"\*\*Dates[:\*]+\s*(.+)", text)
+        if date_line:
+            raw = date_line.group(1)
+            # Range like "June 2–7, 2026"
+            range_m = re.search(r"([A-Za-z]+ \d+)[–—-](\d+),\s*(\d{4})", raw)
+            if range_m:
+                month_day1 = range_m.group(1)
+                day2 = range_m.group(2)
+                year = range_m.group(3)
+                depart_str = f"{month_day1}, {year}"
+                # Extract month name
+                month_m = re.match(r"([A-Za-z]+)", month_day1)
+                month_name = month_m.group(1) if month_m else ""
+                return_str = f"{month_name} {day2}, {year}"
+                data["depart_date"] = _parse_date(depart_str)
+                data["return_date"] = _parse_date(return_str)
+            else:
+                # Two explicit dates "Jun 2 → Jun 7, 2026"
+                two_m = re.search(r"([A-Za-z]+ \d+,?\s*\d{4})[^A-Za-z0-9]+([A-Za-z]+ \d+,?\s*\d{4})", raw)
+                if two_m:
+                    data["depart_date"] = _parse_date(two_m.group(1))
+                    data["return_date"] = _parse_date(two_m.group(2))
+
+        # --- Status ---
+        status_line = re.search(r"\*\*Status[:\*]+\s*(.+)", text)
+        if status_line:
+            raw_status = re.sub(r"[🟡🟢🔴⬜✅🔵🟠]", "", status_line.group(1)).strip().lower()
+            data["status"] = status_map.get(raw_status, "planning")
+
+        # --- Budget: look for TOTAL row in budget table ---
+        # "| **TOTAL** | **$1,304** | **$1,669** | **$1,913** |"
+        budget_m = re.search(r"\*\*TOTAL\*\*[^|]*\|[^|]*\|\s*\*?\*?\$?([\d,]+)", text)
+        if budget_m:
+            try:
+                data["budget"] = float(budget_m.group(1).replace(",", ""))
+            except ValueError:
+                pass
+
+        # Fallback: "**Budget:** $X,XXX" line
+        bline = re.search(r"\*\*Budget[:\*]+\s*\$?([\d,]+)", text)
+        if bline and not data["budget"]:
+            try:
+                data["budget"] = float(bline.group(1).replace(",", ""))
+            except ValueError:
+                pass
+
+        # --- Notes: use the PURPOSE line or first paragraph after H1 ---
+        purpose_m = re.search(r"\*\*Purpose[:\*]+\s*(.+)", text)
+        if purpose_m:
+            data["notes"] = purpose_m.group(1).strip()
+
+        # If name is still empty, use file stem
+        if not data["name"]:
+            data["name"] = path.stem
+
+        return data
+
+    count = 0
+    with db.get_conn() as conn:
+        for md_file in sorted(trips_dir.glob("*.md")):
+            trip = _parse_trip_file(md_file)
+            if not trip or not trip["name"]:
+                continue
+            existing = conn.execute(
+                "SELECT id FROM travel_trips WHERE name = ?", (trip["name"],)
+            ).fetchone()
+            if existing:
+                # Update in case fields changed
+                conn.execute(
+                    """UPDATE travel_trips
+                       SET destination=?, depart_date=?, return_date=?,
+                           status=?, budget=?, notes=?, updated_at=?
+                       WHERE id=?""",
+                    (trip["destination"], trip["depart_date"], trip["return_date"],
+                     trip["status"], trip["budget"], trip["notes"],
+                     _now(), existing["id"]),
+                )
+            else:
+                conn.execute(
+                    """INSERT INTO travel_trips
+                       (id, name, destination, depart_date, return_date,
+                        status, budget, spent, notes, created_at, updated_at)
+                       VALUES (?,?,?,?,?,?,?,0,?,?,?)""",
+                    (_uid(), trip["name"], trip["destination"],
+                     trip["depart_date"], trip["return_date"], trip["status"],
+                     trip["budget"], trip["notes"], _now(), _now()),
+                )
+                count += 1
+    return count
+
+
 def import_todos_from_files() -> int:
     """
     Parse all PROJECT.md, SPRINT-*.md, and checklist files for unchecked
@@ -787,6 +948,7 @@ def import_all(verbose: bool = False) -> dict[str, int]:
     results["knowledge"]  = import_knowledge_from_files()
     results["documents"]  = import_documents_from_files()
     results["todos"]      = import_todos_from_files()
+    results["trips"]      = import_trips_from_files()
 
     if verbose:
         print("ArchonHub Data Import Complete:")
@@ -810,6 +972,7 @@ if __name__ == "__main__":
         if "--automations" in args: print(f"Automations: {import_automations()}")
         if "--clients"     in args: print(f"Clients:     {import_clients()}")
         if "--todos"       in args: print(f"Todos:       {import_todos_from_files()}")
+        if "--trips"       in args: print(f"Trips:       {import_trips_from_files()}")
         if "--docs"        in args:
             print(f"Knowledge:   {import_knowledge_from_files()}")
             print(f"Documents:   {import_documents_from_files()}")
