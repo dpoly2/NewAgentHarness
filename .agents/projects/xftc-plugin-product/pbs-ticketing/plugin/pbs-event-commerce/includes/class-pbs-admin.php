@@ -106,6 +106,55 @@ class PBS_Admin {
     }
 
     public static function ticket_types_page() {
+        // Handle POST actions (add / edit / delete / toggle)
+        if ( isset( $_POST['pbs_tt_action'] ) && check_admin_referer( 'pbs_ticket_types' ) ) {
+            $action = sanitize_key( $_POST['pbs_tt_action'] );
+            $id     = (int) ( $_POST['tt_id'] ?? 0 );
+
+            if ( $action === 'delete' && $id ) {
+                PBS_DB::delete_ticket_type( $id );
+                wp_safe_redirect( add_query_arg( [ 'page' => 'pbs-ticket-types', 'msg' => 'deleted' ], admin_url( 'admin.php' ) ) );
+                exit;
+            }
+            if ( $action === 'toggle' && $id ) {
+                $tt = PBS_DB::get_ticket_type( $id );
+                if ( $tt ) PBS_DB::update_ticket_type( $id, array_merge( $tt, [ 'active' => $tt['active'] ? 0 : 1 ] ) );
+                wp_safe_redirect( add_query_arg( [ 'page' => 'pbs-ticket-types', 'event_id' => (int)($tt['event_id']??0) ], admin_url( 'admin.php' ) ) );
+                exit;
+            }
+            if ( in_array( $action, [ 'add', 'save' ], true ) ) {
+                $fields = [
+                    'event_id'    => $_POST['tt_event_id'] ?? 0,
+                    'name'        => $_POST['tt_name'] ?? '',
+                    'description' => $_POST['tt_description'] ?? '',
+                    'price'       => $_POST['tt_price'] ?? 0,
+                    'capacity'    => $_POST['tt_capacity'] ?? 0,
+                    'ticket_start'=> $_POST['tt_start'] ?? '',
+                    'ticket_end'  => $_POST['tt_end'] ?? '',
+                    'is_donation' => $_POST['tt_is_donation'] ?? 0,
+                    'sort_order'  => $_POST['tt_sort_order'] ?? 0,
+                    'active'      => isset( $_POST['tt_active'] ) ? 1 : 0,
+                ];
+                if ( $action === 'add' ) {
+                    PBS_DB::insert_ticket_type( $fields );
+                } else {
+                    PBS_DB::update_ticket_type( $id, $fields );
+                }
+                wp_safe_redirect( add_query_arg( [ 'page' => 'pbs-ticket-types', 'event_id' => (int)$fields['event_id'], 'msg' => $action === 'add' ? 'added' : 'saved' ], admin_url( 'admin.php' ) ) );
+                exit;
+            }
+        }
+
+        $edit_id   = isset( $_GET['edit'] ) ? (int) $_GET['edit'] : 0;
+        $edit_tt   = $edit_id ? PBS_DB::get_ticket_type( $edit_id ) : null;
+        $event_id  = $edit_tt ? (int) $edit_tt['event_id'] : ( isset( $_GET['event_id'] ) ? (int) $_GET['event_id'] : 0 );
+        $msg       = isset( $_GET['msg'] ) ? sanitize_key( $_GET['msg'] ) : '';
+        $ticket_types = PBS_DB::get_all_ticket_types( $event_id );
+
+        // Get distinct event IDs that have ticket types + published pages/posts for dropdown
+        global $wpdb;
+        $tt_event_ids = $wpdb->get_col( "SELECT DISTINCT event_id FROM {$wpdb->prefix}pbs_ticket_types ORDER BY event_id DESC" );
+
         include PBS_EC_PATH . 'admin/views/ticket-types.php';
     }
 

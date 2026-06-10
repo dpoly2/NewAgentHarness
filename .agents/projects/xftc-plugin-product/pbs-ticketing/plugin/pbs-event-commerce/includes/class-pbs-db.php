@@ -183,6 +183,60 @@ class PBS_DB {
         );
     }
 
+    public static function get_all_ticket_types( $event_id = 0 ) {
+        global $wpdb;
+        if ( $event_id ) {
+            return $wpdb->get_results(
+                $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}pbs_ticket_types WHERE event_id = %d ORDER BY sort_order ASC, id ASC", $event_id ),
+                ARRAY_A
+            );
+        }
+        return $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}pbs_ticket_types ORDER BY event_id ASC, sort_order ASC", ARRAY_A );
+    }
+
+    public static function get_ticket_type( $id ) {
+        global $wpdb;
+        return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}pbs_ticket_types WHERE id = %d", $id ), ARRAY_A );
+    }
+
+    public static function insert_ticket_type( array $data ) {
+        global $wpdb;
+        $wpdb->insert( "{$wpdb->prefix}pbs_ticket_types", [
+            'event_id'     => (int) ( $data['event_id'] ?? 0 ),
+            'name'         => sanitize_text_field( $data['name'] ?? '' ),
+            'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
+            'price'        => (float) ( $data['price'] ?? 0 ),
+            'capacity'     => (int) ( $data['capacity'] ?? 0 ),
+            'ticket_start' => ! empty( $data['ticket_start'] ) ? sanitize_text_field( $data['ticket_start'] ) : null,
+            'ticket_end'   => ! empty( $data['ticket_end'] )   ? sanitize_text_field( $data['ticket_end'] )   : null,
+            'is_donation'  => (int) ! empty( $data['is_donation'] ),
+            'sort_order'   => (int) ( $data['sort_order'] ?? 0 ),
+            'active'       => isset( $data['active'] ) ? (int) $data['active'] : 1,
+        ] );
+        return $wpdb->insert_id;
+    }
+
+    public static function update_ticket_type( $id, array $data ) {
+        global $wpdb;
+        $wpdb->update( "{$wpdb->prefix}pbs_ticket_types", [
+            'event_id'     => (int) ( $data['event_id'] ?? 0 ),
+            'name'         => sanitize_text_field( $data['name'] ?? '' ),
+            'description'  => sanitize_textarea_field( $data['description'] ?? '' ),
+            'price'        => (float) ( $data['price'] ?? 0 ),
+            'capacity'     => (int) ( $data['capacity'] ?? 0 ),
+            'ticket_start' => ! empty( $data['ticket_start'] ) ? sanitize_text_field( $data['ticket_start'] ) : null,
+            'ticket_end'   => ! empty( $data['ticket_end'] )   ? sanitize_text_field( $data['ticket_end'] )   : null,
+            'is_donation'  => (int) ! empty( $data['is_donation'] ),
+            'sort_order'   => (int) ( $data['sort_order'] ?? 0 ),
+            'active'       => isset( $data['active'] ) ? (int) $data['active'] : 1,
+        ], [ 'id' => (int) $id ] );
+    }
+
+    public static function delete_ticket_type( $id ) {
+        global $wpdb;
+        $wpdb->delete( "{$wpdb->prefix}pbs_ticket_types", [ 'id' => (int) $id ] );
+    }
+
     public static function get_orders( $args = [] ) {
         global $wpdb;
         $where  = '1=1';
