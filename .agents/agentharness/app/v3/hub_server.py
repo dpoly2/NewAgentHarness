@@ -2986,6 +2986,7 @@ if FASTAPI_OK:
 
 
 
+    @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         try:
