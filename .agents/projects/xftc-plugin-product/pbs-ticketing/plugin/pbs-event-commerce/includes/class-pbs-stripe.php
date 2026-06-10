@@ -11,6 +11,62 @@ class PBS_Stripe {
      * Create a PaymentIntent and confirm it with the client-side token.
      * $data must include: amount (dollars), token (Stripe PaymentMethod ID), name, email
      */
+    /**
+     * Issue a partial or full refund for a Stripe PaymentIntent or Charge.
+     *
+     * @param string $payment_id  Stripe payment_intent ID or charge ID.
+     * @param float  $amount      Amount to refund in dollars. Null = full refund.
+     * @return array|WP_Error  ['refund_id' => '...'] on success.
+     */
+    public static function refund( string $payment_id, float $amount = null ) {
+        $secret = self::secret_key();
+        if ( ! $secret ) {
+            return new WP_Error( 'config', 'Stripe is not configured.' );
+        }
+
+        if ( empty( $payment_id ) ) {
+            return new WP_Error( 'missing', 'Payment ID is required for refund.' );
+        }
+
+        $body = [];
+
+        // Stripe refunds accept either a charge or payment_intent ID.
+        if ( str_starts_with( $payment_id, 'pi_' ) ) {
+            $body['payment_intent'] = $payment_id;
+        } else {
+            $body['charge'] = $payment_id;
+        }
+
+        if ( null !== $amount ) {
+            $body['amount'] = (int) round( $amount * 100 );
+        }
+
+        $response = wp_remote_post( 'https://api.stripe.com/v1/refunds', [
+            'headers' => [
+                'Authorization' => 'Bearer ' . $secret,
+                'Content-Type'  => 'application/x-www-form-urlencoded',
+            ],
+            'body'    => http_build_query( $body ),
+            'timeout' => 30,
+        ] );
+
+        if ( is_wp_error( $response ) ) {
+            return $response;
+        }
+
+        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+
+        if ( ! empty( $data['error'] ) ) {
+            return new WP_Error( 'stripe_refund', $data['error']['message'] ?? 'Stripe refund failed.' );
+        }
+
+        if ( in_array( $data['status'] ?? '', [ 'succeeded', 'pending' ] ) ) {
+            return [ 'refund_id' => $data['id'] ];
+        }
+
+        return new WP_Error( 'stripe_refund', 'Unexpected Stripe refund status: ' . ( $data['status'] ?? 'unknown' ) );
+    }
+
     public static function charge( $order_id, array $data ) {
         $secret = self::secret_key();
         if ( ! $secret ) return new WP_Error( 'config', 'Stripe is not configured.' );

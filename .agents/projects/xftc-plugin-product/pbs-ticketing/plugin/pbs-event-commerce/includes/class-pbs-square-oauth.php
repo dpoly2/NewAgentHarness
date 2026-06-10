@@ -102,7 +102,7 @@ class PBS_Square_OAuth {
         $given_state = sanitize_text_field( $_GET['state'] ?? '' );
         if ( empty( $saved_state ) || ! hash_equals( $saved_state, $given_state ) ) {
             set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => 'OAuth state mismatch — possible CSRF. Please try again.' ], 60 );
-            wp_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
             exit;
         }
         delete_transient( 'pbs_square_oauth_state' );
@@ -111,7 +111,7 @@ class PBS_Square_OAuth {
         $code = sanitize_text_field( $_GET['code'] ?? '' );
         if ( empty( $code ) ) {
             set_transient( 'pbs_square_oauth_notice', [ 'type' => 'error', 'message' => 'No authorization code received from Square.' ], 60 );
-            wp_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
             exit;
         }
 
@@ -134,7 +134,7 @@ class PBS_Square_OAuth {
             set_transient( 'pbs_square_oauth_notice', [ 'type' => 'success', 'message' => '✅ Square connected successfully! Gateway is now active.' ], 60 );
         }
 
-        wp_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
         exit;
     }
 
@@ -260,7 +260,7 @@ class PBS_Square_OAuth {
         update_option( 'pbs_square_enabled', 0 );
 
         set_transient( 'pbs_square_oauth_notice', [ 'type' => 'info', 'message' => 'Square disconnected.' ], 60 );
-        wp_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
+        wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce-settings' ) );
         exit;
     }
 

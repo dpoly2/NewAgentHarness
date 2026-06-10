@@ -162,7 +162,6 @@ class PBS_Checkout {
         $event_id    = (int) ( $post['event_id'] ?? 0 );
         $ticket_type = sanitize_text_field( $post['ticket_type'] ?? '' );
         $quantity    = max( 1, (int) ( $post['quantity'] ?? 1 ) );
-        $amount      = (float) ( $post['amount'] ?? 0 );
         $name        = sanitize_text_field( $post['name'] ?? '' );
         $email       = sanitize_email( $post['email'] ?? '' );
         $phone       = sanitize_text_field( $post['phone'] ?? '' );
@@ -173,9 +172,30 @@ class PBS_Checkout {
         if ( ! $event_id )             return new WP_Error( 'missing', 'Event not specified.' );
         if ( ! $name )                 return new WP_Error( 'missing', 'Name is required.' );
         if ( ! is_email( $email ) )    return new WP_Error( 'missing', 'Valid email required.' );
-        if ( $amount <= 0 )            return new WP_Error( 'missing', 'Invalid amount.' );
         if ( ! in_array( $gateway, [ 'stripe', 'square', 'paypal' ] ) ) {
             return new WP_Error( 'missing', 'Invalid payment method.' );
+        }
+
+        // Server-side amount calculation — spec §19: order total never trusted from client.
+        $ticket = $ticket_type ? PBS_DB::get_ticket_type_by_name( $event_id, $ticket_type ) : null;
+
+        if ( $ticket ) {
+            if ( (int) $ticket['is_donation'] ) {
+                // Donation: accept client-provided amount but enforce a minimum
+                $amount = (float) ( $post['amount'] ?? 0 );
+                if ( $amount < 1.00 ) {
+                    return new WP_Error( 'amount', 'Minimum donation is $1.00.' );
+                }
+            } else {
+                // Fixed-price ticket: calculate from DB price, ignore client value
+                $amount = round( (float) $ticket['price'] * $quantity, 2 );
+            }
+        } else {
+            // Fallback when ticket type is not found (e.g. free RSVP with no type set)
+            $amount = (float) ( $post['amount'] ?? 0 );
+            if ( $amount < 0 ) {
+                return new WP_Error( 'amount', 'Invalid amount.' );
+            }
         }
 
         return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );

@@ -23,7 +23,7 @@ $pbs_classes = array(
     'PBS_Square', 'PBS_Stripe', 'PBS_PayPal', 'PBS_Admin',
     'PBS_QR', 'PBS_Discount', 'PBS_Waitlist', 'PBS_Custom_Questions',
     'PBS_Refund', 'PBS_Reports', 'PBS_Square_OAuth', 'PBS_Stripe_OAuth',
-    'PBS_PayPal_Connect',
+    'PBS_PayPal_Connect', 'PBS_Webhooks',
 );
 foreach ( $pbs_classes as $pbs_class ) {
     $pbs_file = PBS_EC_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $pbs_class ) ) . '.php';
@@ -64,21 +64,67 @@ add_action( 'wp_enqueue_scripts', function() {
     wp_enqueue_style( 'pbs-tickets', PBS_EC_URL . 'assets/css/pbs-tickets.css', array(), PBS_EC_VERSION );
     wp_enqueue_script( 'pbs-checkout', PBS_EC_URL . 'assets/js/pbs-checkout.js', array( 'jquery' ), PBS_EC_VERSION, true );
     wp_localize_script( 'pbs-checkout', 'PBS_EC', array(
-        'ajax_url'           => admin_url( 'admin-ajax.php' ),
-        'rest_url'           => rest_url( 'pbs-ec/v1/' ),
-        'nonce'              => wp_create_nonce( 'pbs_ec_nonce' ),
-        'rest_nonce'         => wp_create_nonce( 'wp_rest' ),
-        'currency'           => 'USD',
-        'square_app_id'      => get_option( 'pbs_square_app_id', '' ),
-        'square_location_id' => get_option( 'pbs_square_location_id', '' ),
-        'square_env'         => get_option( 'pbs_square_env', 'sandbox' ),
-        'stripe_pub_key'     => get_option( 'pbs_stripe_publishable_key', '' ),
-        'paypal_client_id'   => get_option( 'pbs_paypal_client_id', '' ),
+        'ajax_url'                  => admin_url( 'admin-ajax.php' ),
+        'rest_url'                  => rest_url( 'pbs-ec/v1/' ),
+        'nonce'                     => wp_create_nonce( 'pbs_ec_nonce' ),
+        'rest_nonce'                => wp_create_nonce( 'wp_rest' ),
+        'currency'                  => 'USD',
+        'square_app_id'             => get_option( 'pbs_square_app_id', '' ),
+        'square_location_id'        => get_option( 'pbs_square_location_id', '' ),
+        'square_env'                => get_option( 'pbs_square_env', 'sandbox' ),
+        'stripe_pub_key'            => get_option( 'pbs_stripe_publishable_key', '' ),
+        'paypal_client_id'          => get_option( 'pbs_paypal_client_id', '' ),
+        'paypal_create_order_url'   => rest_url( 'pbs-ec/v1/paypal/create-order' ),
     ) );
 } );
 
 // REST API routes — all v2 additions
 add_action( 'rest_api_init', function() {
+
+    // Webhook endpoints — spec §8: all gateways
+    PBS_Webhooks::register_routes();
+
+    // PayPal server-side order creation — spec §13 Three-Party SDK Flow
+    register_rest_route( 'pbs-ec/v1', '/paypal/create-order', [
+        'methods'             => 'POST',
+        'callback'            => function( WP_REST_Request $req ) {
+            $nonce = $req->get_header( 'x-wp-nonce' ) ?: $req->get_param( 'nonce' );
+            if ( ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+                return new WP_REST_Response( [ 'success' => false, 'message' => 'Security check failed.' ], 403 );
+            }
+
+            $event_id    = (int) $req->get_param( 'event_id' );
+            $ticket_type = sanitize_text_field( $req->get_param( 'ticket_type' ) ?? '' );
+            $quantity    = max( 1, (int) ( $req->get_param( 'quantity' ) ?? 1 ) );
+
+            if ( ! $event_id ) {
+                return new WP_REST_Response( [ 'success' => false, 'message' => 'Event not specified.' ], 400 );
+            }
+
+            // Server-side amount calculation — never trust client amount
+            $ticket = $ticket_type ? PBS_DB::get_ticket_type_by_name( $event_id, $ticket_type ) : null;
+            if ( $ticket ) {
+                $amount = (int) $ticket['is_donation']
+                    ? max( 1.0, (float) $req->get_param( 'amount' ) )
+                    : round( (float) $ticket['price'] * $quantity, 2 );
+            } else {
+                $amount = max( 0.0, (float) $req->get_param( 'amount' ) );
+            }
+
+            $result = PBS_PayPal::create_order( $event_id, [
+                'ticket_type' => $ticket_type,
+                'quantity'    => $quantity,
+                'amount'      => $amount,
+            ] );
+
+            if ( is_wp_error( $result ) ) {
+                return new WP_REST_Response( [ 'success' => false, 'message' => $result->get_error_message() ], 400 );
+            }
+
+            return new WP_REST_Response( [ 'success' => true, 'paypal_order_id' => $result['paypal_order_id'] ] );
+        },
+        'permission_callback' => '__return_true',
+    ] );
 
     // Core ticket/order endpoints
     register_rest_route( 'pbs-ec/v1', '/order', array(

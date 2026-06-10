@@ -159,6 +159,19 @@ class PBS_DB {
         );
     }
 
+    public static function get_ticket_type_by_name( int $event_id, string $name ): ?array {
+        global $wpdb;
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}pbs_ticket_types WHERE event_id = %d AND name = %s AND active = 1 LIMIT 1",
+                $event_id,
+                $name
+            ),
+            ARRAY_A
+        );
+        return $row ?: null;
+    }
+
     public static function get_ticket_types( $event_id ) {
         global $wpdb;
         return $wpdb->get_results(

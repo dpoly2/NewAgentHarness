@@ -26,10 +26,11 @@ class PBS_Admin {
             // Square
             'pbs_square_enabled', 'pbs_square_app_id', 'pbs_square_location_id',
             'pbs_square_access_token', 'pbs_square_env', 'pbs_square_app_secret',
+            'pbs_square_webhook_signature_key',
             // PayPal
             'pbs_paypal_enabled', 'pbs_paypal_client_id', 'pbs_paypal_secret',
             'pbs_paypal_mode', 'pbs_paypal_venmo', 'pbs_paypal_merchant_email',
-            'pbs_paypal_payer_id',
+            'pbs_paypal_payer_id', 'pbs_paypal_webhook_id',
             // Email
             'pbs_email_from', 'pbs_email_from_name', 'pbs_email_bcc',
             'pbs_treasurer_email', 'pbs_email_reminders',
