@@ -38,7 +38,7 @@ except ImportError:
 HUB_BASE = "http://localhost:8765"
 HUB_WS = "ws://localhost:8765/ws"
 TIMEOUT = 5.0
-RECONNECT_INTERVAL = 30  # seconds
+RECONNECT_INTERVAL = 5   # seconds
 
 
 class HubClient:

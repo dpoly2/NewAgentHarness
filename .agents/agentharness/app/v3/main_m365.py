@@ -2045,7 +2045,7 @@ class ArchonHubApp:
     def _refresh_travel(self):
         for child in self.travel_cards_container.winfo_children():
             child.destroy()
-        trips = hub_db.list_trips()
+        trips = self.hub.list_trips()
         if not trips:
             tk.Label(self.travel_cards_container, text="No trips yet.", bg=BG_CANVAS, fg=TEXT_MUTED).pack(anchor="w", padx=10, pady=10)
             return
@@ -2110,9 +2110,9 @@ class ArchonHubApp:
                 "notes": notes.get("1.0", "end").strip(),
             }
             if trip:
-                hub_db.update_trip(trip["id"], **payload)
+                self.hub.update_trip(trip["id"], **payload)
             else:
-                hub_db.create_trip(**payload)
+                self.hub.create_trip(**payload)
             dialog.destroy()
             self._refresh_travel()
 
@@ -2123,7 +2123,7 @@ class ArchonHubApp:
         dialog.grid_columnconfigure(0, weight=1)
 
     def _delete_trip(self, trip_id):
-        hub_db.delete_trip(trip_id)
+        self.hub.delete_trip(trip_id)
         self._refresh_travel()
 
     def show_connectors(self):
