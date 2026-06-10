@@ -8,6 +8,8 @@ class PBS_Admin {
         add_action( 'admin_init',             [ __CLASS__, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts',  [ __CLASS__, 'enqueue_admin_assets' ] );
         add_action( 'admin_post_pbs_create_confirmation_page', [ __CLASS__, 'create_confirmation_page' ] );
+        add_action( 'admin_post_pbs_resend_confirmation',      [ __CLASS__, 'resend_confirmation' ] );
+        add_action( 'admin_post_pbs_print_receipt',            [ __CLASS__, 'print_receipt' ] );
     }
 
     /**
@@ -99,10 +101,84 @@ class PBS_Admin {
     }
 
     public static function orders_page() {
+        $msg = isset( $_GET['msg'] ) ? sanitize_key( $_GET['msg'] ) : '';
         $event_filter  = isset( $_GET['event_id'] ) ? (int) $_GET['event_id'] : 0;
         $status_filter = sanitize_text_field( $_GET['status'] ?? '' );
         $orders = PBS_DB::get_orders( array_filter( [ 'event_id' => $event_filter, 'status' => $status_filter ] ) );
         include PBS_EC_PATH . 'admin/views/orders.php';
+    }
+
+    /** Resend confirmation email to the attendee */
+    public static function resend_confirmation() {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorized' );
+        check_admin_referer( 'pbs_resend_confirmation' );
+
+        $order_id = (int) ( $_POST['order_id'] ?? 0 );
+        $order    = $order_id ? PBS_DB::get_order( $order_id ) : null;
+
+        if ( ! $order ) {
+            wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce&msg=order_not_found' ) );
+            exit;
+        }
+
+        PBS_Email::send_confirmation( $order );
+        wp_safe_redirect( admin_url( 'admin.php?page=pbs-commerce&msg=email_sent&order=' . $order_id ) );
+        exit;
+    }
+
+    /** Render a printable receipt for an order */
+    public static function print_receipt() {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( 'Unauthorized' );
+
+        $order_id = isset( $_GET['order_id'] ) ? (int) $_GET['order_id'] : 0;
+        $nonce    = isset( $_GET['_wpnonce'] ) ? $_GET['_wpnonce'] : '';
+        if ( ! wp_verify_nonce( $nonce, 'pbs_print_receipt_' . $order_id ) ) wp_die( 'Invalid request' );
+
+        $order = $order_id ? PBS_DB::get_order( $order_id ) : null;
+        if ( ! $order ) wp_die( 'Order not found.' );
+
+        $event_title = get_the_title( $order['event_id'] ) ?: 'Event #' . $order['event_id'];
+        $qr_img      = class_exists( 'PBS_QR' ) ? PBS_QR::qr_img( $order['id'], $order['order_number'], 140 ) : '';
+        $org_name    = get_option( 'pbs_email_from_name', 'Psi Beta Sigma 1914' );
+        $org_ein     = get_option( 'pbs_org_ein', '' );
+
+        // Output printable receipt — standalone HTML, no WP chrome
+        header( 'Content-Type: text/html; charset=UTF-8' );
+        echo '<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>Receipt — ' . esc_html( $order['order_number'] ) . '</title>
+        <style>
+          body{font-family:Arial,sans-serif;max-width:680px;margin:40px auto;padding:20px;color:#333;}
+          h1{color:#164f90;margin-bottom:4px;} .sub{color:#666;font-size:14px;margin-bottom:24px;}
+          table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+          th,td{padding:10px 14px;text-align:left;border-bottom:1px solid #eee;}
+          th{background:#f5f5f5;width:180px;}
+          .qr{text-align:center;margin:24px 0;padding:20px;border:2px dashed #164f90;border-radius:8px;}
+          .footer{font-size:12px;color:#999;text-align:center;margin-top:32px;border-top:1px solid #eee;padding-top:16px;}
+          @media print{.no-print{display:none;}}
+        </style></head><body>
+        <div class="no-print" style="margin-bottom:20px;">
+          <button onclick="window.print()" style="padding:8px 20px;background:#164f90;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:14px;">🖨️ Print / Save PDF</button>
+          <button onclick="window.close()" style="margin-left:8px;padding:8px 16px;cursor:pointer;">Close</button>
+        </div>
+        <h1>' . esc_html( $org_name ) . '</h1>
+        <div class="sub">Payment Receipt</div>
+        <table>
+          <tr><th>Order #</th><td><strong>' . esc_html( $order['order_number'] ) . '</strong></td></tr>
+          <tr><th>Date</th><td>' . esc_html( date( 'F j, Y g:i A', strtotime( $order['created_at'] ) ) ) . '</td></tr>
+          <tr><th>Event</th><td>' . esc_html( $event_title ) . '</td></tr>
+          <tr><th>Ticket Type</th><td>' . esc_html( $order['ticket_type'] ) . '</td></tr>
+          <tr><th>Quantity</th><td>' . esc_html( $order['quantity'] ) . '</td></tr>
+          <tr><th>Amount Paid</th><td><strong>$' . number_format( (float)$order['amount'], 2 ) . '</strong></td></tr>
+          <tr><th>Payment Method</th><td>' . esc_html( strtoupper( $order['payment_method'] ) ) . '</td></tr>
+          <tr><th>Transaction ID</th><td style="font-size:12px;">' . esc_html( $order['payment_id'] ) . '</td></tr>
+          <tr><th>Attendee</th><td>' . esc_html( $order['attendee_name'] ) . '</td></tr>
+          <tr><th>Email</th><td>' . esc_html( $order['attendee_email'] ) . '</td></tr>
+          ' . ( $org_ein ? '<tr><th>EIN</th><td>' . esc_html( $org_ein ) . '</td></tr>' : '' ) . '
+        </table>
+        ' . ( $qr_img ? '<div class="qr">' . $qr_img . '<p style="margin:8px 0 0;font-size:12px;color:#999;">Scan at the door</p></div>' : '' ) . '
+        <div class="footer">' . esc_html( $org_name ) . ' &bull; ' . esc_html( get_option( 'pbs_email_from', '' ) ) . ( $org_ein ? ' &bull; EIN: ' . esc_html( $org_ein ) : '' ) . '</div>
+        </body></html>';
+        exit;
     }
 
     public static function ticket_types_page() {
