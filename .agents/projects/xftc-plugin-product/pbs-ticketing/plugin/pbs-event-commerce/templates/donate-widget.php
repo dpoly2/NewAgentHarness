@@ -17,7 +17,8 @@
   <form class="pbs-checkout-form pbs-donate-form" id="pbs-donate-form-<?php echo esc_attr( $event_id ); ?>">
     <?php wp_nonce_field( 'pbs_ec_nonce', 'pbs_nonce' ); ?>
     <input type="hidden" name="event_id" value="<?php echo esc_attr( $event_id ); ?>">
-    <input type="hidden" name="ticket_type" value="Donation">
+    <input type="hidden" name="ticket_type" value="">
+    <input type="hidden" name="is_donation" value="1">
     <input type="hidden" name="quantity" value="1">
 
     <!-- Preset amounts -->

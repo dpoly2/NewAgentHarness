@@ -186,31 +186,40 @@ class PBS_Checkout {
         }
 
         // Server-side amount calculation — spec §19: order total never trusted from client.
-        $ticket = $ticket_type ? PBS_DB::get_ticket_type_by_name( $event_id, $ticket_type ) : null;
+        $is_donation = ! empty( $post['is_donation'] );
 
-        if ( $ticket ) {
-            if ( (int) $ticket['is_donation'] ) {
-                // Donation: accept client-provided amount but enforce a minimum
-                $amount = (float) ( $post['amount'] ?? 0 );
-                if ( $amount < 1.00 ) {
-                    return new WP_Error( 'amount', 'Minimum donation is $1.00.' );
+        if ( $is_donation ) {
+            // Donation widget — amount is user-chosen, enforce minimum $1.00
+            $amount = round( (float) ( $post['amount'] ?? 0 ), 2 );
+            if ( $amount < 1.00 ) {
+                return new WP_Error( 'amount', 'Minimum donation is $1.00.' );
+            }
+            $ticket_type = 'Donation';
+        } else {
+            $ticket = $ticket_type ? PBS_DB::get_ticket_type_by_name( $event_id, $ticket_type ) : null;
+
+            if ( $ticket ) {
+                if ( (int) $ticket['is_donation'] ) {
+                    // Donation ticket type from the ticket widget
+                    $amount = (float) ( $post['amount'] ?? 0 );
+                    if ( $amount < 1.00 ) {
+                        return new WP_Error( 'amount', 'Minimum donation is $1.00.' );
+                    }
+                } else {
+                    // Fixed-price ticket: calculate from DB price, ignore client value
+                    $amount = round( (float) $ticket['price'] * $quantity, 2 );
                 }
             } else {
-                // Fixed-price ticket: calculate from DB price, ignore client value
-                $amount = round( (float) $ticket['price'] * $quantity, 2 );
+                // No ticket_type sent — only allow $0 free orders
+                $client_amount = (float) ( $post['amount'] ?? 0 );
+                if ( $ticket_type !== '' ) {
+                    return new WP_Error( 'amount', 'Ticket type not found or not available.' );
+                }
+                if ( $client_amount > 0 ) {
+                    return new WP_Error( 'amount', 'Cannot process a paid order without a valid ticket type.' );
+                }
+                $amount = 0.00;
             }
-        } else {
-            // No ticket_type sent at all — only allow $0 free orders; reject otherwise
-            $client_amount = (float) ( $post['amount'] ?? 0 );
-            if ( $ticket_type !== '' ) {
-                // A ticket type was specified but it's inactive/not found — reject to prevent
-                // an attacker bypassing price lookup with a bogus ticket_type.
-                return new WP_Error( 'amount', 'Ticket type not found or not available.' );
-            }
-            if ( $client_amount > 0 ) {
-                return new WP_Error( 'amount', 'Cannot process a paid order without a valid ticket type.' );
-            }
-            $amount = 0.00;
         }
 
         return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
