@@ -206,6 +206,10 @@ class HubClient:
         result = self._request("POST", path, data=data)
         return result if isinstance(result, dict) else None
 
+    def post_json(self, path, data=None) -> dict | None:
+        """Public alias for _post — used by desktop UI for arbitrary POST calls."""
+        return self._post(path, data)
+
     def _put(self, path, data=None) -> dict | None:
         result = self._request("PUT", path, data=data)
         return result if isinstance(result, dict) else None
