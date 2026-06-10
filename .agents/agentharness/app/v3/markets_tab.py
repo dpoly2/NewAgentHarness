@@ -764,22 +764,15 @@ class MarketsTab(tk.Frame):
         self._btn(dlg, "Close", dlg.destroy, accent=True).pack(pady=(0,12))
 
     def _run_report(self, job_id: str):
-        """Trigger a report job via the hub API in a background thread."""
+        """Trigger a report job — calls report_monitor directly (no HTTP auth needed)."""
         def _do():
             try:
-                import urllib.request
-                body = json.dumps({"job_id": job_id}).encode()
-                req = urllib.request.Request(
-                    "http://localhost:8765/api/reports/run",
-                    data=body, method="POST",
-                    headers={"Content-Type": "application/json"},
-                )
-                urllib.request.urlopen(req, timeout=10)
-                # Refresh after 3s
-                time.sleep(3)
+                from report_monitor import run_report_job_sync
+                run_report_job_sync(job_id)
+                # Refresh after job completes
                 self._queue.put(("refresh_all", None))
             except Exception as e:
-                logger.warning("Report trigger failed: %s", e)
+                logger.warning("Report job failed: %s", e)
         threading.Thread(target=_do, daemon=True).start()
 
     # ── Helper widgets ────────────────────────────────────────────────────────

@@ -1928,23 +1928,15 @@ class ArchonHubApp:
         self._button(dialog, "Close", dialog.destroy, accent=True).pack(pady=(0,12))
 
     def _run_report_job(self, job_id: str):
-        """Trigger a report job immediately via the API."""
+        """Trigger a report job immediately — calls report_monitor directly (no HTTP auth needed)."""
         def _do():
             try:
-                token = self.hub.get_token() if hasattr(self.hub, "get_token") else None
-                headers = {"Authorization": f"Bearer {token}"} if token else {}
-                import urllib.request, json as _json
-                body = _json.dumps({"job_id": job_id}).encode()
-                req = urllib.request.Request(
-                    "http://localhost:8765/api/reports/run",
-                    data=body, method="POST",
-                    headers={**headers, "Content-Type": "application/json"},
-                )
-                urllib.request.urlopen(req, timeout=10)
-                self._ui_queue.put(("notification", f"Report '{job_id}' queued", SUCCESS))
-                self.root.after(5000, self._refresh_reports)
+                from report_monitor import run_report_job_sync
+                run_report_job_sync(job_id)
+                self._ui_queue.put(("notification", f"Report '{job_id}' complete", SUCCESS))
+                self.root.after(2000, self._refresh_reports)
             except Exception as e:
-                self._ui_queue.put(("notification", f"Report trigger failed: {e}", ERROR))
+                self._ui_queue.put(("notification", f"Report job failed: {e}", ERROR))
         threading.Thread(target=_do, daemon=True).start()
 
     def _delete_report(self, report_id: str):
