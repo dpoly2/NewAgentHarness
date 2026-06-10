@@ -345,9 +345,15 @@ foreach ( [ 'pbs_square_oauth_notice', 'pbs_stripe_oauth_notice' ] as $t_key ) {
         </span>
         <button type="submit" class="pbs-oauth-btn square-btn" form="pbs-square-disconnect-form"><?php echo esc_html( 'Disconnect' ); ?></button>
       <?php else : ?>
-        <a id="pbs-square-oauth-btn" href="<?php echo esc_url( PBS_Square_OAuth::get_auth_url() ); ?>" class="pbs-oauth-btn square-btn" <?php echo $square_can_connect ? '' : 'style="opacity:.5;pointer-events:none;" title="Enter App ID and App Secret first"'; ?>>
+        <a id="pbs-square-oauth-btn"
+           href="<?php echo esc_url( PBS_Square_OAuth::get_auth_url() ); ?>"
+           class="pbs-oauth-btn square-btn"
+           data-saved-app-id="<?php echo esc_attr( get_option( 'pbs_square_app_id', '' ) ); ?>"
+           data-saved-secret-set="<?php echo $pbs_key_set( 'pbs_square_app_secret' ) ? '1' : '0'; ?>"
+           <?php echo $square_can_connect ? '' : 'style="opacity:.5;pointer-events:none;" title="Enter App ID and App Secret first"'; ?>>
           <?php echo esc_html( '🔗 Connect with Square OAuth' ); ?>
         </a>
+        <span id="pbs-square-oauth-notice" style="display:none;margin-left:8px;color:#c62828;font-size:12px;font-weight:600;"></span>
         <span style="margin-left:8px;color:#888;font-size:12px;"><?php echo esc_html( '— or enter access token manually below' ); ?></span>
       <?php endif; ?>
 
@@ -697,29 +703,63 @@ document.getElementById('pbs-settings-form').addEventListener('submit', function
             });
         });
     }
-    // Square OAuth button — enable live as App ID / App Secret are typed
+    // Square OAuth button — enable live as App ID / App Secret are typed,
+    // keep href in sync, and guard against clicking before saving.
     (function() {
-        var oauthBtn  = document.getElementById('pbs-square-oauth-btn');
-        var appIdIn   = document.querySelector('input[name="pbs_square_app_id"]');
-        var appSecIn  = document.getElementById('pbs_square_app_secret');
+        var oauthBtn   = document.getElementById('pbs-square-oauth-btn');
+        var notice     = document.getElementById('pbs-square-oauth-notice');
+        var appIdIn    = document.querySelector('input[name="pbs_square_app_id"]');
+        var appSecIn   = document.getElementById('pbs_square_app_secret');
         if (!oauthBtn || !appIdIn || !appSecIn) return;
 
+        var savedAppId    = oauthBtn.dataset.savedAppId    || '';
+        var savedSecretOk = oauthBtn.dataset.savedSecretSet === '1';
+
+        function updateHref() {
+            try {
+                var url = new URL(oauthBtn.href);
+                url.searchParams.set('client_id', appIdIn.value.trim());
+                oauthBtn.href = url.toString();
+            } catch(e) {}
+        }
+
         function syncSquareBtn() {
-            var ready = appIdIn.value.trim() !== '' && appSecIn.value.trim() !== '';
+            var appId  = appIdIn.value.trim();
+            var secret = appSecIn.value.trim();
+            var ready  = appId !== '' && secret !== '';
             if (ready) {
                 oauthBtn.style.opacity = '1';
                 oauthBtn.style.pointerEvents = 'auto';
                 oauthBtn.removeAttribute('title');
+                updateHref();
             } else {
                 oauthBtn.style.opacity = '0.5';
                 oauthBtn.style.pointerEvents = 'none';
                 oauthBtn.title = 'Enter App ID and App Secret first';
             }
+            if (notice) notice.style.display = 'none';
         }
+
+        // Intercept click — if credentials changed but not yet saved, warn & block
+        oauthBtn.addEventListener('click', function(e) {
+            var appId  = appIdIn.value.trim();
+            var secret = appSecIn.value.trim();
+            var appIdChanged    = appId  !== savedAppId;
+            var secretUnsaved   = secret !== '' && !savedSecretOk;
+
+            if (appIdChanged || secretUnsaved) {
+                e.preventDefault();
+                if (notice) {
+                    notice.textContent = '⚠️ Save Settings first, then click Connect.';
+                    notice.style.display = 'inline';
+                }
+                return false;
+            }
+        });
 
         appIdIn.addEventListener('input', syncSquareBtn);
         appSecIn.addEventListener('input', syncSquareBtn);
-        syncSquareBtn(); // run on page load too
+        syncSquareBtn();
     })();
 
 })();
