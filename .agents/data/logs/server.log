@@ -1,0 +1,27 @@
+2026-06-09 14:00:00 [ERROR] archonhub.server: Run failed: 6793852c8ff94dbf8aa3339bb95771d9
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_server.py", line 1115, in _worker_loop
+    _update_job_record(run_id, final_status, {"job_data": {**config, "result": result}})
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_server.py", line 803, in _update_job_record
+    _update_record("job_queue", run_id, updates, json_fields={"job_data"})
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_server.py", line 280, in _update_record
+    payload = _filter_record(table, updates, json_fields)
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_server.py", line 218, in _filter_record
+    filtered[key] = _json_dumps(value) if key in (json_fields or set()) and value is not None else value
+                    ~~~~~~~~~~~^^^^^^^
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_server.py", line 160, in _json_dumps
+    return json.dumps(value, ensure_ascii=False)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 242, in dumps
+    **kw).encode(obj)
+          ~~~~~~^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\encoder.py", line 202, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\encoder.py", line 263, in iterencode
+    return _iterencode(o, 0)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\encoder.py", line 182, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+                    f'is not JSON serializable')
+TypeError: Object of type SystemMessage is not JSON serializable

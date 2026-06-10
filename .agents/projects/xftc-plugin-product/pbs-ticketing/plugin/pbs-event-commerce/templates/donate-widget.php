@@ -61,7 +61,7 @@
           <?php endforeach; ?>
         </div>
         <input type="hidden" name="gateway" class="pbs-gateway-input" value="<?php echo esc_attr( $gateways[0] ?? '' ); ?>">
-        <div class="pbs-payment-panel" data-panel="stripe">
+        <div class="pbs-payment-panel" data-panel="stripe"<?php echo ( $gateways[0] ?? '' ) !== 'stripe' ? ' style="display:none"' : ''; ?>>
           <div id="pbs-stripe-donate-<?php echo $event_id; ?>" class="pbs-stripe-card-element"></div>
         </div>
         <div class="pbs-payment-panel" data-panel="square" style="display:none">

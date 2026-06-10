@@ -97,6 +97,20 @@ struct DashboardView: View {
                     .lineLimit(1)
             }
             Spacer()
+            if let model = vm.health.llmModel {
+                HStack(spacing: 4) {
+                    Text("⬡")
+                        .font(.caption)
+                    Text("\(vm.health.llmProvider ?? "llm")/\(model)")
+                        .font(.caption.weight(.medium))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(ArchonTheme.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(ArchonTheme.accent.opacity(0.12))
+                .clipShape(Capsule())
+            }
         }
         .archonCard()
     }

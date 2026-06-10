@@ -15,9 +15,11 @@ struct LoginView: View {
 
                 VStack(spacing: 24) {
                     VStack(spacing: 10) {
-                        Image(systemName: "brain.head.profile")
-                            .font(.system(size: 50))
-                            .foregroundStyle(ArchonTheme.accent)
+                        Image("ArchonHubLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         Text("ArchonHub")
                             .font(.largeTitle.bold())
                             .foregroundStyle(ArchonTheme.text)

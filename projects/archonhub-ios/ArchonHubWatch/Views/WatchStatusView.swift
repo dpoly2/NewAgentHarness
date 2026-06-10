@@ -26,6 +26,11 @@ struct WatchStatusView: View {
                     .font(.title3.bold())
                 Text("✓ \(health.pendingTodos) Todos")
                     .font(.title3.bold())
+                if let model = health.llmModel {
+                    Text("⬡ \(model)")
+                        .font(.caption2)
+                        .foregroundStyle(ArchonTheme.accent)
+                }
 
                 // Ask Inez button
                 Button {

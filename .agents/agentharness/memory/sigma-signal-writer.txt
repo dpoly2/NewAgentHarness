@@ -1,0 +1,9 @@
+Task: Check and process Sigma Signal newsletter submission inbox. Review pending submissions, draft responses, prepare content pipeline update.
+Score: 0.00
+Critique: Could not parse evaluator response: {"score": 0.0, "critique": "LangGraph not installed - mock output"}
+
+LLM error: Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.
+Last Output:
+LangGraph not installed - mock output
+
+LLM error: Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.

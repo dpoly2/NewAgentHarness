@@ -425,7 +425,19 @@ class ArchonHubApp:
 
         rail_top = tk.Frame(self.rail, bg=BG_RAIL)
         rail_top.pack(fill="x", pady=(10, 4))
-        tk.Label(rail_top, text="A", fg=ACCENT, bg=BG_RAIL, font=("Segoe UI", 20, "bold")).pack()
+        _logo_shown = False
+        _brandmark = APP_ROOT / "branding" / "master" / "archonhub-brandmark.png"
+        if _brandmark.exists():
+            try:
+                from PIL import Image as _PIL, ImageTk as _PILTk
+                _pil = _PIL.open(_brandmark).convert("RGBA").resize((44, 44), _PIL.LANCZOS)
+                self._rail_logo = _PILTk.PhotoImage(_pil)
+                tk.Label(rail_top, image=self._rail_logo, bg=BG_RAIL).pack(pady=(4, 2))
+                _logo_shown = True
+            except Exception:
+                pass
+        if not _logo_shown:
+            tk.Label(rail_top, text="⬡", fg=ACCENT, bg=BG_RAIL, font=("Segoe UI", 20, "bold")).pack()
 
         for icon, label, method_name in NAV_ITEMS:
             btn = tk.Label(
@@ -462,6 +474,8 @@ class ArchonHubApp:
         langgraph_text = "LangGraph ready" if LANGGRAPH_OK else "LangGraph offline"
         self.langgraph_label = tk.Label(self.status_bar, text=langgraph_text, fg=TEXT_MUTED, bg=BG_PANEL)
         self.langgraph_label.pack(side="left", padx=12)
+        self.llm_label = tk.Label(self.status_bar, text="⬡ …", fg=ACCENT, bg=BG_PANEL, font=("Segoe UI", 9))
+        self.llm_label.pack(side="left", padx=12)
         self.clock_label = tk.Label(self.status_bar, text="", fg=TEXT_MUTED, bg=BG_PANEL)
         self.clock_label.pack(side="right", padx=10)
 
@@ -475,6 +489,16 @@ class ArchonHubApp:
         color = SUCCESS if online else ERROR
         self.status_canvas.itemconfigure(self.status_dot, fill=color)
         self.status_label.configure(text="Hub online" if online else "Hub offline", fg=TEXT_PRIMARY if online else TEXT_BODY)
+        # Refresh LLM model pill
+        try:
+            from hub_nodes import _load_ai_config
+            cfg = _load_ai_config()
+            db_cfg = hub_db.get_config() or {}
+            provider = db_cfg.get("llm_provider") or cfg.get("provider", "openai")
+            model    = db_cfg.get("llm_model")    or cfg.get("model",    "gpt-4o-mini")
+            self.llm_label.configure(text=f"⬡ {provider}/{model}")
+        except Exception:
+            pass
 
     def _reset_nav_bg(self, widget, label):
         if self.current_view == label:
@@ -809,6 +833,8 @@ class ArchonHubApp:
                     self._refresh_users()
             elif kind == "notification":
                 self.show_toast(item[1], item[2])
+            elif kind == "toast":
+                self.show_toast(item[1], item[2] if len(item) > 2 else ACCENT)
         self.root.after(100, self._poll_queue)
 
     def _handle_hub_event(self, event):
@@ -1975,23 +2001,75 @@ class ArchonHubApp:
         self._button(buttons, "Open Web Dashboard", lambda: webbrowser.open("http://localhost:8765")).pack(side="left", padx=4)
 
     def _build_admin_config_tab(self, parent):
-        card = self._card(parent, "Config")
+        card = self._card(parent, "AI Provider")
         card.pack(fill="x", padx=10, pady=10)
         config = hub_db.get_config()
         config = config if isinstance(config, dict) else {}
-        self.admin_model_var = tk.StringVar(value=str(config.get("llm_model", "gpt-4o-mini")))
-        self.admin_threads_var = tk.IntVar(value=int(config.get("thread_pool_size", 3) or 3))
-        masked_token = self._mask_token(str(config.get("api_token", "")))
+        ai_cfg = self._load_ai_config_file()
+
+        PROVIDERS = ["openai", "anthropic", "ollama", "github", "groq", "gemini"]
+        MODELS_BY_PROVIDER = {
+            "openai":    ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o4-mini", "o3-mini"],
+            "anthropic": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-sonnet-4-5"],
+            "ollama":    ["llama3.2", "llama3.2:3b", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5"],
+            "github":    ["gpt-4o-mini", "gpt-4o", "Meta-Llama-3-8B-Instruct", "Phi-3.5-mini-instruct"],
+            "groq":      ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+            "gemini":    ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"],
+        }
+        BASE_URLS = {
+            "openai":    "https://api.openai.com/v1",
+            "anthropic": "https://api.anthropic.com/v1",
+            "ollama":    "http://localhost:11434/v1",
+            "github":    "https://models.inference.ai.azure.com",
+            "groq":      "https://api.groq.com/openai/v1",
+            "gemini":    "",
+        }
+
+        cur_provider = config.get("llm_provider") or ai_cfg.get("provider", "openai")
+        cur_model    = config.get("llm_model")    or ai_cfg.get("model",    "gpt-4o-mini")
+        cur_key      = config.get("llm_api_key")  or ai_cfg.get("apiKey",   "")
+        cur_url      = config.get("llm_base_url") or ai_cfg.get("baseUrl",  "")
+
+        self.admin_provider_var = tk.StringVar(value=cur_provider)
+        self.admin_model_var    = tk.StringVar(value=cur_model)
+        self.admin_key_var      = tk.StringVar(value=cur_key)
+        self.admin_url_var      = tk.StringVar(value=cur_url or BASE_URLS.get(cur_provider, ""))
+        self.admin_threads_var  = tk.IntVar(value=int(config.get("thread_pool_size", 3) or 3))
+
         form = tk.Frame(card, bg=BG_PANEL)
         form.pack(fill="x", padx=14, pady=(0, 14))
-        tk.Label(form, text="LLM Model", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=4)
-        self._combo(form, self.admin_model_var, ["gpt-4o-mini", "gpt-4.1-mini", "o4-mini", "claude-sonnet-4.5"]).grid(row=1, column=0, sticky="ew")
-        tk.Label(form, text="Thread Pool Size", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=4)
-        tk.Spinbox(form, from_=1, to=32, textvariable=self.admin_threads_var, bg=BG_INPUT, fg=TEXT_PRIMARY, relief="flat").grid(row=3, column=0, sticky="ew")
-        tk.Label(form, text="API Token", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=4)
-        tk.Label(form, text=masked_token, bg=BG_INPUT, fg=TEXT_PRIMARY, anchor="w", padx=8, pady=6).grid(row=5, column=0, sticky="ew")
-        self._button(form, "Save", self._save_admin_config, accent=True).grid(row=6, column=0, sticky="ew", pady=(10, 0))
         form.grid_columnconfigure(0, weight=1)
+        form.grid_columnconfigure(1, weight=1)
+
+        tk.Label(form, text="Provider", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Model",    bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=1, sticky="w", pady=4, padx=(8, 0))
+        self._combo(form, self.admin_provider_var, PROVIDERS).grid(row=1, column=0, sticky="ew")
+        self.admin_model_combo = self._combo(form, self.admin_model_var, MODELS_BY_PROVIDER.get(cur_provider, []))
+        self.admin_model_combo.grid(row=1, column=1, sticky="ew", padx=(8, 0))
+
+        tk.Label(form, text="API Key", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Base URL (leave blank for default)", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=1, sticky="w", pady=4, padx=(8, 0))
+        self._entry(form, self.admin_key_var, show="*").grid(row=3, column=0, sticky="ew")
+        self._entry(form, self.admin_url_var).grid(row=3, column=1, sticky="ew", padx=(8, 0))
+
+        tk.Label(form, text="Thread Pool Size", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=4)
+        tk.Spinbox(form, from_=1, to=32, textvariable=self.admin_threads_var, bg=BG_INPUT, fg=TEXT_PRIMARY, relief="flat").grid(row=5, column=0, sticky="ew")
+
+        btn_row = tk.Frame(form, bg=BG_PANEL)
+        btn_row.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        self._button(btn_row, "Save", self._save_admin_config, accent=True).pack(side="left", padx=4)
+        self._button(btn_row, "Test Connection", self._test_llm_connection).pack(side="left", padx=4)
+
+        def _on_provider_change(*_):
+            p = self.admin_provider_var.get()
+            models = MODELS_BY_PROVIDER.get(p, [])
+            self.admin_model_combo["values"] = models
+            if models and self.admin_model_var.get() not in models:
+                self.admin_model_var.set(models[0])
+            default_url = BASE_URLS.get(p, "")
+            if default_url:
+                self.admin_url_var.set(default_url)
+        self.admin_provider_var.trace_add("write", _on_provider_change)
 
     def _build_admin_users_tab(self, parent):
         card = self._card(parent, "Users")
@@ -2062,8 +2140,55 @@ class ArchonHubApp:
         self._refresh_logs()
 
     def _save_admin_config(self):
-        hub_db.update_config({"llm_model": self.admin_model_var.get(), "thread_pool_size": int(self.admin_threads_var.get() or 3)})
+        cfg = {
+            "llm_provider":    self.admin_provider_var.get(),
+            "llm_model":       self.admin_model_var.get(),
+            "llm_api_key":     self.admin_key_var.get(),
+            "llm_base_url":    self.admin_url_var.get(),
+            "thread_pool_size": int(self.admin_threads_var.get() or 3),
+        }
+        hub_db.update_config(cfg)
+        self._save_ai_config_file({
+            "provider": cfg["llm_provider"],
+            "model":    cfg["llm_model"],
+            "apiKey":   cfg["llm_api_key"],
+            "baseUrl":  cfg["llm_base_url"],
+            "enabled":  True,
+        })
         self.show_toast("Config saved.", SUCCESS)
+
+    def _test_llm_connection(self):
+        import threading as _t
+        self.show_toast("Testing connection…", ACCENT)
+        def _run():
+            try:
+                from hub_nodes import _llm
+                llm = _llm()
+                from langchain_core.messages import HumanMessage
+                resp = llm.invoke([HumanMessage(content="Reply with exactly: OK")])
+                text = getattr(resp, "content", str(resp))[:80]
+                self._ui_queue.put(("toast", f"✅ Connected — {text}", SUCCESS))
+            except Exception as exc:
+                self._ui_queue.put(("toast", f"❌ {exc}", ERROR))
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _load_ai_config_file(self) -> dict:
+        paths = [
+            APP_ROOT / ".agents" / "data" / "ai_config.json",
+            APP_ROOT / "projects" / "agentharness-v2" / "data" / "ai_config.json",
+        ]
+        for p in paths:
+            if p.exists():
+                try:
+                    return json.loads(p.read_text(encoding="utf-8"))
+                except Exception:
+                    pass
+        return {}
+
+    def _save_ai_config_file(self, data: dict):
+        dest = APP_ROOT / ".agents" / "data" / "ai_config.json"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def _refresh_users(self):
         rows = hub_db.list_users()

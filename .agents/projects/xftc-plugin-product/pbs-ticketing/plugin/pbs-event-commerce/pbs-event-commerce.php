@@ -22,7 +22,8 @@ $pbs_classes = array(
     'PBS_DB', 'PBS_Shortcodes', 'PBS_Checkout', 'PBS_Email',
     'PBS_Square', 'PBS_Stripe', 'PBS_PayPal', 'PBS_Admin',
     'PBS_QR', 'PBS_Discount', 'PBS_Waitlist', 'PBS_Custom_Questions',
-    'PBS_Refund', 'PBS_Reports',
+    'PBS_Refund', 'PBS_Reports', 'PBS_Square_OAuth', 'PBS_Stripe_OAuth',
+    'PBS_PayPal_Connect',
 );
 foreach ( $pbs_classes as $pbs_class ) {
     $pbs_file = PBS_EC_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $pbs_class ) ) . '.php';
@@ -37,6 +38,25 @@ add_action( 'plugins_loaded', function() {
     PBS_Shortcodes::init();
     PBS_Checkout::init();
     PBS_Admin::init();
+    PBS_Square_OAuth::init();
+    PBS_Stripe_OAuth::init();
+    PBS_PayPal_Connect::init();
+
+    add_action( 'pbs_square_token_refresh', function() {
+        $expires = get_option( 'pbs_square_token_expires', '' );
+        if ( ! $expires ) {
+            return;
+        }
+
+        $exp_ts = strtotime( $expires );
+        if ( $exp_ts && ( $exp_ts - time() ) < 7 * DAY_IN_SECONDS ) {
+            PBS_Square_OAuth::refresh_token();
+        }
+    } );
+
+    if ( ! wp_next_scheduled( 'pbs_square_token_refresh' ) ) {
+        wp_schedule_event( time(), 'daily', 'pbs_square_token_refresh' );
+    }
 } );
 
 // Frontend assets

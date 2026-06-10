@@ -22,12 +22,14 @@ class PBS_Admin {
             // Stripe
             'pbs_stripe_enabled', 'pbs_stripe_publishable_key', 'pbs_stripe_secret_key',
             'pbs_stripe_webhook_secret', 'pbs_stripe_connect_client_id', 'pbs_stripe_mode',
+            'pbs_stripe_user_id',
             // Square
             'pbs_square_enabled', 'pbs_square_app_id', 'pbs_square_location_id',
-            'pbs_square_access_token', 'pbs_square_env',
+            'pbs_square_access_token', 'pbs_square_env', 'pbs_square_app_secret',
             // PayPal
             'pbs_paypal_enabled', 'pbs_paypal_client_id', 'pbs_paypal_secret',
-            'pbs_paypal_mode', 'pbs_paypal_venmo',
+            'pbs_paypal_mode', 'pbs_paypal_venmo', 'pbs_paypal_merchant_email',
+            'pbs_paypal_payer_id',
             // Email
             'pbs_email_from', 'pbs_email_from_name', 'pbs_email_bcc',
             'pbs_treasurer_email', 'pbs_email_reminders',
@@ -43,6 +45,12 @@ class PBS_Admin {
     public static function enqueue_admin_assets( $hook ) {
         if ( strpos( $hook, 'pbs-commerce' ) === false && strpos( $hook, 'pbs-ticket' ) === false ) return;
         wp_enqueue_style( 'pbs-admin', PBS_EC_URL . 'assets/css/pbs-tickets.css', [], PBS_EC_VERSION );
+        wp_register_script( 'pbs-admin', false, [ 'jquery' ], PBS_EC_VERSION, true );
+        wp_enqueue_script( 'pbs-admin' );
+        wp_localize_script( 'pbs-admin', 'PBS_Admin', [
+            'nonce'    => wp_create_nonce( 'pbs_admin_nonce' ),
+            'ajax_url' => admin_url( 'admin-ajax.php' ),
+        ] );
     }
 
     /** Helper: return array of enabled gateway slugs */

@@ -55,12 +55,19 @@ except Exception:
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 INEZ_FALLBACK = (
-    "I'm Inez, Chief of Staff. I'm currently unable to connect to the AI engine "
-    "(OpenAI API key may be missing). Please check your .env file and restart."
+    "I'm Inez, Chief of Staff. I'm currently unable to connect to the AI engine. "
+    "Please go to Admin → AI Provider, set your provider and API key, then save."
 )
 
 
 def _llm(temperature: float = 0.3):
+    """Use the shared multi-provider LLM factory from hub_nodes when available."""
+    try:
+        from hub_nodes import _llm as _hub_llm
+        return _hub_llm(temperature=temperature)
+    except Exception:
+        pass
+    # Bare fallback — direct OpenAI
     return ChatOpenAI(
         model=MODEL,
         temperature=temperature,
@@ -322,17 +329,29 @@ def think(
         return result
 
     except Exception as exc:
+        err_str = str(exc)
         logger.error("Inez LLM error: %s", exc)
+        # Give a friendly message for common config errors
+        if "api_key" in err_str.lower() or "credentials" in err_str.lower() or "OPENAI_API_KEY" in err_str:
+            msg = (
+                f"{INEZ_FALLBACK}\n\n"
+                "Go to **Admin → AI Provider**, set your provider (e.g. OpenAI or Ollama) "
+                "and enter your API key, then click Save."
+            )
+        elif "connection" in err_str.lower() or "refused" in err_str.lower() or "11434" in err_str:
+            msg = (
+                "I can't reach the Ollama server at localhost:11434. "
+                "Please make sure Ollama is running (`ollama serve`) or switch to OpenAI in Admin → AI Provider."
+            )
+        else:
+            msg = f"I ran into a problem: {err_str[:200]}"
         return {
-            "inez_message": (
-                "I encountered an issue processing that request. "
-                f"Please check your API key and try again. ({exc})"
-            ),
+            "inez_message": msg,
             "dispatches": [],
             "needs_agents": False,
             "todos": [],
             "tasks": [],
-            "error": str(exc),
+            "error": err_str,
         }
 
 

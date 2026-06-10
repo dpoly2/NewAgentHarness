@@ -33,3 +33,8 @@
 
 ## Output Format
 All content delivered in Markdown for review, then passed to sigma-signal-designer for HTML conversion.
+
+
+LLM error: Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.
+
+LLM error: Missing credentials. Please pass an `api_key`, `workload_identity`, `admin_api_key`, or set the `OPENAI_API_KEY` or `OPENAI_ADMIN_KEY` environment variable.

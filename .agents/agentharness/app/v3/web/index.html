@@ -727,6 +727,7 @@
                 <div class="status-group">
                     <div class="status-pill"><span class="status-dot offline" id="hubDot"></span><span id="hubLabel">Hub Offline</span></div>
                     <div class="status-pill"><span class="status-dot offline" id="wsDot"></span><span id="wsLabel">WebSocket disconnected</span></div>
+                    <div class="status-pill" id="llmPill" style="color:var(--accent)">⬡ <span id="llmLabel">…</span></div>
                 </div>
                 <div class="status-group">
                     <div class="status-pill">User: <strong id="statusUsername">Guest</strong></div>
@@ -1118,6 +1119,12 @@
                 if (!health) return;
                 state.health = health;
                 setHubStatus(String(health.status || '').toLowerCase() !== 'offline', String(health.status || '').toLowerCase() === 'offline' ? 'Hub Offline' : 'Hub Online');
+                if (health.llm_model) {
+                    const pill = $('#llmPill');
+                    const lbl  = $('#llmLabel');
+                    if (lbl) lbl.textContent = `${health.llm_provider || ''}/${health.llm_model}`;
+                    if (pill) pill.style.display = '';
+                }
             } catch {
                 setHubStatus(false, 'Hub Offline');
             }
@@ -1303,7 +1310,7 @@
                 <div class="login-screen">
                     <div class="login-card">
                         <div class="login-logo">
-                            <div class="brand-mark">AH</div>
+                            <img src="/web/logo.svg" alt="ArchonHub" style="height:60px;width:auto;margin-bottom:4px;" onerror="this.outerHTML='<div class=\'brand-mark\'>AH</div>'" />
                             <h2>ArchonHub</h2>
                             <p>v1.0.0 · Agent orchestration hub</p>
                         </div>
@@ -2821,20 +2828,32 @@
                     `
                         <div class="split-grid">
                             <div class="section-stack">
-                                <div class="form-card">
-                                    <h3>Hub Config</h3>
+                                    <div class="form-card">
+                                    <h3>AI Provider</h3>
                                     <form id="configForm" class="form-grid">
                                         <div class="field">
-                                            <label>LLM Model</label>
-                                            <select name="llm_model">
-                                                ${['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-5-sonnet'].map((item) => `<option value="${item}" ${(config?.llm_model || config?.OPENAI_MODEL || 'gpt-4o-mini') === item ? 'selected' : ''}>${item}</option>`).join('')}
+                                            <label>Provider</label>
+                                            <select name="llm_provider">
+                                                ${['openai','anthropic','ollama','github','groq','gemini'].map(p => `<option value="${p}" ${(config?.llm_provider||'openai')===p?'selected':''}>${p}</option>`).join('')}
                                             </select>
                                         </div>
                                         <div class="field">
-                                            <label>Thread Pool Size</label>
-                                            <input name="thread_pool_size" type="number" min="1" max="16" value="${escapeHtml(String(config?.thread_pool_size || config?.thread_pool || 3))}" />
+                                            <label>Model</label>
+                                            <input name="llm_model" value="${escapeHtml(String(config?.llm_model || config?.OPENAI_MODEL || 'gpt-4o-mini'))}" placeholder="e.g. gpt-4o-mini" />
                                         </div>
-                                        <div class="field span-2">
+                                        <div class="field">
+                                            <label>API Key</label>
+                                            <input name="llm_api_key" type="password" value="${escapeHtml(config?.llm_api_key || '')}" placeholder="sk-... or leave blank for env var" autocomplete="new-password" />
+                                        </div>
+                                        <div class="field">
+                                            <label>Base URL <span style="color:var(--text-muted);font-weight:400">(blank = default)</span></label>
+                                            <input name="llm_base_url" value="${escapeHtml(config?.llm_base_url || '')}" placeholder="https://api.openai.com/v1" />
+                                        </div>
+                                        <div class="field">
+                                            <label>Thread Pool Size</label>
+                                            <input name="thread_pool_size" type="number" min="1" max="16" value="${escapeHtml(String(config?.thread_pool_size || 3))}" />
+                                        </div>
+                                        <div class="field">
                                             <label>API Token</label>
                                             <input name="api_token" value="${escapeHtml(config?.api_token || '••••••••••••••••')}" readonly />
                                         </div>

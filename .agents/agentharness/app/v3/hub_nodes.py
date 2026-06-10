@@ -77,13 +77,87 @@ except ImportError:
 
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+_AI_CONFIG_PATHS = [
+    AGENTS_DIR / "data" / "ai_config.json",
+    APP_ROOT / "projects" / "agentharness-v2" / "data" / "ai_config.json",
+]
 
-def _llm(temperature=0.2):
-    return ChatOpenAI(
-        model=MODEL,
-        temperature=temperature,
-        api_key=os.environ.get("OPENAI_API_KEY", ""),
-    )
+_BASE_URLS_BY_PROVIDER = {
+    "ollama": "http://localhost:11434/v1",
+    "github": "https://models.inference.ai.azure.com",
+    "groq":   "https://api.groq.com/openai/v1",
+}
+
+
+def _load_ai_config() -> dict:
+    """Load LLM provider config from file, then env vars as fallback."""
+    defaults: dict = {
+        "provider": os.environ.get("LLM_PROVIDER", "openai"),
+        "baseUrl":  os.environ.get("LLM_BASE_URL", ""),
+        "apiKey":   os.environ.get("OPENAI_API_KEY", ""),
+        "model":    os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        "enabled":  True,
+    }
+    for path in _AI_CONFIG_PATHS:
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return {**defaults, **data}
+            except Exception:
+                pass
+    return defaults
+
+
+def _llm(temperature: float = 0.2):
+    cfg = _load_ai_config()
+    # DB overrides take highest priority
+    try:
+        if hasattr(db, "get_config"):
+            db_cfg = db.get_config()
+            if isinstance(db_cfg, dict):
+                if db_cfg.get("llm_provider"):
+                    cfg["provider"] = db_cfg["llm_provider"]
+                if db_cfg.get("llm_model"):
+                    cfg["model"] = db_cfg["llm_model"]
+                if db_cfg.get("llm_api_key"):
+                    cfg["apiKey"] = db_cfg["llm_api_key"]
+                if db_cfg.get("llm_base_url"):
+                    cfg["baseUrl"] = db_cfg["llm_base_url"]
+    except Exception:
+        pass
+
+    provider = cfg.get("provider", "openai")
+    model    = cfg.get("model", "gpt-4o-mini")
+    api_key  = cfg.get("apiKey", "") or os.environ.get("OPENAI_API_KEY", "")
+    base_url = cfg.get("baseUrl", "")
+
+    # Anthropic
+    if provider == "anthropic":
+        try:
+            from langchain_anthropic import ChatAnthropic  # type: ignore
+            return ChatAnthropic(model=model, temperature=temperature, api_key=api_key)
+        except ImportError:
+            pass  # fall through to OpenAI-compatible
+
+    # Google Gemini
+    if provider == "gemini":
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI  # type: ignore
+            return ChatGoogleGenerativeAI(model=model, temperature=temperature, google_api_key=api_key)
+        except ImportError:
+            pass
+
+    # OpenAI-compatible: openai, ollama, github, groq, custom
+    resolved_url = base_url or _BASE_URLS_BY_PROVIDER.get(provider, "")
+    resolved_key = api_key or (os.environ.get("GITHUB_TOKEN", "") if provider == "github" else "ollama")
+    kwargs: dict = {
+        "model":       model,
+        "temperature": temperature,
+        "api_key":     resolved_key or "sk-placeholder",
+    }
+    if resolved_url:
+        kwargs["base_url"] = resolved_url
+    return ChatOpenAI(**kwargs)
 
 
 if LANGGRAPH_OK:

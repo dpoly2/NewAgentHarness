@@ -153,7 +153,7 @@ class PBS_Square_OAuth {
         $response = wp_remote_post( $token_url, [
             'headers' => [
                 'Content-Type'  => 'application/json',
-                'Square-Version' => '2024-01-17',
+                'Square-Version' => '2024-10-17',
             ],
             'body' => wp_json_encode( [
                 'client_id'     => $app_id,
@@ -199,7 +199,7 @@ class PBS_Square_OAuth {
         $response = wp_remote_post( $token_url, [
             'headers' => [
                 'Content-Type'   => 'application/json',
-                'Square-Version' => '2024-01-17',
+                'Square-Version' => '2024-10-17',
             ],
             'body' => wp_json_encode( [
                 'client_id'     => $app_id,
@@ -233,7 +233,7 @@ class PBS_Square_OAuth {
         $response = wp_remote_get( $base_url . '/v2/locations', [
             'headers' => [
                 'Authorization'  => 'Bearer ' . $access_token,
-                'Square-Version' => '2024-01-17',
+                'Square-Version' => '2024-10-17',
                 'Content-Type'   => 'application/json',
             ],
             'timeout' => 10,
@@ -270,7 +270,7 @@ class PBS_Square_OAuth {
                 'headers' => [
                     'Content-Type'        => 'application/json',
                     'Authorization'       => 'Client ' . $app_secret,
-                    'Square-Version'      => '2024-01-17',
+                    'Square-Version'      => '2024-10-17',
                 ],
                 'body'    => wp_json_encode( [ 'client_id' => $app_id, 'access_token' => $access_token ] ),
                 'timeout' => 10,

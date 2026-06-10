@@ -10,6 +10,8 @@ struct HealthResponse: Codable {
     let wsClients: Int
     let pendingTodos: Int
     let totalRuns: Int
+    let llmProvider: String?
+    let llmModel: String?
 
     static let empty = HealthResponse(
         status: "offline",
@@ -20,7 +22,9 @@ struct HealthResponse: Codable {
         queueDepth: 0,
         wsClients: 0,
         pendingTodos: 0,
-        totalRuns: 0
+        totalRuns: 0,
+        llmProvider: nil,
+        llmModel: nil
     )
 }
 

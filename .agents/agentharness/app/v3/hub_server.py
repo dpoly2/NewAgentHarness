@@ -157,7 +157,15 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def _json_dumps(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False)
+    def _default(obj: Any) -> Any:
+        # LangChain / LangGraph message objects
+        if hasattr(obj, "content") and hasattr(obj, "type"):
+            return {"type": getattr(obj, "type", obj.__class__.__name__), "content": obj.content}
+        # Any object with __dict__
+        if hasattr(obj, "__dict__"):
+            return obj.__dict__
+        return str(obj)
+    return json.dumps(value, ensure_ascii=False, default=_default)
 
 
 def _json_loads(value: Any, default: Any = None) -> Any:
@@ -1504,6 +1512,15 @@ if FASTAPI_OK:
     @app.get("/api/health")
     async def health():
         queue_depth = hub._queue.qsize() if hub._queue else 0
+        # Resolve current LLM provider + model from config
+        try:
+            from hub_nodes import _load_ai_config  # type: ignore
+            _ai = _load_ai_config()
+            _cfg = _all_config()
+            _llm_provider = _cfg.get("llm_provider") or _ai.get("provider", "openai")
+            _llm_model    = _cfg.get("llm_model")    or _ai.get("model",    "gpt-4o-mini")
+        except Exception:
+            _llm_provider, _llm_model = "openai", "gpt-4o-mini"
         return {
             "status": "ok",
             "app": "ArchonHub",
@@ -1517,6 +1534,8 @@ if FASTAPI_OK:
             "langgraph_ok": LANGGRAPH_OK,
             "pending_todos": _count_rows("todos", "status = ?", ["pending"]),
             "total_runs": _count_rows("runs"),
+            "llm_provider": _llm_provider,
+            "llm_model":    _llm_model,
         }
 
 

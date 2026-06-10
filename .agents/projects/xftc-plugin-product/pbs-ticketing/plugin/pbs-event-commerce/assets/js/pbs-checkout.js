@@ -102,7 +102,8 @@
             style: { base: { fontFamily: "'Open Sans', Arial, sans-serif", fontSize: '15px', color: '#1a1a1a' } }
         });
 
-        const mountId = 'pbs-stripe-card-' + eventId || 'pbs-stripe-donate-' + eventId;
+        const isDonate = $container.hasClass('pbs-donate-widget');
+        const mountId = isDonate ? 'pbs-stripe-donate-' + eventId : 'pbs-stripe-card-' + eventId;
         const mountEl = document.getElementById(mountId) ||
                         $container.find('.pbs-stripe-card-element')[0];
         if (mountEl) {
@@ -123,7 +124,8 @@
         try {
             const payments = Square.payments(PBS.square_app_id, PBS.square_location_id);
             const card = await payments.card();
-            const mountId = 'pbs-square-card-' + eventId || 'pbs-square-donate-' + eventId;
+            const isDonate = $container.hasClass('pbs-donate-widget');
+            const mountId = isDonate ? 'pbs-square-donate-' + eventId : 'pbs-square-card-' + eventId;
             await card.attach('#' + mountId);
             squareInstances[eventId] = { payments, card };
         } catch(e) { console.warn('Square init failed:', e); }
@@ -133,7 +135,8 @@
     function initPayPal($container) {
         if (!PBS.paypal_client_id || typeof paypal === 'undefined') return;
         const eventId  = $container.data('event');
-        const btnId    = 'pbs-paypal-btn-' + eventId || 'pbs-paypal-donate-' + eventId;
+        const isDonate = $container.hasClass('pbs-donate-widget');
+        const btnId    = isDonate ? 'pbs-paypal-donate-' + eventId : 'pbs-paypal-btn-' + eventId;
 
         paypal.Buttons({
             createOrder: function(data, actions) {
@@ -191,14 +194,37 @@
     }
 
     function submitOrder($form, $container, paymentToken, paypalOrderId) {
+        const eventId = $container.data('event');
         const data = $form.serialize()
             + '&action=pbs_process_order'
             + '&nonce=' + PBS.nonce
             + (paymentToken  ? '&payment_token=' + encodeURIComponent(paymentToken)  : '')
             + (paypalOrderId ? '&paypal_order_id=' + encodeURIComponent(paypalOrderId) : '');
 
-        $.post(PBS.ajax_url, data, function(res) {
+        $.post(PBS.ajax_url, data, async function(res) {
             if (res.success) {
+                // Bug 5 fix: handle Stripe 3DS requires_action
+                if (res.data.requires_action && stripeInstances[eventId]) {
+                    const { stripe } = stripeInstances[eventId];
+                    const { error, paymentIntent } = await stripe.confirmCardPayment(res.data.client_secret);
+                    if (error) {
+                        showError($container, error.message || '3D Secure authentication failed.');
+                        return;
+                    }
+                    if (paymentIntent && paymentIntent.status === 'succeeded') {
+                        // Notify server to mark order complete
+                        $.post(PBS.ajax_url, {
+                            action: 'pbs_stripe_3ds_complete',
+                            nonce: PBS.nonce,
+                            order_id: res.data.order_id,
+                            payment_intent_id: paymentIntent.id,
+                        }, function(r) {
+                            if (r.success) { window.location.href = r.data.redirect; }
+                            else { showError($container, r.data.message || '3DS confirmation failed.'); }
+                        }).fail(function() { showError($container, 'Network error after 3DS.'); });
+                    }
+                    return;
+                }
                 window.location.href = res.data.redirect;
             } else {
                 showError($container, res.data.message || 'Payment failed. Please try again.');
@@ -216,22 +242,41 @@
 
     /* ── Init all widgets on page ───────────────────────────── */
     $(document).ready(function() {
+        let sdksNeeded  = 0;
+        let sdksLoaded  = 0;
+
+        function onSdkLoaded() {
+            sdksLoaded++;
+            if (sdksLoaded >= sdksNeeded) { initWidgets(); }
+        }
+
+        function loadScript(src, onload) {
+            sdksNeeded++;
+            const s = document.createElement('script');
+            s.src = src;
+            s.onload = onload || onSdkLoaded;
+            s.onerror = onSdkLoaded; // count failures so we don't hang
+            document.head.appendChild(s);
+        }
+
         // Load Stripe.js if key configured
         if (PBS.stripe_pub_key) {
-            $('<script>').attr('src', 'https://js.stripe.com/v3/').appendTo('head');
+            loadScript('https://js.stripe.com/v3/');
         }
-        // Load Square Web Payments SDK
+        // Bug 1 fix: interpolate sqEnv into Square SDK URL
         if (PBS.square_app_id) {
             const sqEnv = PBS.square_env === 'production' ? '' : 'sandbox.';
-            $('<script>').attr('src', 'https://web.squarecdn.com/v1/square.js').appendTo('head');
+            loadScript(`https://${sqEnv}web.squarecdn.com/v1/square.js`);
         }
         // Load PayPal SDK
         if (PBS.paypal_client_id) {
-            $('<script>').attr('src', 'https://www.paypal.com/sdk/js?client-id=' + PBS.paypal_client_id + '&currency=USD').appendTo('head');
+            loadScript('https://www.paypal.com/sdk/js?client-id=' + PBS.paypal_client_id + '&currency=USD');
         }
 
-        // Small delay to allow SDKs to load
-        setTimeout(function() {
+        // If no SDKs needed, init immediately
+        if (sdksNeeded === 0) { initWidgets(); }
+
+        function initWidgets() {
             $('.pbs-ticket-widget, .pbs-donate-widget').each(function() {
                 const $container = $(this);
                 initQtyControls($container.find('form'));
@@ -242,7 +287,7 @@
                 initPayPal($container);
                 initFormSubmit($container);
             });
-        }, 800);
+        }
     });
 
 })(jQuery);
