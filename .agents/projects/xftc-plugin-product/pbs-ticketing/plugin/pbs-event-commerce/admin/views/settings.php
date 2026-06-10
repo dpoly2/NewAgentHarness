@@ -654,6 +654,16 @@ if ( $show_diag ) : ?>
           <?php if ( ! empty( $last_oauth['error'] ) ) echo ' — ' . esc_html( $last_oauth['error'] ); ?>
           <?php if ( ! empty( $last_oauth['saved_state_empty'] ) ) echo ' (no saved state — try connecting again)'; ?>
         </td></tr>
+    <?php if ( ! empty( $last_oauth['exchange_http_code'] ) ) : ?>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">HTTP status</th>
+        <td style="padding:4px 8px;"><?php echo esc_html( $last_oauth['exchange_http_code'] ); ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Redirect URI sent</th>
+        <td style="padding:4px 8px;font-family:monospace;font-size:11px;"><?php echo esc_html( $last_oauth['exchange_redirect_uri'] ?? '—' ); ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Exchange env</th>
+        <td style="padding:4px 8px;"><?php echo esc_html( $last_oauth['exchange_env'] ?? '—' ); ?></td></tr>
+    <tr><th style="text-align:left;padding:4px 8px;color:#888;">Raw response</th>
+        <td style="padding:4px 8px;font-family:monospace;font-size:11px;word-break:break-all;"><?php echo esc_html( $last_oauth['exchange_raw'] ?? '—' ); ?></td></tr>
+    <?php endif; ?>
     <?php endif; ?>
   </table>
 </details>

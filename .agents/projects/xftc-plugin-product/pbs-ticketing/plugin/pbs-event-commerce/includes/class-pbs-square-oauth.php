@@ -192,15 +192,31 @@ class PBS_Square_OAuth {
 
         if ( is_wp_error( $response ) ) return $response;
 
-        $body = json_decode( wp_remote_retrieve_body( $response ), true );
+        $http_code = wp_remote_retrieve_response_code( $response );
+        $raw_body  = wp_remote_retrieve_body( $response );
+        $body      = json_decode( $raw_body, true );
+
+        // Capture full response in diagnostics
+        $last = get_option( 'pbs_square_last_oauth', [] );
+        $last['exchange_http_code'] = $http_code;
+        $last['exchange_raw']       = substr( $raw_body, 0, 500 );
+        $last['exchange_env']       = $environment;
+        $last['exchange_redirect_uri'] = self::get_redirect_uri();
+        update_option( 'pbs_square_last_oauth', $last );
 
         if ( isset( $body['errors'] ) ) {
-            $msg = $body['errors'][0]['detail'] ?? 'Unknown Square error.';
-            return new WP_Error( 'square_oauth_error', $msg );
+            $msg = $body['errors'][0]['detail'] ?? ( $body['errors'][0]['code'] ?? 'Unknown Square error.' );
+            return new WP_Error( 'square_oauth_error', "[HTTP {$http_code}] {$msg}" );
+        }
+
+        // Handle alternate Square error formats (type/message)
+        if ( isset( $body['type'] ) && $body['type'] === 'error' ) {
+            return new WP_Error( 'square_oauth_error', "[HTTP {$http_code}] " . ( $body['message'] ?? 'Unknown error' ) );
         }
 
         if ( empty( $body['access_token'] ) ) {
-            return new WP_Error( 'no_token', 'No access token in Square response.' );
+            $preview = substr( $raw_body, 0, 300 );
+            return new WP_Error( 'no_token', "[HTTP {$http_code}] No access token. Response: {$preview}" );
         }
 
         return $body;
