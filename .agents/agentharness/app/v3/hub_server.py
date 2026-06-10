@@ -47,7 +47,7 @@ try:
     )
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
-    from fastapi.responses import RedirectResponse, JSONResponse
+    from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
     from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     from pydantic import BaseModel, Field
     import uvicorn
@@ -1260,6 +1260,8 @@ class ConnectorCreate(BaseModel):
     smtp_port: int = 587
     username: str = ""
     credentials: dict = Field(default_factory=dict)
+    oauth_client_id: str = ""
+    oauth_client_secret: str = ""
 
 
 class ConnectorUpdate(BaseModel):
@@ -1271,6 +1273,8 @@ class ConnectorUpdate(BaseModel):
     smtp_port: Optional[int] = None
     username: Optional[str] = None
     credentials: Optional[dict] = None
+    oauth_client_id: Optional[str] = None
+    oauth_client_secret: Optional[str] = None
     status: Optional[str] = None
 
 
@@ -1888,6 +1892,9 @@ if FASTAPI_OK:
                 "smtp_port": body.smtp_port,
                 "username": body.username,
                 "credentials": body.credentials,
+                "oauth_client_id": body.oauth_client_id,
+                "oauth_client_secret": body.oauth_client_secret,
+                "token_expires_at": "",
                 "status": "pending",
                 "created_at": _now_iso(),
                 "updated_at": _now_iso(),
@@ -1925,12 +1932,167 @@ if FASTAPI_OK:
 
 
     @app.post("/api/connectors/{id}/test")
-    async def test_connector(id: str, current_user: dict = Depends(get_current_user)):
+    async def test_connector_endpoint(id: str, current_user: dict = Depends(get_current_user)):
         del current_user
-        connector = _get_record("email_connectors", id, json_fields={"credentials"})
+        connector = hub_db.get_connector(id)
         if not connector:
             raise HTTPException(404, "Connector not found")
-        return {"ok": True, "message": "Connection test not implemented", "connector_id": id}
+        try:
+            from oauth_connector import test_connector as _test
+            ok, msg = _test(connector)
+        except Exception as exc:
+            ok, msg = False, str(exc)
+        hub_db.update_connector(
+            id,
+            status="active" if ok else "error",
+            last_error="" if ok else msg,
+            last_synced=_now_iso() if ok else None,
+        )
+        return {"ok": ok, "message": msg, "connector_id": id}
+
+
+    # ── OAuth endpoints ───────────────────────────────────────────────────────
+
+    @app.get("/api/connectors/oauth/google/init")
+    async def google_oauth_init(
+        connector_id: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Return Google OAuth2 authorization URL for a connector."""
+        del current_user
+        connector = hub_db.get_connector(connector_id)
+        if not connector:
+            raise HTTPException(404, "Connector not found")
+        client_id  = connector.get("oauth_client_id", "")
+        client_sec = connector.get("oauth_client_secret", "")
+        if not client_id:
+            raise HTTPException(400, "oauth_client_id not set on this connector")
+        try:
+            from oauth_connector import GoogleOAuth, store_pending_state
+            g = GoogleOAuth(client_id, client_sec, connector_id)
+            url, state, verifier = g.get_authorization_url()
+            store_pending_state(state, connector_id, "google", verifier)
+            return {"auth_url": url, "state": state}
+        except Exception as exc:
+            raise HTTPException(500, str(exc)) from exc
+
+
+    @app.get("/api/connectors/oauth/google/callback")
+    async def google_oauth_callback(code: str, state: str):
+        """Handle Google OAuth2 callback. Exchanges code for tokens, redirects to app."""
+        try:
+            from oauth_connector import GoogleOAuth, consume_pending_state
+            pending = consume_pending_state(state)
+            if not pending:
+                return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state. Please retry from the app.</p>", status_code=400)
+            connector_id = pending["connector_id"]
+            verifier     = pending["verifier"]
+            connector    = hub_db.get_connector(connector_id)
+            if not connector:
+                return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
+            client_id  = connector.get("oauth_client_id", "")
+            client_sec = connector.get("oauth_client_secret", "")
+            g = GoogleOAuth(client_id, client_sec, connector_id)
+            token = g.exchange_code(code, verifier)
+            import time as _time
+            hub_db.update_connector(
+                connector_id,
+                auth_type="oauth2",
+                status="active",
+                token_expires_at=str(int(token.get("expires_at", _time.time() + 3600))),
+                last_error="",
+                last_synced=_now_iso(),
+            )
+            email = token.get("email", connector.get("email_address", ""))
+            return HTMLResponse(
+                f"<html><body style='font-family:sans-serif;background:#0d1117;color:#e8eaf0;"
+                f"display:flex;align-items:center;justify-content:center;height:100vh'>"
+                f"<div style='text-align:center'>"
+                f"<h2 style='color:#00c864'>✅ Gmail Connected</h2>"
+                f"<p>{email}</p>"
+                f"<p style='color:#6b7a99'>You can close this tab and return to ArchonHub.</p>"
+                f"<script>setTimeout(()=>window.close(),3000)</script>"
+                f"</div></body></html>"
+            )
+        except Exception as exc:
+            logger.error("Google OAuth callback error: %s", exc)
+            return HTMLResponse(
+                f"<html><body style='font-family:sans-serif;background:#0d1117;color:#ff4444;"
+                f"display:flex;align-items:center;justify-content:center;height:100vh'>"
+                f"<div><h2>❌ OAuth Failed</h2><p>{exc}</p></div></body></html>",
+                status_code=500,
+            )
+
+
+    @app.get("/api/connectors/oauth/microsoft/init")
+    async def microsoft_oauth_init(
+        connector_id: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Return Microsoft OAuth2 authorization URL for a connector."""
+        del current_user
+        connector = hub_db.get_connector(connector_id)
+        if not connector:
+            raise HTTPException(404, "Connector not found")
+        client_id  = connector.get("oauth_client_id", "")
+        client_sec = connector.get("oauth_client_secret", "")
+        if not client_id:
+            raise HTTPException(400, "oauth_client_id not set on this connector")
+        try:
+            from oauth_connector import MicrosoftOAuth, store_pending_state
+            m = MicrosoftOAuth(client_id, client_sec, connector_id)
+            url, state = m.get_authorization_url()
+            store_pending_state(state, connector_id, "microsoft")
+            return {"auth_url": url, "state": state}
+        except Exception as exc:
+            raise HTTPException(500, str(exc)) from exc
+
+
+    @app.get("/api/connectors/oauth/microsoft/callback")
+    async def microsoft_oauth_callback(code: str, state: str):
+        """Handle Microsoft OAuth2 callback."""
+        try:
+            from oauth_connector import MicrosoftOAuth, consume_pending_state
+            pending = consume_pending_state(state)
+            if not pending:
+                return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state.</p>", status_code=400)
+            connector_id = pending["connector_id"]
+            connector    = hub_db.get_connector(connector_id)
+            if not connector:
+                return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
+            client_id  = connector.get("oauth_client_id", "")
+            client_sec = connector.get("oauth_client_secret", "")
+            m = MicrosoftOAuth(client_id, client_sec, connector_id)
+            token = m.exchange_code(code)
+            import time as _time
+            hub_db.update_connector(
+                connector_id,
+                auth_type="oauth2",
+                status="active",
+                token_expires_at=str(int(token.get("expires_at", _time.time() + 3600))),
+                last_error="",
+                last_synced=_now_iso(),
+            )
+            acct = token.get("id_token_claims", {}).get("preferred_username",
+                   connector.get("email_address", ""))
+            return HTMLResponse(
+                f"<html><body style='font-family:sans-serif;background:#0d1117;color:#e8eaf0;"
+                f"display:flex;align-items:center;justify-content:center;height:100vh'>"
+                f"<div style='text-align:center'>"
+                f"<h2 style='color:#00c864'>✅ Microsoft Account Connected</h2>"
+                f"<p>{acct}</p>"
+                f"<p style='color:#6b7a99'>You can close this tab and return to ArchonHub.</p>"
+                f"<script>setTimeout(()=>window.close(),3000)</script>"
+                f"</div></body></html>"
+            )
+        except Exception as exc:
+            logger.error("Microsoft OAuth callback error: %s", exc)
+            return HTMLResponse(
+                f"<html><body style='font-family:sans-serif;background:#0d1117;color:#ff4444;"
+                f"display:flex;align-items:center;justify-content:center;height:100vh'>"
+                f"<div><h2>❌ OAuth Failed</h2><p>{exc}</p></div></body></html>",
+                status_code=500,
+            )
 
 
     @app.get("/api/projects")

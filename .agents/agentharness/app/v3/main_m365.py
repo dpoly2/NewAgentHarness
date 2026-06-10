@@ -350,6 +350,8 @@ class ArchonHubApp:
         self.selected_todo_id = None
         self.selected_job_id = None
         self.selected_connector_id = None
+        self._connector_selected_id = None
+        self._connector_lookup = {}
         self.selected_user_id = None
         self.admin_unlocked = False
         self.hub_process = None
@@ -2127,89 +2129,249 @@ class ArchonHubApp:
     def show_connectors(self):
         self._set_active_nav("Connect")
         self._clear_content()
-        self._section_header(self.content, "Connectors", "Email connector registry and transport tests.")
+        self._section_header(self.content, "Email Connectors", "Manage Gmail, Outlook, and IMAP accounts.")
 
         paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
         paned.pack(fill="both", expand=True, padx=20, pady=(0, 20))
-        left = tk.Frame(paned, bg=BG_CANVAS, width=500)
+
+        left = tk.Frame(paned, bg=BG_CANVAS, width=540)
         right = tk.Frame(paned, bg=BG_CANVAS)
-        paned.add(left, minsize=460)
-        paned.add(right)
+        paned.add(left, minsize=500)
+        paned.add(right, minsize=360)
 
-        list_card = self._card(left, "Connector List")
+        # ── Left: Account List ────────────────────────────────────────────
+        list_card = self._card(left, "Connected Accounts")
         list_card.pack(fill="both", expand=True)
-        columns = ("label", "email", "provider", "status")
-        self.connectors_tree = ttk.Treeview(list_card, columns=columns, show="headings", selectmode="browse")
-        for column, text, width in (
-            ("label", "Label", 160),
-            ("email", "Email", 220),
-            ("provider", "Provider", 120),
-            ("status", "Status", 100),
+
+        columns = ("label", "email", "provider", "auth", "status")
+        self.connectors_tree = ttk.Treeview(list_card, columns=columns, show="headings", selectmode="browse", height=14)
+        for col, text, width in (
+            ("label",    "Label",    140),
+            ("email",    "Email",    200),
+            ("provider", "Provider",  90),
+            ("auth",     "Auth",      90),
+            ("status",   "Status",   100),
         ):
-            self.connectors_tree.heading(column, text=text)
-            self.connectors_tree.column(column, width=width, anchor="w")
-        self.connectors_tree.pack(fill="both", expand=True, padx=14, pady=(0, 10))
-        self.connectors_tree.bind("<<TreeviewSelect>>", lambda _e: self._set_selected_connector())
-        actions = tk.Frame(list_card, bg=BG_PANEL)
-        actions.pack(fill="x", padx=14, pady=(0, 14))
-        self._button(actions, "Test Selected", self._test_selected_connector, accent=True).pack(side="left", padx=4)
-        self._button(actions, "Delete", self._delete_selected_connector).pack(side="left", padx=4)
-        self._button(actions, "Refresh", self._refresh_connectors).pack(side="left", padx=4)
+            self.connectors_tree.heading(col, text=text)
+            self.connectors_tree.column(col, width=width, anchor="w")
+        vsb = ttk.Scrollbar(list_card, orient="vertical", command=self.connectors_tree.yview)
+        self.connectors_tree.configure(yscrollcommand=vsb.set)
+        self.connectors_tree.pack(side="left", fill="both", expand=True, padx=(14, 0), pady=(0, 10))
+        vsb.pack(side="left", fill="y", pady=(0, 10), padx=(0, 6))
+        self.connectors_tree.bind("<<TreeviewSelect>>", self._on_connector_select)
 
-        add_card = self._card(right, "Add Connector")
-        add_card.pack(fill="both", expand=True)
-        form = tk.Frame(add_card, bg=BG_PANEL)
-        form.pack(fill="both", expand=True, padx=14, pady=(0, 14))
-        self.connector_vars = {
-            "label": tk.StringVar(),
-            "email_address": tk.StringVar(),
-            "provider": tk.StringVar(value="imap"),
-            "imap_host": tk.StringVar(),
-            "imap_port": tk.StringVar(value="993"),
-            "smtp_host": tk.StringVar(),
-            "smtp_port": tk.StringVar(value="587"),
-            "username": tk.StringVar(),
-            "password": tk.StringVar(),
+        action_bar = tk.Frame(list_card, bg=BG_PANEL)
+        action_bar.pack(fill="x", padx=14, pady=(0, 14))
+        self._button(action_bar, "🔌 Test",     self._test_selected_connector, accent=True).pack(side="left", padx=4)
+        self._button(action_bar, "🔄 Re-Auth",  self._reauth_selected_connector).pack(side="left", padx=4)
+        self._button(action_bar, "🗑 Delete",   self._delete_selected_connector).pack(side="left", padx=4)
+        self._button(action_bar, "↻ Refresh",   self._refresh_connectors).pack(side="right", padx=4)
+
+        # ── Right: Notebook (Add / Details) ──────────────────────────────
+        right_nb = ttk.Notebook(right, style="Dark.TNotebook")
+        right_nb.pack(fill="both", expand=True)
+
+        add_frame = tk.Frame(right_nb, bg=BG_PANEL)
+        detail_frame = tk.Frame(right_nb, bg=BG_PANEL)
+        right_nb.add(add_frame,    text="  ➕ Add Account  ")
+        right_nb.add(detail_frame, text="  🔍 Details  ")
+
+        # ── Add Account tab ──────────────────────────────────────────────
+        self._connector_vars = {
+            "label":              tk.StringVar(),
+            "email_address":      tk.StringVar(),
+            "provider":           tk.StringVar(value="gmail"),
+            "oauth_client_id":    tk.StringVar(),
+            "oauth_client_secret":tk.StringVar(),
+            "imap_host":          tk.StringVar(),
+            "imap_port":          tk.StringVar(value="993"),
+            "smtp_host":          tk.StringVar(),
+            "smtp_port":          tk.StringVar(value="587"),
+            "username":           tk.StringVar(),
+            "password":           tk.StringVar(),
         }
-        labels = [
-            ("Label", "label"),
-            ("Email", "email_address"),
-            ("Provider", "provider"),
-            ("IMAP Host", "imap_host"),
-            ("IMAP Port", "imap_port"),
-            ("SMTP Host", "smtp_host"),
-            ("SMTP Port", "smtp_port"),
-            ("Username", "username"),
-            ("Password", "password"),
-        ]
-        for idx, (label, key) in enumerate(labels):
-            tk.Label(form, text=label, bg=BG_PANEL, fg=TEXT_BODY).grid(row=idx * 2, column=0, sticky="w", pady=(4 if idx else 0, 4))
-            if key == "provider":
-                self._combo(form, self.connector_vars[key], ["imap", "gmail", "outlook", "smtp"]).grid(row=idx * 2 + 1, column=0, sticky="ew")
-            else:
-                self._entry(form, self.connector_vars[key], show="*" if key == "password" else None).grid(row=idx * 2 + 1, column=0, sticky="ew")
-        self._button(form, "Add Connector", self._add_connector, accent=True).grid(row=len(labels) * 2, column=0, sticky="ew", pady=(12, 0))
-        form.grid_columnconfigure(0, weight=1)
 
+        add_scroll = tk.Frame(add_frame, bg=BG_PANEL)
+        add_scroll.pack(fill="both", expand=True, padx=14, pady=12)
+
+        # Static top fields
+        for lbl, key in [("Label *", "label"), ("Email Address *", "email_address")]:
+            tk.Label(add_scroll, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+            self._entry(add_scroll, self._connector_vars[key]).pack(fill="x")
+
+        tk.Label(add_scroll, text="Provider *", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(8, 2))
+        provider_combo = self._combo(add_scroll, self._connector_vars["provider"],
+                                     ["gmail", "outlook", "imap", "zoho", "yahoo"])
+        provider_combo.pack(fill="x")
+
+        # Dynamic section — rebuilt on provider change
+        self._connector_dyn_frame = tk.Frame(add_scroll, bg=BG_PANEL)
+        self._connector_dyn_frame.pack(fill="x")
+        self._connector_add_btn_frame = tk.Frame(add_scroll, bg=BG_PANEL)
+        self._connector_add_btn_frame.pack(fill="x", pady=(12, 0))
+
+        self._connector_vars["provider"].trace_add("write", lambda *_: self._rebuild_connector_form())
+        self._rebuild_connector_form()
+
+        # ── Details tab ──────────────────────────────────────────────────
+        self._connector_detail_vars = {
+            "label":    tk.StringVar(value="—"),
+            "email":    tk.StringVar(value="—"),
+            "provider": tk.StringVar(value="—"),
+            "auth":     tk.StringVar(value="—"),
+            "status":   tk.StringVar(value="—"),
+            "token":    tk.StringVar(value="—"),
+            "synced":   tk.StringVar(value="—"),
+            "error":    tk.StringVar(value=""),
+        }
+        self._connector_selected_id = None
+
+        det = detail_frame
+        for label, key in [
+            ("Label",          "label"),
+            ("Email",          "email"),
+            ("Provider",       "provider"),
+            ("Auth Type",      "auth"),
+            ("Status",         "status"),
+            ("Token / Auth",   "token"),
+            ("Last Synced",    "synced"),
+        ]:
+            tk.Label(det, text=label, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", padx=14, pady=(8, 2))
+            tk.Label(det, textvariable=self._connector_detail_vars[key],
+                     bg=BG_PANEL, fg=TEXT_BODY, font=("Segoe UI", 10, "bold"), wraplength=280, justify="left").pack(anchor="w", padx=14)
+
+        tk.Label(det, text="Last Error", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", padx=14, pady=(8, 2))
+        self._connector_err_label = tk.Label(det, textvariable=self._connector_detail_vars["error"],
+                                              bg=BG_PANEL, fg=ERROR, font=("Segoe UI", 9), wraplength=280, justify="left")
+        self._connector_err_label.pack(anchor="w", padx=14)
+
+        det_btns = tk.Frame(det, bg=BG_PANEL)
+        det_btns.pack(anchor="w", padx=14, pady=(16, 0))
+        self._button(det_btns, "🔌 Test Connection", self._test_selected_connector, accent=True).pack(side="left", padx=(0, 8))
+        self._button(det_btns, "🔄 Re-Authorize",    self._reauth_selected_connector).pack(side="left")
+
+        self._right_nb_connectors = right_nb
         self._refresh_connectors()
 
-    def _refresh_connectors(self):
-        rows = hub_db.list_connectors()
-        self.connectors_tree.delete(*self.connectors_tree.get_children())
-        self.connector_lookup = {}
-        for row in rows:
-            cid = row["id"]
-            self.connector_lookup[cid] = row
-            self.connectors_tree.insert("", "end", iid=cid, values=(row.get("label", ""), row.get("email_address", ""), row.get("provider", ""), row.get("status", "")), tags=(row.get("status", ""),))
-        for tag, color in STATUS_COLORS.items():
-            self.connectors_tree.tag_configure(tag, foreground=color)
+    # ── OAuth presets ────────────────────────────────────────────────────
 
-    def _set_selected_connector(self):
-        selected = self.connectors_tree.selection()
-        self.selected_connector_id = selected[0] if selected else None
+    _PROVIDER_PRESETS = {
+        "gmail":   {"imap_host": "imap.gmail.com",          "imap_port": "993",
+                    "smtp_host": "smtp.gmail.com",           "smtp_port": "587", "oauth": True},
+        "outlook": {"imap_host": "outlook.office365.com",   "imap_port": "993",
+                    "smtp_host": "smtp.office365.com",       "smtp_port": "587", "oauth": True},
+        "imap":    {"imap_host": "",    "imap_port": "993",
+                    "smtp_host": "",    "smtp_port": "587",  "oauth": False},
+        "zoho":    {"imap_host": "imap.zoho.com",            "imap_port": "993",
+                    "smtp_host": "smtp.zoho.com",            "smtp_port": "587", "oauth": False},
+        "yahoo":   {"imap_host": "imap.mail.yahoo.com",      "imap_port": "993",
+                    "smtp_host": "smtp.mail.yahoo.com",      "smtp_port": "587", "oauth": False},
+    }
 
-    def _add_connector(self):
-        data = {key: var.get().strip() for key, var in self.connector_vars.items()}
+    def _rebuild_connector_form(self):
+        """Destroy and rebuild the dynamic form section based on selected provider."""
+        for w in self._connector_dyn_frame.winfo_children():
+            w.destroy()
+        for w in self._connector_add_btn_frame.winfo_children():
+            w.destroy()
+
+        provider = self._connector_vars["provider"].get()
+        preset = self._PROVIDER_PRESETS.get(provider, self._PROVIDER_PRESETS["imap"])
+
+        # Apply host/port presets
+        self._connector_vars["imap_host"].set(preset["imap_host"])
+        self._connector_vars["imap_port"].set(preset["imap_port"])
+        self._connector_vars["smtp_host"].set(preset["smtp_host"])
+        self._connector_vars["smtp_port"].set(preset["smtp_port"])
+
+        f = self._connector_dyn_frame
+
+        if preset["oauth"]:
+            # ── OAuth2 mode ──────────────────────────────────────────────
+            provider_name = "Google" if provider == "gmail" else "Microsoft"
+            note = (
+                f"Authorize ArchonHub to access your {provider_name} account via OAuth2.\n"
+                f"You need a {'Google Cloud' if provider == 'gmail' else 'Azure App'} Client ID & Secret."
+            )
+            tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
+                     wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
+
+            for lbl, key in [("Client ID *", "oauth_client_id"), ("Client Secret *", "oauth_client_secret")]:
+                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
+                show = "*" if "secret" in key else None
+                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
+
+            # Help link
+            help_url = (
+                "https://console.cloud.google.com/apis/credentials"
+                if provider == "gmail"
+                else "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps"
+            )
+            lnk = tk.Label(f, text=f"📋 Open {provider_name} Console →", bg=BG_PANEL,
+                           fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
+            lnk.pack(anchor="w", pady=(4, 0))
+            lnk.bind("<Button-1>", lambda _e: webbrowser.open(help_url))
+
+            redirect_note = tk.Label(
+                f,
+                text=f"Redirect URI:  http://localhost:8765/api/connectors/oauth/{provider}/callback",
+                bg=BG_PANEL, fg="#6b7a99", font=("Segoe UI", 8),
+            )
+            redirect_note.pack(anchor="w", pady=(2, 8))
+
+            # Authorize button
+            btn_label = f"🔐 Authorize with {provider_name}"
+            self._button(self._connector_add_btn_frame, btn_label,
+                         lambda p=provider: self._create_and_authorize(p), accent=True).pack(fill="x")
+
+        else:
+            # ── Password mode ────────────────────────────────────────────
+            for lbl, key, show in [
+                ("IMAP Host",  "imap_host",  None),
+                ("IMAP Port",  "imap_port",  None),
+                ("SMTP Host",  "smtp_host",  None),
+                ("SMTP Port",  "smtp_port",  None),
+                ("Username",   "username",   None),
+                ("Password",   "password",   "*"),
+            ]:
+                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
+                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
+
+            self._button(self._connector_add_btn_frame, "➕ Add Connector",
+                         self._add_password_connector, accent=True).pack(fill="x")
+
+    def _create_and_authorize(self, provider: str):
+        """Save connector then open browser for OAuth authorization."""
+        data = {k: v.get().strip() for k, v in self._connector_vars.items()}
+        if not data["label"] or not data["email_address"]:
+            self.show_toast("Label and email are required.", WARNING)
+            return
+        if not data["oauth_client_id"] or not data["oauth_client_secret"]:
+            self.show_toast("Client ID and Client Secret are required for OAuth.", WARNING)
+            return
+
+        preset = self._PROVIDER_PRESETS.get(provider, {})
+        connector = hub_db.create_connector(
+            label=data["label"],
+            email_address=data["email_address"],
+            provider=provider,
+            auth_type="oauth2",
+            imap_host=preset.get("imap_host", ""),
+            imap_port=int(preset.get("imap_port", 993)),
+            smtp_host=preset.get("smtp_host", ""),
+            smtp_port=int(preset.get("smtp_port", 587)),
+            username=data["email_address"],
+            oauth_client_id=data["oauth_client_id"],
+            oauth_client_secret=data["oauth_client_secret"],
+        )
+        connector_id = connector["id"]
+        self._refresh_connectors()
+        self.show_toast(f"Connector created — opening browser for authorization…", ACCENT)
+        self._start_oauth_flow(connector_id, provider)
+
+    def _add_password_connector(self):
+        """Save a plain-password IMAP connector."""
+        data = {k: v.get().strip() for k, v in self._connector_vars.items()}
         if not data["label"] or not data["email_address"]:
             self.show_toast("Label and email are required.", WARNING)
             return
@@ -2217,6 +2379,7 @@ class ArchonHubApp:
             label=data["label"],
             email_address=data["email_address"],
             provider=data["provider"],
+            auth_type="password",
             imap_host=data["imap_host"],
             imap_port=int(data["imap_port"] or 993),
             smtp_host=data["smtp_host"],
@@ -2224,47 +2387,228 @@ class ArchonHubApp:
             username=data["username"],
             credentials={"password": data["password"]},
         )
-        for var in self.connector_vars.values():
-            var.set("")
-        self.connector_vars["provider"].set("imap")
-        self.connector_vars["imap_port"].set("993")
-        self.connector_vars["smtp_port"].set("587")
+        # Clear form
+        for key, var in self._connector_vars.items():
+            if key not in ("provider",):
+                var.set("")
         self._refresh_connectors()
         self.show_toast("Connector added.", SUCCESS)
 
-    def _test_selected_connector(self):
-        if not self.selected_connector_id or self.selected_connector_id not in self.connector_lookup:
+    def _start_oauth_flow(self, connector_id: str, provider: str):
+        """Call hub server to get OAuth URL, open browser, then poll for completion."""
+        import urllib.request as _ur
+        import json as _json
+
+        def _do():
+            try:
+                # Fetch auth URL from hub server (requires server running on 8765)
+                url = f"http://localhost:8765/api/connectors/oauth/{provider}/init?connector_id={connector_id}"
+                # We need an auth header — re-use saved token if available
+                req = _ur.Request(url, headers={"Accept": "application/json"})
+                token = getattr(self, "_hub_token", None)
+                if token:
+                    req.add_header("Authorization", f"Bearer {token}")
+                try:
+                    with _ur.urlopen(req, timeout=8) as resp:
+                        payload = _json.loads(resp.read())
+                    auth_url = payload.get("auth_url", "")
+                except Exception:
+                    # Hub may not be running — fall back to building URL directly
+                    auth_url = self._build_local_oauth_url(connector_id, provider)
+
+                if not auth_url:
+                    self._ui_queue.put(("toast", "Could not get OAuth URL. Is the Hub server running?", WARNING))
+                    return
+
+                webbrowser.open(auth_url)
+                self._ui_queue.put(("toast", "Browser opened — complete authorization, then return here.", ACCENT))
+
+                # Poll for up to 2 minutes
+                for _ in range(60):
+                    import time as _t
+                    _t.sleep(2)
+                    fresh = hub_db.get_connector(connector_id)
+                    if fresh and fresh.get("status") == "active":
+                        self._ui_queue.put(("toast", f"✅ {fresh.get('email_address', '')} authorized!", SUCCESS))
+                        self._ui_queue.put(("refresh_connectors",))
+                        return
+                self._ui_queue.put(("toast", "Authorization timed out. Check connector status.", WARNING))
+                self._ui_queue.put(("refresh_connectors",))
+            except Exception as exc:
+                self._ui_queue.put(("toast", f"OAuth flow error: {exc}", ERROR))
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _build_local_oauth_url(self, connector_id: str, provider: str) -> str:
+        """Build OAuth URL directly using oauth_connector module (hub server fallback)."""
+        try:
+            connector = hub_db.get_connector(connector_id)
+            if not connector:
+                return ""
+            client_id  = connector.get("oauth_client_id", "")
+            client_sec = connector.get("oauth_client_secret", "")
+            if provider == "gmail":
+                from oauth_connector import GoogleOAuth, store_pending_state
+                g = GoogleOAuth(client_id, client_sec, connector_id)
+                url, state, verifier = g.get_authorization_url()
+                store_pending_state(state, connector_id, "google", verifier)
+                return url
+            else:
+                from oauth_connector import MicrosoftOAuth, store_pending_state
+                m = MicrosoftOAuth(client_id, client_sec, connector_id)
+                url, state = m.get_authorization_url()
+                store_pending_state(state, connector_id, "microsoft")
+                return url
+        except Exception:
+            return ""
+
+    def _reauth_selected_connector(self):
+        """Re-run OAuth for the selected connector."""
+        if not self._connector_selected_id:
+            self.show_toast("Select a connector first.", WARNING)
             return
-        connector = self.connector_lookup[self.selected_connector_id]
+        connector = hub_db.get_connector(self._connector_selected_id)
+        if not connector:
+            return
+        provider = connector.get("provider", "")
+        if provider not in ("gmail", "outlook"):
+            self.show_toast("Re-authorization is only for OAuth connectors.", WARNING)
+            return
+        self.show_toast("Opening browser for re-authorization…", ACCENT)
+        self._start_oauth_flow(self._connector_selected_id, provider)
+
+    def _refresh_connectors(self):
+        import time as _t
+        rows = hub_db.list_connectors()
+        self.connectors_tree.delete(*self.connectors_tree.get_children())
+        self._connector_lookup = {}
+        now_ts = _t.time()
+        for row in rows:
+            cid = row["id"]
+            self._connector_lookup[cid] = row
+            provider  = row.get("provider", "")
+            auth_type = row.get("auth_type", "password")
+            status    = row.get("status", "pending")
+
+            # Compute display auth label + token status badge
+            if auth_type == "oauth2":
+                exp_str = row.get("token_expires_at", "")
+                if exp_str and exp_str.isdigit():
+                    exp_ts = int(exp_str)
+                    if exp_ts < now_ts:
+                        auth_display = "⚠️ expired"
+                        if status == "active":
+                            status = "token_expired"
+                    else:
+                        hours_left = (exp_ts - now_ts) / 3600
+                        auth_display = f"🔑 OAuth2 ({hours_left:.0f}h)"
+                else:
+                    auth_display = "🔑 OAuth2"
+            else:
+                auth_display = "🔒 password"
+
+            status_tag = status
+            self.connectors_tree.insert(
+                "", "end", iid=cid,
+                values=(row.get("label", ""), row.get("email_address", ""),
+                        provider, auth_display, status),
+                tags=(status_tag,),
+            )
+
+        for tag, color in {
+            **STATUS_COLORS,
+            "active":        SUCCESS,
+            "token_expired": WARNING,
+            "error":         ERROR,
+            "pending":       TEXT_MUTED,
+        }.items():
+            self.connectors_tree.tag_configure(tag, foreground=color)
+
+        # Refresh detail panel if something is selected
+        if self._connector_selected_id and self._connector_selected_id in self._connector_lookup:
+            self._load_connector_detail(self._connector_lookup[self._connector_selected_id])
+
+    def _on_connector_select(self, _event=None):
+        sel = self.connectors_tree.selection()
+        self._connector_selected_id = sel[0] if sel else None
+        if self._connector_selected_id and self._connector_selected_id in self._connector_lookup:
+            self._load_connector_detail(self._connector_lookup[self._connector_selected_id])
+            # Switch to details tab
+            if hasattr(self, "_right_nb_connectors"):
+                self._right_nb_connectors.select(1)
+
+    def _load_connector_detail(self, row: dict):
+        import time as _t
+        now_ts = _t.time()
+        auth_type = row.get("auth_type", "password")
+        exp_str   = row.get("token_expires_at", "")
+
+        if auth_type == "oauth2" and exp_str and exp_str.isdigit():
+            exp_ts = int(exp_str)
+            if exp_ts < now_ts:
+                token_disp = "⚠️ Token expired — re-authorize required"
+            else:
+                left_secs = exp_ts - now_ts
+                h = int(left_secs // 3600)
+                m = int((left_secs % 3600) // 60)
+                token_disp = f"🔑 Valid — expires in {h}h {m}m"
+        elif auth_type == "oauth2":
+            token_disp = "🔒 Not yet authorized"
+        else:
+            token_disp = "🔒 Password auth"
+
+        synced = row.get("last_synced") or "Never"
+        if synced != "Never":
+            try:
+                synced = datetime.fromisoformat(synced).strftime("%Y-%m-%d %H:%M")
+            except Exception:
+                pass
+
+        self._connector_detail_vars["label"].set(row.get("label", "—"))
+        self._connector_detail_vars["email"].set(row.get("email_address", "—"))
+        self._connector_detail_vars["provider"].set(row.get("provider", "—"))
+        self._connector_detail_vars["auth"].set(auth_type)
+        self._connector_detail_vars["status"].set(row.get("status", "—"))
+        self._connector_detail_vars["token"].set(token_disp)
+        self._connector_detail_vars["synced"].set(synced)
+        self._connector_detail_vars["error"].set(row.get("last_error") or "")
+
+    # backward compat alias (used by _ui_queue handler)
+    def _set_selected_connector(self):
+        self._on_connector_select()
+
+    def _test_selected_connector(self):
+        if not self._connector_selected_id or self._connector_selected_id not in self._connector_lookup:
+            self.show_toast("Select a connector first.", WARNING)
+            return
+        connector = self._connector_lookup[self._connector_selected_id]
 
         def _thread():
-            errors = []
-            for host, port, label in (
-                (connector.get("imap_host"), connector.get("imap_port"), "IMAP"),
-                (connector.get("smtp_host"), connector.get("smtp_port"), "SMTP"),
-            ):
-                if not host:
-                    continue
-                try:
-                    with socket.create_connection((host, int(port)), timeout=4):
-                        pass
-                except Exception as exc:
-                    errors.append(f"{label}: {exc}")
-            if errors:
-                hub_db.update_connector(self.selected_connector_id, status="failed", last_error="; ".join(errors))
-                self._ui_queue.put(("notification", "Connector test failed.", ERROR))
-            else:
-                hub_db.update_connector(self.selected_connector_id, status="online", last_error="", last_synced=datetime.now().isoformat())
-                self._ui_queue.put(("notification", "Connector test passed.", SUCCESS))
+            try:
+                from oauth_connector import test_connector as _tc
+                ok, msg = _tc(connector)
+            except Exception as exc:
+                ok, msg = False, str(exc)
+
+            hub_db.update_connector(
+                self._connector_selected_id,
+                status="active" if ok else "error",
+                last_error="" if ok else msg,
+                last_synced=datetime.now().isoformat() if ok else None,
+            )
+            color = SUCCESS if ok else ERROR
+            self._ui_queue.put(("toast", f"{'✅' if ok else '❌'} {msg}", color))
             self._ui_queue.put(("refresh_connectors",))
 
         threading.Thread(target=_thread, daemon=True).start()
 
     def _delete_selected_connector(self):
-        if self.selected_connector_id:
-            hub_db.delete_connector(self.selected_connector_id)
-            self.selected_connector_id = None
+        if self._connector_selected_id:
+            hub_db.delete_connector(self._connector_selected_id)
+            self._connector_selected_id = None
             self._refresh_connectors()
+            self.show_toast("Connector deleted.", SUCCESS)
+
 
     def show_admin(self):
         if not self.admin_unlocked:

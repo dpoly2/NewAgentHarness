@@ -262,6 +262,9 @@ def init_schema() -> None:
             smtp_port INTEGER DEFAULT 587,
             username TEXT,
             credentials TEXT DEFAULT '{}',
+            oauth_client_id TEXT DEFAULT '',
+            oauth_client_secret TEXT DEFAULT '',
+            token_expires_at TEXT DEFAULT '',
             status TEXT DEFAULT 'pending',
             last_error TEXT,
             last_synced TEXT,
@@ -696,6 +699,10 @@ def init_schema() -> None:
         "ALTER TABLE messages ADD COLUMN metadata TEXT DEFAULT '{}'",
         "ALTER TABLE messages ADD COLUMN tokens_used INTEGER DEFAULT 0",
         "ALTER TABLE messages ADD COLUMN model_used TEXT DEFAULT ''",
+        # OAuth connector columns
+        "ALTER TABLE email_connectors ADD COLUMN oauth_client_id TEXT DEFAULT ''",
+        "ALTER TABLE email_connectors ADD COLUMN oauth_client_secret TEXT DEFAULT ''",
+        "ALTER TABLE email_connectors ADD COLUMN token_expires_at TEXT DEFAULT ''",
     ]
     with get_conn() as conn:
         for _mig in _migrations:
@@ -1663,6 +1670,9 @@ def create_connector(
     smtp_port: int = 587,
     username: str | None = None,
     credentials: dict[str, Any] | str | None = None,
+    oauth_client_id: str = "",
+    oauth_client_secret: str = "",
+    token_expires_at: str = "",
 ) -> dict[str, Any]:
     connector_id = id or str(uuid.uuid4())
     now = _now_iso()
@@ -1671,25 +1681,18 @@ def create_connector(
             """
             INSERT INTO email_connectors (
                 id, label, email_address, provider, auth_type, imap_host, imap_port,
-                smtp_host, smtp_port, username, credentials, status,
-                last_error, last_synced, created_at, updated_at
+                smtp_host, smtp_port, username, credentials,
+                oauth_client_id, oauth_client_secret, token_expires_at,
+                status, last_error, last_synced, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NULL, NULL, ?, ?)
             """,
             (
-                connector_id,
-                label,
-                email_address,
-                provider,
-                auth_type,
-                imap_host,
-                imap_port,
-                smtp_host,
-                smtp_port,
-                username,
+                connector_id, label, email_address, provider, auth_type,
+                imap_host, imap_port, smtp_host, smtp_port, username,
                 _normalize_json_text(credentials, "{}"),
-                now,
-                now,
+                oauth_client_id, oauth_client_secret, token_expires_at,
+                now, now,
             ),
         )
     return get_connector(connector_id) or {}
@@ -1709,19 +1712,11 @@ def get_connector(id: str) -> dict[str, Any] | None:
 
 def update_connector(id: str, **kwargs: Any) -> dict[str, Any] | None:
     allowed = {
-        "label",
-        "email_address",
-        "provider",
-        "auth_type",
-        "imap_host",
-        "imap_port",
-        "smtp_host",
-        "smtp_port",
-        "username",
-        "credentials",
-        "status",
-        "last_error",
-        "last_synced",
+        "label", "email_address", "provider", "auth_type",
+        "imap_host", "imap_port", "smtp_host", "smtp_port",
+        "username", "credentials",
+        "oauth_client_id", "oauth_client_secret", "token_expires_at",
+        "status", "last_error", "last_synced",
     }
     assignments: list[str] = []
     params: list[Any] = []
