@@ -1351,6 +1351,120 @@ class MemoryUpdate(BaseModel):
     data: dict
 
 
+class AgentUpsert(BaseModel):
+    agent_id: str
+    name: str
+    type: str = "specialist"
+    role: str = ""
+    description: str = ""
+    project_slug: str = ""
+    capabilities: List[str] = Field(default_factory=list)
+    integrations: List[str] = Field(default_factory=list)
+    status: str = "active"
+    system_prompt: str = ""
+    config: dict = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
+
+
+class AgentUpdate(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    role: Optional[str] = None
+    description: Optional[str] = None
+    project_slug: Optional[str] = None
+    capabilities: Optional[List[str]] = None
+    integrations: Optional[List[str]] = None
+    status: Optional[str] = None
+    system_prompt: Optional[str] = None
+    config: Optional[dict] = None
+    metadata: Optional[dict] = None
+
+
+class AutomationCreate(BaseModel):
+    slug: str
+    name: str
+    description: str = ""
+    project_slug: str = ""
+    agent_id: str = ""
+    trigger_type: str = "manual"
+    trigger_config: dict = Field(default_factory=dict)
+    steps: List[Any] = Field(default_factory=list)
+    status: str = "active"
+
+
+class AutomationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    project_slug: Optional[str] = None
+    agent_id: Optional[str] = None
+    trigger_type: Optional[str] = None
+    trigger_config: Optional[dict] = None
+    steps: Optional[List[Any]] = None
+    status: Optional[str] = None
+
+
+class KnowledgeCreate(BaseModel):
+    title: str
+    content: str
+    source: str = ""
+    source_type: str = "manual"
+    category: str = "general"
+    tags: List[str] = Field(default_factory=list)
+    project_slug: str = ""
+    agent_id: str = ""
+
+
+class KnowledgeUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    project_slug: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class DocumentCreate(BaseModel):
+    title: str
+    doc_type: str = "general"
+    content: str = ""
+    format: str = "markdown"
+    project_slug: str = ""
+    client_id: str = ""
+    tags: List[str] = Field(default_factory=list)
+    created_by: str = ""
+
+
+class DocumentUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    doc_type: Optional[str] = None
+    status: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+class IntegrationUpsert(BaseModel):
+    name: str
+    provider: str
+    entity_type: str = "global"
+    entity_id: str = ""
+    auth_type: str = "oauth2"
+    credentials: dict = Field(default_factory=dict)
+    scope: str = ""
+    status: str = "pending"
+    metadata: dict = Field(default_factory=dict)
+
+
+class AutomationDocCreate(BaseModel):
+    automation_id: str = ""
+    run_id: str = ""
+    title: str = ""
+    doc_type: str = "report"
+    content: str = ""
+    status: str = "draft"
+    reviewed_by: str = ""
+    review_notes: str = ""
+
+
 class InezChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
@@ -2326,7 +2440,482 @@ if FASTAPI_OK:
         return {"id": id, "deleted": True}
 
 
-    @app.websocket("/ws")
+    # ── Agent Registry ────────────────────────────────────────────────────────
+
+    _AGENT_JSON = {"capabilities", "integrations", "config", "metadata"}
+
+    @app.get("/api/agents")
+    async def list_agents_endpoint(
+        project_slug: Optional[str] = None,
+        type: Optional[str] = None,
+        status: Optional[str] = None,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        where, params = [], []
+        if project_slug:
+            where.append("project_slug = ?"); params.append(project_slug)
+        if type:
+            where.append("type = ?"); params.append(type)
+        if status:
+            where.append("status = ?"); params.append(status)
+        return _list_records("agent_registry", where=where or None, params=params or None,
+                              order_by="project_slug ASC, name ASC", json_fields=_AGENT_JSON)
+
+    @app.post("/api/agents")
+    async def upsert_agent_endpoint(body: AgentUpsert, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        data = {
+            "id": uuid.uuid4().hex,
+            "agent_id": body.agent_id,
+            "name": body.name,
+            "type": body.type,
+            "role": body.role,
+            "description": body.description,
+            "project_slug": body.project_slug,
+            "capabilities": body.capabilities,
+            "integrations": body.integrations,
+            "status": body.status,
+            "system_prompt": body.system_prompt,
+            "config": body.config,
+            "metadata": body.metadata,
+            "created_at": now,
+            "updated_at": now,
+        }
+        conn = _db_connection()
+        try:
+            existing = conn.execute(
+                "SELECT id FROM agent_registry WHERE agent_id = ?", (body.agent_id,)
+            ).fetchone()
+            if existing:
+                data.pop("id"); data.pop("created_at")
+                data["updated_at"] = now
+                payload = _filter_record("agent_registry", data, _AGENT_JSON)
+                cols = ", ".join(f"{c} = ?" for c in payload)
+                conn.execute(
+                    f"UPDATE agent_registry SET {cols} WHERE agent_id = ?",
+                    list(payload.values()) + [body.agent_id],
+                )
+            else:
+                payload = _filter_record("agent_registry", data, _AGENT_JSON)
+                cols = list(payload.keys())
+                conn.execute(
+                    f"INSERT INTO agent_registry ({', '.join(cols)}) VALUES ({', '.join('?' for _ in cols)})",
+                    [payload[c] for c in cols],
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return _list_records("agent_registry", where=["agent_id = ?"], params=[body.agent_id],
+                              json_fields=_AGENT_JSON)[0]
+
+    @app.get("/api/agents/{agent_id}")
+    async def get_agent_endpoint(agent_id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        rec = _list_records("agent_registry", where=["agent_id = ?"], params=[agent_id],
+                             json_fields=_AGENT_JSON)
+        if not rec:
+            raise HTTPException(404, "Agent not found")
+        return rec[0]
+
+    @app.put("/api/agents/{agent_id}")
+    async def update_agent_endpoint(agent_id: str, body: AgentUpdate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates["updated_at"] = _now_iso()
+        conn = _db_connection()
+        try:
+            payload = _filter_record("agent_registry", updates, _AGENT_JSON)
+            if payload:
+                cols = ", ".join(f"{c} = ?" for c in payload)
+                conn.execute(
+                    f"UPDATE agent_registry SET {cols} WHERE agent_id = ?",
+                    list(payload.values()) + [agent_id],
+                )
+                conn.commit()
+        finally:
+            conn.close()
+        recs = _list_records("agent_registry", where=["agent_id = ?"], params=[agent_id],
+                              json_fields=_AGENT_JSON)
+        if not recs:
+            raise HTTPException(404, "Agent not found")
+        return recs[0]
+
+    @app.delete("/api/agents/{agent_id}")
+    async def delete_agent_endpoint(agent_id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        conn = _db_connection()
+        try:
+            cur = conn.execute("DELETE FROM agent_registry WHERE agent_id = ?", (agent_id,))
+            conn.commit()
+            if cur.rowcount == 0:
+                raise HTTPException(404, "Agent not found")
+        finally:
+            conn.close()
+        return {"agent_id": agent_id, "deleted": True}
+
+
+    # ── Automations ────────────────────────────────────────────────────────────
+
+    _AUTO_JSON = {"trigger_config", "steps", "metadata"}
+
+    @app.get("/api/automations")
+    async def list_automations(
+        project_slug: Optional[str] = None,
+        status: Optional[str] = None,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        where, params = [], []
+        if project_slug:
+            where.append("project_slug = ?"); params.append(project_slug)
+        if status:
+            where.append("status = ?"); params.append(status)
+        return _list_records("automations", where=where or None, params=params or None,
+                              order_by="updated_at DESC", json_fields=_AUTO_JSON)
+
+    @app.post("/api/automations")
+    async def create_automation(body: AutomationCreate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        return _create_record("automations", {
+            "id": uuid.uuid4().hex,
+            "slug": body.slug, "name": body.name,
+            "description": body.description, "project_slug": body.project_slug,
+            "agent_id": body.agent_id, "trigger_type": body.trigger_type,
+            "trigger_config": body.trigger_config, "steps": body.steps,
+            "status": body.status, "run_count": 0,
+            "created_at": now, "updated_at": now,
+        }, json_fields=_AUTO_JSON)
+
+    @app.get("/api/automations/{id}")
+    async def get_automation(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        rec = _get_record("automations", id, json_fields=_AUTO_JSON)
+        if not rec:
+            raise HTTPException(404, "Automation not found")
+        return rec
+
+    @app.put("/api/automations/{id}")
+    async def update_automation(id: str, body: AutomationUpdate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates["updated_at"] = _now_iso()
+        rec = _update_record("automations", id, updates, json_fields=_AUTO_JSON)
+        if not rec:
+            raise HTTPException(404, "Automation not found")
+        return rec
+
+    @app.delete("/api/automations/{id}")
+    async def delete_automation(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        if not _delete_record("automations", id):
+            raise HTTPException(404, "Automation not found")
+        return {"id": id, "deleted": True}
+
+    @app.post("/api/automations/{id}/trigger")
+    async def trigger_automation(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        auto = _get_record("automations", id, json_fields=_AUTO_JSON)
+        if not auto:
+            raise HTTPException(404, "Automation not found")
+        run_id = uuid.uuid4().hex
+        now = _now_iso()
+        _create_record("automation_runs", {
+            "id": run_id, "automation_id": id,
+            "automation_slug": auto.get("slug", ""),
+            "triggered_by": "manual", "status": "running",
+            "started_at": now,
+        })
+        _update_record("automations", id, {"last_run_at": now, "last_run_status": "running"})
+        return {"run_id": run_id, "automation_id": id, "status": "running"}
+
+    @app.get("/api/automations/{id}/runs")
+    async def list_automation_runs(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        return _list_records("automation_runs", where=["automation_id = ?"], params=[id],
+                              order_by="started_at DESC", json_fields={"metadata"})
+
+    @app.get("/api/automations/{id}/documents")
+    async def list_automation_docs(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        return _list_records("automation_documents", where=["automation_id = ?"], params=[id],
+                              order_by="created_at DESC")
+
+    @app.post("/api/automations/{id}/documents")
+    async def create_automation_doc(id: str, body: AutomationDocCreate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        return _create_record("automation_documents", {
+            "id": uuid.uuid4().hex,
+            "automation_id": id,
+            "run_id": body.run_id, "title": body.title,
+            "doc_type": body.doc_type, "content": body.content,
+            "status": body.status, "reviewed_by": body.reviewed_by,
+            "review_notes": body.review_notes,
+            "created_at": now, "updated_at": now,
+        })
+
+
+    # ── Knowledge Base ─────────────────────────────────────────────────────────
+
+    _KB_JSON = {"tags"}
+
+    @app.get("/api/knowledge")
+    async def list_knowledge(
+        category: Optional[str] = None,
+        project_slug: Optional[str] = None,
+        q: Optional[str] = None,
+        limit: int = 50,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        if q:
+            like = f"%{q}%"
+            conn = _db_connection()
+            try:
+                where = "is_active = 1 AND (title LIKE ? OR content LIKE ?)"
+                params_q: list[Any] = [like, like]
+                if category:
+                    where += " AND category = ?"; params_q.append(category)
+                if project_slug:
+                    where += " AND project_slug = ?"; params_q.append(project_slug)
+                rows = conn.execute(
+                    f"SELECT * FROM knowledge_base WHERE {where} ORDER BY updated_at DESC LIMIT ?",
+                    params_q + [limit],
+                ).fetchall()
+                return [_row_to_dict(r, _KB_JSON) for r in rows]
+            finally:
+                conn.close()
+        where_l, params_l = ["is_active = 1"], []
+        if category:
+            where_l.append("category = ?"); params_l.append(category)
+        if project_slug:
+            where_l.append("project_slug = ?"); params_l.append(project_slug)
+        return _list_records("knowledge_base", where=where_l, params=params_l,
+                              order_by="updated_at DESC", limit=limit, json_fields=_KB_JSON)
+
+    @app.post("/api/knowledge")
+    async def create_knowledge(body: KnowledgeCreate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        return _create_record("knowledge_base", {
+            "id": uuid.uuid4().hex,
+            "title": body.title, "content": body.content,
+            "source": body.source, "source_type": body.source_type,
+            "category": body.category, "tags": body.tags,
+            "project_slug": body.project_slug, "agent_id": body.agent_id,
+            "is_active": 1, "created_at": now, "updated_at": now,
+        }, json_fields=_KB_JSON)
+
+    @app.get("/api/knowledge/{id}")
+    async def get_knowledge(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        rec = _get_record("knowledge_base", id, json_fields=_KB_JSON)
+        if not rec:
+            raise HTTPException(404, "Knowledge entry not found")
+        return rec
+
+    @app.put("/api/knowledge/{id}")
+    async def update_knowledge(id: str, body: KnowledgeUpdate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates["updated_at"] = _now_iso()
+        if "is_active" in updates:
+            updates["is_active"] = 1 if updates["is_active"] else 0
+        rec = _update_record("knowledge_base", id, updates, json_fields=_KB_JSON)
+        if not rec:
+            raise HTTPException(404, "Knowledge entry not found")
+        return rec
+
+    @app.delete("/api/knowledge/{id}")
+    async def delete_knowledge(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        if not _delete_record("knowledge_base", id):
+            raise HTTPException(404, "Knowledge entry not found")
+        return {"id": id, "deleted": True}
+
+
+    # ── Documents ──────────────────────────────────────────────────────────────
+
+    _DOC_JSON = {"tags"}
+
+    @app.get("/api/documents")
+    async def list_documents(
+        project_slug: Optional[str] = None,
+        doc_type: Optional[str] = None,
+        client_id: Optional[str] = None,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        where, params = [], []
+        if project_slug:
+            where.append("project_slug = ?"); params.append(project_slug)
+        if doc_type:
+            where.append("doc_type = ?"); params.append(doc_type)
+        if client_id:
+            where.append("client_id = ?"); params.append(client_id)
+        return _list_records("documents", where=where or None, params=params or None,
+                              order_by="updated_at DESC", json_fields=_DOC_JSON)
+
+    @app.post("/api/documents")
+    async def create_document(body: DocumentCreate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        return _create_record("documents", {
+            "id": uuid.uuid4().hex,
+            "title": body.title, "doc_type": body.doc_type,
+            "content": body.content, "format": body.format,
+            "project_slug": body.project_slug, "client_id": body.client_id,
+            "tags": body.tags, "created_by": body.created_by,
+            "version": 1, "status": "draft",
+            "created_at": now, "updated_at": now,
+        }, json_fields=_DOC_JSON)
+
+    @app.get("/api/documents/{id}")
+    async def get_document(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        rec = _get_record("documents", id, json_fields=_DOC_JSON)
+        if not rec:
+            raise HTTPException(404, "Document not found")
+        return rec
+
+    @app.put("/api/documents/{id}")
+    async def update_document(id: str, body: DocumentUpdate, current_user: dict = Depends(get_current_user)):
+        del current_user
+        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates["updated_at"] = _now_iso()
+        rec = _update_record("documents", id, updates, json_fields=_DOC_JSON)
+        if not rec:
+            raise HTTPException(404, "Document not found")
+        return rec
+
+    @app.delete("/api/documents/{id}")
+    async def delete_document_ep(id: str, current_user: dict = Depends(get_current_user)):
+        del current_user
+        if not _delete_record("documents", id):
+            raise HTTPException(404, "Document not found")
+        return {"id": id, "deleted": True}
+
+
+    # ── Integrations ───────────────────────────────────────────────────────────
+
+    _INT_JSON = {"credentials", "metadata"}
+
+    @app.get("/api/integrations")
+    async def list_integrations(
+        provider: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        where, params = [], []
+        if provider:
+            where.append("provider = ?"); params.append(provider)
+        if entity_type:
+            where.append("entity_type = ?"); params.append(entity_type)
+        recs = _list_records("integrations", where=where or None, params=params or None,
+                              order_by="updated_at DESC", json_fields=_INT_JSON)
+        # Strip credential values from list response
+        for r in recs:
+            if "credentials" in r and isinstance(r["credentials"], dict):
+                r["credentials"] = {k: "***" for k in r["credentials"]}
+        return recs
+
+    @app.post("/api/integrations")
+    async def upsert_integration(body: IntegrationUpsert, current_user: dict = Depends(get_current_user)):
+        del current_user
+        now = _now_iso()
+        return _create_record("integrations", {
+            "id": uuid.uuid4().hex,
+            "name": body.name, "provider": body.provider,
+            "entity_type": body.entity_type, "entity_id": body.entity_id,
+            "auth_type": body.auth_type, "credentials": body.credentials,
+            "scope": body.scope, "status": body.status,
+            "metadata": body.metadata, "created_at": now, "updated_at": now,
+        }, json_fields=_INT_JSON)
+
+    @app.get("/api/integrations/{id}")
+    async def get_integration(id: str, admin_user: dict = Depends(get_admin_user)):
+        del admin_user
+        rec = _get_record("integrations", id, json_fields=_INT_JSON)
+        if not rec:
+            raise HTTPException(404, "Integration not found")
+        return rec
+
+    @app.delete("/api/integrations/{id}")
+    async def delete_integration(id: str, admin_user: dict = Depends(get_admin_user)):
+        del admin_user
+        if not _delete_record("integrations", id):
+            raise HTTPException(404, "Integration not found")
+        return {"id": id, "deleted": True}
+
+
+    # ── Events Log ─────────────────────────────────────────────────────────────
+
+    @app.get("/api/events")
+    async def list_events(
+        event_type: Optional[str] = None,
+        level: Optional[str] = None,
+        limit: int = 100,
+        current_user: dict = Depends(get_current_user),
+    ):
+        del current_user
+        where, params = [], []
+        if event_type:
+            where.append("event_type = ?"); params.append(event_type)
+        if level:
+            where.append("level = ?"); params.append(level)
+        return _list_records("events_log", where=where or None, params=params or None,
+                              order_by="created_at DESC", limit=limit, json_fields={"detail"})
+
+
+    # ── Context / Memory ───────────────────────────────────────────────────────
+
+    @app.get("/api/context")
+    async def get_full_context(current_user: dict = Depends(get_current_user)):
+        """Return complete portfolio context — agents, projects, clients, automations, todos."""
+        del current_user
+        if db and hasattr(db, "get_full_context"):
+            try:
+                return db.get_full_context()  # type: ignore[attr-defined]
+            except Exception:
+                pass
+        return {
+            "projects": _list_records("projects", order_by="name ASC", json_fields={"tags"}),
+            "clients": _list_records("clients", order_by="name ASC"),
+            "agents": _list_records("agent_registry", where=["status = ?"], params=["active"],
+                                     order_by="project_slug ASC, name ASC",
+                                     json_fields={"capabilities", "integrations", "config", "metadata"}),
+            "automations": _list_records("automations", where=["status = ?"], params=["active"],
+                                          order_by="name ASC", json_fields={"trigger_config", "steps"}),
+            "todos": _list_records("todos",
+                                    where=["status IN ('pending','in_progress')"], params=[],
+                                    order_by="created_at DESC"),
+        }
+
+
+    # ── Data Import ────────────────────────────────────────────────────────────
+
+    @app.post("/api/import")
+    async def run_data_import(admin_user: dict = Depends(get_admin_user)):
+        """Trigger a full re-import of all markdown/JSON source files into the DB."""
+        del admin_user
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "data_import", str(HERE / "data_import.py")
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            result = mod.import_all()
+            return {"status": "ok", "imported": result}
+        except Exception as exc:
+            raise HTTPException(500, f"Import failed: {exc}") from exc
+
+
+
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         try:

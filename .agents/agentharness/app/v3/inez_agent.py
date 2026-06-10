@@ -121,6 +121,90 @@ def _load_client_roster() -> str:
     return "\n".join(lines) if lines else ""
 
 
+def _load_portfolio_context() -> str:
+    """Load full portfolio context from DB — projects, clients, agents, automations."""
+    if not DB_OK:
+        return ""
+    lines = []
+    try:
+        # Projects
+        projects = db.list_projects()
+        if projects:
+            lines.append("ACTIVE PROJECTS:")
+            for p in projects:
+                status = p.get("status", "")
+                lead = p.get("lead_agent", "")
+                url = p.get("url", "")
+                url_str = f" [{url}]" if url else ""
+                lines.append(f"  • {p.get('name','')} ({p.get('slug','')}) — {status} | Lead: {lead}{url_str}")
+    except Exception:
+        pass
+
+    try:
+        # Clients
+        clients = db.list_clients()
+        if clients:
+            lines.append("\nCLIENTS:")
+            for c in clients:
+                lines.append(
+                    f"  • {c.get('name','')} ({c.get('slug','')}) — {c.get('status','')} | "
+                    f"Contact: {c.get('contact_name','')} | {c.get('notes','')[:120]}"
+                )
+    except Exception:
+        pass
+
+    try:
+        # Active agents summary
+        agents = [a for a in db.list_agents() if a.get("status") == "active"]
+        if agents:
+            lines.append(f"\nAGENTS: {len(agents)} active agents across {len(set(a.get('project_slug','') for a in agents))} projects")
+    except Exception:
+        pass
+
+    try:
+        # Automations
+        autos = db.list_automations(status="active")
+        if autos:
+            lines.append("\nACTIVE AUTOMATIONS:")
+            for a in autos[:10]:
+                lines.append(f"  • {a.get('name','')} ({a.get('trigger_type','manual')}) — {a.get('project_slug','')}")
+    except Exception:
+        pass
+
+    return "\n".join(lines) if lines else ""
+
+
+def _load_client_roster() -> str:
+    """Load S2T Designs client roster — first tries DB, falls back to file scan."""
+    # Try DB first
+    if DB_OK:
+        try:
+            clients = db.list_clients()
+            if clients:
+                lines = ["S2T / PORTFOLIO CLIENTS:"]
+                for c in clients:
+                    lines.append(f"  • {c.get('name','')} — {c.get('status','')} | {c.get('notes','')[:100]}")
+                return "\n".join(lines)
+        except Exception:
+            pass
+
+    # Fallback: file scan
+    lines = []
+    try:
+        roster_text = S2T_ROSTER_PATH.read_text(encoding="utf-8")
+        table_match = re.search(r"## Active Clients[\s\S]*?\n((?:\|[^\n]+\n)+)", roster_text)
+        if table_match:
+            lines.append("S2T DESIGNS ACTIVE CLIENTS:")
+            rows = table_match.group(1).strip().split("\n")[2:]
+            for row in rows:
+                cells = [c.strip() for c in row.split("|") if c.strip()]
+                if len(cells) >= 3:
+                    lines.append(f"  • {cells[0]} — {cells[-1]}")
+    except Exception:
+        pass
+    return "\n".join(lines) if lines else ""
+
+
 def _load_todos_context() -> str:
     """Load current todos as context for Inez."""
     if not DB_OK:
@@ -132,9 +216,10 @@ def _load_todos_context() -> str:
         lines = ["Active Todos:"]
         for t in todos[:20]:
             due = f" (due {t.get('due_date')})" if t.get("due_date") else ""
+            agent = f" → {t.get('assigned_agent')}" if t.get("assigned_agent") else ""
             lines.append(
                 f"- [{t.get('priority','med').upper()}] {t.get('title','')} "
-                f"| {t.get('project','')} | {t.get('status','')}{due}"
+                f"| {t.get('project','')} | {t.get('status','')}{due}{agent}"
             )
         return "\n".join(lines)
     except Exception:
@@ -168,21 +253,22 @@ def _format_conversation_history(history: list[dict]) -> str:
 
 
 def _build_system_prompt(history: list[dict]) -> str:
-    """Build Inez's full system prompt with live context injected."""
+    """Build Inez's full system prompt with live context injected from DB."""
     skill = _load_skill()
     todos = _load_todos_context()
     memory = _load_memory_context()
     conv = _format_conversation_history(history)
-    client_roster = _load_client_roster()
 
-    # Inject client roster into memory context if available
-    if client_roster:
-        memory = f"{client_roster}\n\n{memory}" if memory else client_roster
+    # Pull full portfolio context from DB (replaces file-based client roster)
+    portfolio = _load_portfolio_context()
+    client_roster = _load_client_roster() if not portfolio else ""
+
+    full_memory = "\n\n".join(filter(None, [portfolio, client_roster, memory])) or "No prior memory."
 
     return (
         skill
         .replace("{todos_context}", todos)
-        .replace("{memory_context}", memory or "No prior memory.")
+        .replace("{memory_context}", full_memory)
         .replace("{conversation_history}", conv)
     )
 
