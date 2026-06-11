@@ -22,7 +22,7 @@
                 const $item = $(this).closest('.pbs-ticket-item');
                 const price = parseFloat($item.data('price')) || 0;
                 const name  = $item.data('name');
-                if (qty > 0) { total += price * qty; ticketNames.push(name + ' x' + qty); totalQty += qty; }
+                if (qty > 0) { total += price * qty; ticketNames.push(name); totalQty += qty; }
             });
 
             const $summary = $form.find('.pbs-order-summary, .pbs-donate-summary');
