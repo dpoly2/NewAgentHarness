@@ -39,6 +39,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                AutomationsView()
+            }
+            .tabItem {
+                Label("Automations", systemImage: "bolt.circle.fill")
+            }
+
+            NavigationStack {
                 SettingsView()
             }
             .tabItem {

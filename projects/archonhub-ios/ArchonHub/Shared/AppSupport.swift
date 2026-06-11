@@ -125,6 +125,24 @@ enum ArchonDateFormatter {
     }
 }
 
+extension JSONValue {
+    var displayText: String {
+        switch self {
+        case .string(let s): return s
+        case .number(let n): return n.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(n)) : String(n)
+        case .bool(let b): return b ? "Yes" : "No"
+        case .null: return ""
+        case .array(let arr): return arr.map(\.displayText).filter { !$0.isEmpty }.joined(separator: "\n")
+        case .object(let dict):
+            let ordered = ["summary", "content", "text", "message", "body"]
+            for key in ordered {
+                if let val = dict[key] { return val.displayText }
+            }
+            return dict.map { "**\($0.key):** \($0.value.displayText)" }.joined(separator: "\n")
+        }
+    }
+}
+
 enum APIError: LocalizedError {
     case invalidURL
     case invalidResponse

@@ -54,10 +54,40 @@ struct Todo: Codable, Identifiable, Hashable {
     let createdAt: String?
 }
 
-struct DailyBrief: Codable, Hashable {
+struct Automation: Codable, Identifiable, Hashable {
+    let id: String
+    let slug: String
+    let name: String
+    let description: String?
+    let projectSlug: String?
+    let agentId: String?
+    let triggerType: String?
+    let status: String?
+    let lastRunAt: String?
+    let lastRunStatus: String?
+}
+
+struct DailyBrief: Hashable {
     let id: String
     let content: String
     let createdAt: String?
+}
+
+extension DailyBrief: Codable {
+    private enum CodingKeys: String, CodingKey { case id, content, createdAt }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
+        if let str = try? c.decode(String.self, forKey: .content) {
+            content = str
+        } else if let json = try? c.decode(JSONValue.self, forKey: .content) {
+            content = json.displayText
+        } else {
+            content = ""
+        }
+    }
 }
 
 struct SchedulerJob: Codable, Identifiable, Hashable {
