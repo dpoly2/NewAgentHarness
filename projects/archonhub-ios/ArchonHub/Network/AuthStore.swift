@@ -19,7 +19,7 @@ final class AuthStore: ObservableObject {
     func login(username: String, password: String) async throws {
         let response = try await HubClient.shared.login(username: username, password: password)
         self.username = username
-        self.role = response.role ?? "user"
+        self.role = response.user?.role ?? "user"
         self.isAuthenticated = true
         UserDefaults.standard.set(username, forKey: Keys.username)
         UserDefaults.standard.set(self.role, forKey: Keys.role)

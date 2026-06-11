@@ -39,7 +39,7 @@ final class HubClient: ObservableObject {
 
     func login(username: String, password: String) async throws -> LoginResponse {
         let response: LoginResponse = try await request(
-            path: "/api/login",
+            path: "/api/auth/login",
             method: "POST",
             body: LoginRequest(username: username, password: password),
             requiresAuth: false

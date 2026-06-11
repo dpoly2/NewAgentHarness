@@ -160,10 +160,15 @@ struct LoginRequest: Codable {
     let password: String
 }
 
+struct LoginUser: Codable {
+    let username: String
+    let role: String
+}
+
 struct LoginResponse: Codable {
     let accessToken: String
     let tokenType: String
-    let role: String?
+    let user: LoginUser?
 }
 
 struct WSEvent: Codable, Hashable {
