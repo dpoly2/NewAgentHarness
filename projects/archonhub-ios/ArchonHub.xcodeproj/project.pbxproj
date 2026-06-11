@@ -19,6 +19,7 @@
 		DC8279FA0E65982B50902D32 /* RunsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76F3E66B2C909CA569336E24 /* RunsView.swift */; };
 		CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BDDABE83150280268D2370 /* RunDetailView.swift */; };
 		31F0EF3827318AF7925D406F /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F170BC8587417CB08D4A5A9 /* TodosView.swift */; };
+		BCA5D24BEC33935FF8A291FB /* AutomationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22294E263D4B7EE08D909BBF /* AutomationsView.swift */; };
 		5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D54A64EC08732004634ACF0B /* AddTodoView.swift */; };
 		CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EC205EAE234EA083230944 /* BriefingView.swift */; };
 		4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9C54540BA3996C6E2D263A /* ChatView.swift */; };
@@ -55,6 +56,7 @@
 		76F3E66B2C909CA569336E24 /* RunsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunsView.swift; sourceTree = "<group>"; };
 		23BDDABE83150280268D2370 /* RunDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetailView.swift; sourceTree = "<group>"; };
 		0F170BC8587417CB08D4A5A9 /* TodosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodosView.swift; sourceTree = "<group>"; };
+		22294E263D4B7EE08D909BBF /* AutomationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationsView.swift; sourceTree = "<group>"; };
 		D54A64EC08732004634ACF0B /* AddTodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTodoView.swift; sourceTree = "<group>"; };
 		C6EC205EAE234EA083230944 /* BriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingView.swift; sourceTree = "<group>"; };
 		7C9C54540BA3996C6E2D263A /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -165,6 +167,7 @@
 				74E158F053383D17818F1E74,
 				C2BA9557CF95145E3366EE80,
 				00B7868B5E59F3EB8ABFE057,
+				A3F8E924C15D48B09E31D6F7,
 				9FF79E57F616E4AB6B52CEE4,
 			);
 			path = Views;
@@ -228,6 +231,14 @@
 				74562AA2B1927210B2149F24,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		A3F8E924C15D48B09E31D6F7 /* ArchonHubViewsAutomations */ = {
+			isa = PBXGroup;
+			children = (
+				22294E263D4B7EE08D909BBF,
+			);
+			path = Automations;
 			sourceTree = "<group>";
 		};
 		42F1D5B5794FC9D7573514E7 /* ArchonHubResources */ = {
@@ -393,6 +404,7 @@
 				DC8279FA0E65982B50902D32 /* RunsView.swift in Sources */,
 				CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */,
 				31F0EF3827318AF7925D406F /* TodosView.swift in Sources */,
+				BCA5D24BEC33935FF8A291FB /* AutomationsView.swift in Sources */,
 				5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */,
 				CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */,
 				4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */,
