@@ -209,7 +209,7 @@ struct AutomationsView: View {
             )
             withAnimation {
                 let runId = result.runId.map { String($0.prefix(8)) } ?? "started"
-                successMessage = ""\(automation.name)" triggered — run \(runId)"
+                successMessage = "\(automation.name) triggered, run \(runId)"
             }
             await loadAutomations()
         } catch {
