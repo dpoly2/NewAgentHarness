@@ -37,8 +37,7 @@ final class DashboardViewModel: ObservableObject {
             health = try await healthResponse
             recentRuns = try await runResponse
             errorMessage = ""
-
-            await HubClient.shared.checkHealth()
+            HubClient.shared.applyHealthResponse(health)
         } catch {
             errorMessage = error.localizedDescription
             recentRuns = []
