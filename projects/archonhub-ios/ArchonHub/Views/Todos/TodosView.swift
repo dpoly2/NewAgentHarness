@@ -41,11 +41,11 @@ struct TodosView: View {
                         } label: { Label("Delete", systemImage: "trash.fill") }
                     }
                     .swipeActions(edge: .leading) {
-                        Button { Task { await setStatus(todo, status: "done") } } label: {
+                        Button(action: { Task { await setStatus(todo, status: "done") } }) {
                             Label("Done", systemImage: "checkmark.circle.fill")
                         }
                         .tint(ArchonTheme.success)
-                        Button { Task { await setStatus(todo, status: "in_progress") } } label: {
+                        Button(action: { Task { await setStatus(todo, status: "in_progress") } }) {
                             Label("Working", systemImage: "clock.fill")
                         }
                         .tint(ArchonTheme.warning)
