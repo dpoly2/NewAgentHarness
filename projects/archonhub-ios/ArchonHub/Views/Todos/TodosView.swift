@@ -30,7 +30,7 @@ struct TodosView: View {
                     .listRowBackground(ArchonTheme.card)
             } else {
                 ForEach(filteredTodos) { todo in
-                    Button { selectedTodo = todo } label {
+                    Button { selectedTodo = todo } label: {
                         todoRow(todo)
                     }
                     .buttonStyle(.plain)
@@ -41,11 +41,11 @@ struct TodosView: View {
                         } label: { Label("Delete", systemImage: "trash.fill") }
                     }
                     .swipeActions(edge: .leading) {
-                        Button { Task { await setStatus(todo, status: "done") } } label {
+                        Button { Task { await setStatus(todo, status: "done") } } label: {
                             Label("Done", systemImage: "checkmark.circle.fill")
                         }
                         .tint(ArchonTheme.success)
-                        Button { Task { await setStatus(todo, status: "in_progress") } } label {
+                        Button { Task { await setStatus(todo, status: "in_progress") } } label: {
                             Label("Working", systemImage: "clock.fill")
                         }
                         .tint(ArchonTheme.warning)
