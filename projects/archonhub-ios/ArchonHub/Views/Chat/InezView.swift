@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Inez Message Model
 
 struct InezMessage: Identifiable, Hashable {
-    let id = UUID()
+    let id = UUID().uuidString
     let role: InezRole
     let content: String
     let dispatches: [InezDispatch]
