@@ -3,8 +3,8 @@ import SwiftUI
 struct LoginView: View {
     @EnvironmentObject private var authStore: AuthStore
 
-    @State private var username = "admin"
-    @State private var password = "ArchonHub2024!"
+    @State private var username = ""
+    @State private var password = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
 

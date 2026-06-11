@@ -132,7 +132,7 @@ struct InezChatRequest: Codable {
 }
 
 struct InezDispatch: Codable, Identifiable, Hashable {
-    var id: String { (agentId ?? "") + (project ?? "") }
+    var id: String { "\(agentId ?? "")|\(project ?? "")" }
     let agentId: String?
     let project: String?
     let graph: String?
@@ -160,9 +160,15 @@ struct LoginRequest: Codable {
     let password: String
 }
 
+struct LoginUser: Codable {
+    let username: String
+    let role: String
+}
+
 struct LoginResponse: Codable {
     let accessToken: String
     let tokenType: String
+    let user: LoginUser?
 }
 
 struct WSEvent: Codable, Hashable {

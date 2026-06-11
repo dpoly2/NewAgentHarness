@@ -34,6 +34,9 @@
 		570979101AE80BDE4593A071 /* ArchonHubComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2061FBB29EC6AB0A2D2D8143 /* ArchonHubComplication.swift */; };
 		E38D47BAF522846878516E8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5526FCF48A1460E9D18EF952 /* Assets.xcassets */; };
 		8A0B2150C9C9EAC248CD0049 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 305A8750CEE988883F8995AB /* Assets.xcassets */; };
+		BF7E32859466AC6EB9016109 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */; };
+		0E90813CDDBB89B5B7371595 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */; };
+		10460059F48D240AE12A2074 /* InezView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4308777EE7B32F1ED8C6B933 /* InezView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -64,6 +67,8 @@
 		2061FBB29EC6AB0A2D2D8143 /* ArchonHubComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchonHubComplication.swift; sourceTree = "<group>"; };
 		210678DFA6E8EA42EDD5361C /* ArchonHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3845A7A36A05BA55463A2FD8 /* ArchonHubWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHubWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		4308777EE7B32F1ED8C6B933 /* InezView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InezView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +76,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BF7E32859466AC6EB9016109 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +84,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0E90813CDDBB89B5B7371595 /* WatchConnectivity.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,6 +217,7 @@
 			isa = PBXGroup;
 			children = (
 				7C9C54540BA3996C6E2D263A,
+				4308777EE7B32F1ED8C6B933,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -388,6 +396,7 @@
 				5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */,
 				CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */,
 				4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */,
+				10460059F48D240AE12A2074 /* InezView.swift in Sources */,
 				DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -437,6 +446,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
 				MARKETING_VERSION = 1.0.0;
@@ -458,7 +470,9 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks");
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.ios;
@@ -479,7 +493,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
-				INFOPLIST_KEY_CLKComplicationPrincipalClass = $(PRODUCT_MODULE_NAME).ArchonHubComplication;
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ArchonHubComplication";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.archonhub.ios;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.watch;
@@ -501,7 +515,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
-				INFOPLIST_KEY_CLKComplicationPrincipalClass = $(PRODUCT_MODULE_NAME).ArchonHubComplication;
+				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ArchonHubComplication";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.archonhub.ios;
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.archonhub.watch;

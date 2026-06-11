@@ -14,6 +14,7 @@ final class HubClient: ObservableObject {
 
     private var token: String
     private var webSocketTask: URLSessionWebSocketTask?
+    private var wsReconnectAttempt = 0
     private var wsEventSubject = PassthroughSubject<WSEvent, Never>()
     var wsEvents: AnyPublisher<WSEvent, Never> { wsEventSubject.eraseToAnyPublisher() }
 
@@ -25,7 +26,7 @@ final class HubClient: ObservableObject {
     }
 
     private init() {
-        self.serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? "http://localhost:8765"
+        self.serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? "https://app.archonhub.app"
         self.token = KeychainWrapper.read(key: Keys.token) ?? ""
 
         Task {
@@ -38,7 +39,7 @@ final class HubClient: ObservableObject {
 
     func login(username: String, password: String) async throws -> LoginResponse {
         let response: LoginResponse = try await request(
-            path: "/api/login",
+            path: "/api/auth/login",
             method: "POST",
             body: LoginRequest(username: username, password: password),
             requiresAuth: false
@@ -86,6 +87,8 @@ final class HubClient: ObservableObject {
         webSocketTask = nil
     }
 
+    var currentToken: String { token }
+
     func setToken(_ value: String, persist: Bool = true) {
         token = value
         if persist {
@@ -97,6 +100,12 @@ final class HubClient: ObservableObject {
         token = ""
         KeychainWrapper.delete(key: Keys.token)
         disconnectWebSocket()
+    }
+
+    func applyHealthResponse(_ health: HealthResponse) {
+        isOnline = health.status.lowercased() == "ok" || health.status.lowercased() == "online"
+        UserDefaults.standard.set(health.activeRuns, forKey: Keys.activeRuns)
+        UserDefaults.standard.set(health.pendingTodos, forKey: Keys.pendingTodos)
     }
 
     func checkHealth() async {
@@ -291,12 +300,19 @@ final class HubClient: ObservableObject {
                     self.wsEventSubject.send(WSEvent(type: "message", runId: nil, text: payload, color: nil, data: nil))
                 }
 
+                self.wsReconnectAttempt = 0
                 self.receiveWebSocketMessage()
             case .failure:
                 DispatchQueue.main.async {
                     self.isOnline = false
+                    self.webSocketTask = nil
+                    guard !self.token.isEmpty else { return }
+                    let delay = min(30.0, pow(2.0, Double(self.wsReconnectAttempt)))
+                    self.wsReconnectAttempt += 1
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                        self?.connectWebSocket()
+                    }
                 }
-                self.webSocketTask = nil
             }
         }
     }
@@ -318,17 +334,17 @@ final class HubClient: ObservableObject {
         return nil
     }
 
-    private var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        return encoder
-    }
+    private let encoder: JSONEncoder = {
+        let e = JSONEncoder()
+        e.keyEncodingStrategy = .convertToSnakeCase
+        return e
+    }()
 
-    private var decoder: JSONDecoder {
-        let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return decoder
-    }
+    private let decoder: JSONDecoder = {
+        let d = JSONDecoder()
+        d.keyDecodingStrategy = .convertFromSnakeCase
+        return d
+    }()
 }
 
 private enum KeychainWrapper {
