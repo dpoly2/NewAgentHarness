@@ -179,11 +179,18 @@ def _json_loads(value: Any, default: Any = None) -> Any:
         return default if default is not None else value
 
 
+_table_columns_cache: dict[str, set[str]] = {}
+
+
 def _table_columns(table: str) -> set[str]:
+    if table in _table_columns_cache:
+        return _table_columns_cache[table]
     conn = _db_connection()
     try:
         rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
-        return {row[1] for row in rows}
+        result = {row[1] for row in rows}
+        _table_columns_cache[table] = result
+        return result
     except Exception:
         return set()
     finally:
@@ -201,6 +208,9 @@ def _db_connection() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA synchronous=NORMAL")   # safe with WAL; faster than FULL
+    conn.execute("PRAGMA cache_size=-32000")    # 32 MB page cache
+    conn.execute("PRAGMA temp_store=MEMORY")    # temp tables in RAM
     return conn
 
 
@@ -3196,4 +3206,15 @@ else:
 if __name__ == "__main__":
     if not FASTAPI_OK:
         raise SystemExit("FastAPI is not installed")
-    uvicorn.run("hub_server:app", host="0.0.0.0", port=8765, reload=False)
+    import multiprocessing
+    workers = min(4, max(2, multiprocessing.cpu_count()))
+    uvicorn.run(
+        "hub_server:app",
+        host="0.0.0.0",
+        port=8765,
+        reload=False,
+        workers=workers,
+        log_level="warning",
+        access_log=False,
+        loop="auto",
+    )
