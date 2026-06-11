@@ -641,6 +641,18 @@ class ArchonHubApp:
         text = str(value).replace("T", " ")
         return text[:19]
 
+    def _widget_ok(self, attr: str) -> bool:
+        """Return True only if the attribute exists AND the Tk widget is still alive.
+        Prevents TclError crashes when background threads fire UI updates after a
+        widget has been destroyed (e.g. during tab/pane rebuild)."""
+        widget = getattr(self, attr, None)
+        if widget is None:
+            return False
+        try:
+            return bool(widget.winfo_exists())
+        except Exception:
+            return False
+
     def _status_badge(self, parent, text, color):
         return tk.Label(parent, text=text, bg=color, fg=BG_RAIL, padx=8, pady=2, font=("Segoe UI", 9, "bold"))
 
@@ -838,32 +850,32 @@ class ArchonHubApp:
                 result       = item[2]
                 self._inez_handle_result(think_run_id, result)
             elif kind == "refresh_runs":
-                if hasattr(self, "runs_tree"):
+                if self._widget_ok("runs_tree"):
                     self._refresh_runs()
                 self._refresh_home_status()
             elif kind == "refresh_todos":
-                if hasattr(self, "todo_tree"):
+                if self._widget_ok("todo_tree"):
                     self._refresh_todos()
             elif kind == "refresh_digest":
-                if hasattr(self, "digest_text"):
+                if self._widget_ok("digest_text"):
                     self._refresh_digest()
             elif kind == "refresh_schedule":
-                if hasattr(self, "schedule_tree"):
+                if self._widget_ok("schedule_tree"):
                     self._refresh_schedule()
             elif kind == "refresh_clients":
-                if hasattr(self, "clients_cards_container"):
+                if self._widget_ok("clients_cards_container"):
                     self._refresh_clients()
             elif kind == "refresh_travel":
-                if hasattr(self, "travel_cards_container"):
+                if self._widget_ok("travel_cards_container"):
                     self._refresh_travel()
             elif kind == "refresh_reports":
-                if hasattr(self, "reports_container"):
+                if self._widget_ok("reports_container"):
                     self._refresh_reports()
             elif kind == "refresh_connectors":
-                if hasattr(self, "connectors_tree"):
+                if self._widget_ok("connectors_tree"):
                     self._refresh_connectors()
             elif kind == "refresh_users":
-                if hasattr(self, "users_tree"):
+                if self._widget_ok("users_tree"):
                     self._refresh_users()
             elif kind == "notification":
                 self.show_toast(item[1], item[2])
@@ -913,9 +925,9 @@ class ArchonHubApp:
             self.run_state[run_id]["status"] = "failed"
             self.run_logs[run_id].append(f"[{stamp}] Failed | {data.get('error', 'Unknown error')}")
 
-        if self.selected_run_id == run_id and hasattr(self, "run_log_text"):
+        if self.selected_run_id == run_id and self._widget_ok("run_log_text"):
             self._update_run_detail(run_id)
-        if hasattr(self, "runs_tree"):
+        if self._widget_ok("runs_tree"):
             self._refresh_runs(select_run_id=run_id)
         self._refresh_home_status()
 
@@ -1202,36 +1214,39 @@ class ArchonHubApp:
         self._refresh_runs()
 
     def _refresh_runs(self, select_run_id=None):
-        if not hasattr(self, "runs_tree"):
+        if not self._widget_ok("runs_tree"):
             return
         rows = self._get_runs()
-        self.runs_tree.delete(*self.runs_tree.get_children())
-        self.runs_lookup = {}
-        for row in rows:
-            run_id = row.get("run_id")
-            self.runs_lookup[run_id] = row
-            values = (
-                str(run_id)[:15],
-                row.get("agent_id", ""),
-                row.get("project", ""),
-                row.get("graph", ""),
-                f"{float(row.get('score', 0.0) or 0.0):.2f}",
-                row.get("status", ""),
-                self._human_time(row.get("created_at", "")),
-            )
-            tag = row.get("status", "")
-            self.runs_tree.insert("", "end", iid=run_id, values=values, tags=(tag,))
-        for tag, color in STATUS_COLORS.items():
-            self.runs_tree.tag_configure(tag, foreground=color)
-        target = select_run_id or self.selected_run_id
-        if target and target in self.runs_tree.get_children():
-            self.runs_tree.selection_set(target)
-            self.runs_tree.focus(target)
-            self._update_run_detail(target)
-        elif rows:
-            first = rows[0]["run_id"]
-            self.runs_tree.selection_set(first)
-            self._update_run_detail(first)
+        try:
+            self.runs_tree.delete(*self.runs_tree.get_children())
+            self.runs_lookup = {}
+            for row in rows:
+                run_id = row.get("run_id")
+                self.runs_lookup[run_id] = row
+                values = (
+                    str(run_id)[:15],
+                    row.get("agent_id", ""),
+                    row.get("project", ""),
+                    row.get("graph", ""),
+                    f"{float(row.get('score', 0.0) or 0.0):.2f}",
+                    row.get("status", ""),
+                    self._human_time(row.get("created_at", "")),
+                )
+                tag = row.get("status", "")
+                self.runs_tree.insert("", "end", iid=run_id, values=values, tags=(tag,))
+            for tag, color in STATUS_COLORS.items():
+                self.runs_tree.tag_configure(tag, foreground=color)
+            target = select_run_id or self.selected_run_id
+            if target and target in self.runs_tree.get_children():
+                self.runs_tree.selection_set(target)
+                self.runs_tree.focus(target)
+                self._update_run_detail(target)
+            elif rows:
+                first = rows[0]["run_id"]
+                self.runs_tree.selection_set(first)
+                self._update_run_detail(first)
+        except Exception:
+            pass
 
     def _on_run_selected(self):
         selected = self.runs_tree.selection()
