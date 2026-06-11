@@ -26,7 +26,7 @@ final class HubClient: ObservableObject {
     }
 
     private init() {
-        self.serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? "http://localhost:8765"
+        self.serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? "https://app.archonhub.app"
         self.token = KeychainWrapper.read(key: Keys.token) ?? ""
 
         Task {
