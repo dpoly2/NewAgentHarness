@@ -32,6 +32,7 @@ struct InezView: View {
     @State private var draft = ""
     @State private var conversationId: String?
     @State private var isThinking = false
+    @State private var thinkingStep = ""
     @State private var errorMessage = ""
 
     private let welcomeMessage = InezMessage(
@@ -93,6 +94,12 @@ struct InezView: View {
         .task {
             if messages.isEmpty {
                 messages.append(welcomeMessage)
+            }
+        }
+        .onReceive(hubClient.wsEvents) { event in
+            guard event.type == "inez_thinking", let step = event.text, !step.isEmpty else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                thinkingStep = step
             }
         }
     }
@@ -259,11 +266,13 @@ struct InezView: View {
                 Text("Inez")
                     .font(.caption.bold())
                     .foregroundStyle(Color(red: 0.77, green: 0.71, blue: 0.99))
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     BouncingDotsView()
-                    Text("Thinking...")
+                    Text(thinkingStep.isEmpty ? "Thinking..." : thinkingStep)
                         .font(.caption)
                         .foregroundStyle(ArchonTheme.muted)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .id(thinkingStep)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -331,6 +340,7 @@ struct InezView: View {
             )
             conversationId = response.conversationId
             isThinking = false
+            thinkingStep = ""
             messages.append(InezMessage(
                 role: .inez,
                 content: response.inezMessage,
@@ -338,6 +348,7 @@ struct InezView: View {
             ))
         } catch {
             isThinking = false
+            thinkingStep = ""
             errorMessage = error.localizedDescription
             messages.append(InezMessage(
                 role: .inez,

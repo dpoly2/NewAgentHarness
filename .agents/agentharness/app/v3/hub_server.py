@@ -11,7 +11,7 @@ import sys
 import uuid
 import json
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
@@ -140,7 +140,7 @@ security = HTTPBearer(auto_error=False) if FASTAPI_OK else None
 
 
 def _utcnow() -> datetime:
-    return datetime.utcnow()
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _now_iso() -> str:
@@ -2336,10 +2336,21 @@ if FASTAPI_OK:
         ]
 
         # Call Inez in executor (blocking LLM call)
+        # Wire an emit callback so thinking steps are broadcast over WebSocket in real time.
         loop = asyncio.get_running_loop()
+
+        def _inez_emit(event_type: str, **kwargs: Any) -> None:
+            """Thread-safe bridge: called from executor thread → schedules WS broadcast."""
+            event: dict = {"type": event_type}
+            # inez_agent uses 'message' kwarg; WSEvent uses 'text'
+            if "message" in kwargs:
+                event["text"] = kwargs.pop("message")
+            event.update(kwargs)
+            asyncio.run_coroutine_threadsafe(hub.broadcast(event), loop)
+
         result = await loop.run_in_executor(
             hub._executor,
-            lambda: think(body.message, history),
+            lambda: think(body.message, history, emit=_inez_emit),
         )
 
         inez_message = result.get("inez_message", "")
@@ -3206,15 +3217,30 @@ else:
 if __name__ == "__main__":
     if not FASTAPI_OK:
         raise SystemExit("FastAPI is not installed")
-    import multiprocessing
-    workers = min(4, max(2, multiprocessing.cpu_count()))
+
+    import sys as _sys
+    import multiprocessing as _mp
+
+    # Windows: multiprocessing workers can't inherit sockets (WinError 10022)
+    # and each worker would get an isolated hub instance (breaks WebSocket broadcast).
+    # Use a single worker with asyncio on Windows; use multiple workers on Linux/macOS.
+    if _sys.platform == "win32":
+        _workers = 1
+        _loop = "asyncio"
+    else:
+        _workers = min(4, max(2, _mp.cpu_count()))
+        _loop = "auto"
+
+    port = int(os.environ.get("HUB_PORT", 8765))
+    host = os.environ.get("HUB_HOST", "0.0.0.0")
+
     uvicorn.run(
         "hub_server:app",
-        host="0.0.0.0",
-        port=8765,
+        host=host,
+        port=port,
         reload=False,
-        workers=workers,
+        workers=_workers,
         log_level="warning",
         access_log=False,
-        loop="auto",
+        loop=_loop,
     )
