@@ -1,0 +1,196 @@
+name: ArchonHub iOS — TestFlight Deploy
+
+# Triggers on version tags: archonhub/v1.2.3
+# Also manually dispatchable for ad-hoc TestFlight builds.
+on:
+  push:
+    tags:
+      - 'archonhub/v*'
+  workflow_dispatch:
+    inputs:
+      notes:
+        description: 'TestFlight release notes'
+        required: false
+        default: 'Internal build'
+
+concurrency:
+  group: archonhub-testflight
+  cancel-in-progress: false
+
+# ── Required GitHub Secrets ────────────────────────────────────────────────────
+# APPLE_CERTIFICATE          – Base64-encoded .p12 distribution certificate
+#                              openssl base64 -in Certificates.p12 | pbcopy
+# APPLE_CERTIFICATE_PASSWORD – Password for the .p12
+# APPLE_PROVISIONING_PROFILE – Base64-encoded .mobileprovision (App Store)
+#                              base64 -i ArchonHub_AppStore.mobileprovision | pbcopy
+# APP_STORE_CONNECT_API_KEY  – Base64-encoded App Store Connect API .p8 key
+#                              base64 -i AuthKey_XXXXXXXX.p8 | pbcopy
+# APP_STORE_CONNECT_KEY_ID   – Key ID from App Store Connect (e.g. XXXXXXXX)
+# APP_STORE_CONNECT_ISSUER_ID– Issuer ID from App Store Connect
+# KEYCHAIN_PASSWORD          – Any password for the temp CI keychain (e.g. a UUID)
+# ──────────────────────────────────────────────────────────────────────────────
+
+env:
+  PROJECT:       projects/archonhub-ios/ArchonHub.xcodeproj
+  SCHEME:        ArchonHub
+  WORKSPACE:     projects/archonhub-ios
+  BUNDLE_ID:     com.smithcapital.archonhub
+  EXPORT_METHOD: app-store
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # JOB 1: Build & upload iPhone + Watch app to TestFlight
+  # ──────────────────────────────────────────────────────────
+  testflight:
+    name: Build & Upload to TestFlight
+    runs-on: macos-14            # Xcode 15, Apple Silicon runner
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Read version info ─────────────────────────────────
+      - name: Read version
+        id: version
+        run: |
+          MARKETING=$(grep 'MARKETING_VERSION' ${{ env.PROJECT }}/project.pbxproj \
+            | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION' ${{ env.PROJECT }}/project.pbxproj \
+            | head -1 | grep -oE '[0-9]+')
+          echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD"         >> "$GITHUB_OUTPUT"
+          echo "ArchonHub $MARKETING ($BUILD)"
+
+      # ── Xcode version ─────────────────────────────────────
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # ── Install Fastlane ──────────────────────────────────
+      - name: Set up Ruby & Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ${{ env.WORKSPACE }}
+
+      # ── Import signing certificate ─────────────────────────
+      - name: Import code signing certificate
+        env:
+          CERTIFICATE_BASE64:  ${{ secrets.APPLE_CERTIFICATE }}
+          CERTIFICATE_PASSWORD:${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD:   ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/archonhub-ci.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$CERTIFICATE_BASE64" | base64 --decode -o "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+      # ── Install provisioning profile ──────────────────────
+      - name: Install provisioning profile
+        env:
+          PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+        run: |
+          PROFILE_PATH="$RUNNER_TEMP/ArchonHub_AppStore.mobileprovision"
+          echo "$PROFILE_BASE64" | base64 --decode -o "$PROFILE_PATH"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
+
+      # ── Write App Store Connect API key ───────────────────
+      - name: Write App Store Connect API key
+        env:
+          API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          KEY_ID:         ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        run: |
+          mkdir -p ~/.private_keys
+          echo "$API_KEY_BASE64" | base64 --decode -o \
+            "$HOME/.private_keys/AuthKey_${KEY_ID}.p8"
+
+      # ── Create ExportOptions.plist ────────────────────────
+      - name: Create ExportOptions.plist
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>${{ env.EXPORT_METHOD }}</string>
+            <key>teamID</key>
+            <string>${{ secrets.APPLE_TEAM_ID }}</string>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${{ env.BUNDLE_ID }}</key>
+              <string>ArchonHub AppStore</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      # ── Build archive ─────────────────────────────────────
+      - name: Build Xcode archive
+        run: |
+          xcodebuild archive \
+            -project "${{ env.PROJECT }}" \
+            -scheme   "${{ env.SCHEME }}" \
+            -sdk      iphoneos \
+            -configuration Release \
+            -archivePath "$RUNNER_TEMP/ArchonHub.xcarchive" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            | xcpretty
+
+      # ── Export IPA ────────────────────────────────────────
+      - name: Export IPA
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath    "$RUNNER_TEMP/ArchonHub.xcarchive" \
+            -exportPath     "$RUNNER_TEMP/ArchonHub-IPA" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            | xcpretty
+
+      # ── Upload to TestFlight ──────────────────────────────
+      - name: Upload to TestFlight
+        env:
+          KEY_ID:    ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$RUNNER_TEMP/ArchonHub-IPA/ArchonHub.ipa" \
+            --apiKey    "$KEY_ID" \
+            --apiIssuer "$ISSUER_ID"
+
+      # ── Summary ───────────────────────────────────────────
+      - name: Build summary
+        run: |
+          echo "### ArchonHub TestFlight Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ steps.version.outputs.marketing }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ steps.version.outputs.build }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Scheme | ${{ env.SCHEME }} (iPhone + Apple Watch) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Destination | TestFlight — ${{ env.BUNDLE_ID }} |" >> $GITHUB_STEP_SUMMARY
+
+      # ── Cleanup keychain ──────────────────────────────────
+      - name: Clean up keychain
+        if: always()
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/archonhub-ci.keychain-db"
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
