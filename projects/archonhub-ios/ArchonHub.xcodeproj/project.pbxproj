@@ -20,6 +20,7 @@
 		CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BDDABE83150280268D2370 /* RunDetailView.swift */; };
 		31F0EF3827318AF7925D406F /* TodosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F170BC8587417CB08D4A5A9 /* TodosView.swift */; };
 		BCA5D24BEC33935FF8A291FB /* AutomationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22294E263D4B7EE08D909BBF /* AutomationsView.swift */; };
+		F2D4E85A1C7B3A0E9F6D2C4B /* ModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C3A94E7D2F1E0A5C8B9D3F /* ModelsView.swift */; };
 		5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D54A64EC08732004634ACF0B /* AddTodoView.swift */; };
 		CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6EC205EAE234EA083230944 /* BriefingView.swift */; };
 		4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9C54540BA3996C6E2D263A /* ChatView.swift */; };
@@ -57,6 +58,7 @@
 		23BDDABE83150280268D2370 /* RunDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunDetailView.swift; sourceTree = "<group>"; };
 		0F170BC8587417CB08D4A5A9 /* TodosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodosView.swift; sourceTree = "<group>"; };
 		22294E263D4B7EE08D909BBF /* AutomationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationsView.swift; sourceTree = "<group>"; };
+		B1C3A94E7D2F1E0A5C8B9D3F /* ModelsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsView.swift; sourceTree = "<group>"; };
 		D54A64EC08732004634ACF0B /* AddTodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTodoView.swift; sourceTree = "<group>"; };
 		C6EC205EAE234EA083230944 /* BriefingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefingView.swift; sourceTree = "<group>"; };
 		7C9C54540BA3996C6E2D263A /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 				C2BA9557CF95145E3366EE80,
 				00B7868B5E59F3EB8ABFE057,
 				A3F8E924C15D48B09E31D6F7,
+				C9D2F17A3E5B8C0A4D1E6F2B,
 				9FF79E57F616E4AB6B52CEE4,
 			);
 			path = Views;
@@ -231,6 +234,14 @@
 				74562AA2B1927210B2149F24,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		C9D2F17A3E5B8C0A4D1E6F2B /* ArchonHubViewsModels */ = {
+			isa = PBXGroup;
+			children = (
+				B1C3A94E7D2F1E0A5C8B9D3F,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		A3F8E924C15D48B09E31D6F7 /* ArchonHubViewsAutomations */ = {
@@ -405,6 +416,7 @@
 				CE377456BFC032FAEB5722C6 /* RunDetailView.swift in Sources */,
 				31F0EF3827318AF7925D406F /* TodosView.swift in Sources */,
 				BCA5D24BEC33935FF8A291FB /* AutomationsView.swift in Sources */,
+				F2D4E85A1C7B3A0E9F6D2C4B /* ModelsView.swift in Sources */,
 				5EDDA129762661CB04977172 /* AddTodoView.swift in Sources */,
 				CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */,
 				4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */,

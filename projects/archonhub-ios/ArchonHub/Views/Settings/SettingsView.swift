@@ -44,6 +44,7 @@ struct SettingsView: View {
             Section("About") {
                 LabeledContent("Version", value: "ArchonHub v1.0.0")
                 LabeledContent("Product", value: "AI Agent Harness")
+                NavigationLink("Models & Providers") { ModelsView() }
             }
         }
         .scrollContentBackground(.hidden)

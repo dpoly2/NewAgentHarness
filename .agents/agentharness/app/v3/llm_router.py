@@ -326,8 +326,9 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
 
     Priority:
       1. Agent's stored model override (preferred_provider / preferred_model)
-      2. Ollama auto-assignment based on skill keywords (if Ollama is running)
-      3. Global config from hub_db / ai_config.json / env vars (existing _llm())
+      2. model_catalog smart routing (Perplexity-style, uses capability tags)
+      3. Ollama auto-assignment based on skill keywords (if Ollama is running)
+      4. Global config from hub_db / ai_config.json / env vars (existing _llm())
 
     Falls back to global _llm() on any error.
     """
@@ -346,7 +347,21 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
         except Exception as e:
             logger.warning("Agent override LLM failed (%s), falling back: %s", agent_id, e)
 
-    # 2. Ollama auto-assignment
+    # 2. model_catalog smart routing
+    try:
+        from model_catalog import route_for_task, build_llm_from_route, TASK_CAPABILITY_MAP
+        kws = extract_skill_keywords(agent_id, skill_text)
+        task_type = next((kw for kw in kws if kw in TASK_CAPABILITY_MAP), kws[0] if kws else "reasoning")
+        route = route_for_task(task_type, agent_id)
+        if route:
+            llm = build_llm_from_route(route, temperature=temperature)
+            logger.debug("Agent %s catalog-routed to %s/%s (%s)",
+                         agent_id, route["provider"], route["model_id"], route["reason"])
+            return llm
+    except Exception as e:
+        logger.debug("model_catalog routing failed for %s: %s", agent_id, e)
+
+    # 3. Ollama auto-assignment
     if allow_ollama and ollama_is_running():
         kws = extract_skill_keywords(agent_id, skill_text)
         result = get_best_model_for_skill(kws)
@@ -359,7 +374,7 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
             except Exception as e:
                 logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
 
-    # 3. Global config fallback
+    # 4. Global config fallback
     try:
         from hub_nodes import _llm
         return _llm(temperature=temperature)
