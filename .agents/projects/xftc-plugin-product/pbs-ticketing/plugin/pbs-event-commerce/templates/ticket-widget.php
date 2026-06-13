@@ -133,7 +133,7 @@
         </div>
       </div>
       <?php else : ?>
-        <p class="pbs-notice pbs-no-gateways">⚠️ No payment methods configured yet. Visit PBS Commerce → Settings to add Stripe, Square, or PayPal credentials.</p>
+        <p class="pbs-notice pbs-no-gateways">&#x26A0;&#xFE0F; No payment methods configured yet. Visit PBS Commerce → Settings to add Stripe, Square, or PayPal credentials.</p>
       <?php endif; ?>
 
       <div class="pbs-submit-wrap">

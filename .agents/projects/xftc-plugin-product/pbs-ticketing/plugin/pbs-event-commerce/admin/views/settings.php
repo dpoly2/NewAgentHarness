@@ -38,7 +38,7 @@ $paypal_verified    = get_option( 'pbs_paypal_merchant_email', '' );
 $conf_msg = isset( $_GET['conf_page'] ) ? sanitize_text_field( $_GET['conf_page'] ) : '';
 if ( $conf_msg === 'created' ) {
     $conf_id = (int) get_option( 'pbs_confirmation_page_id', 0 );
-    echo '<div class="notice notice-success is-dismissible"><p>✅ <strong>Confirmation page created!</strong> <a href="' . esc_url( get_permalink( $conf_id ) ) . '" target="_blank">View page ↗</a></p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>&#x2705; <strong>Confirmation page created!</strong> <a href="' . esc_url( get_permalink( $conf_id ) ) . '" target="_blank">View page &#x2197;</a></p></div>';
 } elseif ( $conf_msg === 'exists' ) {
     echo '<div class="notice notice-info is-dismissible"><p>ℹ️ Confirmation page already exists.</p></div>';
 } elseif ( $conf_msg === 'error' ) {
@@ -49,7 +49,7 @@ if ( $conf_msg === 'created' ) {
 $square_msg = isset( $_GET['square_msg'] ) ? sanitize_text_field( $_GET['square_msg'] ) : '';
 $square_err = isset( $_GET['square_err'] ) ? sanitize_text_field( $_GET['square_err'] ) : '';
 if ( $square_msg === 'connected' ) {
-    echo '<div class="notice notice-success is-dismissible"><p>✅ <strong>Square connected successfully!</strong> Gateway is now active.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>&#x2705; <strong>Square connected successfully!</strong> Gateway is now active.</p></div>';
 } elseif ( $square_msg === 'state_mismatch' ) {
     echo '<div class="notice notice-error is-dismissible"><p>❌ <strong>Square OAuth failed:</strong> Security state mismatch. This usually means the OAuth session expired. Please try connecting again.</p></div>';
 } elseif ( $square_msg === 'no_code' ) {
@@ -184,7 +184,7 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
 <div class="pbs-gateway-card">
   <div class="pbs-card-header">
     <div class="pbs-card-header-left">
-      <span style="font-size:22px;">💳</span>
+      <span style="font-size:22px;">&#x1F4B3;</span>
       <span class="pbs-card-title">Stripe</span>
       <span class="pbs-status-dot <?php echo $stripe_status['connected'] ? 'connected' : ( $pbs_key_set( 'pbs_stripe_secret_key' ) ? 'error' : 'disconnected' ); ?>"></span>
       <span class="pbs-status-text">
@@ -213,14 +213,14 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
   <div class="pbs-card-body">
     <p style="margin:0 0 16px;font-size:13px;color:#666;">
       Accept credit/debit cards via Stripe.
-      <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">Get API keys ↗</a>
+      <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">Get API keys &#x2197;</a>
       &nbsp;|&nbsp;
-      <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer">Test keys ↗</a>
+      <a href="https://dashboard.stripe.com/test/apikeys" target="_blank" rel="noopener noreferrer">Test keys &#x2197;</a>
     </p>
 
     <div style="margin-bottom:16px;">
       <?php if ( $pbs_key_set( 'pbs_stripe_secret_key' ) ) : ?>
-        <span style="color:#4caf50;font-weight:600;"><?php echo esc_html( '✅ Stripe connected' ); ?></span>
+        <span style="color:#4caf50;font-weight:600;"><?php echo esc_html( '&#x2705; Stripe connected' ); ?></span>
         <button type="submit" class="pbs-oauth-btn stripe-btn" form="pbs-stripe-disconnect-form"><?php echo esc_html( 'Disconnect' ); ?></button>
       <?php else : ?>
         <a href="<?php echo esc_url( PBS_Stripe_OAuth::get_auth_url() ); ?>" class="pbs-oauth-btn stripe-btn" <?php echo $stripe_can_connect ? '' : 'style="opacity:.5;pointer-events:none;" title="Enter Connect Client ID first"'; ?>>
@@ -343,7 +343,7 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
   <div class="pbs-card-body">
     <p style="margin:0 0 16px;font-size:13px;color:#666;">
       Accept cards via Square's Web Payments SDK.
-      <a href="https://developer.squareup.com/apps" target="_blank" rel="noopener noreferrer">Square Developer Dashboard ↗</a>
+      <a href="https://developer.squareup.com/apps" target="_blank" rel="noopener noreferrer">Square Developer Dashboard &#x2197;</a>
     </p>
 
     <?php if ( ! $pbs_key_set( 'pbs_square_access_token' ) ) : ?>
@@ -353,7 +353,7 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
         <li>Open <a href="https://developer.squareup.com/apps" target="_blank">Square Developer Dashboard</a> → your app → <strong>OAuth</strong> tab</li>
         <li>Add this <strong>Redirect URL</strong>:
           <br><code id="pbs-square-redirect-uri" style="background:#f1f1f1;padding:3px 8px;border-radius:3px;font-size:12px;user-select:all;"><?php echo esc_html( PBS_Square_OAuth::get_redirect_uri() ); ?></code>
-          <button type="button" onclick="var u=document.getElementById('pbs-square-redirect-uri');navigator.clipboard.writeText(u.textContent);this.textContent='✅ Copied!';setTimeout(()=>this.textContent='📋 Copy',2000);" style="margin-left:6px;font-size:11px;padding:2px 8px;cursor:pointer;">📋 Copy</button>
+          <button type="button" onclick="var u=document.getElementById('pbs-square-redirect-uri');navigator.clipboard.writeText(u.textContent);this.textContent='&#x2705; Copied!';setTimeout(()=>this.textContent='&#x1F4CB; Copy',2000);" style="margin-left:6px;font-size:11px;padding:2px 8px;cursor:pointer;">&#x1F4CB; Copy</button>
         </li>
         <li>Copy your <strong>Application ID</strong> and <strong>Application Secret</strong> from the <strong>Credentials</strong> tab</li>
         <li>Paste them in the fields below, then click <strong>Save Settings</strong></li>
@@ -365,7 +365,7 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
     <div style="margin-bottom:16px;">
       <?php if ( $pbs_key_set( 'pbs_square_access_token' ) ) : ?>
         <span style="font-weight:600;color:<?php echo ! empty( $square_status['expired'] ) ? '#c62828' : '#4caf50'; ?>;">
-            <?php echo ! empty( $square_status['expired'] ) ? esc_html( 'Token Expired — Reconnect' ) : esc_html( '✅ Square connected' ); ?>
+            <?php echo ! empty( $square_status['expired'] ) ? esc_html( 'Token Expired — Reconnect' ) : esc_html( '&#x2705; Square connected' ); ?>
         </span>
         <button type="submit" class="pbs-oauth-btn square-btn" form="pbs-square-disconnect-form"><?php echo esc_html( 'Disconnect' ); ?></button>
       <?php else : ?>
@@ -492,14 +492,14 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
   <div class="pbs-card-body">
     <p style="margin:0 0 16px;font-size:13px;color:#666;">
       Accept PayPal & Venmo via PayPal JS SDK.
-      <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer">PayPal Developer Dashboard ↗</a>
+      <a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noopener noreferrer">PayPal Developer Dashboard &#x2197;</a>
     </p>
 
     <div style="margin-bottom:16px;">
       <button type="button" class="pbs-oauth-btn paypal-btn" id="pbs-test-paypal"><?php echo esc_html( '🔍 Test Connection' ); ?></button>
       <span style="margin-left:8px;color:#888;font-size:12px;"><?php echo esc_html( 'PayPal business account credentials — Client ID and Secret from developer.paypal.com → My Apps & Credentials' ); ?></span>
       <?php if ( ! empty( $paypal_verified ) ) : ?>
-        <div class="pbs-inline-status success"><?php echo esc_html( '✅ Verified: ' . $paypal_verified ); ?></div>
+        <div class="pbs-inline-status success"><?php echo esc_html( '&#x2705; Verified: ' . $paypal_verified ); ?></div>
       <?php endif; ?>
       <div id="pbs-paypal-test-result" class="pbs-inline-status"></div>
     </div>
@@ -657,12 +657,12 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
           $conf_page = $conf_id ? get_post( $conf_id ) : null;
           if ( $conf_page && $conf_page->post_status === 'publish' ) :
           ?>
-            <span style="color:#4caf50;font-weight:600;">✅ <?php echo esc_html( $conf_page->post_title ); ?></span>
-            <a href="<?php echo esc_url( get_permalink( $conf_id ) ); ?>" target="_blank" style="margin-left:8px;">View ↗</a>
+            <span style="color:#4caf50;font-weight:600;">&#x2705; <?php echo esc_html( $conf_page->post_title ); ?></span>
+            <a href="<?php echo esc_url( get_permalink( $conf_id ) ); ?>" target="_blank" style="margin-left:8px;">View &#x2197;</a>
             <a href="<?php echo esc_url( get_edit_post_link( $conf_id ) ); ?>" style="margin-left:8px;">Edit</a>
             <input type="hidden" name="pbs_confirmation_page_id" value="<?php echo esc_attr( $conf_id ); ?>">
           <?php else : ?>
-            <span style="color:#e65100;font-weight:600;">⚠️ Not configured</span>
+            <span style="color:#e65100;font-weight:600;">&#x26A0;&#xFE0F; Not configured</span>
             <form method="post" style="display:inline;margin-left:12px;" action="<?php echo esc_url( admin_url('admin-post.php') ); ?>">
               <?php wp_nonce_field( 'pbs_create_confirmation_page' ); ?>
               <input type="hidden" name="action" value="pbs_create_confirmation_page">
@@ -896,7 +896,7 @@ document.getElementById('pbs-settings-form').addEventListener('submit', function
             if (appIdChanged || secretUnsaved) {
                 e.preventDefault();
                 if (notice) {
-                    notice.textContent = '⚠️ Save Settings first, then click Connect.';
+                    notice.textContent = '&#x26A0;&#xFE0F; Save Settings first, then click Connect.';
                     notice.style.display = 'inline';
                 }
                 return false;

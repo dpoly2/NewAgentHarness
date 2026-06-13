@@ -16,7 +16,7 @@ $orders       = is_array( $orders ) ? $orders : [];
   if ( $msg === 'email_sent' ) {
       $o = $last_order ? PBS_DB::get_order( $last_order ) : null;
       $to = $o ? $o['attendee_email'] : 'attendee';
-      echo '<div class="notice notice-success is-dismissible"><p>✅ Confirmation email resent to <strong>' . esc_html( $to ) . '</strong>.</p></div>';
+      echo '<div class="notice notice-success is-dismissible"><p>&#x2705; Confirmation email resent to <strong>' . esc_html( $to ) . '</strong>.</p></div>';
   } elseif ( $msg === 'order_not_found' ) {
       echo '<div class="notice notice-error is-dismissible"><p>❌ Order not found.</p></div>';
   }

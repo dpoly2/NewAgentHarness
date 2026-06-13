@@ -16,7 +16,7 @@ class PBS_Email {
     }
 
     private static function wrap( $body, $title = 'Psi Beta Sigma 1914' ) {
-        return '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;">
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><title>' . esc_html( $title ) . '</title></head><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#333;">
         <div style="background:#164f90;padding:20px;text-align:center;border-radius:8px 8px 0 0;">
           <h2 style="color:#fff;margin:0;">Psi Beta Sigma 1914</h2>
           <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;font-size:14px;">Austin, Texas Chapter</p>
@@ -50,7 +50,7 @@ class PBS_Email {
         }
 
         $body = '
-        <h3 style="color:#2e7d32;">✅ Order Confirmed!</h3>
+        <h3 style="color:#2e7d32;">&#x2705; Order Confirmed!</h3>
         <p>Hi <strong>' . esc_html($order['attendee_name']) . '</strong>, your order is confirmed. Please bring this e-ticket to the event.</p>
 
         <div style="border:2px dashed #164f90;border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
@@ -113,7 +113,7 @@ class PBS_Email {
         // Send new e-ticket to new attendee
         $qr_img = PBS_QR::qr_img($order['id'], $order['order_number'], 180);
         $body_new = '
-        <h3 style="color:#2e7d32;">🎟️ Ticket Transferred to You!</h3>
+        <h3 style="color:#2e7d32;">&#x1F39F;&#xFE0F; Ticket Transferred to You!</h3>
         <p>Hi <strong>' . esc_html($new_name) . '</strong>, a ticket for <strong>' . esc_html($event_title) . '</strong> has been transferred to you.</p>
         <div style="border:2px dashed #164f90;border-radius:8px;padding:20px;margin:20px 0;text-align:center;">
           <p style="font-size:18px;font-weight:bold;margin:0 0 4px;">Order #' . esc_html($order['order_number']) . '</p>

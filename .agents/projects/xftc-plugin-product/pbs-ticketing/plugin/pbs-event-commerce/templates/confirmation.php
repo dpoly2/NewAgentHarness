@@ -1,7 +1,7 @@
 <?php if ( ! defined( 'ABSPATH' ) ) exit; ?>
 <div class="tribe-tickets pbs-confirmation">
   <div style="background:#2e7d32;color:#fff;border-radius:8px;padding:24px;text-align:center;margin-bottom:24px;">
-    <h2 style="margin:0;color:#fff;">✅ Order Confirmed!</h2>
+    <h2 style="margin:0;color:#fff;">&#x2705; Order Confirmed!</h2>
     <p style="margin:8px 0 0;opacity:.9;">Order #<?php echo esc_html($order['order_number']); ?></p>
   </div>
   <table class="pbs-admin-table" style="margin-bottom:24px;">

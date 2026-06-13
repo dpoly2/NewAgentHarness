@@ -19,7 +19,7 @@ $tt_event_ids = $tt_event_ids ?? [];
 <h1>Ticket Types <?php if ( $event_id ) echo '— ' . esc_html( get_the_title( $event_id ) ); ?></h1>
 
 <?php
-$msgs = [ 'added' => '✅ Ticket type added.', 'saved' => '✅ Ticket type updated.', 'deleted' => '🗑 Ticket type deleted.' ];
+$msgs = [ 'added' => '&#x2705; Ticket type added.', 'saved' => '&#x2705; Ticket type updated.', 'deleted' => '&#x1F5D1; Ticket type deleted.' ];
 if ( $msg && isset( $msgs[$msg] ) ) echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $msgs[$msg] ) . '</p></div>';
 ?>
 
@@ -62,14 +62,14 @@ if ( $msg && isset( $msgs[$msg] ) ) echo '<div class="notice notice-success is-d
           <?php echo esc_html($tt['sold']); ?>
           <?php if ($tt['capacity'] > 0) echo '<br><small>' . $cap_pct . '%</small>'; ?>
         </td>
-        <td><?php echo $tt['is_donation'] ? '💝 Donation' : '🎟 Ticket'; ?></td>
+        <td><?php echo $tt['is_donation'] ? '&#x1F49D; Donation' : '&#x1F39F; Ticket'; ?></td>
         <td>
           <form method="post" style="display:inline;">
             <?php wp_nonce_field('pbs_ticket_types'); ?>
             <input type="hidden" name="pbs_tt_action" value="toggle">
             <input type="hidden" name="tt_id" value="<?php echo esc_attr($tt['id']); ?>">
             <button type="submit" class="button button-small" style="color:<?php echo $tt['active'] ? '#4caf50' : '#aaa'; ?>">
-              <?php echo $tt['active'] ? '✅ Active' : '⏸ Inactive'; ?>
+              <?php echo $tt['active'] ? '&#x2705; Active' : '&#x23F8; Inactive'; ?>
             </button>
           </form>
         </td>
