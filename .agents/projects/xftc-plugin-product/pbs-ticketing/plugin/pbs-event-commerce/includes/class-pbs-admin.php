@@ -72,7 +72,7 @@ class PBS_Admin {
             'pbs_treasurer_email', 'pbs_email_reminders',
             // Checkout
             'pbs_confirmation_page_id', 'pbs_donor_covers_fees', 'pbs_tax_receipts',
-            'pbs_max_tickets', 'pbs_org_ein',
+            'pbs_max_tickets', 'pbs_org_ein', 'pbs_donation_gateway',
         ];
         foreach ( $options as $opt ) {
             register_setting( 'pbs_commerce_settings', $opt );

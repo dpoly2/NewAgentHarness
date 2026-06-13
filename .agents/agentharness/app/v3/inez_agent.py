@@ -501,10 +501,61 @@ def _build_system_prompt(history: list[dict]) -> str:
     return base + travel_tools_note
 
 
+def _normalize_agent_id(agent_id: str) -> str:
+    """
+    Map a potentially hallucinated agent_id to the closest registered agent.
+    Strategy (in order):
+      1. Exact match
+      2. Normalised match (strip hyphens/underscores/spaces, lowercase)
+      3. Substring match on normalised form
+      4. Word-in-ID match: split hallucinated ID on word boundaries, check each
+         word appears as substring in a registered ID. Highest hit count wins.
+    """
+    try:
+        agents = db.list_agents()
+        registered = {a["agent_id"]: a for a in agents if a.get("agent_id")}
+    except Exception:
+        return agent_id
+
+    if agent_id in registered:
+        return agent_id
+
+    def _norm(s: str) -> str:
+        return re.sub(r"[-_\s]", "", s.lower())
+
+    norm_id = _norm(agent_id)
+
+    # Exact normalised match (e.g. "wordpress-agent" == "wordpressagent")
+    for rid in registered:
+        if _norm(rid) == norm_id:
+            return rid
+
+    # Substring on normalised form
+    for rid in registered:
+        norm_rid = _norm(rid)
+        if norm_id in norm_rid or norm_rid in norm_id:
+            return rid
+
+    # Word-in-ID: split hallucinated id into words, score by how many words
+    # appear as substrings inside each registered id (handles "wordpress-expert" → "wordpressagent")
+    words = [w.lower() for w in re.split(r"[-_\s]", agent_id) if len(w) > 2]
+    if words:
+        best, best_score = None, 0
+        for rid in registered:
+            rid_lower = rid.lower()
+            score = sum(1 for w in words if w in rid_lower)
+            if score > best_score:
+                best_score, best = score, rid
+        if best and best_score > 0:
+            return best
+
+    return agent_id  # keep original if nothing matches
+
+
 def _parse_inez_response(raw: str) -> dict:
     """
     Extract structured response from Inez.
-    Handles: JSON dispatch block, [TASK:] markers, [TODO:] markers.
+    Handles: JSON code block, markdown bold-section format, [TASK:]/[TODO:] markers.
     Falls back gracefully if JSON is missing or malformed.
     """
     result = {
@@ -539,23 +590,65 @@ def _parse_inez_response(raw: str) -> dict:
     clean = todo_re.sub("", raw)
     clean = task_re.sub("", clean).strip()
 
-    # Try to find JSON dispatch block
-    json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", clean, re.DOTALL)
-    if not json_match:
-        json_match = re.search(r"(\{[^{}]*\"inez_message\"[^{}]*\})", clean, re.DOTALL)
+    def _apply_dispatch_data(data: dict) -> bool:
+        """Populate result from a parsed dispatch dict. Returns True on success."""
+        if "inez_message" not in data and "dispatches" not in data:
+            return False
+        msg = data.get("inez_message", "")
+        # Strip **inez_message**: prefix if LLM echoed it inside the value
+        msg = re.sub(r"^\*\*inez_message\*\*:\s*", "", msg).strip().strip('"')
+        result["inez_message"] = msg
+        dispatches = data.get("dispatches", [])
+        # Normalise agent_ids so hallucinated names map to real ones
+        for d in dispatches:
+            if isinstance(d, dict) and d.get("agent_id"):
+                d["agent_id"] = _normalize_agent_id(d["agent_id"])
+        result["dispatches"] = dispatches
+        result["needs_agents"] = bool(dispatches)
+        return True
 
+    # ── Strategy 1: JSON inside a code fence ──────────────────────────────
+    json_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", clean, re.DOTALL)
     if json_match:
         try:
-            data = json.loads(json_match.group(1))
-            if "inez_message" in data:
-                result["inez_message"] = data["inez_message"]
-                result["dispatches"] = data.get("dispatches", [])
-                result["needs_agents"] = bool(result["dispatches"])
+            if _apply_dispatch_data(json.loads(json_match.group(1))):
                 return result
         except json.JSONDecodeError:
             pass
 
-    # Fallback: treat entire clean response as inez_message
+    # ── Strategy 2: bare top-level JSON object containing "inez_message" ──
+    bare_match = re.search(r"(\{[\s\S]*\"inez_message\"[\s\S]*\})", clean, re.DOTALL)
+    if bare_match:
+        try:
+            if _apply_dispatch_data(json.loads(bare_match.group(1))):
+                return result
+        except json.JSONDecodeError:
+            pass
+
+    # ── Strategy 3: markdown bold-section format ───────────────────────────
+    # e.g. **inez_message**: "..." \n **dispatches**: [...] \n **needs_agents**: true
+    msg_match = re.search(
+        r"\*\*inez_message\*\*\s*:\s*[\"']?(.*?)[\"']?\s*(?=\n\*\*|\Z)", clean, re.DOTALL | re.IGNORECASE
+    )
+    disp_match = re.search(r"\*\*dispatches\*\*\s*:\s*(\[[\s\S]*?\])\s*(?=\n\*\*|\Z)", clean, re.DOTALL | re.IGNORECASE)
+
+    if msg_match or disp_match:
+        if msg_match:
+            result["inez_message"] = msg_match.group(1).strip().strip('"').strip("'")
+        if disp_match:
+            try:
+                dispatches = json.loads(disp_match.group(1))
+                for d in dispatches:
+                    if isinstance(d, dict) and d.get("agent_id"):
+                        d["agent_id"] = _normalize_agent_id(d["agent_id"])
+                result["dispatches"] = dispatches
+                result["needs_agents"] = bool(dispatches)
+            except json.JSONDecodeError:
+                pass
+        if result["inez_message"] or result["dispatches"]:
+            return result
+
+    # ── Fallback: treat entire clean response as inez_message ─────────────
     result["inez_message"] = clean
     return result
 
@@ -629,16 +722,43 @@ def think(
     system_prompt = _build_system_prompt(history)
 
     # ── Step 2: Inez analysis — determines what to say and who to dispatch ────
+    # Build a concise agent roster for dispatch guidance
+    _agent_roster_lines = []
+    try:
+        _all_agents = db.list_agents()
+        for _a in _all_agents:
+            _aid = _a.get("agent_id", "")
+            _name = _a.get("name", "")
+            _desc = str(_a.get("description", ""))[:80]
+            if _aid and _aid not in ("inez-chief-of-staff",):
+                _agent_roster_lines.append(f"  - {_aid}: {_name}" + (f" — {_desc}" if _desc else ""))
+    except Exception:
+        pass
+    _roster_block = (
+        "\n\nAVAILABLE AGENTS (use exact agent_id values when dispatching):\n"
+        + ("\n".join(_agent_roster_lines) if _agent_roster_lines else "  (none registered)")
+    )
+
     dispatch_instructions = (
-        "\n\nDISPATCH INSTRUCTIONS: When you need agents to do work, include a JSON block:\n"
+        "\n\nDISPATCH INSTRUCTIONS: When you need agents to do work, respond ONLY with this exact JSON format"
+        " (no markdown, no bold headers, just the JSON code block):\n"
         "```json\n"
-        '{"inez_message": "...", "dispatches": [{"agent_id": "agent-id", "task": "specific task description", '
+        '{"inez_message": "Brief summary of what you are doing and why.", '
+        '"dispatches": [{"agent_id": "exact-agent-id-from-list", "task": "specific task description", '
         '"project": "project-slug", "context": "any extra context the agent needs"}]}\n'
         "```\n"
-        "For travel requests, dispatch to: travel-project-lead (orchestrator), "
-        "travel-hotel-agent (lodging), travel-flights-agent (flights), travel-budget-helper (budget).\n"
-        "For project work, dispatch the relevant specialist agent.\n"
-        "Agents will execute the task, write results to the database, and report back."
+        "EXAMPLE — user asks 'have the wordpress expert audit our site':\n"
+        "```json\n"
+        '{"inez_message": "Dispatching the WordPress agent to audit your site.", '
+        '"dispatches": [{"agent_id": "wordpressagent", "task": "Audit site for performance and SEO issues", '
+        '"project": "web", "context": ""}]}\n'
+        "```\n"
+        "RULES:\n"
+        "- Use ONLY agent_id values from the AVAILABLE AGENTS list below — never invent or paraphrase them.\n"
+        "- If no agent dispatch is needed, respond in plain text (no JSON block).\n"
+        "- For travel: travel-project-lead (orchestrator), travel-hotel-agent (lodging), "
+        "travel-flights-agent (flights), travel-budget-helper (budget).\n"
+        + _roster_block
     )
 
     augmented_message = user_message

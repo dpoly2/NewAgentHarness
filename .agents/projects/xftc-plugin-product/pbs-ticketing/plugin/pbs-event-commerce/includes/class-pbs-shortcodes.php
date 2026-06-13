@@ -41,7 +41,14 @@ class PBS_Shortcodes {
         $event_id = (int) $atts['event_id'];
         $goal     = (float) $atts['goal'];
         $amounts  = array_map( 'trim', explode( ',', $atts['amounts'] ) );
-        $gateways = self::active_gateways();
+
+        // Donations use a single configured gateway (default: stripe)
+        $all_gateways      = self::active_gateways();
+        $donation_gateway  = get_option( 'pbs_donation_gateway', 'stripe' );
+        // Only show the configured donation gateway if it is active, else fall back to all active
+        $gateways = in_array( $donation_gateway, $all_gateways, true )
+            ? [ $donation_gateway ]
+            : $all_gateways;
 
         // Calculate total donated so far
         global $wpdb;

@@ -36,9 +36,10 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 
 try:
-    from hub_client import HubClient
+    from hub_client import HubClient, LLM_TIMEOUT as _HUB_LLM_TIMEOUT
 except Exception:
     HubClient = None
+    _HUB_LLM_TIMEOUT = 180.0
 
 import hub_db
 from ah_logging import LOG_DIR
@@ -2992,7 +2993,7 @@ class ArchonHubApp:
                     resp = self.hub.post_json("/api/inez/chat", {
                         "message": task,
                         "conversation_id": self._inez_conv_id,
-                    })
+                    }, timeout=_HUB_LLM_TIMEOUT)
                     if resp:
                         self._inez_conv_id = resp.get("conversation_id", self._inez_conv_id)
                     _on_inez_result(resp or {})

@@ -189,6 +189,11 @@ class PBS_Checkout {
         $is_donation = ! empty( $post['is_donation'] );
 
         if ( $is_donation ) {
+            // Donation widget — enforce the configured donation gateway
+            $configured_gw = get_option( 'pbs_donation_gateway', 'stripe' );
+            if ( $gateway !== $configured_gw ) {
+                $gateway = $configured_gw;
+            }
             // Donation widget — amount is user-chosen, enforce minimum $1.00
             $amount = round( (float) ( $post['amount'] ?? 0 ), 2 );
             if ( $amount < 1.00 ) {

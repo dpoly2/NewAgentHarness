@@ -38,6 +38,7 @@ except ImportError:
 HUB_BASE = "http://localhost:8765"
 HUB_WS = "ws://localhost:8765/ws"
 TIMEOUT = 5.0
+LLM_TIMEOUT = 180.0      # LLM endpoints (Inez/chat) can take minutes
 RECONNECT_INTERVAL = 5   # seconds
 
 
@@ -177,7 +178,7 @@ class HubClient:
             if self._running:
                 self._sleep_or_stop(self._reconnect_interval)
 
-    def _request(self, method: str, path: str, *, data: dict | None = None, params: dict | None = None) -> Any | None:
+    def _request(self, method: str, path: str, *, data: dict | None = None, params: dict | None = None, timeout: float = TIMEOUT) -> Any | None:
         if not self.online or not self.token:
             return None
         try:
@@ -185,9 +186,9 @@ class HubClient:
             headers = self._headers()
             params = {key: value for key, value in (params or {}).items() if value is not None}
             if httpx is not None:
-                response = httpx.request(method, url, headers=headers, json=data, params=params, timeout=TIMEOUT)
+                response = httpx.request(method, url, headers=headers, json=data, params=params, timeout=timeout)
             elif requests is not None:
-                response = requests.request(method, url, headers=headers, json=data, params=params, timeout=TIMEOUT)
+                response = requests.request(method, url, headers=headers, json=data, params=params, timeout=timeout)
             else:
                 return None
             response.raise_for_status()
@@ -196,7 +197,10 @@ class HubClient:
             return {}
         except Exception as exc:
             logger.debug("ArchonHub %s %s failed: %s", method, path, exc)
-            self._set_online(False)
+            # Only mark offline for connection errors, not timeouts — LLM calls take time
+            exc_str = str(type(exc).__name__).lower()
+            if "timeout" not in exc_str and "readtimeout" not in exc_str:
+                self._set_online(False)
             return None
 
     def _get(self, path, **params) -> dict | list | None:
@@ -206,9 +210,10 @@ class HubClient:
         result = self._request("POST", path, data=data)
         return result if isinstance(result, dict) else None
 
-    def post_json(self, path, data=None) -> dict | None:
+    def post_json(self, path, data=None, timeout: float = TIMEOUT) -> dict | None:
         """Public alias for _post — used by desktop UI for arbitrary POST calls."""
-        return self._post(path, data)
+        result = self._request("POST", path, data=data, timeout=timeout)
+        return result if isinstance(result, dict) else None
 
     def _put(self, path, data=None) -> dict | None:
         result = self._request("PUT", path, data=data)

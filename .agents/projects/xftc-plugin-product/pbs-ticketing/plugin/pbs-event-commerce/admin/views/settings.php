@@ -620,6 +620,29 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
         </td>
       </tr>
       <tr>
+        <th>Donation Payment Method</th>
+        <td>
+          <?php
+          $donation_gw     = get_option( 'pbs_donation_gateway', 'stripe' );
+          $active_gateways = [];
+          if ( get_option( 'pbs_stripe_publishable_key' ) && get_option( 'pbs_stripe_secret_key' ) ) $active_gateways[] = 'stripe';
+          if ( get_option( 'pbs_square_app_id' ) && get_option( 'pbs_square_access_token' ) )        $active_gateways[] = 'square';
+          if ( get_option( 'pbs_paypal_client_id' ) )                                                $active_gateways[] = 'paypal';
+          ?>
+          <select name="pbs_donation_gateway">
+            <?php foreach ( [ 'stripe', 'square', 'paypal' ] as $gw ) : ?>
+            <option value="<?php echo esc_attr( $gw ); ?>"
+              <?php selected( $donation_gw, $gw ); ?>
+              <?php if ( ! in_array( $gw, $active_gateways, true ) ) echo 'disabled'; ?>>
+              <?php echo esc_html( ucfirst( $gw ) ); ?>
+              <?php if ( ! in_array( $gw, $active_gateways, true ) ) echo ' (not configured)'; ?>
+            </option>
+            <?php endforeach; ?>
+          </select>
+          <p class="description">Payment processor used exclusively for the <code>[pbs_donate]</code> widget. Ticket purchases always show all active gateways.</p>
+        </td>
+      </tr>
+      <tr>
         <th>EIN (for receipts)</th>
         <td>
           <input type="text" name="pbs_org_ein" value="<?php echo esc_attr( get_option( 'pbs_org_ein', '' ) ); ?>" class="regular-text" placeholder="XX-XXXXXXX">
