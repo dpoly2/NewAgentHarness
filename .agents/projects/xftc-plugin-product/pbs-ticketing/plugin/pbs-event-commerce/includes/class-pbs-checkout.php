@@ -84,8 +84,9 @@ class PBS_Checkout {
         // Mark complete
         PBS_DB::update_order_status( $order_id, 'complete', $result['transaction_id'] ?? '' );
 
-        // Send confirmation email
+        // Allow integrations (e.g. ProfilePress) to react to a completed order
         $order = PBS_DB::get_order( $order_id );
+        do_action( 'pbs_order_complete', $order_id, $order );
         PBS_Email::send_confirmation( $order );
 
         // Build confirmation URL — use pbs_oid/pbs_tok to avoid TEC order_id query var conflict.
@@ -141,7 +142,9 @@ class PBS_Checkout {
         }
 
         PBS_DB::update_order_status( $order_id, 'complete', $payment_intent_id );
-        PBS_Email::send_confirmation( PBS_DB::get_order( $order_id ) );
+        $completed_order = PBS_DB::get_order( $order_id );
+        do_action( 'pbs_order_complete', $order_id, $completed_order );
+        PBS_Email::send_confirmation( $completed_order );
 
         $token       = substr( wp_hash( $order['order_number'] ), 0, 12 );
         $confirm_url = add_query_arg( [
@@ -249,6 +252,9 @@ class PBS_Checkout {
                 $amount = 0.00;
             }
         }
+
+        // Allow integrations (e.g. ProfilePress member discount) to adjust amount
+        $amount = (float) apply_filters( 'pbs_order_amount', $amount, $event_id, get_current_user_id() );
 
         return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
     }

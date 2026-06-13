@@ -23,7 +23,7 @@ $pbs_classes = array(
     'PBS_Square', 'PBS_Stripe', 'PBS_PayPal', 'PBS_Admin',
     'PBS_QR', 'PBS_Discount', 'PBS_Waitlist', 'PBS_Custom_Questions',
     'PBS_Refund', 'PBS_Reports', 'PBS_Square_OAuth', 'PBS_Stripe_OAuth',
-    'PBS_PayPal_Connect', 'PBS_Webhooks',
+    'PBS_PayPal_Connect', 'PBS_Webhooks', 'PBS_ProfilePress',
 );
 foreach ( $pbs_classes as $pbs_class ) {
     $pbs_file = PBS_EC_PATH . 'includes/class-' . strtolower( str_replace( '_', '-', $pbs_class ) ) . '.php';
@@ -41,6 +41,11 @@ add_action( 'plugins_loaded', function() {
     PBS_Square_OAuth::init();
     PBS_Stripe_OAuth::init();
     PBS_PayPal_Connect::init();
+
+    // Boot ProfilePress integration only when PP is active
+    if ( PBS_ProfilePress::profilepress_active() ) {
+        PBS_ProfilePress::init();
+    }
 
     add_action( 'pbs_square_token_refresh', function() {
         $expires = get_option( 'pbs_square_token_expires', '' );
