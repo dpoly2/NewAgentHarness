@@ -2337,7 +2337,6 @@ if FASTAPI_OK:
 
         # Call Inez in executor (blocking LLM call)
         # Wire an emit callback so thinking steps are broadcast over WebSocket in real time.
-        # Wrap with a 45s timeout — a hung LLM call must never block the WS heartbeat thread.
         loop = asyncio.get_running_loop()
 
         def _inez_emit(event_type: str, **kwargs: Any) -> None:
@@ -2349,25 +2348,10 @@ if FASTAPI_OK:
             event.update(kwargs)
             asyncio.run_coroutine_threadsafe(hub.broadcast(event), loop)
 
-        try:
-            result = await asyncio.wait_for(
-                loop.run_in_executor(
-                    hub._executor,
-                    lambda: think(body.message, history, emit=_inez_emit),
-                ),
-                timeout=45.0,
-            )
-        except asyncio.TimeoutError:
-            result = {
-                "inez_message": (
-                    "I'm taking too long to respond — the AI provider may be unreachable. "
-                    "Check that your API key is set in Admin → AI Provider and that your "
-                    "internet connection is active."
-                ),
-                "dispatches": [],
-                "needs_agents": False,
-                "error": "timeout",
-            }
+        result = await loop.run_in_executor(
+            hub._executor,
+            lambda: think(body.message, history, emit=_inez_emit),
+        )
 
         inez_message = result.get("inez_message", "")
         dispatches = result.get("dispatches", [])

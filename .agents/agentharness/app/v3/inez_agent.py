@@ -65,18 +65,14 @@ def _llm(temperature: float = 0.3):
     try:
         from hub_nodes import _llm as _hub_llm
         return _hub_llm(temperature=temperature)
-    except ValueError:
-        # Re-raise config errors (missing API key etc.) — don't fall back silently
-        raise
     except Exception:
         pass
-    # Bare fallback — direct OpenAI (only reached if hub_nodes not importable)
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if not api_key:
-        raise ValueError(
-            "No API key configured. Go to Admin → AI Provider in ArchonHub and enter your API key."
-        )
-    return ChatOpenAI(model=MODEL, temperature=temperature, api_key=api_key)
+    # Bare fallback — direct OpenAI
+    return ChatOpenAI(
+        model=MODEL,
+        temperature=temperature,
+        api_key=os.environ.get("OPENAI_API_KEY", ""),
+    )
 
 
 def _load_skill() -> str:

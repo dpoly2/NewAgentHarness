@@ -89,8 +89,8 @@ class PBS_Stripe {
                 'description'          => sprintf( 'PBS Order %s — %s', $order['order_number'], $data['ticket_type'] ),
                 'receipt_email'        => $data['email'],
                 'return_url'           => add_query_arg( [
-                    'order_id' => $order_id,
-                    'token'    => substr( wp_hash( $order['order_number'] ), 0, 12 ),
+                    'pbs_oid' => $order_id,
+                    'pbs_tok' => substr( wp_hash( $order['order_number'] ), 0, 12 ),
                 ], get_permalink( get_option( 'pbs_confirmation_page_id', 0 ) ) ?: home_url( '/order-confirmation/' ) ),
                 'metadata[order_id]'   => $order_id,
                 'metadata[order_num]'  => $order['order_number'],

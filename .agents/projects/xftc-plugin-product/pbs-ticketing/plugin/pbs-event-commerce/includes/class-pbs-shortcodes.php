@@ -59,8 +59,9 @@ class PBS_Shortcodes {
 
     /** [pbs_order_summary] — shown on confirmation page */
     public static function order_summary( $atts ) {
-        $order_id = isset( $_GET['order_id'] ) ? (int) $_GET['order_id'] : 0;
-        $token    = isset( $_GET['token'] ) ? sanitize_text_field( $_GET['token'] ) : '';
+        // Use pbs_oid / pbs_tok to avoid conflicts with TEC's own order_id query var.
+        $order_id = isset( $_GET['pbs_oid'] ) ? (int) $_GET['pbs_oid'] : 0;
+        $token    = isset( $_GET['pbs_tok'] ) ? sanitize_text_field( $_GET['pbs_tok'] ) : '';
 
         if ( ! $order_id ) return '<p>No order found.</p>';
 

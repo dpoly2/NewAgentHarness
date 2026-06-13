@@ -149,30 +149,11 @@ def _llm(temperature: float = 0.2):
 
     # OpenAI-compatible: openai, ollama, github, groq, custom
     resolved_url = base_url or _BASE_URLS_BY_PROVIDER.get(provider, "")
-
-    # For Ollama: no real key needed — use "ollama" as a placeholder
-    if provider == "ollama":
-        resolved_key = api_key or "ollama"
-    elif provider == "github":
-        resolved_key = api_key or os.environ.get("GITHUB_TOKEN", "")
-    else:
-        resolved_key = api_key
-
-    # Fail fast if provider needs a real key but none is configured.
-    # This prevents the LLM call from hanging 60s+ against a remote API.
-    if provider in ("openai", "groq", "anthropic") and not resolved_key:
-        raise ValueError(
-            f"No API key configured for provider '{provider}'. "
-            "Go to Admin → AI Provider in ArchonHub and enter your API key."
-        )
-
+    resolved_key = api_key or (os.environ.get("GITHUB_TOKEN", "") if provider == "github" else "ollama")
     kwargs: dict = {
-        "model":          model,
-        "temperature":    temperature,
-        "api_key":        resolved_key or "sk-placeholder",
-        # Hard cap on how long a single LLM call can block the executor thread.
-        # Keeps the hub responsive and prevents WebSocket heartbeat failures.
-        "request_timeout": 35.0,
+        "model":       model,
+        "temperature": temperature,
+        "api_key":     resolved_key or "sk-placeholder",
     }
     if resolved_url:
         kwargs["base_url"] = resolved_url

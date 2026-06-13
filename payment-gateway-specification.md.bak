@@ -1,0 +1,1385 @@
+﻿# Payment Gateway Specification
+## WordPress Plugin Commerce Integration
+
+**Version:** 2.0
+**Based on:** Event Tickets v5.28.3.1 (The Events Calendar)
+**Scope:** Complete front-end and server-side specification for implementing payment gateways within a WordPress plugin commerce system, including PHP class contracts, OAuth/connection flows, admin views, and JavaScript checkout modules.
+
+---
+
+## Table of Contents
+
+1. [Overview](#1-overview)
+2. [Architecture](#2-architecture)
+3. [PHP Class Contracts](#3-php-class-contracts)
+   - 3.1 Gateway_Interface
+   - 3.2 Abstract_Gateway
+   - 3.3 Abstract_Merchant / Merchant_Interface
+   - 3.4 Abstract_Settings
+   - 3.5 Abstract_Signup
+   - 3.6 Abstract_Webhooks
+   - 3.7 Abstract_WhoDat (OAuth Proxy)
+   - 3.8 Abstract_REST_Endpoint
+4. [Service Provider Pattern](#4-service-provider-pattern)
+5. [Gateway Manager & Registration](#5-gateway-manager--registration)
+6. [Asset Registration](#6-asset-registration)
+7. [OAuth / Connection Flow](#7-oauth--connection-flow)
+8. [Webhook Architecture](#8-webhook-architecture)
+9. [Admin PHP View Templates](#9-admin-php-view-templates)
+   - 9.1 View Template Conventions
+   - 9.2 Gateway List (Settings Page)
+   - 9.3 Connect / Inactive Template
+   - 9.4 Connected / Active Template
+   - 9.5 Disconnect Button & Confirmation Dialog
+   - 9.6 Signup Modal
+10. [JavaScript Namespace Convention](#10-javascript-namespace-convention)
+11. [Gateway JS Module Structure](#11-gateway-js-module-structure)
+12. [Shared JS Services](#12-shared-js-services)
+13. [Checkout Flow Contract](#13-checkout-flow-contract)
+14. [REST API Contract](#14-rest-api-contract)
+15. [Admin JS: Connect & Webhook Settings](#15-admin-js-connect--webhook-settings)
+16. [CSS Architecture](#16-css-architecture)
+17. [Localised Configuration Object](#17-localised-configuration-object)
+18. [Implementation Checklists](#18-implementation-checklists)
+19. [Security Requirements](#19-security-requirements)
+
+---
+
+## 1. Overview
+
+A **payment gateway** is a fully self-contained module composed of:
+
+| Layer | Description |
+|---|---|
+| **PHP Gateway class** | Identity, state, checkout rendering |
+| **PHP Merchant class** | Credential storage, connection state |
+| **PHP Settings class** | Admin settings fields, connection HTML |
+| **PHP Signup class** | OAuth/connect URL generation |
+| **PHP Webhooks class** | Webhook event handling |
+| **PHP WhoDat class** | Proxy to OAuth intermediary (for OAuth gateways) |
+| **PHP REST endpoints** | Order creation, confirmation, webhook ingestion |
+| **PHP Service Provider** | Dependency injection wiring |
+| **Admin PHP views** | Settings page, connect/disconnect UI |
+| **JavaScript checkout** | Frontend payment UI |
+| **JavaScript admin** | Connect, disconnect, webhook validation |
+| **CSS** | Gateway-specific checkout and admin styles |
+
+---
+
+## 2. Architecture
+
+```
+src/Tickets/Commerce/
+├── Gateways/
+│   ├── Manager.php                  ← Gateway registry
+│   ├── Contracts/
+│   │   ├── Gateway_Interface.php
+│   │   ├── Abstract_Gateway.php
+│   │   ├── Merchant_Interface.php
+│   │   ├── Abstract_Merchant.php
+│   │   ├── Abstract_Settings.php
+│   │   ├── Abstract_Signup.php
+│   │   ├── Abstract_Webhooks.php
+│   │   ├── Abstract_WhoDat.php
+│   │   └── Abstract_REST_Endpoint.php
+│   └── {Slug}/
+│       ├── Provider.php             ← DI service provider
+│       ├── Gateway.php              ← Core identity + state
+│       ├── Merchant.php             ← Credentials + account data
+│       ├── Settings.php             ← Admin settings fields
+│       ├── Signup.php               ← OAuth URL generation
+│       ├── Webhooks.php             ← Webhook orchestration
+│       ├── WhoDat.php               ← OAuth proxy client
+│       ├── Assets.php               ← Script/style enqueuing
+│       ├── Hooks.php                ← WordPress filter/action binding
+│       ├── Order.php                ← Gateway-specific order logic
+│       ├── REST.php                 ← REST endpoint aggregator (optional)
+│       ├── REST/
+│       │   ├── Order_Endpoint.php
+│       │   ├── On_Boarding_Endpoint.php
+│       │   └── Webhook_Endpoint.php
+│       └── Webhooks/
+│           ├── Handler.php
+│           └── Events.php
+
+src/admin-views/settings/tickets-commerce/
+└── {slug}/
+    ├── main.php                     ← Top-level settings section
+    ├── signup-link.php              ← Connect button HTML
+    ├── connect/
+    │   ├── inactive.php             ← Not connected view
+    │   ├── active.php               ← Connected view
+    │   ├── logo.php                 ← Brand logo/features
+    │   ├── help-links.php           ← Docs/troubleshooting links
+    │   ├── non-ssl-notice.php       ← SSL requirement notice
+    │   ├── active/
+    │   │   ├── connection.php       ← Account name + disconnect link
+    │   │   ├── {gateway}-status.php ← Account health status
+    │   │   ├── button.php           ← Action button (re-connect etc.)
+    │   │   └── actions.php          ← Debug/refresh action links
+    │   └── help-links/
+    │       ├── configuring.php
+    │       └── troubleshooting.php
+    └── modal/
+        └── signup-complete/
+            ├── content.php
+            └── notice-test-mode.php
+
+build/
+├── js/commerce/gateway/{slug}/
+│   └── checkout.js
+├── js/admin/gateway/{slug}/
+│   └── settings.js (or webhooks.js)
+├── css/tickets-commerce/gateway/
+│   ├── {slug}.css
+│   └── {slug}-rtl.css
+└── css/tickets-commerce/admin/gateway/{slug}/
+    └── admin-global.css
+```
+
+---
+
+## 3. PHP Class Contracts
+
+### 3.1 Gateway_Interface
+
+Every gateway must implement `TEC\Tickets\Commerce\Gateways\Contracts\Gateway_Interface`.
+
+```php
+interface Gateway_Interface {
+    // Required static identity
+    public static function get_key(): string;
+    public static function get_provider_key(): string;
+    public static function get_label(): string;
+    public static function get_settings_url( array $args = [] ): string;
+
+    // Required state checks
+    public static function is_active(): bool;
+    public static function is_connected(): bool;
+    public static function should_show(): bool;
+    public static function is_enabled(): bool;
+
+    // Required operations
+    public function get_settings(): array;
+    public function register_gateway( array $gateways ): array;
+    public function get_admin_notices(): array;
+    public function handle_invalid_response( $response, string $message, string $slug = 'error' ): void;
+    public function render_checkout_template( \Tribe__Template $template ): string;
+}
+```
+
+### 3.2 Abstract_Gateway
+
+`TEC\Tickets\Commerce\Gateways\Contracts\Abstract_Gateway` implements `Gateway_Interface` and provides:
+
+| Property / Method | Type | Notes |
+|---|---|---|
+| `$key` | `protected static string` | **Required.** Unique lowercase identifier (e.g. `'paypal'`) |
+| `$settings` | `protected static string` | FQCN of the Settings class |
+| `$merchant` | `protected static string` | FQCN of the Merchant class |
+| `$supported_currencies` | `protected static array` | ISO 4217 codes; empty = all supported |
+| `$default_currency_precision` | `protected static int` | Default `2` |
+| `VERSION` | `const` | Gateway version string (define in concrete class) |
+| `get_key()` | `static` | Returns `$key` |
+| `get_provider_key()` | `static` | Returns `Commerce::PROVIDER . '-' . $key` |
+| `is_connected()` | `static` | Delegates to `Merchant::is_connected()` |
+| `is_active()` | `static` | Delegates to `Merchant::is_active()` |
+| `is_test_mode()` | `static` | Checks global sandbox + gateway-specific setting |
+| `should_show()` | `static` | Override to conditionally hide gateway |
+| `is_enabled()` | `static` | Reads `tribe_get_option( $option_enabled_prefix . $key )` |
+| `get_enabled_option_key()` | `static` | Returns option key string |
+| `disable()` | `static` | Removes the enabled option |
+| `get_supported_currencies()` | `static` | Returns array, filtered by `tec_tickets_commerce_gateway_supported_currencies_{key}` |
+| `is_currency_supported( $code )` | `static` | Returns `true` if empty list (any supported) |
+| `generate_unique_tracking_id()` | | `{site_host}?v={VERSION}-{random6}`, max 127 chars |
+| `get_logo_url()` | | Return URL to gateway logo image |
+| `get_subtitle()` | | Return gateway subtitle string for admin list |
+| `renders_solo()` | | Return `true` if gateway takes the full checkout (default); `false` if combinable |
+| `get_checkout_container_template_name()` | `static` | Template name in `views/v2/commerce/gateway/{key}/` |
+| `render_checkout_template( Template $t )` | | Must return rendered HTML string |
+
+#### Concrete Gateway Example
+
+```php
+namespace TEC\Tickets\Commerce\Gateways\{Slug};
+
+use TEC\Tickets\Commerce\Gateways\Contracts\Abstract_Gateway;
+
+class Gateway extends Abstract_Gateway {
+
+    const VERSION = '1.0.0';
+
+    protected static string $key      = '{slug}';
+    protected static string $settings = Settings::class;
+    protected static string $merchant = Merchant::class;
+
+    protected static array $supported_currencies = [ 'USD', 'CAD', 'GBP' ];
+
+    public static function get_label(): string {
+        return __( '{Gateway Name}', 'event-tickets' );
+    }
+
+    public function get_logo_url(): string {
+        return \Tribe__Tickets__Main::instance()->plugin_url . 'src/resources/images/{slug}-logo.png';
+    }
+
+    public function get_admin_notices(): array {
+        return [];
+    }
+
+    public function render_checkout_template( \Tribe__Template $template ): string {
+        return $template->template(
+            'gateway/{slug}/container',
+            static::get_checkout_template_vars(),
+            false
+        );
+    }
+
+    public static function get_checkout_template_vars(): array {
+        return [
+            'must_login' => ! is_user_logged_in() && tribe( \TEC\Tickets\Commerce\Module::class )->login_required(),
+        ];
+    }
+}
+```
+
+---
+
+### 3.3 Abstract_Merchant / Merchant_Interface
+
+Stores and manages merchant credentials, connection state, and account data.
+
+```php
+interface Merchant_Interface {
+    public function get_account_key(): string;
+    public function get_disconnect_action(): string;
+    public function get_disconnect_url(): string;
+    public function get_client_id(): string;
+    public function get_client_secret(): ?string;
+    public function save(): bool;
+    public function to_array(): array;
+    public function from_array( array $data, bool $needs_save = true ): bool;
+    public function is_connected(): bool;
+    public function is_active(): bool;
+    public function is_ready_to_sell(): bool;
+}
+```
+
+`Abstract_Merchant` provides:
+
+| Method | Notes |
+|---|---|
+| `init()` | Calls `from_array( get_details_data() )` — loads from DB on singleton init |
+| `from_array( $data )` | Validates then calls `setup_properties()` |
+| `save()` | `update_option( get_account_key(), to_array() )` |
+| `get_disconnect_url()` | Builds settings URL with `tc-action` and `tc-nonce` params |
+| `is_ready_to_sell()` | Override for gateways with additional onboarding requirements |
+
+**Credential Storage Pattern:**
+```php
+// Option key pattern
+protected string $account_key = 'tec_tickets_commerce_{slug}_{mode}_merchant';
+// {mode} is 'live' or 'sandbox'
+
+// Properties to persist (implement to_array / from_array / setup_properties):
+protected ?string $client_id     = null;  // Public key / account ID
+protected ?string $client_secret = null;  // Secret key / access token
+protected ?string $access_token  = null;  // For token-based OAuth flows
+protected bool    $needs_save    = false;
+```
+
+---
+
+### 3.4 Abstract_Settings
+
+Provides the admin settings fields for the gateway settings page.
+
+```php
+abstract class Abstract_Settings {
+    public static string $option_sandbox;  // Option key for gateway-specific sandbox toggle
+
+    // Must return array of tribe_field() settings definitions
+    abstract public function get_settings(): array;
+
+    // Must return rendered HTML for the connection status box
+    abstract public function get_connection_settings_html(): string;
+
+    // Returns whether this gateway is in test/sandbox mode
+    public function is_gateway_test_mode(): bool {
+        return tec_tickets_commerce_is_sandbox_mode();
+    }
+}
+```
+
+**`get_settings()` Return Format:**
+```php
+public function get_settings(): array {
+    return [
+        // Section heading
+        'tickets-commerce-{slug}-header' => [
+            'type' => 'html',
+            'html' => $this->get_connection_settings_html(),
+        ],
+        // Example text field
+        'tickets-commerce-{slug}-publishable-key' => [
+            'type'            => 'text',
+            'label'           => __( 'Publishable Key', 'event-tickets' ),
+            'tooltip'         => __( 'Enter your publishable key.', 'event-tickets' ),
+            'validation_type' => 'alpha_numeric_with_dashes',
+            'can_be_empty'    => true,
+            'parent_option'   => false,
+        ],
+    ];
+}
+```
+
+---
+
+### 3.5 Abstract_Signup
+
+Handles OAuth URL generation and signup flow transient state.
+
+```php
+abstract class Abstract_Signup implements Signup_Interface {
+    public static string $signup_hash_meta_key;  // Transient key for hash
+    public static string $signup_data_meta_key;  // Transient key for data
+
+    public string $template_folder;  // Template subdirectory
+
+    // Core methods (inherited from Abstract_Signup):
+    public function get_template(): \Tribe__Template;
+    public function get_transient_data(): mixed;
+    public function update_transient_data( $value ): bool;  // TTL: DAY_IN_SECONDS
+    public function delete_transient_data(): bool;
+    public function get_link_html(): string;  // Renders signup-link.php template
+
+    // Must implement:
+    abstract public function generate_url(): string;
+    abstract public function generate_disconnect_url(): string;
+}
+```
+
+**Signup Flow:**
+1. `generate_url()` — calls WhoDat proxy, stores hash as transient, returns OAuth URL
+2. WordPress redirects to OAuth provider
+3. OAuth provider redirects back to `On_Boarding_Endpoint` (REST)
+4. `On_Boarding_Endpoint` validates hash, calls `Merchant::from_array()`, `Merchant::save()`
+5. Redirects to settings page
+
+---
+
+### 3.6 Abstract_Webhooks
+
+Manages webhook settings storage and event retry logic.
+
+```php
+abstract class Abstract_Webhooks extends Controller_Contract {
+
+    const PENDING_WEBHOOKS_KEY = '_tec_tickets_commerce_webhook_pending';
+
+    abstract public function get_gateway(): Abstract_Gateway;
+    abstract public function get_merchant(): Abstract_Merchant;
+
+    // Settings key: tec_tickets_commerce_{gateway_key}_{mode}_webhooks_settings
+    public function get_settings_key(): string;
+    public function get_setting( $key, $default = null ): mixed;
+    public function update_settings( array $settings = [] ): bool;
+    public function get_settings(): ?array;      // Returns null if no 'id' field
+    public function delete_settings(): bool;
+
+    // Pending webhook queue (stored as post meta on order)
+    public function add_pending_webhook( int $order_id, string $new_status, string $old_status, array $metadata = [] ): void;
+    public function get_pending_webhooks( int $order_id ): array;
+    public function delete_pending_webhooks( int $order_id ): void;
+
+    // Max retries: filtered by tec_tickets_commerce_gateway_webhook_maximum_attempts (default 5)
+    // and tec_tickets_commerce_gateway_{key}_webhook_maximum_attempts
+    public function get_max_number_of_retries(): int;
+}
+```
+
+**Webhook Handler Pattern:**
+```php
+// Webhook_Endpoint registers the WP REST route
+// POST /tec/v1/commerce/gateway/{slug}/webhook
+// Handler::process_event() dispatches to event-specific handlers
+
+class Handler {
+    public function process_event( array $event_data ): bool;
+}
+
+class Events {
+    // Returns array mapping event type strings to handler class names
+    public function get_events(): array;
+}
+```
+
+---
+
+### 3.7 Abstract_WhoDat (OAuth Proxy)
+
+WhoDat is the OAuth intermediary hosted at `https://whodat.theeventscalendar.com/`. Gateways that use OAuth must extend `Abstract_WhoDat`.
+
+```php
+abstract class Abstract_WhoDat implements WhoDat_Interface {
+
+    protected const API_ENDPOINT = '';   // Gateway-specific path, e.g. 'commerce/v1/paypal'
+    protected const API_BASE_URL = 'https://whodat.theeventscalendar.com/';
+
+    // URL resolution
+    public function get_gateway_endpoint(): string;
+    public function get_api_base_url(): string;  // Overridable via TEC_TC_WHODAT_DEV_URL constant
+    public function get_api_url( string $endpoint, array $query_args = [] ): string;
+
+    // HTTP calls (use wp_remote_get / wp_remote_post)
+    public function get( string $endpoint, array $query_args ): ?array;
+    public function get_with_cache( string $endpoint, array $query_args = [], int $expiration = 600 ): ?array;
+    public function post( string $endpoint, array $query_args = [], array $request_arguments = [] ): ?array;
+
+    // Error logging (delegates to tribe_log action)
+    public function log_error( string $type, string $message, string $url ): void;
+}
+```
+
+**WhoDat Usage Pattern (in Signup::generate_url()):**
+```php
+$url = tribe( WhoDat::class )->get( 'connect', [
+    'return_url'   => $this->get_return_url( $hash ),
+    'country_code' => $country,
+] );
+// Returns: [ 'links' => [ [ 'rel' => 'action_url', 'href' => '...' ] ] ]
+```
+
+**For non-WhoDat gateways** (direct API key gateways like Stripe):
+- Skip the WhoDat proxy
+- Store API keys directly in merchant options via the Settings form
+- Generate the connect URL in `Signup::generate_url()` pointing directly to the provider's OAuth URL
+
+---
+
+### 3.8 Abstract_REST_Endpoint
+
+```php
+abstract class Abstract_REST_Endpoint implements REST_Endpoint_Interface {
+    protected string $path;  // e.g. '/commerce/gateway/{slug}/order'
+
+    public function get_endpoint_path(): string;
+    public function get_route_url(): string;  // rest_url( namespace . path )
+    public function get_return_url( ?string $hash = null ): string;
+    public function sanitize_callback( $value ): string|array;
+    public function get_documentation(): array;
+
+    // Must implement (register_rest_route):
+    abstract public function register(): void;
+}
+```
+
+**REST route namespace:** `tec/v1` (from `tribe('tickets.rest-v1.main')->get_events_route_namespace()`)
+
+---
+
+## 4. Service Provider Pattern
+
+Every gateway must have a `Provider` class extending `TEC\Common\Contracts\Service_Provider`.
+
+```php
+namespace TEC\Tickets\Commerce\Gateways\{Slug};
+
+use TEC\Common\Contracts\Service_Provider;
+
+class Provider extends Service_Provider {
+
+    public function register(): void {
+        // Register all classes as singletons
+        $this->container->singleton( Gateway::class );
+        $this->container->singleton( Merchant::class );
+        $this->container->singleton( Settings::class );
+        $this->container->singleton( Signup::class );
+        $this->container->singleton( Webhooks::class );
+        $this->container->singleton( WhoDat::class );
+        $this->container->singleton( REST\Order_Endpoint::class );
+        $this->container->singleton( REST\On_Boarding_Endpoint::class );
+        $this->container->singleton( REST\Webhook_Endpoint::class );
+
+        // Register subsystems
+        $this->register_assets();
+        $this->register_hooks();
+    }
+
+    protected function register_assets(): void {
+        $assets = new Assets( $this->container );
+        $assets->register();
+        $this->container->singleton( Assets::class, $assets );
+    }
+
+    protected function register_hooks(): void {
+        $hooks = new Hooks( $this->container );
+        $hooks->register();
+        $this->container->singleton( Hooks::class, $hooks );
+    }
+}
+```
+
+**Hooks class must bind:**
+```php
+add_filter( 'tec_tickets_commerce_gateways', [ $this, 'register_gateway' ] );
+add_filter( 'rest_api_init',                 [ $this, 'register_endpoints' ] );
+// Plus any gateway-specific hooks (order status transitions, webhook events, etc.)
+```
+
+**Provider registration** (in parent Commerce provider):
+```php
+$this->container->register( \TEC\Tickets\Commerce\Gateways\{Slug}\Provider::class );
+```
+
+---
+
+## 5. Gateway Manager & Registration
+
+`TEC\Tickets\Commerce\Gateways\Manager` is the central registry.
+
+```php
+class Manager {
+    // Option key storing which gateway a ticket/attendee was purchased through
+    public static string $option_gateway = '_tickets_commerce_gateway';
+
+    // Returns all gateways registered via 'tec_tickets_commerce_gateways' filter
+    // Keyed by gateway slug: [ 'paypal' => Gateway, 'stripe' => Gateway, ... ]
+    public function get_gateways(): array;
+
+    // Returns the gateway key from options (default: paypal)
+    public function get_current_gateway(): string;
+
+    // Returns merged settings arrays from all visible gateways
+    public function get_gateway_settings(): array;
+
+    // Returns a single gateway by slug
+    public function get_gateway_by_key( string $key ): ?Abstract_Gateway;
+
+    // Returns gateways that are both enabled AND active, respecting renders_solo()
+    // 'checkout' context: solo gateways stop the list; only one solo gateway shown
+    public function get_available_gateways( string $context = 'checkout' ): array;
+}
+```
+
+**Registering Your Gateway:**
+```php
+// In Hooks::register():
+add_filter( 'tec_tickets_commerce_gateways', [ tribe( Gateway::class ), 'register_gateway' ] );
+
+// In Gateway::register_gateway():
+public function register_gateway( array $gateways ): array {
+    $gateways[ static::get_key() ] = $this;
+    return $gateways;
+}
+```
+
+**Filtering Available Gateways:**
+```php
+// Modify which gateways appear in checkout:
+add_filter( 'tec_tickets_commerce_available_gateways', function( $available, $all, $context ) {
+    // Custom logic here
+    return $available;
+}, 10, 3 );
+```
+
+---
+
+## 6. Asset Registration
+
+`Assets.php` extends `Service_Provider` and uses `tec_asset()` to register scripts and styles.
+
+```php
+tec_asset(
+    \Tribe__Tickets__Main::instance(),
+
+    // Handle
+    'tec-tickets-commerce-gateway-{slug}-checkout',
+
+    // Path (relative to plugin root)
+    'commerce/gateway/{slug}/checkout.js',
+
+    // Dependencies
+    [
+        'jquery',
+        'tribe-common',
+        'tec-ky',                                          // HTTP client
+        'tribe-tickets-loader',                            // Loading overlay
+        'tribe-tickets-commerce-js',                       // Core commerce
+        'tribe-tickets-commerce-notice-js',                // Notice system
+        'tribe-tickets-commerce-base-gateway-checkout-toggler',
+        // Add SDK handle if needed: 'tec-tickets-commerce-gateway-{slug}-sdk'
+    ],
+
+    // Hook to enqueue on
+    'tec-tickets-commerce-checkout-shortcode-assets',
+
+    [
+        'groups'       => [ 'tec-tickets-commerce-gateway-{slug}' ],
+        'conditionals' => [ $this, 'should_enqueue_assets' ],
+        'localize'     => [
+            'name' => 'tecTicketsCommerceGateway{Slug}Checkout',
+            'data' => static function () {
+                return [
+                    'orderEndpoint' => tribe( REST\Order_Endpoint::class )->get_route_url(),
+                    'nonce'         => wp_create_nonce( 'wp_rest' ),
+                    // Add gateway-specific fields here
+                ];
+            },
+        ],
+    ]
+);
+```
+
+**Asset Conditional:**
+```php
+public function should_enqueue_assets(): bool {
+    return tribe( Checkout::class )->is_current_page()
+        && tribe( Gateway::class )->is_enabled()
+        && tribe( Gateway::class )->is_active();
+}
+```
+
+**External SDK Asset (if needed):**
+```php
+tec_asset(
+    \Tribe__Tickets__Main::instance(),
+    'tec-tickets-commerce-gateway-{slug}-sdk',
+    'https://cdn.{provider}.com/sdk.js',  // External URL
+    [],
+    'tec-tickets-commerce-checkout-shortcode-assets',
+    [
+        'type'         => 'js',
+        'external'     => true,
+        'conditionals' => [ $this, 'should_enqueue_assets' ],
+    ]
+);
+```
+
+---
+
+## 7. OAuth / Connection Flow
+
+### 7.1 Topology
+
+```
+WordPress Admin
+    │
+    │  GET  ?tc-action=connect
+    ▼
+Signup::generate_url()
+    │  POST  {whodat_base}/{slug}/connect
+    ▼
+WhoDat Proxy (https://whodat.theeventscalendar.com/)
+    │  OAuth redirect
+    ▼
+Payment Provider OAuth (PayPal / Square)
+    │  callback with auth_code + shared_id
+    ▼
+On_Boarding_Endpoint (REST)
+    │  POST  {whodat}/token-exchange
+    ▼
+Merchant::from_array()  →  Merchant::save()
+    │
+    ▼
+Redirect to Settings Page (connected state)
+```
+
+### 7.2 Signup URL Generation
+
+```php
+public function generate_url(): string {
+    $hash = wp_generate_password( 32, false );
+
+    $this->update_transient_data( [
+        'hash'       => $hash,
+        'return_url' => tribe( Gateway::class )->get_settings_url(),
+    ] );
+
+    $response = tribe( WhoDat::class )->get( 'connect', [
+        'return_url'   => tribe( REST\On_Boarding_Endpoint::class )->get_return_url( $hash ),
+        'country_code' => $country_code,
+        'mode'         => tribe( Merchant::class )->get_mode(),
+    ] );
+
+    // Extract the action_url from the links array
+    foreach ( $response['links'] ?? [] as $link ) {
+        if ( 'action_url' === $link['rel'] ) {
+            return $link['href'];
+        }
+    }
+
+    return '';
+}
+```
+
+### 7.3 On-Boarding REST Endpoint
+
+```php
+// Registered at: GET /tec/v1/commerce/gateway/{slug}/on-boarding
+// Called by OAuth provider as the return_url
+
+public function get( WP_REST_Request $request ): WP_REST_Response {
+    $hash      = $request->get_param( 'hash' );
+    $auth_code = $request->get_param( 'authCode' );  // Or 'code' depending on provider
+    $shared_id = $request->get_param( 'sharedId' );  // Provider-specific
+
+    // Validate hash against transient
+    $transient_data = tribe( Signup::class )->get_transient_data();
+    if ( $transient_data['hash'] !== $hash ) {
+        return new WP_REST_Response( [ 'error' => 'Invalid hash' ], 403 );
+    }
+
+    // Exchange auth_code for access_token via WhoDat
+    $token_data = tribe( WhoDat::class )->post( 'token', [], [
+        'body' => [ 'auth_code' => $auth_code, 'shared_id' => $shared_id ],
+    ] );
+
+    // Store merchant data
+    tribe( Merchant::class )->from_array( $token_data );
+    tribe( Merchant::class )->save();
+    tribe( Signup::class )->delete_transient_data();
+
+    // Redirect to settings
+    wp_safe_redirect( tribe( Gateway::class )->get_settings_url() );
+    exit;
+}
+```
+
+### 7.4 Disconnect Flow
+
+```php
+// URL-based disconnect (PayPal pattern — triggered by admin link click):
+// ?tc-action={gateway}-disconnect&tc-nonce={nonce}
+
+// AJAX-based disconnect (Square pattern):
+add_action( 'wp_ajax_tec_tickets_commerce_gateway_{slug}_disconnect', [ $this, 'handle_disconnect' ] );
+
+public function handle_disconnect(): void {
+    check_ajax_referer( '{slug}-disconnect', '_wpnonce' );
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        wp_send_json_error( [], 403 );
+    }
+
+    tribe( Merchant::class )->disconnect();  // delete_option( account_key )
+    wp_send_json_success();
+}
+```
+
+---
+
+## 8. Webhook Architecture
+
+### 8.1 REST Endpoint Registration
+
+```php
+// POST /tec/v1/commerce/gateway/{slug}/webhook
+// No authentication — verified by webhook signature header
+
+register_rest_route( $namespace, '/commerce/gateway/{slug}/webhook', [
+    'methods'             => WP_REST_Server::CREATABLE,
+    'callback'            => [ $this, 'handle' ],
+    'permission_callback' => '__return_true',  // Auth via signature
+] );
+```
+
+### 8.2 Signature Verification
+
+Always verify the webhook payload signature before processing:
+
+```php
+public function handle( WP_REST_Request $request ): WP_REST_Response {
+    $signature = $request->get_header( 'X-{Provider}-Signature' );
+    $payload   = $request->get_body();
+
+    if ( ! $this->verify_signature( $payload, $signature ) ) {
+        return new WP_REST_Response( [ 'error' => 'Invalid signature' ], 401 );
+    }
+
+    $event = json_decode( $payload, true );
+    return tribe( Webhooks\Handler::class )->process_event( $event );
+}
+```
+
+### 8.3 Event Dispatching
+
+```php
+class Handler {
+    public function process_event( array $event ): WP_REST_Response {
+        $event_type = $event['type'] ?? '';
+        $events_map = tribe( Events::class )->get_events();
+
+        if ( ! isset( $events_map[ $event_type ] ) ) {
+            return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
+        }
+
+        $handler_class = $events_map[ $event_type ];
+        return tribe( $handler_class )->handle( $event );
+    }
+}
+
+class Events {
+    public function get_events(): array {
+        return [
+            '{provider}.payment.succeeded' => Webhooks\Payment_Succeeded_Webhook::class,
+            '{provider}.payment.failed'    => Webhooks\Payment_Failed_Webhook::class,
+        ];
+    }
+}
+```
+
+### 8.4 Webhook Settings Storage
+
+Option key: `tec_tickets_commerce_{gateway_key}_{mode}_webhooks_settings`
+
+Must contain at minimum: `[ 'id' => '{webhook_id_from_provider}', ... ]`
+
+```php
+// Store after registration with provider:
+tribe( Webhooks::class )->update_settings( [
+    'id'          => $webhook_id,
+    'url'         => tribe( REST\Webhook_Endpoint::class )->get_route_url(),
+    'signing_key' => $signing_key,
+] );
+```
+
+---
+
+## 9. Admin PHP View Templates
+
+### 9.1 View Template Conventions
+
+- All templates are PHP files under `src/admin-views/settings/tickets-commerce/{slug}/`
+- Variables are injected by the `Tribe__Template` engine via `$this->template( 'path', $vars )`
+- Always guard with `defined( 'ABSPATH' ) || exit;`
+- Always escape all output: `esc_html()`, `esc_url()`, `esc_attr()`
+- Translate all strings with `__( 'text', 'event-tickets' )`
+- Template docblock must list all injected template variables with `@var` tags
+
+```php
+<?php
+/**
+ * Template description.
+ *
+ * @since {version}
+ * @var Tribe__Template $this         Template object.
+ * @var Gateway         $gateway      Gateway instance.
+ * @var Merchant        $merchant     Merchant instance.
+ * @var bool            $is_connected Whether connected.
+ */
+
+defined( 'ABSPATH' ) || exit;
+```
+
+### 9.2 Gateway List (Settings Page)
+
+The admin settings page renders a list of gateway cards via:
+
+```
+src/admin-views/settings/tickets-commerce/gateways/
+  container.php  ← Iterates gateways, calls item.php for each
+  item.php       ← One gateway card; calls brand.php, status.php, button.php
+  brand.php      ← Logo image + gateway name
+  status.php     ← "Enabled for Checkout" badge (or empty)
+  button.php     ← "Settings" link to gateway-specific settings section
+  toggle.php     ← Enable/disable toggle for the gateway
+```
+
+**CSS class pattern for gateway cards:**
+```html
+<div class="tec-tickets__admin-settings-tickets-commerce-gateways-item">
+  <!-- brand, status, button sub-templates -->
+</div>
+```
+
+### 9.3 Connect / Inactive Template
+
+`connect/inactive.php` — rendered when `$is_merchant_connected === false`:
+
+```php
+defined( 'ABSPATH' ) || exit;
+if ( ! empty( $is_merchant_connected ) ) return;
+?>
+<h2 class="tec-tickets__admin-settings-tickets-commerce-gateway-title">
+    <?php esc_html_e( 'Accept online payments with {Gateway}!', 'event-tickets' ); ?>
+</h2>
+
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-description">
+    <p><?php esc_html_e( 'Description text...', 'event-tickets' ); ?></p>
+
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/signup-link' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/non-ssl-notice' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/help-links' ); ?>
+</div>
+```
+
+**SSL Notice (include for all card-processing gateways):**
+```php
+<?php if ( ! is_ssl() ) : ?>
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-non-ssl-notice">
+    <?php echo wp_kses(
+        __( '<strong>SSL Certificate Required</strong> - ...', 'event-tickets' ),
+        [ 'strong' => [] ]
+    ); ?>
+</div>
+<?php endif; ?>
+```
+
+**Signup Link** — for OAuth gateways, the connect button uses data attributes for JS state:
+```html
+<div
+    id="tec-tickets__admin-settings-tickets-commerce-gateway-{slug}-container"
+    class="tec-tickets__admin-settings-tickets-commerce-gateway"
+    data-connect="<?php echo esc_attr__( 'Connect with {Gateway}', 'event-tickets' ); ?>"
+    data-connecting="<?php echo esc_attr__( 'Connecting...', 'event-tickets' ); ?>"
+    data-reconnect="<?php echo esc_attr__( 'Reconnect Account', 'event-tickets' ); ?>"
+    data-connect-error="<?php echo esc_attr__( 'There was an error connecting...', 'event-tickets' ); ?>"
+    data-disconnect-confirm="<?php echo esc_attr__( 'Are you sure you want to disconnect?', 'event-tickets' ); ?>"
+    data-disconnect-error="<?php echo esc_attr__( 'There was an error disconnecting...', 'event-tickets' ); ?>"
+    data-disconnecting="<?php echo esc_attr__( 'Disconnecting...', 'event-tickets' ); ?>"
+    data-connect-nonce="<?php echo esc_attr( wp_create_nonce( '{slug}-connect' ) ); ?>"
+>
+    <a
+        href="#"
+        id="tec-tickets__admin-settings-tickets-commerce-gateway-connect-{slug}"
+        class="tec-tickets__admin-settings-tickets-commerce-gateway-connect-button-link"
+    >
+        <?php esc_html_e( 'Connect with {Gateway}', 'event-tickets' ); ?>
+    </a>
+</div>
+```
+
+For **API key gateways** (e.g. Stripe): the connect link points directly to the provider OAuth URL from `Signup::generate_url()`, no JS connect/disconnect needed — settings form saves keys directly.
+
+### 9.4 Connected / Active Template
+
+`connect/active.php` — rendered when `$is_merchant_connected === true`:
+
+```php
+defined( 'ABSPATH' ) || exit;
+if ( empty( $is_merchant_connected ) ) return;
+?>
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-connected">
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/active/connection' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/active/{slug}-status' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/active/button' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/help-links' ); ?>
+</div>
+```
+
+**`active/connection.php`** — shows account identity and disconnect link:
+```php
+<?php
+$name           = $merchant->get_client_id();
+$disconnect_url = $signup->generate_disconnect_url();
+?>
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-connected-row">
+    <div class="tec-tickets__admin-settings-tickets-commerce-gateway-connected-col1">
+        <?php esc_html_e( 'Connected as:', 'event-tickets' ); ?>
+    </div>
+    <div class="tec-tickets__admin-settings-tickets-commerce-gateway-connected-col2">
+        <span class="tec-tickets__admin-settings-tickets-commerce-gateway-connected-text-name">
+            <?php echo esc_html( $name ); ?>
+        </span>
+        <a href="<?php echo esc_url( $disconnect_url ); ?>"
+           class="tec-tickets__admin-settings-tickets-commerce-gateway-connected-text-disconnect-link">
+            <?php esc_html_e( 'Disconnect', 'event-tickets' ); ?>
+        </a>
+    </div>
+</div>
+```
+
+**`active/{slug}-status.php`** — show account health (payment enabled, payout status, etc.)
+
+### 9.5 Disconnect Button & Confirmation Dialog
+
+For AJAX-disconnect gateways (Square pattern), the disconnect button and dialog live in `connect/disconnect.php`:
+
+```php
+<!-- Disconnect Button -->
+<button
+    type="button"
+    class="button button-link-delete"
+    id="tec-tickets__admin-settings-tickets-commerce-gateway-disconnect-{slug}"
+    data-nonce="<?php echo esc_attr( $disconnect_nonce ); ?>"
+    aria-label="<?php esc_attr_e( 'Disconnect from {Gateway}', 'event-tickets' ); ?>"
+>
+    <?php esc_html_e( 'Disconnect', 'event-tickets' ); ?>
+</button>
+
+<!-- Confirmation Dialog -->
+<div
+    id="tec-tickets__admin-settings-tickets-commerce-gateway-disconnect-{slug}-dialog"
+    class="tec-tickets__admin-settings-tickets-commerce-gateway-dialog"
+    style="display: none;"
+>
+    <div class="tec-tickets__admin-settings-tickets-commerce-gateway-dialog-content">
+        <h3><?php esc_html_e( 'Disconnect {Gateway}', 'event-tickets' ); ?></h3>
+        <p><?php esc_html_e( 'Are you sure? This will disable payment processing.', 'event-tickets' ); ?></p>
+        <div class="tec-tickets__admin-settings-tickets-commerce-gateway-dialog-buttons">
+            <button type="button" class="button button-secondary
+                tec-tickets__admin-settings-tickets-commerce-gateway-disconnect-cancel">
+                <?php esc_html_e( 'Cancel', 'event-tickets' ); ?>
+            </button>
+            <button type="button" class="button button-primary button-danger
+                tec-tickets__admin-settings-tickets-commerce-gateway-disconnect-confirm">
+                <?php esc_html_e( 'Disconnect', 'event-tickets' ); ?>
+            </button>
+        </div>
+    </div>
+</div>
+```
+
+### 9.6 Signup Modal (Post-Connect)
+
+`modal/signup-complete.php` + `modal/signup-complete/content.php` — shown as an overlay immediately after OAuth return:
+
+```php
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-modal">
+    <?php $this->template( 'settings/tickets-commerce/{slug}/modal/signup-complete/content' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/modal/signup-complete/notice-test-mode' ); ?>
+</div>
+```
+
+`notice-test-mode.php` — always include: warns when connected in sandbox/test mode.
+
+### 9.7 Help Links Template
+
+`connect/help-links.php` — standard help link block (render in both inactive and active states):
+
+```php
+<div class="tec-tickets__admin-settings-tickets-commerce-gateway-help-links">
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/help-links/configuring' ); ?>
+    <?php $this->template( 'settings/tickets-commerce/{slug}/connect/help-links/troubleshooting' ); ?>
+</div>
+```
+
+---
+
+## 10. JavaScript Namespace Convention
+
+All gateway code must be registered under the global namespace before the module IIFE, and re-declared as an empty object at the end.
+
+```js
+// Top of file
+window.tribe.tickets.commerce.gateway.{slug} =
+  window.tribe.tickets.commerce.gateway.{slug} || {};
+window.tribe.tickets.commerce.gateway.{slug}.checkout = {};
+
+// IIFE
+(function($, module, ky) {
+  'use strict';
+  // ... implementation
+})(jQuery, window.tribe.tickets.commerce.gateway.{slug}.checkout, tribe.ky);
+
+// Bottom of file (load confirmation + tec.* alias)
+window.tec = window.tec || {};
+window.tec.tickets = window.tec.tickets || {};
+window.tec.tickets.commerce = window.tec.tickets.commerce || {};
+window.tec.tickets.commerce.gateway = window.tec.tickets.commerce.gateway || {};
+window.tec.tickets.commerce.gateway.{slug} =
+  window.tec.tickets.commerce.gateway.{slug} || {};
+window.tec.tickets.commerce.gateway.{slug}.checkout = {};
+```
+
+Admin modules use `window.tec.tickets.admin.gateway.{slug}`.
+
+---
+
+## 11. Gateway JS Module Structure
+
+### Required Properties
+
+| Property | Type | Description |
+|---|---|---|
+| `checkout` | Object | Localised PHP config object |
+| `selectors` | Object | All DOM selectors as named properties |
+| `checkoutContainer` | jQuery\|null | Active checkout container |
+
+### Required Methods
+
+| Method | Description |
+|---|---|
+| `ready()` | Entry point, called on DOM ready |
+| `bindEvents()` | Attach all DOM event listeners |
+| `handlePayment( event )` | Submit handler |
+| `handleCreateOrder()` | POST to server, returns promise |
+| `getPurchaserData()` | Reads purchaser form fields |
+| `showNotice( container, title, content )` | Display error/info |
+| `hideNotice( container )` | Hide notice |
+| `getRequestArgs( body?, headers? )` | Build ky options with nonce |
+| `onBeforeRetry( error )` | ky hook — returns ky.stop |
+| `onBeforeError( error )` | ky hook — returns ky.stop |
+| `submitButton( enabled )` | Toggle submit button disabled state |
+
+### Selector Naming
+
+```js
+module.selectors = {
+  submitButton:  '#tec-tc-gateway-{slug}-checkout-button',
+  cardErrors:    '#tec-tc-gateway-{slug}-errors',
+  hiddenElement: '.tribe-common-a11y-hidden',
+  form:          '.tribe-tickets__commerce-checkout-{slug}-form',
+};
+```
+
+---
+
+## 12. Shared JS Services
+
+| Service | Usage |
+|---|---|
+| `tribe.ky` | HTTP client for all AJAX/REST calls |
+| `tribe.tickets.commerce.notice` | `.show()`, `.hide()`, `.populate()` |
+| `tribe.tickets.loader` | `.show( container )`, `.hide( container )` |
+| `tribe.tickets.commerce.getPurchaserData( form )` | Reads purchaser fields |
+| `tribe.tickets.debug.log( slug, method, args )` | Debug logging (no-op in production) |
+| `tribe.tickets.commerce.selectors.checkoutContainer` | Top-level checkout wrapper selector |
+| `tribe.tickets.commerce.selectors.purchaserFormContainer` | Purchaser form selector |
+
+All loader show/hide calls must be paired — always hide in every success AND failure code path.
+
+---
+
+## 13. Checkout Flow Contract
+
+### Linear Flow (Free / API-key gateways)
+```
+Submit → handlePayment → handleCreateOrder (POST)
+  ← success: redirect to redirect_url
+  ← failure: showNotice, re-enable button
+```
+
+### Three-Party SDK Flow (PayPal)
+```
+SDK loads → setupButtons
+  createOrder → POST /order → return id
+  onApprove → POST /order/:id { payer_id } → check → redirect
+  onCancel → DELETE /order/:id
+```
+
+### Tokenise-then-Submit (Square)
+```
+Info form submit → initializeSDK → card.attach()
+Pay click → card.tokenize() → POST /order { payment_source_id } → redirect
+```
+
+### Intent-Confirm Flow (Stripe)
+```
+Pay click → handleCreateOrder (POST) → stripeLib.confirmPayment()
+  ← succeeded: handleUpdateOrder (POST) → redirect
+  ← error: handlePaymentError → showNotice
+```
+
+---
+
+## 14. REST API Contract
+
+### Create Order — `POST {orderEndpoint}`
+```json
+Request:  { "purchaser": { ... }, "...gatewayFields": "..." }
+Success:  { "success": true, "id": "...", "redirect_url": "..." }
+Failure:  { "success": false, "message": "...", "code": "..." }
+```
+
+### Confirm Order — `POST {orderEndpoint}/{id}`
+```json
+Request:  { "...gatewayConfirmationData": "..." }
+Success:  { "success": true, "redirect_url": "..." }
+Failure:  { "success": false, "message": "...", "data": { "name": "...", "details": [] } }
+```
+
+### Cancel Order — `DELETE {orderEndpoint}/{id}`
+```json
+Request:  { "failed_status": "...", "failed_reason": "..." }
+Response: { "success": true|false, "title": "..." }
+```
+
+All responses must include `success: boolean`. Redirect URL is always from the server — never trust client-provided URLs.
+
+---
+
+## 15. Admin JS: Connect & Webhook Settings
+
+### OAuth Connect (Square pattern)
+```js
+// POST ajaxurl — action: tec_tickets_commerce_gateway_{slug}_connect
+// Response: { success: true, data: { url: string } }  → redirect to OAuth URL
+// Cycle button text through: data-connect → data-connecting → (error) → data-connect
+```
+
+### Disconnect
+```js
+// Show confirmation dialog before proceeding
+// POST ajaxurl — action: tec_tickets_commerce_gateway_{slug}_disconnect
+// Response: { success: true } → reload page
+// Disable button + show disconnecting text during request
+```
+
+### Webhook Key Validation (Stripe pattern)
+```js
+// On input change — two-step validation:
+// Step 1: POST ajaxurl { action: 'validate_webhook', signing_key, tc_nonce }
+// Step 2 (if needed): POST ajaxurl { action: 'verify_webhook', signing_key, tc_nonce }
+// Response: { data: { is_valid_webhook: bool, status: string } }
+// Show dashicon: dashicons-update (checking) → dashicons-yes / dashicons-no
+// Disable Save Settings button during validation
+```
+
+### Country Selector Refresh (PayPal pattern)
+```js
+// On <select> change:
+// GET ajaxurl?action=...refresh_connect_url&nonce=...&country_code=...
+// Response: { success: true, data: { new_url: string } }
+// Update connect button href, remove disabled class
+```
+
+---
+
+## 16. CSS Architecture
+
+```
+build/css/tickets-commerce/gateway/
+  {slug}.css
+  {slug}-rtl.css
+  {slug}/
+    admin-global.css      (if admin styles needed)
+    admin-global-rtl.css
+```
+
+### Class Naming
+```css
+/* Checkout */
+.tribe-tickets__commerce-checkout-{slug}
+.tribe-tickets__commerce-checkout-{slug}-*
+
+/* Admin settings */
+.tec-tickets__admin-settings-tickets-commerce-gateway-{slug}-*
+
+/* JS hook IDs (not styled directly) */
+#tec-tc-gateway-{slug}-checkout-button
+#tec-tc-gateway-{slug}-errors
+#tec-tc-gateway-{slug}-card-element
+
+/* Dialog */
+.tec-tickets__admin-settings-tickets-commerce-gateway-dialog
+.tec-tickets__admin-settings-tickets-commerce-gateway-dialog-content
+.tec-tickets__admin-settings-tickets-commerce-gateway-dialog-buttons
+```
+
+Every CSS file must have a `-rtl.css` counterpart. Use logical CSS properties where possible.
+
+---
+
+## 17. Localised Configuration Object
+
+Registered via `wp_localize_script()` in `Assets::register()`.
+
+| Handle suffix | PHP variable name |
+|---|---|
+| Checkout script | `tecTicketsCommerceGateway{Slug}Checkout` |
+| Signup/admin script | `tecTicketsCommerceGateway{Slug}Signup` |
+
+### Required Fields (all gateways)
+| Field | Type | Source |
+|---|---|---|
+| `nonce` | string | `wp_create_nonce( 'wp_rest' )` |
+| `orderEndpoint` | string | `REST\Order_Endpoint::get_route_url()` |
+
+### Common Optional Fields
+| Field | Type | Description |
+|---|---|---|
+| `publishableKey` | string | Public API key (Stripe) |
+| `applicationId` | string | SDK app ID (Square) |
+| `locationId` | string | Merchant location (Square) |
+| `paymentIntentData` | object | Pre-created payment intent (Stripe) |
+| `amount` | string | Order total in smallest currency unit |
+| `currencyCode` | string | ISO 4217 code |
+| `userLoggedIn` | boolean | `is_user_logged_in()` |
+| `userData` | object | Pre-filled billing for logged-in users |
+
+### Signup/Admin Fields
+| Field | Type | Description |
+|---|---|---|
+| `onboardNonce` | string | Nonce for onboarding callback |
+| `refreshConnectNonce` | string | Nonce for refresh connect URL |
+| `onboardingEndpointUrl` | string | REST URL for OAuth callback POST |
+| `connectNonce` | string | Nonce for AJAX connect action |
+
+---
+
+## 18. Implementation Checklists
+
+### PHP Files
+- [ ] `Gateway.php` — extends `Abstract_Gateway`, defines `$key`, `VERSION`, all interface methods
+- [ ] `Merchant.php` — extends `Abstract_Merchant`, defines `$account_key`, `$disconnect_action`
+- [ ] `Settings.php` — extends `Abstract_Settings`, implements `get_settings()`, `get_connection_settings_html()`
+- [ ] `Signup.php` — extends `Abstract_Signup`, implements `generate_url()`, `generate_disconnect_url()`
+- [ ] `Webhooks.php` — extends `Abstract_Webhooks`, implements `get_gateway()`, `get_merchant()`
+- [ ] `WhoDat.php` — extends `Abstract_WhoDat`, defines `API_ENDPOINT` (OAuth gateways only)
+- [ ] `Assets.php` — registers JS + CSS via `tec_asset()`, localises config object
+- [ ] `Hooks.php` — binds filter `tec_tickets_commerce_gateways`, REST init, disconnect action
+- [ ] `Provider.php` — registers all singletons, calls `register_assets()` and `register_hooks()`
+- [ ] `REST/Order_Endpoint.php` — handles order create, confirm, cancel
+- [ ] `REST/On_Boarding_Endpoint.php` — handles OAuth callback (OAuth gateways only)
+- [ ] `REST/Webhook_Endpoint.php` — receives and verifies webhook payloads
+
+### Admin View Templates
+- [ ] `connect/inactive.php` — not-connected state with signup link
+- [ ] `connect/active.php` — connected state container
+- [ ] `connect/active/connection.php` — account name + disconnect link
+- [ ] `connect/active/{slug}-status.php` — account health/status
+- [ ] `connect/active/button.php` — action button (reconnect etc.)
+- [ ] `connect/logo.php` — gateway logo + feature list
+- [ ] `connect/signup-link.php` — connect button (or API key form)
+- [ ] `connect/non-ssl-notice.php` — SSL requirement warning
+- [ ] `connect/help-links.php` — configuring + troubleshooting links
+- [ ] `connect/disconnect.php` — disconnect button + confirmation dialog (AJAX gateways)
+- [ ] `modal/signup-complete.php` + sub-templates — post-connect modal
+- [ ] `main.php` — top-level section that includes inactive/active templates conditionally
+
+### JavaScript
+- [ ] Both `tribe.*` and `tec.*` namespaces initialised and re-declared
+- [ ] IIFE receives `(jQuery, module, ky)` — no direct globals except `window` and `tribe.*`
+- [ ] `module.selectors` contains all DOM selectors
+- [ ] `module.checkout` assigned from localised config object
+- [ ] `getRequestArgs()` includes `X-WP-Nonce` header
+- [ ] Loader shown before async work, hidden in all code paths
+- [ ] Submit button disabled during processing, re-enabled on error
+- [ ] All fetch calls wrapped in `try/catch`
+- [ ] `tribe.tickets.debug.log()` at start of significant methods
+- [ ] Admin: connect/disconnect actions implement two-state button text
+- [ ] Admin: confirmation dialog shown before disconnect
+
+### Security
+- [ ] All REST endpoints verify `X-WP-Nonce` or webhook signature
+- [ ] All AJAX handlers call `check_ajax_referer()` or `wp_verify_nonce()`
+- [ ] `current_user_can( 'manage_options' )` checked on admin actions
+- [ ] Redirect URL comes from server; `wp_validate_redirect()` or whitelist applied
+- [ ] No API secrets in `wp_localize_script()` — public keys only
+- [ ] All input sanitised: `sanitize_text_field()`, `sanitize_email()`
+- [ ] Order total calculated server-side; never trusted from client
+
+---
+
+## 19. Security Requirements
+
+| Requirement | Implementation |
+|---|---|
+| REST request authentication | `X-WP-Nonce` header, verified via WP REST nonce |
+| Admin AJAX authentication | `check_ajax_referer()` + `current_user_can( 'manage_options' )` |
+| Webhook payload authentication | Signature header verification (provider-specific HMAC) |
+| Redirect URL safety | `wp_validate_redirect()` or server-generated absolute URL only |
+| OAuth state validation | Hash stored as transient, compared on return |
+| Merchant credentials | Stored in `wp_options` (encrypted where possible), never in JS |
+| Only public keys in JS | `publishableKey`, `applicationId` — never secret keys |
+| Order amounts | Always server-calculated; client values ignored |
+| Order IDs | UUIDs or sufficiently random; not sequential integers |
+| SSL required | Check `is_ssl()` before rendering connect button for card gateways |
+| Transient expiry | OAuth state transients expire in `DAY_IN_SECONDS` |
+| Pending webhook retry | Max 5 attempts (filterable); prevents infinite loops |
+
+---
+
+*Specification v2.0 — derived from Event Tickets v5.28.3.1 (The Events Calendar)*

@@ -14,3 +14,161 @@
 2026-06-09 23:40:10 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
 2026-06-09 23:46:19 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
 2026-06-09 23:55:40 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-10 02:00:00 [ERROR] archonhub.scheduler: Nightly DB cleanup failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 288, in job_nightly_db_cleanup
+    from hub_db import get_db
+ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_db.py). Did you mean: 'get_job'?
+2026-06-10 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
+2026-06-10 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
+2026-06-10 03:13:35 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-10 03:21:00 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-10 03:22:46 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 06:29:27 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 06:50:00 [INFO] archonhub.scheduler: Daily briefing computed
+2026-06-11 07:00:00 [INFO] archonhub.scheduler: Daily reflexion report queued
+2026-06-11 07:25:07 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:25:07 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:25:07 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:25:07 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:29:21 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:29:21 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:29:21 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 07:29:21 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-11 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-11 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-11 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-11 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-11 08:36:48 [ERROR] archonhub.scheduler: Markets pre-market report generation failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 315, in job_markets_daily_premarket_brief
+    await run_report_job("markets_daily_premarket_brief")
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 515, in run_report_job
+    return await asyncio.to_thread(run_report_job_sync, job_id, emit, extra_context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\threads.py", line 26, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 451, in run_report_job_sync
+    result = run_agent(
+        agent_id=agent_id,
+    ...<3 lines>...
+        emit=emit,
+    )
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\agent_runner.py", line 450, in run_agent
+    summary=parsed.get("summary","")[:200],
+            ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: slice(None, 200, None)
+2026-06-11 08:38:56 [ERROR] archonhub.scheduler: Markets pre-market report generation failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 315, in job_markets_daily_premarket_brief
+    await run_report_job("markets_daily_premarket_brief")
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 515, in run_report_job
+    return await asyncio.to_thread(run_report_job_sync, job_id, emit, extra_context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\threads.py", line 26, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 451, in run_report_job_sync
+    result = run_agent(
+        agent_id=agent_id,
+    ...<3 lines>...
+        emit=emit,
+    )
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\agent_runner.py", line 450, in run_agent
+    summary=parsed.get("summary","")[:200],
+            ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: slice(None, 200, None)
+2026-06-11 08:39:39 [ERROR] archonhub.scheduler: Markets pre-market report generation failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 315, in job_markets_daily_premarket_brief
+    await run_report_job("markets_daily_premarket_brief")
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 515, in run_report_job
+    return await asyncio.to_thread(run_report_job_sync, job_id, emit, extra_context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\asyncio\threads.py", line 26, in to_thread
+    return await loop.run_in_executor(None, func_call)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\Lib\concurrent\futures\thread.py", line 59, in run
+    result = self.fn(*self.args, **self.kwargs)
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\report_monitor.py", line 451, in run_report_job_sync
+    result = run_agent(
+        agent_id=agent_id,
+    ...<3 lines>...
+        emit=emit,
+    )
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\agent_runner.py", line 450, in run_agent
+    summary=parsed.get("summary","")[:200],
+            ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+KeyError: slice(None, 200, None)
+2026-06-11 14:00:00 [INFO] archonhub.scheduler: Sigma Signal check queued
+2026-06-11 14:00:00 [INFO] archonhub.scheduler: Sigma Signal check queued
+2026-06-11 14:00:00 [INFO] archonhub.scheduler: Sigma Signal check queued
+2026-06-11 14:00:00 [INFO] archonhub.scheduler: Sigma Signal check queued
+2026-06-12 02:00:00 [ERROR] archonhub.scheduler: Nightly DB cleanup failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 288, in job_nightly_db_cleanup
+    from hub_db import get_db
+ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_db.py). Did you mean: 'get_job'?
+2026-06-12 02:00:00 [ERROR] archonhub.scheduler: Nightly DB cleanup failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 288, in job_nightly_db_cleanup
+    from hub_db import get_db
+ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_db.py). Did you mean: 'get_job'?
+2026-06-12 02:00:00 [ERROR] archonhub.scheduler: Nightly DB cleanup failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 288, in job_nightly_db_cleanup
+    from hub_db import get_db
+ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_db.py). Did you mean: 'get_job'?
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
+2026-06-12 02:00:00 [ERROR] archonhub.scheduler: Nightly DB cleanup failed
+Traceback (most recent call last):
+  File "D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_scheduler.py", line 288, in job_nightly_db_cleanup
+    from hub_db import get_db
+ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarness\.agents\agentharness\app\v3\hub_db.py). Did you mean: 'get_job'?
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
+2026-06-12 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
+2026-06-12 06:50:00 [INFO] archonhub.scheduler: Daily briefing computed
+2026-06-12 06:50:00 [INFO] archonhub.scheduler: Daily briefing computed
+2026-06-12 06:50:00 [INFO] archonhub.scheduler: Daily briefing computed
+2026-06-12 06:50:00 [INFO] archonhub.scheduler: Daily briefing computed
+2026-06-12 07:00:00 [INFO] archonhub.scheduler: Daily reflexion report queued
+2026-06-12 07:00:00 [INFO] archonhub.scheduler: Daily reflexion report queued
+2026-06-12 07:00:00 [INFO] archonhub.scheduler: Daily reflexion report queued
+2026-06-12 07:00:00 [INFO] archonhub.scheduler: Daily reflexion report queued
+2026-06-12 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-12 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-12 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-12 08:30:00 [INFO] archonhub.scheduler: Markets pre-market brief queued
+2026-06-12 12:47:13 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 12:47:13 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 12:47:13 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 12:47:13 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:03:27 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:03:27 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:03:27 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:03:27 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:03:29 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:07:48 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:11:42 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:15:21 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:15:44 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:17:31 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:18:54 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:20:03 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:21:04 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:22:12 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:23:00 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 13:36:42 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 14:00:00 [INFO] archonhub.scheduler: Sigma Signal check queued
+2026-06-12 14:31:38 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs
+2026-06-12 14:46:34 [INFO] archonhub.scheduler: Registered 10 built-in scheduler jobs

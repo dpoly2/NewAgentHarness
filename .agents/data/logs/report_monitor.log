@@ -1,0 +1,54 @@
+2026-06-11 06:50:00 [INFO] archonhub.report_monitor: report_monitor: running agent=inez-chief-of-staff for job=daily_briefing
+2026-06-11 06:52:55 [INFO] archonhub.report_monitor: report_monitor: job=daily_briefing complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-11 07:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=finance-cfo for job=daily_reflexion
+2026-06-11 07:00:47 [INFO] archonhub.report_monitor: report_monitor: job=daily_reflexion complete — 1 agents, 3 db_writes, 2 todos, status=complete
+2026-06-11 07:16:40 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-equity-analyst for job=markets_weekly_picks_digest
+2026-06-11 07:18:16 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-options-strategist for job=markets_weekly_picks_digest
+2026-06-11 07:19:45 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_weekly_picks_digest
+2026-06-11 07:21:09 [INFO] archonhub.report_monitor: report_monitor: job=markets_weekly_picks_digest complete — 3 agents, 13 db_writes, 5 todos, status=complete
+2026-06-11 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-11 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-11 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-11 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-11 08:31:44 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-11 08:32:38 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-11 08:33:10 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-11 08:33:17 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-11 08:38:01 [INFO] archonhub.report_monitor: report_monitor: job=markets_daily_premarket_brief complete — 2 agents, 1 db_writes, 0 todos, status=complete
+2026-06-11 14:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=sigma-signal-writer for job=sigma_signal_check
+2026-06-11 14:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=sigma-signal-writer for job=sigma_signal_check
+2026-06-11 14:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=sigma-signal-writer for job=sigma_signal_check
+2026-06-11 14:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=sigma-signal-writer for job=sigma_signal_check
+2026-06-11 14:00:34 [INFO] archonhub.report_monitor: report_monitor: job=sigma_signal_check complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-11 14:02:50 [INFO] archonhub.report_monitor: report_monitor: job=sigma_signal_check complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-11 14:03:12 [INFO] archonhub.report_monitor: report_monitor: job=sigma_signal_check complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-11 14:03:33 [INFO] archonhub.report_monitor: report_monitor: job=sigma_signal_check complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-12 06:50:00 [INFO] archonhub.report_monitor: report_monitor: running agent=inez-chief-of-staff for job=daily_briefing
+2026-06-12 06:50:00 [INFO] archonhub.report_monitor: report_monitor: running agent=inez-chief-of-staff for job=daily_briefing
+2026-06-12 06:50:00 [INFO] archonhub.report_monitor: report_monitor: running agent=inez-chief-of-staff for job=daily_briefing
+2026-06-12 06:50:00 [INFO] archonhub.report_monitor: report_monitor: running agent=inez-chief-of-staff for job=daily_briefing
+2026-06-12 06:51:55 [INFO] archonhub.report_monitor: report_monitor: job=daily_briefing complete — 1 agents, 0 db_writes, 0 todos, status=complete
+2026-06-12 06:53:32 [INFO] archonhub.report_monitor: report_monitor: job=daily_briefing complete — 1 agents, 5 db_writes, 0 todos, status=complete
+2026-06-12 06:55:15 [INFO] archonhub.report_monitor: report_monitor: job=daily_briefing complete — 1 agents, 5 db_writes, 2 todos, status=complete
+2026-06-12 06:57:48 [INFO] archonhub.report_monitor: report_monitor: job=daily_briefing complete — 1 agents, 4 db_writes, 0 todos, status=complete
+2026-06-12 07:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=finance-cfo for job=daily_reflexion
+2026-06-12 07:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=finance-cfo for job=daily_reflexion
+2026-06-12 07:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=finance-cfo for job=daily_reflexion
+2026-06-12 07:01:10 [INFO] archonhub.report_monitor: report_monitor: job=daily_reflexion complete — 1 agents, 1 db_writes, 2 todos, status=complete
+2026-06-12 07:01:51 [INFO] archonhub.report_monitor: report_monitor: job=daily_reflexion complete — 1 agents, 3 db_writes, 1 todos, status=complete
+2026-06-12 07:02:24 [INFO] archonhub.report_monitor: report_monitor: job=daily_reflexion complete — 1 agents, 4 db_writes, 2 todos, status=complete
+2026-06-12 07:03:08 [INFO] archonhub.report_monitor: report_monitor: job=daily_reflexion complete — 1 agents, 5 db_writes, 3 todos, status=complete
+2026-06-12 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-12 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-12 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-12 08:30:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-macro-analyst for job=markets_daily_premarket_brief
+2026-06-12 08:31:04 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-12 08:31:27 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-12 08:32:03 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-12 08:33:00 [INFO] archonhub.report_monitor: report_monitor: running agent=markets-project-lead for job=markets_daily_premarket_brief
+2026-06-12 08:35:01 [INFO] archonhub.report_monitor: report_monitor: job=markets_daily_premarket_brief complete — 2 agents, 1 db_writes, 2 todos, status=complete
+2026-06-12 08:36:20 [INFO] archonhub.report_monitor: report_monitor: job=markets_daily_premarket_brief complete — 2 agents, 1 db_writes, 2 todos, status=complete
+2026-06-12 08:38:38 [INFO] archonhub.report_monitor: report_monitor: job=markets_daily_premarket_brief complete — 2 agents, 1 db_writes, 1 todos, status=complete
+2026-06-12 08:41:09 [INFO] archonhub.report_monitor: report_monitor: job=markets_daily_premarket_brief complete — 2 agents, 1 db_writes, 1 todos, status=complete
+2026-06-12 14:00:00 [INFO] archonhub.report_monitor: report_monitor: running agent=sigma-signal-writer for job=sigma_signal_check
+2026-06-12 14:00:41 [INFO] archonhub.report_monitor: report_monitor: job=sigma_signal_check complete — 1 agents, 3 db_writes, 4 todos, status=complete

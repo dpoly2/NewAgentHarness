@@ -32,9 +32,9 @@ class PBS_Email {
     /** Order confirmation + e-ticket with QR code */
     public static function send_confirmation( $order ) {
         $event_title = get_the_title($order['event_id']);
-        $event       = tribe_get_event($order['event_id']);
-        $event_date  = $event ? tribe_get_start_date($order['event_id'], false, 'F j, Y g:i A') : '';
-        $event_venue = $event ? tribe_get_venue($order['event_id']) : '';
+        $event       = function_exists( 'tribe_get_event' ) ? tribe_get_event($order['event_id']) : null;
+        $event_date  = ( $event && function_exists( 'tribe_get_start_date' ) ) ? tribe_get_start_date($order['event_id'], false, 'F j, Y g:i A') : '';
+        $event_venue = ( $event && function_exists( 'tribe_get_venue' ) ) ? tribe_get_venue($order['event_id']) : '';
 
         // QR code
         $qr_token = PBS_QR::generate_token($order['id'], $order['order_number']);

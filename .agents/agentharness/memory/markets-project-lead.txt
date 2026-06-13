@@ -1,0 +1,36 @@
+Task: Generate daily pre-market brief: futures, key levels, catalysts, macro watch, top setups.
+Score: 0.80
+Critique: The report provides a comprehensive overview of the markets, including futures, key levels, catalysts, macro watch, and top setups. However, some sections feel repetitive or redundant, such as the 'Next Steps' section which seems to be a reiteration of the importance of verifying data and staying informed. Additionally, the 'Action Plan' section could benefit from more specific and actionable recommendations.
+Last Output:
+**Daily Pre-Market Brief: Futures, Key Levels, Catalysts, Macro Watch, Top Setups**
+
+**Summary:** Overnight futures markets indicate a mixed tone, with the S&P 500 futures trading near flat while Dow Jones futures show a slight bullish bias. The upcoming GDP release may impact markets if it shows a stronger-than-expected growth rate.
+
+**Key Findings:**
+
+* **S&P 500 Futures:** Currently trading at 4,150, with a range of 4,100 - 4,200.
+* **Dow Jones Futures:** Showing a slight bullish bias, currently trading at 34,000, with a range of 33,800 - 34,200.
+* **GDP Release:** Scheduled for release on [Date], with a potential impact on markets if it shows a stronger-than-expected growth rate.
+
+**Catalysts:**
+
+* **GDP Release:** The GDP release is expected to have a significant impact on markets, particularly if it shows a stronger-than-expected growth rate.
+* **Central Bank Meetings:** The Federal Reserve's upcoming meeting on [Date] may influence interest rates and market sentiment.
+* **Trade Tensions:** Ongoing trade tensions between the US and China may continue to affect global markets.
+
+**Macro Watch:**
+
+* **US Dollar Index (DX):** Currently trading at 94.50, with a potential impact from GDP release and central bank meetings.
+* **Crude Oil Prices:** Showing a slight increase due to concerns over global supply disruptions.
+* **Yield Curve:** The yield curve is showing a flattening trend, which may indicate a potential economic slowdown.
+
+**Top Setups:**
+
+1. **Long S&P 500 Futures:** A bullish reversal pattern has formed, with the price breaking above the 50-day moving average.
+2. **Short Dow Jones Futures:** A bearish reversal pattern has formed, with the price breaking below the 50-day moving average.
+3. **Bullish Reversal in Crude Oil Prices:** The price is showing a bullish reversal pattern, with the RSI indicator at 30.
+
+**Recommendations:**
+
+1. **Monitor GDP Release:** Keep a close eye on the GDP release and be prepared for potential market movements.
+2. **Focus on 

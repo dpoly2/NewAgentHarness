@@ -88,11 +88,11 @@ class PBS_Checkout {
         $order = PBS_DB::get_order( $order_id );
         PBS_Email::send_confirmation( $order );
 
-        // Build confirmation URL
+        // Build confirmation URL — use pbs_oid/pbs_tok to avoid TEC order_id query var conflict.
         $token       = substr( wp_hash( $order['order_number'] ), 0, 12 );
         $confirm_url = add_query_arg( [
-            'order_id' => $order_id,
-            'token'    => $token,
+            'pbs_oid' => $order_id,
+            'pbs_tok' => $token,
         ], get_permalink( get_option( 'pbs_confirmation_page_id', 0 ) ) ?: home_url( '/order-confirmation/' ) );
 
         wp_send_json_success( [
@@ -145,8 +145,8 @@ class PBS_Checkout {
 
         $token       = substr( wp_hash( $order['order_number'] ), 0, 12 );
         $confirm_url = add_query_arg( [
-            'order_id' => $order_id,
-            'token'    => $token,
+            'pbs_oid' => $order_id,
+            'pbs_tok' => $token,
         ], get_permalink( get_option( 'pbs_confirmation_page_id', 0 ) ) ?: home_url( '/order-confirmation/' ) );
 
         wp_send_json_success( [
@@ -209,12 +209,35 @@ class PBS_Checkout {
                     // Fixed-price ticket: calculate from DB price, ignore client value
                     $amount = round( (float) $ticket['price'] * $quantity, 2 );
                 }
+            } elseif ( $ticket_type !== '' ) {
+                // Multi-ticket order: resolve via individual qty_{id} POST fields.
+                $multi_amount = 0.0;
+                $multi_names  = [];
+                $multi_qty    = 0;
+                foreach ( $post as $key => $val ) {
+                    if ( 0 !== strpos( $key, 'qty_' ) ) continue;
+                    $tid = (int) substr( $key, 4 );
+                    $qty = max( 0, (int) $val );
+                    if ( ! $tid || ! $qty ) continue;
+                    $tt = PBS_DB::get_ticket_type( $tid );
+                    if ( ! $tt || (int) $tt['event_id'] !== $event_id || ! (int) $tt['active'] ) continue;
+                    $multi_names[] = $tt['name'];
+                    $multi_qty    += $qty;
+                    if ( (int) $tt['is_donation'] ) {
+                        $multi_amount += max( 1.0, (float) ( $post['amount'] ?? 0 ) );
+                    } else {
+                        $multi_amount += round( (float) $tt['price'] * $qty, 2 );
+                    }
+                }
+                if ( empty( $multi_names ) ) {
+                    return new WP_Error( 'amount', 'Ticket type not found or not available.' );
+                }
+                $ticket_type = implode( ', ', $multi_names );
+                $quantity    = $multi_qty ?: $quantity;
+                $amount      = round( $multi_amount, 2 );
             } else {
                 // No ticket_type sent — only allow $0 free orders
                 $client_amount = (float) ( $post['amount'] ?? 0 );
-                if ( $ticket_type !== '' ) {
-                    return new WP_Error( 'amount', 'Ticket type not found or not available.' );
-                }
                 if ( $client_amount > 0 ) {
                     return new WP_Error( 'amount', 'Cannot process a paid order without a valid ticket type.' );
                 }
