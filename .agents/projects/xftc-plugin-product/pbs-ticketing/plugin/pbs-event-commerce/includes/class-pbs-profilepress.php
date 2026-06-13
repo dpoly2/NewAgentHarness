@@ -116,11 +116,8 @@ class PBS_ProfilePress {
     public static function maybe_grant_membership( int $order_id, array $order ): void {
         $event_id = (int) ( $order['event_id'] ?? 0 );
 
-        // Per-event plan takes priority; fall back to the global default
+        // Only grant if explicitly configured on the event; global default is "Do not grant"
         $plan_id = (int) get_post_meta( $event_id, '_pbs_pp_grant_plan', true );
-        if ( ! $plan_id ) {
-            $plan_id = (int) get_option( 'pbs_pp_default_grant_plan', 0 );
-        }
         if ( ! $plan_id ) return;
 
         // Match order to a WP user by email

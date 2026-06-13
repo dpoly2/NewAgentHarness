@@ -700,9 +700,8 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
             <?php endforeach; ?>
           </select>
           <p class="description">
-            Every ticket buyer will be automatically enrolled in this PP membership plan after a successful purchase.
-            Individual events can override this with their own "Grant Plan on Purchase" setting.
-            Set to <strong>Disabled</strong> to opt out globally.
+            Optionally enroll every ticket buyer into this PP membership plan after a successful purchase.
+            Defaults to <strong>Disabled</strong> — enrollment only happens when configured per-event.
           </p>
         </td>
       </tr>
