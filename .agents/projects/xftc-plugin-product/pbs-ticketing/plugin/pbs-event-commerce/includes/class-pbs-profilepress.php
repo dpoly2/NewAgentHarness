@@ -114,8 +114,13 @@ class PBS_ProfilePress {
      * @param array $order    Order row from pbs_orders table.
      */
     public static function maybe_grant_membership( int $order_id, array $order ): void {
-        $event_id  = (int) ( $order['event_id'] ?? 0 );
-        $plan_id   = (int) get_post_meta( $event_id, '_pbs_pp_grant_plan', true );
+        $event_id = (int) ( $order['event_id'] ?? 0 );
+
+        // Per-event plan takes priority; fall back to the global default
+        $plan_id = (int) get_post_meta( $event_id, '_pbs_pp_grant_plan', true );
+        if ( ! $plan_id ) {
+            $plan_id = (int) get_option( 'pbs_pp_default_grant_plan', 0 );
+        }
         if ( ! $plan_id ) return;
 
         // Match order to a WP user by email
@@ -277,7 +282,7 @@ class PBS_ProfilePress {
                         </option>
                     <?php endforeach; ?>
                 </select>
-                <p class="description">Automatically add ticket buyer to this PP plan.</p>
+                <p class="description">Override the global default, or set to "Do not grant" to skip enrollment for this event.</p>
             </td>
         </tr>
         <tr>

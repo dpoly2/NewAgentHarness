@@ -676,6 +676,41 @@ foreach ( [ 'pbs_stripe_oauth_notice' ] as $t_key ) {
   </div>
 </div>
 
+<?php if ( PBS_ProfilePress::profilepress_active() ) : ?>
+<div class="pbs-section-card" style="margin-top:20px">
+  <h2 class="pbs-section-title" style="padding:16px 20px 0;font-size:15px;font-weight:600;">ProfilePress Integration</h2>
+  <div class="pbs-section-body" style="padding:0 20px 20px">
+    <table class="form-table" style="margin-top:12px">
+      <tr>
+        <th style="width:220px">Default Auto-Enroll Plan</th>
+        <td>
+          <?php
+          $default_plan_id = (int) get_option( 'pbs_pp_default_grant_plan', 0 );
+          $all_plans       = PBS_ProfilePress::profilepress_active()
+              ? \ProfilePress\Core\Membership\Models\Plan\PlanFactory::get_plans()
+              : [];
+          ?>
+          <select name="pbs_pp_default_grant_plan">
+            <option value="0">— Disabled —</option>
+            <?php foreach ( $all_plans as $plan ) : ?>
+              <option value="<?php echo esc_attr( $plan->id ); ?>"
+                <?php selected( $default_plan_id, $plan->id ); ?>>
+                <?php echo esc_html( $plan->name ); ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+          <p class="description">
+            Every ticket buyer will be automatically enrolled in this PP membership plan after a successful purchase.
+            Individual events can override this with their own "Grant Plan on Purchase" setting.
+            Set to <strong>Disabled</strong> to opt out globally.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="pbs-save-bar">
   <?php submit_button( 'Save Settings', 'primary', 'submit', false ); ?>
   <span id="pbs-save-status" style="font-size:13px;color:#888;"></span>
