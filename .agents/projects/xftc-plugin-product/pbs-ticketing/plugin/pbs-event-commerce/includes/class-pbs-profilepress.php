@@ -370,38 +370,54 @@ class PBS_ProfilePress {
      * Calculate expiry date from a PP plan's billing period.
      */
     private static function plan_expiry( int $plan_id ): string {
-        if ( ! class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) ) {
-            return date( 'Y-m-d H:i:s', strtotime( '+1 year' ) );
+        if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) &&
+             method_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory', 'fromId' ) ) {
+            $plan = \ProfilePress\Core\Membership\Models\Plan\PlanFactory::fromId( $plan_id );
+            if ( $plan && ! empty( $plan->billing_frequency ) ) {
+                $freq = $plan->billing_frequency;
+                $map  = [
+                    'daily'    => '+1 day',
+                    'weekly'   => '+1 week',
+                    'monthly'  => '+1 month',
+                    'yearly'   => '+1 year',
+                    'lifetime' => '+100 years',
+                ];
+                $offset = $map[ $freq ] ?? '+1 year';
+                return date( 'Y-m-d H:i:s', strtotime( $offset ) );
+            }
         }
-        $plan = \ProfilePress\Core\Membership\Models\Plan\PlanFactory::fromId( $plan_id );
-        if ( ! $plan || ! $plan->billing_frequency ) {
-            return date( 'Y-m-d H:i:s', strtotime( '+1 year' ) );
-        }
-        $freq = $plan->billing_frequency;  // e.g. 'monthly', 'yearly', '3_months'
-        $map  = [
-            'daily'    => '+1 day',
-            'weekly'   => '+1 week',
-            'monthly'  => '+1 month',
-            'yearly'   => '+1 year',
-            'lifetime' => '+100 years',
-        ];
-        $offset = $map[ $freq ] ?? '+1 year';
-        return date( 'Y-m-d H:i:s', strtotime( $offset ) );
+        return date( 'Y-m-d H:i:s', strtotime( '+1 year' ) );
     }
 
     private static function get_all_plans(): array {
-        if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) ) {
+        // Try ProfilePress 4.x factory first, fall back to direct WP post query
+        if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) &&
+             method_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory', 'get_plans' ) ) {
             return \ProfilePress\Core\Membership\Models\Plan\PlanFactory::get_plans() ?: [];
         }
-        return [];
+
+        // Universal fallback: query the ppress_membership_plan post type directly
+        $posts = get_posts( [
+            'post_type'      => 'ppress_membership_plan',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+        ] );
+
+        return array_map( function( $post ) {
+            return (object) [ 'id' => $post->ID, 'name' => $post->post_title ];
+        }, $posts );
     }
 
     private static function get_plan_name( int $plan_id ): string {
-        if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) ) {
+        if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) &&
+             method_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory', 'fromId' ) ) {
             $plan = \ProfilePress\Core\Membership\Models\Plan\PlanFactory::fromId( $plan_id );
             return $plan->name ?? "Plan #{$plan_id}";
         }
-        return "Plan #{$plan_id}";
+        $post = get_post( $plan_id );
+        return $post ? $post->post_title : "Plan #{$plan_id}";
     }
 
     private static function get_plan_url( int $plan_id ): string {
