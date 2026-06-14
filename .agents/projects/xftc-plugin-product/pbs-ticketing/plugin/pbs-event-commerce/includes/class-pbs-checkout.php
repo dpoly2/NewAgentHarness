@@ -84,8 +84,7 @@ class PBS_Checkout {
         // Mark complete
         PBS_DB::update_order_status( $order_id, 'complete', $result['transaction_id'] ?? '' );
 
-        // Allow integrations (e.g. ProfilePress) to react to a completed order
-        $order = PBS_DB::get_order( $order_id );
+        // Fire order complete action for any registered hooks
         do_action( 'pbs_order_complete', $order_id, $order );
         PBS_Email::send_confirmation( $order );
 
@@ -253,7 +252,7 @@ class PBS_Checkout {
             }
         }
 
-        // Allow integrations (e.g. ProfilePress member discount) to adjust amount
+        // Allow filters to adjust the final amount
         $amount = (float) apply_filters( 'pbs_order_amount', $amount, $event_id, get_current_user_id() );
 
         return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
