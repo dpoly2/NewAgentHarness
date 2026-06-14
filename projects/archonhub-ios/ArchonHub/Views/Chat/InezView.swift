@@ -34,6 +34,7 @@ struct InezView: View {
     @State private var isThinking = false
     @State private var thinkingStep = ""
     @State private var errorMessage = ""
+    @State private var showMemory = false
 
     private let welcomeMessage = InezMessage(
         role: .inez,
@@ -91,6 +92,30 @@ struct InezView: View {
         .background(ArchonTheme.background.ignoresSafeArea())
         .navigationTitle("Inez")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showMemory = true
+                } label: {
+                    Image(systemName: "brain.head.profile")
+                        .foregroundStyle(Color(red: 0.77, green: 0.71, blue: 0.99))
+                }
+            }
+        }
+        .sheet(isPresented: $showMemory) {
+            NavigationStack {
+                InezMemoryView(conversationId: conversationId)
+                    .environmentObject(hubClient)
+                    .navigationTitle("Memory")
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showMemory = false }
+                        }
+                    }
+            }
+            .presentationDetents([.medium, .large])
+        }
         .task {
             if messages.isEmpty {
                 messages.append(welcomeMessage)

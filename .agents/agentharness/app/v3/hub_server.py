@@ -2436,6 +2436,75 @@ if FASTAPI_OK:
         return result
 
 
+    @app.get("/api/inez/memory")
+    async def inez_memory(
+        conversation_id: str | None = None,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Return all 3 memory buckets for the Inez Memory UI."""
+        del current_user
+        import json as _json
+        from inez_agent import INEZ_AGENT_ID
+
+        # ── Short-term: last 20 messages in the active conversation ──────────
+        short_term: list[dict] = []
+        if conversation_id:
+            rows = _list_records(
+                "messages",
+                where=["conversation_id = ?"],
+                params=[conversation_id],
+                order_by="created_at ASC",
+            ) or []
+            short_term = [
+                {"role": r.get("role", "user"), "content": r.get("content", ""), "created_at": r.get("created_at", "")}
+                for r in rows[-20:]
+            ]
+
+        # ── Saved Facts: key-value items in agent_memory (excluding exchange_ log entries) ──
+        raw_facts = db.get_memory(INEZ_AGENT_ID) or []
+        saved_facts = [
+            {"key": m["key"], "value": m["value"], "updated_at": m.get("updated_at", "")}
+            for m in raw_facts
+            if not m["key"].startswith("exchange_")
+        ]
+
+        # ── Daily Sessions: group conversations by date ───────────────────────
+        all_convs = _list_records("conversations", order_by="updated_at DESC") or []
+        sessions_by_date: dict[str, list[dict]] = {}
+        for conv in all_convs:
+            date_str = (conv.get("updated_at") or conv.get("created_at") or "")[:10]
+            if not date_str:
+                continue
+            sessions_by_date.setdefault(date_str, []).append({
+                "id": conv.get("id"),
+                "title": conv.get("title", "Conversation"),
+                "slug": conv.get("slug", ""),
+                "updated_at": conv.get("updated_at", ""),
+            })
+
+        daily_sessions = [
+            {"date": date, "conversations": convs, "count": len(convs)}
+            for date, convs in sorted(sessions_by_date.items(), reverse=True)
+        ]
+
+        return {
+            "short_term": short_term,
+            "saved_facts": saved_facts,
+            "daily_sessions": daily_sessions,
+        }
+
+    @app.delete("/api/inez/memory/facts/{key}")
+    async def delete_inez_fact(key: str, current_user: dict = Depends(get_current_user)):
+        """Delete a single saved fact from Inez's memory."""
+        del current_user
+        from inez_agent import INEZ_AGENT_ID
+        with db.get_conn() as conn:
+            conn.execute(
+                "DELETE FROM agent_memory WHERE agent_id = ? AND key = ?",
+                (INEZ_AGENT_ID, key),
+            )
+        return {"deleted": key}
+
     @app.get("/api/briefs")
     async def list_briefs(current_user: dict = Depends(get_current_user)):
         del current_user

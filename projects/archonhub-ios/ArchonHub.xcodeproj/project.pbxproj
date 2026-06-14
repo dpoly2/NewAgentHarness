@@ -38,6 +38,7 @@
 		8A0B2150C9C9EAC248CD0049 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 305A8750CEE988883F8995AB /* Assets.xcassets */; };
 		BF7E32859466AC6EB9016109 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */; };
 		0E90813CDDBB89B5B7371595 /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */; };
+		A5C832F1E7294B608DAF3210 /* InezMemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F86A0E2C491B57E0A5189D /* InezMemoryView.swift */; };
 		10460059F48D240AE12A2074 /* InezView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4308777EE7B32F1ED8C6B933 /* InezView.swift */; };
 /* End PBXBuildFile section */
 
@@ -72,6 +73,7 @@
 		210678DFA6E8EA42EDD5361C /* ArchonHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3845A7A36A05BA55463A2FD8 /* ArchonHubWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArchonHubWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		577226C4E43F46F2EAE50449 /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
+		D3F86A0E2C491B57E0A5189D /* InezMemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InezMemoryView.swift; sourceTree = "<group>"; };
 		4308777EE7B32F1ED8C6B933 /* InezView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InezView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -224,6 +226,7 @@
 			children = (
 				7C9C54540BA3996C6E2D263A,
 				4308777EE7B32F1ED8C6B933,
+				D3F86A0E2C491B57E0A5189D,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -421,6 +424,7 @@
 				CA18871BA0101C4DC4D56F13 /* BriefingView.swift in Sources */,
 				4BE17C377343CDC7D98DF51B /* ChatView.swift in Sources */,
 				10460059F48D240AE12A2074 /* InezView.swift in Sources */,
+				A5C832F1E7294B608DAF3210 /* InezMemoryView.swift in Sources */,
 				DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
