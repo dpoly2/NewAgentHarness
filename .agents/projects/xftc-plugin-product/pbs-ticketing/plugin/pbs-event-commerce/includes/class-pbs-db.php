@@ -8,12 +8,13 @@ class PBS_DB {
         $charset = $wpdb->get_charset_collate();
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-        // Orders table (v2: added checked_in, checked_in_at, promo_code, discount_amount)
+        // Orders table (v2: added checked_in, checked_in_at, promo_code, discount_amount; v3: added order_type)
         dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}pbs_orders (
             id              INT(11) NOT NULL AUTO_INCREMENT,
             order_number    VARCHAR(30)   NOT NULL,
             event_id        INT(11)       NOT NULL DEFAULT 0,
             ticket_type     VARCHAR(150)  NOT NULL DEFAULT '',
+            order_type      VARCHAR(20)   NOT NULL DEFAULT 'ticket',
             quantity        INT(5)        NOT NULL DEFAULT 1,
             amount          DECIMAL(10,2) NOT NULL DEFAULT 0.00,
             discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -31,8 +32,14 @@ class PBS_DB {
             PRIMARY KEY (id),
             KEY event_id (event_id),
             KEY status (status),
-            KEY attendee_email (attendee_email)
+            KEY attendee_email (attendee_email),
+            KEY order_type (order_type)
         ) $charset;");
+
+        // Live-site upgrade: add order_type if it is missing from an existing table
+        if ( ! array_key_exists( 'order_type', self::get_columns( "{$wpdb->prefix}pbs_orders" ) ) ) {
+            $wpdb->query( "ALTER TABLE {$wpdb->prefix}pbs_orders ADD COLUMN order_type VARCHAR(20) NOT NULL DEFAULT 'ticket' AFTER ticket_type" );
+        }
 
         // Attendees table
         dbDelta("CREATE TABLE IF NOT EXISTS {$wpdb->prefix}pbs_attendees (
@@ -119,6 +126,14 @@ class PBS_DB {
         ) $charset;");
 
         update_option( 'pbs_ec_db_version', PBS_EC_VERSION );
+    }
+
+    /** Return array of column names keyed by column name for a given table. */
+    private static function get_columns( string $table ): array {
+        global $wpdb;
+        $cols = $wpdb->get_results( "SHOW COLUMNS FROM `$table`", ARRAY_A );
+        if ( ! $cols ) return [];
+        return array_column( $cols, 'Field', 'Field' );
     }
 
     public static function generate_order_number() {

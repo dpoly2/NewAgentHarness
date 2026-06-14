@@ -23,7 +23,7 @@ class PBS_ProfilePress {
         add_action( 'pbs_order_complete', [ __CLASS__, 'maybe_grant_membership' ], 10, 2 );
 
         // 3. Apply member discount during server-side amount calculation
-        add_filter( 'pbs_order_amount', [ __CLASS__, 'apply_member_discount' ], 10, 3 );
+        add_filter( 'pbs_order_amount', [ __CLASS__, 'apply_member_discount' ], 10, 4 );
 
         // 4. Add "My Tickets" tab to PP member account page
         add_filter( 'ppress_myac_tabs', [ __CLASS__, 'add_tickets_tab' ] );
@@ -32,6 +32,9 @@ class PBS_ProfilePress {
         // 5. Admin: add PP fields to event meta box
         add_action( 'pbs_event_meta_box_fields', [ __CLASS__, 'admin_fields' ] );
         add_action( 'pbs_save_event_meta',        [ __CLASS__, 'save_admin_fields' ], 10, 2 );
+
+        // 6. Cron handler for deferred WP user + membership grant (outside AJAX lifecycle)
+        add_action( 'pbs_deferred_grant_membership', [ __CLASS__, 'deferred_grant_membership' ], 10, 2 );
     }
 
     // -------------------------------------------------------------------------
@@ -51,6 +54,12 @@ class PBS_ProfilePress {
      * @param int   $event_id
      */
     public static function widget_data( array $data, int $event_id ): array {
+        // Safety: this filter only makes sense in the ticket widget context, not donations.
+        // donate-widget.php does not apply this filter, but guard defensively in case it ever does.
+        if ( ! empty( $data['is_donation'] ) ) {
+            return $data;
+        }
+
         $required_plan_id = (int) get_post_meta( $event_id, '_pbs_pp_required_plan', true );
         $discount_pct     = (float) get_post_meta( $event_id, '_pbs_pp_member_discount', true );
 
@@ -114,6 +123,9 @@ class PBS_ProfilePress {
      * @param array $order    Order row from pbs_orders table.
      */
     public static function maybe_grant_membership( int $order_id, array $order ): void {
+        // Never grant PP membership for donation orders — donations are separate from membership.
+        if ( ( $order['order_type'] ?? 'ticket' ) === 'donation' ) return;
+
         $event_id = (int) ( $order['event_id'] ?? 0 );
 
         // Only grant if explicitly configured on the event; global default is "Do not grant"
@@ -122,24 +134,60 @@ class PBS_ProfilePress {
 
         // Match order to a WP user by email
         $user = get_user_by( 'email', $order['attendee_email'] ?? '' );
+        if ( $user ) {
+            // User already exists — check and grant synchronously (no user_register fires)
+            if ( self::user_has_plan( $user->ID, $plan_id ) ) return;
+            self::grant_plan( $user->ID, $plan_id, $order_id );
+        } else {
+            // No WP user yet — defer user creation + grant to the next cron tick so we
+            // are completely outside the active AJAX response. This prevents ProfilePress's
+            // user_register hooks (ppress_after_registration, ppress_user_registered) from
+            // firing inside the payment callback and corrupting the JSON response.
+            if ( ! wp_next_scheduled( 'pbs_deferred_grant_membership', [ $order_id, $plan_id ] ) ) {
+                wp_schedule_single_event( time(), 'pbs_deferred_grant_membership', [ $order_id, $plan_id ] );
+            }
+        }
+    }
+
+    /**
+     * Cron handler: runs on the next WP tick, safely outside any AJAX lifecycle.
+     * Creates the WP user (if still needed) and grants the PP membership plan.
+     */
+    public static function deferred_grant_membership( int $order_id, int $plan_id ): void {
+        $order = PBS_DB::get_order( $order_id );
+        if ( ! $order ) return;
+
+        $user = get_user_by( 'email', $order['attendee_email'] ?? '' );
         if ( ! $user ) {
-            // Create a WP user so PP can manage their membership
-            $username = sanitize_user( explode( '@', $order['attendee_email'] )[0], true );
-            $username = self::unique_username( $username );
-            $user_id  = wp_create_user( $username, wp_generate_password(), $order['attendee_email'] );
-            if ( is_wp_error( $user_id ) ) return;
+            // Now safe to create — we are in a cron context, not inside an AJAX response.
+            $base_username = sanitize_user( explode( '@', $order['attendee_email'] )[0], true );
+            $username      = self::unique_username( $base_username ?: 'user' );
+
+            // Temporarily unhook PP's user_register handlers to avoid registration
+            // emails / redirects being triggered for this programmatic account creation.
+            $pp_hooks = self::suspend_pp_registration_hooks();
+
+            $user_id = wp_create_user( $username, wp_generate_password(), $order['attendee_email'] );
+
+            self::restore_pp_registration_hooks( $pp_hooks );
+
+            if ( is_wp_error( $user_id ) ) {
+                error_log( "PBS_ProfilePress: wp_create_user failed for order #{$order_id}: " . $user_id->get_error_message() );
+                return;
+            }
+
             wp_update_user( [
                 'ID'           => $user_id,
                 'display_name' => $order['attendee_name'] ?? $username,
                 'first_name'   => self::first_name( $order['attendee_name'] ?? '' ),
                 'last_name'    => self::last_name( $order['attendee_name'] ?? '' ),
             ] );
+
             $user = get_user_by( 'id', $user_id );
         }
 
-        // Don't double-grant if they already have an active subscription to this plan
+        if ( ! $user ) return;
         if ( self::user_has_plan( $user->ID, $plan_id ) ) return;
-
         self::grant_plan( $user->ID, $plan_id, $order_id );
     }
 
@@ -149,14 +197,17 @@ class PBS_ProfilePress {
 
     /**
      * Reduce the order amount by the configured % discount for active PP members.
-     * Hooked to `pbs_order_amount` (must be fired in PBS_Checkout::sanitize_order_input).
+     * Hooked to `pbs_order_amount` (4 args: amount, event_id, user_id, is_donation).
      *
-     * @param float $amount    Calculated order amount.
+     * @param float $amount      Calculated order amount.
      * @param int   $event_id
-     * @param int   $user_id   0 if not logged in.
+     * @param int   $user_id     0 if not logged in.
+     * @param bool  $is_donation True for donation orders — discounts are never applied.
      * @return float
      */
-    public static function apply_member_discount( float $amount, int $event_id, int $user_id ): float {
+    public static function apply_member_discount( float $amount, int $event_id, int $user_id, bool $is_donation = false ): float {
+        // Never discount a charitable donation.
+        if ( $is_donation ) return $amount;
         if ( $amount <= 0 || ! $user_id ) return $amount;
 
         $discount_pct     = (float) get_post_meta( $event_id, '_pbs_pp_member_discount', true );
@@ -324,12 +375,17 @@ class PBS_ProfilePress {
         if ( ! $user_id || ! $plan_id ) return false;
 
         // ProfilePress 4.x API
-        if ( class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory' ) ) {
-            $subs = \ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory::get_subscriptions_by_user_id( $user_id );
-            foreach ( $subs as $sub ) {
-                if ( (int) $sub->plan_id === $plan_id && $sub->is_active() ) {
-                    return true;
+        if ( class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory' ) &&
+             method_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory', 'get_subscriptions_by_user_id' ) ) {
+            try {
+                $subs = \ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory::get_subscriptions_by_user_id( $user_id );
+                foreach ( (array) $subs as $sub ) {
+                    if ( (int) $sub->plan_id === $plan_id && method_exists( $sub, 'is_active' ) && $sub->is_active() ) {
+                        return true;
+                    }
                 }
+            } catch ( \Throwable $e ) {
+                error_log( 'PBS_ProfilePress::user_has_plan error: ' . $e->getMessage() );
             }
             return false;
         }
@@ -346,10 +402,21 @@ class PBS_ProfilePress {
      * Grant a PP plan to a user by creating a free active subscription.
      */
     private static function grant_plan( int $user_id, int $plan_id, int $pbs_order_id ): void {
-        if ( ! class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory' ) ) return;
+        if ( ! class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionFactory' ) ) {
+            error_log( "PBS_ProfilePress::grant_plan — SubscriptionFactory class not found (PP version incompatible?)." );
+            return;
+        }
+        if ( ! class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionEntity' ) ) {
+            error_log( "PBS_ProfilePress::grant_plan — SubscriptionEntity class not found." );
+            return;
+        }
+        if ( ! class_exists( '\ProfilePress\Core\Membership\Models\Subscription\SubscriptionStatus' ) ) {
+            error_log( "PBS_ProfilePress::grant_plan — SubscriptionStatus class not found." );
+            return;
+        }
 
         try {
-            $sub = new \ProfilePress\Core\Membership\Models\Subscription\SubscriptionEntity();
+            $sub             = new \ProfilePress\Core\Membership\Models\Subscription\SubscriptionEntity();
             $sub->plan_id    = $plan_id;
             $sub->user_id    = $user_id;
             $sub->status     = \ProfilePress\Core\Membership\Models\Subscription\SubscriptionStatus::ACTIVE;
@@ -361,7 +428,7 @@ class PBS_ProfilePress {
             if ( $sub_id ) {
                 update_metadata( 'ppress_subscriptions', $sub_id, 'pbs_order_id', $pbs_order_id );
             }
-        } catch ( \Exception $e ) {
+        } catch ( \Throwable $e ) {
             error_log( 'PBS_ProfilePress::grant_plan error: ' . $e->getMessage() );
         }
     }
@@ -372,24 +439,35 @@ class PBS_ProfilePress {
     private static function plan_expiry( int $plan_id ): string {
         if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) &&
              method_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory', 'fromId' ) ) {
-            $plan = \ProfilePress\Core\Membership\Models\Plan\PlanFactory::fromId( $plan_id );
-            if ( $plan && ! empty( $plan->billing_frequency ) ) {
-                $freq = $plan->billing_frequency;
-                $map  = [
-                    'daily'    => '+1 day',
-                    'weekly'   => '+1 week',
-                    'monthly'  => '+1 month',
-                    'yearly'   => '+1 year',
-                    'lifetime' => '+100 years',
-                ];
-                $offset = $map[ $freq ] ?? '+1 year';
-                return date( 'Y-m-d H:i:s', strtotime( $offset ) );
+            try {
+                $plan = \ProfilePress\Core\Membership\Models\Plan\PlanFactory::fromId( $plan_id );
+                if ( $plan && ! empty( $plan->billing_frequency ) ) {
+                    $freq = $plan->billing_frequency;
+                    $map  = [
+                        'daily'    => '+1 day',
+                        'weekly'   => '+1 week',
+                        'monthly'  => '+1 month',
+                        'yearly'   => '+1 year',
+                        'lifetime' => '+100 years',
+                    ];
+                    $offset = $map[ $freq ] ?? '+1 year';
+                    return date( 'Y-m-d H:i:s', strtotime( $offset ) );
+                }
+            } catch ( \Throwable $e ) {
+                error_log( 'PBS_ProfilePress::plan_expiry error: ' . $e->getMessage() );
             }
         }
         return date( 'Y-m-d H:i:s', strtotime( '+1 year' ) );
     }
 
     private static function get_all_plans(): array {
+        return self::get_all_plans_public();
+    }
+
+    /**
+     * Public wrapper — used by admin/views/settings.php which cannot call private methods.
+     */
+    public static function get_all_plans_public(): array {
         // Try ProfilePress 4.x factory first, fall back to direct WP post query
         if ( class_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory' ) &&
              method_exists( '\ProfilePress\Core\Membership\Models\Plan\PlanFactory', 'get_plans' ) ) {
@@ -425,6 +503,50 @@ class PBS_ProfilePress {
             return ppress_signup_url( $plan_id );
         }
         return home_url( '/register/' );
+    }
+
+    // -------------------------------------------------------------------------
+    // PP registration hook suppression helpers
+    // Used by deferred_grant_membership to prevent PP's user_register handlers
+    // from sending registration emails or firing redirects when we programmatically
+    // create a WP account for a ticket buyer.
+    // -------------------------------------------------------------------------
+
+    private static function suspend_pp_registration_hooks(): array {
+        global $wp_filter;
+        $hooks_to_suspend = [ 'user_register', 'profile_update', 'wp_new_user_notification_email' ];
+        $suspended        = [];
+
+        foreach ( $hooks_to_suspend as $hook ) {
+            if ( isset( $wp_filter[ $hook ] ) ) {
+                $suspended[ $hook ] = clone $wp_filter[ $hook ];
+                // Remove only callbacks that belong to ProfilePress (namespace \ProfilePress or class prefix ppress)
+                foreach ( $wp_filter[ $hook ]->callbacks as $priority => $callbacks ) {
+                    foreach ( $callbacks as $key => $cb ) {
+                        $func = $cb['function'];
+                        $is_pp = false;
+                        if ( is_array( $func ) ) {
+                            $class = is_object( $func[0] ) ? get_class( $func[0] ) : (string) $func[0];
+                            $is_pp = ( str_contains( $class, 'ProfilePress' ) || str_starts_with( strtolower( $class ), 'ppress' ) );
+                        } elseif ( is_string( $func ) ) {
+                            $is_pp = str_starts_with( strtolower( $func ), 'ppress' ) || str_contains( $func, 'ProfilePress' );
+                        }
+                        if ( $is_pp ) {
+                            unset( $wp_filter[ $hook ]->callbacks[ $priority ][ $key ] );
+                        }
+                    }
+                }
+            }
+        }
+
+        return $suspended;
+    }
+
+    private static function restore_pp_registration_hooks( array $suspended ): void {
+        global $wp_filter;
+        foreach ( $suspended as $hook => $filter_obj ) {
+            $wp_filter[ $hook ] = $filter_obj;
+        }
     }
 
     // -------------------------------------------------------------------------

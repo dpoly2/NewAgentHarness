@@ -29,6 +29,7 @@ class PBS_Checkout {
         $order_id = PBS_DB::insert_order( [
             'event_id'       => $data['event_id'],
             'ticket_type'    => $data['ticket_type'],
+            'order_type'     => $data['order_type'],
             'quantity'       => $data['quantity'],
             'amount'         => $data['amount'],
             'attendee_name'  => $data['name'],
@@ -252,9 +253,10 @@ class PBS_Checkout {
             }
         }
 
-        // Allow filters to adjust the final amount
-        $amount = (float) apply_filters( 'pbs_order_amount', $amount, $event_id, get_current_user_id() );
+        // Allow filters to adjust the final amount (skip for pure donations)
+        $amount = (float) apply_filters( 'pbs_order_amount', $amount, $event_id, get_current_user_id(), $is_donation );
 
-        return compact( 'event_id', 'ticket_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
+        $order_type = $is_donation ? 'donation' : 'ticket';
+        return compact( 'event_id', 'ticket_type', 'order_type', 'quantity', 'amount', 'name', 'email', 'phone', 'gateway', 'token', 'paypal_order_id' );
     }
 }
