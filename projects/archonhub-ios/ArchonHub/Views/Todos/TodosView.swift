@@ -189,7 +189,7 @@ struct TodoDetailSheet: View {
                                 Circle()
                                     .fill(ArchonTheme.priorityColor(todo.priority ?? "medium"))
                                     .frame(width: 8, height: 8)
-                                Text("\(todo.priority.capitalized) priority")
+                                Text("\((todo.priority ?? "medium").capitalized) priority")
                                     .font(.caption)
                                     .foregroundStyle(ArchonTheme.muted)
                                 if let project = todo.project {
