@@ -11,9 +11,24 @@ struct ContentView: View {
             }
 
             NavigationStack {
-                RunsView()
+                InezView()
             }
             .tabItem {
+                Label("Inez", systemImage: "crown.fill")
+            }
+            
+            NavigationStack{
+                ReportsView()
+            }
+            .tabItem{
+                
+                Label("Reports", systemImage: "newspaper.fill")
+            }
+            
+            NavigationStack {
+                RunsView()
+            }
+                .tabItem {
                 Label("Runs", systemImage: "play.circle.fill")
             }
 
@@ -25,10 +40,10 @@ struct ContentView: View {
             }
 
             NavigationStack {
-                InezView()
+                NotificationsView()
             }
             .tabItem {
-                Label("Inez", systemImage: "crown.fill")
+                Label("Notifications", systemImage: "bolt.fill")
             }
 
             NavigationStack {
