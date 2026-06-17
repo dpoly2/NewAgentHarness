@@ -95,7 +95,7 @@ struct TodosView: View {
                 }
                 Spacer()
                 Circle()
-                    .fill(ArchonTheme.priorityColor(todo.priority))
+                    .fill(ArchonTheme.priorityColor(todo.priority ?? "medium"))
                     .frame(width: 8, height: 8)
                     .padding(.top, 4)
             }
