@@ -116,7 +116,7 @@ struct ReportsView: View {
             // Full content (when expanded)
             if isExpanded && !report.content.isEmpty {
                 Divider()
-                    .background(ArchonTheme.border)
+                    .background(ArchonTheme.muted)
                 
                 ScrollView {
                     Text(report.content)
