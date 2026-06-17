@@ -80,6 +80,7 @@ BUILT_IN_JOBS = (
     ("markets_weekly_picks_digest",   "Markets Weekly Picks Digest",   {"day_of_week": "mon", "hour": 7,  "minute": 0},         "Markets weekly actionable picks"),
     ("markets_monthly_portfolio_review", "Markets Monthly P&L Review", {"day":  "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}, "Markets monthly portfolio review"),
     ("nightly_db_cleanup",            "Nightly DB Cleanup",            {"hour": 2,  "minute": 0},                               "Remove runs older than 90 days"),
+    ("nightly_db_backup",             "Nightly DB Backup",             {"hour": 3,  "minute": 0},                               "Export critical tables to JSON backup"),
 )
 BUILT_IN_JOB_IDS = {job_id for job_id, _, _, _ in BUILT_IN_JOBS}
 
@@ -301,6 +302,16 @@ async def job_nightly_db_cleanup(hub):
     logger.info("Nightly DB cleanup removed %s runs older than 90 days", deleted)
 
 
+async def job_nightly_db_backup(hub):
+    logger = get_logger("scheduler")
+    try:
+        from hub_backup import backup_all
+        backup_all()
+        _notify("Nightly DB backup completed", logger)
+    except Exception:
+        logger.exception("Nightly DB backup failed")
+
+
 async def job_markets_daily_premarket_brief(hub):
     logger = get_logger("scheduler")
     config = {
@@ -387,6 +398,7 @@ class HubScheduler:
             "markets_weekly_picks_digest":     (job_markets_weekly_picks_digest,        "Markets Weekly Picks Digest",   {"day_of_week": "mon", "hour": 7,  "minute": 0}),
             "markets_monthly_portfolio_review":(job_markets_monthly_portfolio_review,   "Markets Monthly P&L Review",    {"day": "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}),
             "nightly_db_cleanup":              (job_nightly_db_cleanup,                 "Nightly DB Cleanup",            {"hour": 2,  "minute": 0}),
+            "nightly_db_backup":               (job_nightly_db_backup,                  "Nightly DB Backup",             {"hour": 3,  "minute": 0}),
         }
 
         for job_id, (func, name, cron_kwargs) in job_specs.items():

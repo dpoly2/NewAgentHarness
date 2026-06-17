@@ -1870,7 +1870,13 @@ def create_client(
                 now,
             ),
         )
-    return get_client(client_id) or {}
+    result = get_client(client_id) or {}
+    try:
+        from hub_backup import backup_clients
+        backup_clients()
+    except Exception:
+        pass
+    return result
 
 
 def list_clients() -> list[dict[str, Any]]:
@@ -1925,13 +1931,26 @@ def update_client(id: str, **kwargs: Any) -> dict[str, Any] | None:
         cur = conn.execute(f"UPDATE clients SET {', '.join(assignments)} WHERE id = ?", params)
     if cur.rowcount == 0:
         return None
-    return get_client(id)
+    result = get_client(id)
+    try:
+        from hub_backup import backup_clients
+        backup_clients()
+    except Exception:
+        pass
+    return result
 
 
 def delete_client(id: str) -> bool:
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM clients WHERE id = ?", (id,))
-    return cur.rowcount > 0
+    deleted = cur.rowcount > 0
+    if deleted:
+        try:
+            from hub_backup import backup_clients
+            backup_clients()
+        except Exception:
+            pass
+    return deleted
 
 
 def create_conversation(id: str | None = None, slug: str = "global", title: str = "") -> dict[str, Any]:
