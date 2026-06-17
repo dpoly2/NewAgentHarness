@@ -17,8 +17,12 @@ final class ArchonHubComplication: NSObject, CLKComplicationDataSource {
     }
 
     func getCurrentTimelineEntry(for complication: CLKComplication, withHandler handler: @escaping (CLKComplicationTimelineEntry?) -> Void) {
+        guard let template = template(for: complication.family) else {
+            handler(nil)
+            return
+        }
         handler(
-            CLKComplicationTimelineEntry(date: .now, complicationTemplate: template(for: complication.family))
+            CLKComplicationTimelineEntry(date: .now, complicationTemplate: template)
         )
     }
 
