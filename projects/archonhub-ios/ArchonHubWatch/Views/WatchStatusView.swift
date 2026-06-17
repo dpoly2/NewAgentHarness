@@ -113,7 +113,6 @@ struct WatchInezSheet: View {
 
                 if response.isEmpty {
                     TextField("Ask Inez...", text: $draft)
-                        .textFieldStyle(.roundedBorder)
 
                     Button(isLoading ? "Sending..." : "Send") {
                         Task { await send() }
