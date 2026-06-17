@@ -126,7 +126,7 @@ struct Project: Codable, Identifiable, Hashable {
 }
 
 struct Notification: Codable, Identifiable, Hashable {
-    let id: String
+    let id: Int
     let text: String
     let color: String?
     let category: String?
