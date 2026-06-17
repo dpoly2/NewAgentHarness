@@ -148,9 +148,12 @@ struct ReportsView: View {
         defer { isLoading = false }
         
         do {
+            print("📊 Fetching reports from /api/reports")
             reports = try await HubClient.shared.get("/api/reports")
+            print("✅ Loaded \(reports.count) reports")
             errorMessage = ""
         } catch {
+            print("❌ Failed to load reports: \(error)")
             errorMessage = error.localizedDescription
         }
     }
