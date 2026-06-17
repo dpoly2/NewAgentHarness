@@ -131,6 +131,20 @@ struct Notification: Codable, Identifiable, Hashable {
     let read: Bool
 }
 
+struct Report: Codable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let reportType: String
+    let content: String
+    let summary: String
+    let projectSlug: String?
+    let generatedBy: String?
+    let jobId: String?
+    let status: String
+    let generatedAt: String?
+    let createdAt: String?
+}
+
 struct Conversation: Codable, Identifiable, Hashable {
     let id: String
     let title: String
