@@ -29,7 +29,7 @@ struct HealthResponse: Codable {
 }
 
 struct AgentRun: Codable, Identifiable, Hashable {
-    let id: String
+    let id: Int  // Changed from String - server returns integer
     let runId: String?
     let agentId: String
     let project: String
@@ -40,13 +40,16 @@ struct AgentRun: Codable, Identifiable, Hashable {
     let output: String?
     let status: String
     let createdAt: String?
+    
+    // Conform to Identifiable with String id
+    var stringId: String { "\(id)" }
 }
 
 struct Todo: Codable, Identifiable, Hashable {
     let id: String
     let title: String
     let description: String?
-    let priority: String
+    let priority: String?  // Changed to optional - can be null
     let status: String
     let project: String?
     let dueDate: String?
