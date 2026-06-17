@@ -100,9 +100,12 @@ struct RunsView: View {
         defer { isLoading = false }
 
         do {
+            print("📊 Fetching runs from /api/runs")
             runs = try await HubClient.shared.get("/api/runs")
+            print("✅ Loaded \(runs.count) runs")
             errorMessage = ""
         } catch {
+            print("❌ Failed to load runs: \(error)")
             errorMessage = error.localizedDescription
             runs = []
         }
