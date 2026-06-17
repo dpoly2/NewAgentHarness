@@ -137,6 +137,12 @@ final class HubClient: ObservableObject {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
+            // Debug: Print response for decoding errors
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("❌ Decoding error for \(path)")
+                print("Response: \(responseStr.prefix(500))")
+                print("Error: \(error)")
+            }
             throw APIError.decoding
         }
     }
@@ -156,6 +162,12 @@ final class HubClient: ObservableObject {
         do {
             return try decoder.decode(T.self, from: data)
         } catch {
+            // Debug: Print response for decoding errors
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("❌ Decoding error for \(path)")
+                print("Response: \(responseStr.prefix(500))")
+                print("Error: \(error)")
+            }
             throw APIError.decoding
         }
     }
