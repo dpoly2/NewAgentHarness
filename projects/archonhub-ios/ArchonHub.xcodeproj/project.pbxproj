@@ -39,6 +39,8 @@
 		DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74562AA2B1927210B2149F24 /* SettingsView.swift */; };
 		E0251FB89023F689673ECF09 /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D439B15E0985F3EF3D36496 /* AuthStore.swift */; };
 		E38D47BAF522846878516E8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5526FCF48A1460E9D18EF952 /* Assets.xcassets */; };
+		EFC7DAAD2FE2C37B00D19857 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */; };
+		EFC7DAAE2FE2C37B00D19857 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */; };
 		F2D4E85A1C7B3A0E9F6D2C4B /* ModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C3A94E7D2F1E0A5C8B9D3F /* ModelsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -75,6 +77,8 @@
 		CF194FE2B3D2B2B8B754465A /* AppSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSupport.swift; sourceTree = "<group>"; };
 		D3F86A0E2C491B57E0A5189D /* InezMemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InezMemoryView.swift; sourceTree = "<group>"; };
 		D54A64EC08732004634ACF0B /* AddTodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTodoView.swift; sourceTree = "<group>"; };
+		EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -128,6 +132,8 @@
 		227E806159E879CF9DC193A5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				EFC7DAAA2FE2C37A00D19857 /* Notifications */,
+				EFC7DAAC2FE2C37A00D19857 /* Reports */,
 				DC50F64AE7186DCF43AB953D /* Auth */,
 				1D3B0695D5AA359290EA3B11 /* Dashboard */,
 				1D24FA3173958EFFA9F25BAA /* Runs */,
@@ -301,6 +307,22 @@
 			name = "Recovered References";
 			sourceTree = "<group>";
 		};
+		EFC7DAAA2FE2C37A00D19857 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
+		EFC7DAAC2FE2C37A00D19857 /* Reports */ = {
+			isa = PBXGroup;
+			children = (
+				EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */,
+			);
+			path = Reports;
+			sourceTree = "<group>";
+		};
 		F1541DDF6DD1DAC85428703C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -416,6 +438,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A152C2D328D5FB926038097E /* AppSupport.swift in Sources */,
+				EFC7DAAD2FE2C37B00D19857 /* ReportsView.swift in Sources */,
+				EFC7DAAE2FE2C37B00D19857 /* NotificationsView.swift in Sources */,
 				DE0860AD24F14C273F8D2CF4 /* Models.swift in Sources */,
 				C83A00E881A28F12113974C2 /* HubClient.swift in Sources */,
 				E0251FB89023F689673ECF09 /* AuthStore.swift in Sources */,
