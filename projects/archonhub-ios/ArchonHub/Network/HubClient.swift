@@ -275,7 +275,15 @@ final class HubClient: ObservableObject {
             return nil
         }
 
-        components.path = path.hasPrefix("/") ? path : "/\(path)"
+        // Split path from query string so URLComponents doesn't percent-encode '?'
+        if let queryStart = path.firstIndex(of: "?") {
+            let pathPart = String(path[..<queryStart])
+            let queryPart = String(path[path.index(after: queryStart)...])
+            components.path = pathPart.hasPrefix("/") ? pathPart : "/\(pathPart)"
+            components.query = queryPart
+        } else {
+            components.path = path.hasPrefix("/") ? path : "/\(path)"
+        }
         return components.url
     }
 
