@@ -41,6 +41,7 @@ try:
         Depends,
         WebSocket,
         WebSocketDisconnect,
+        BackgroundTasks,
         status,
         Header,
         Query,
@@ -3185,12 +3186,22 @@ if FASTAPI_OK:
         current_user: dict = Depends(get_current_user),
     ):
         del current_user
-        return hub_db.list_reports(
+        return db.list_reports(
             report_type=report_type,
             project_slug=project_slug,
             job_id=job_id,
             limit=limit,
         )
+
+    @app.get("/api/reports/types/summary")
+    async def report_types_summary(current_user: dict = Depends(get_current_user)):
+        """Return count of reports per type for the Reports tab header."""
+        del current_user
+        with db.get_conn() as conn:
+            rows = conn.execute(
+                "SELECT report_type, COUNT(*) as cnt FROM reports GROUP BY report_type ORDER BY cnt DESC"
+            ).fetchall()
+        return [{"report_type": r["report_type"], "count": r["cnt"]} for r in rows]
 
     @app.get("/api/reports/{report_id}")
     async def get_report_endpoint(
@@ -3198,7 +3209,7 @@ if FASTAPI_OK:
         current_user: dict = Depends(get_current_user),
     ):
         del current_user
-        report = hub_db.get_report(report_id)
+        report = db.get_report(report_id)
         if not report:
             raise HTTPException(404, "Report not found")
         return report
@@ -3209,14 +3220,14 @@ if FASTAPI_OK:
         admin_user: dict = Depends(get_admin_user),
     ):
         del admin_user
-        if not hub_db.delete_report(report_id):
+        if not db.delete_report(report_id):
             raise HTTPException(404, "Report not found")
         return {"status": "deleted"}
 
     @app.post("/api/reports/run")
     async def run_report_endpoint(
         req: ReportRunRequest,
-        background_tasks,
+        background_tasks: BackgroundTasks,
         admin_user: dict = Depends(get_admin_user),
     ):
         """Manually trigger a report job immediately."""
@@ -3229,16 +3240,6 @@ if FASTAPI_OK:
                 logger.error("Manual report run failed: %s", exc)
         background_tasks.add_task(_run)
         return {"status": "queued", "job_id": req.job_id}
-
-    @app.get("/api/reports/types/summary")
-    async def report_types_summary(current_user: dict = Depends(get_current_user)):
-        """Return count of reports per type for the Reports tab header."""
-        del current_user
-        with hub_db.get_conn() as conn:
-            rows = conn.execute(
-                "SELECT report_type, COUNT(*) as cnt FROM reports GROUP BY report_type ORDER BY cnt DESC"
-            ).fetchall()
-        return [{"report_type": r["report_type"], "count": r["cnt"]} for r in rows]
 
     # ── Model Catalog ──────────────────────────────────────────────────────────
 
