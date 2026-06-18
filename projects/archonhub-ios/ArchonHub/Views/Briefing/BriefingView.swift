@@ -142,10 +142,11 @@ struct BriefingView: View {
         isGenerating = true
         defer { isGenerating = false }
         do {
-            print("✨ Generating new briefing...")
-            let _: DailyBrief = try await HubClient.shared.post("/api/briefing/generate", body: EmptyBody())
+            print("✨ Generating new briefing via /api/inez/brief...")
+            let brief: DailyBrief = try await HubClient.shared.get("/api/inez/brief")
             print("✅ Briefing generated successfully")
-            await loadBriefs()
+            briefs.insert(brief, at: 0)
+            errorMessage = ""
         } catch {
             print("❌ Failed to generate briefing: \(error)")
             errorMessage = error.localizedDescription
