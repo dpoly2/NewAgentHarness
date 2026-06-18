@@ -81,7 +81,8 @@ extension DailyBrief: Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
+        // Generate ID if not provided by server
+        id = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
         if let str = try? c.decode(String.self, forKey: .content) {
             content = str
