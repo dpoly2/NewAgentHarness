@@ -129,11 +129,13 @@ struct BriefingView: View {
         defer { isLoading = false }
         do {
             print("📋 Fetching briefings from /api/briefs")
-            briefs = try await HubClient.shared.get("/api/briefs")
+            let response: [DailyBrief]? = try await HubClient.shared.get("/api/briefs")
+            briefs = response ?? []
             print("✅ Loaded \(briefs.count) briefings")
             errorMessage = ""
         } catch {
             print("❌ Failed to load briefings: \(error)")
+            briefs = []
             errorMessage = error.localizedDescription
         }
     }
