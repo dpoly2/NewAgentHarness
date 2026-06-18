@@ -128,8 +128,8 @@ struct BriefingView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            print("📋 Fetching briefings from /api/briefing")
-            briefs = try await HubClient.shared.get("/api/briefing")
+            print("📋 Fetching briefings from /api/briefs")
+            briefs = try await HubClient.shared.get("/api/briefs")
             print("✅ Loaded \(briefs.count) briefings")
             errorMessage = ""
         } catch {
