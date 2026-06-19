@@ -41,6 +41,7 @@
 		E38D47BAF522846878516E8B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5526FCF48A1460E9D18EF952 /* Assets.xcassets */; };
 		EFC7DAAD2FE2C37B00D19857 /* ReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */; };
 		EFC7DAAE2FE2C37B00D19857 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */; };
+		CC5B43C28B294DA592101C46 /* DocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 350E96CBA9E748C989C262F9 /* DocumentsView.swift */; };
 		F2D4E85A1C7B3A0E9F6D2C4B /* ModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C3A94E7D2F1E0A5C8B9D3F /* ModelsView.swift */; };
 /* End PBXBuildFile section */
 
@@ -79,6 +80,7 @@
 		D54A64EC08732004634ACF0B /* AddTodoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTodoView.swift; sourceTree = "<group>"; };
 		EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
+		350E96CBA9E748C989C262F9 /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -134,6 +136,7 @@
 			children = (
 				EFC7DAAA2FE2C37A00D19857 /* Notifications */,
 				EFC7DAAC2FE2C37A00D19857 /* Reports */,
+				7646A0FD4CF04A109BD13F4C /* Documents */,
 				DC50F64AE7186DCF43AB953D /* Auth */,
 				1D3B0695D5AA359290EA3B11 /* Dashboard */,
 				1D24FA3173958EFFA9F25BAA /* Runs */,
@@ -323,6 +326,14 @@
 			path = Reports;
 			sourceTree = "<group>";
 		};
+		7646A0FD4CF04A109BD13F4C /* Documents */ = {
+			isa = PBXGroup;
+			children = (
+				350E96CBA9E748C989C262F9 /* DocumentsView.swift */,
+			);
+			path = Documents;
+			sourceTree = "<group>";
+		};
 		F1541DDF6DD1DAC85428703C /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -440,6 +451,7 @@
 				A152C2D328D5FB926038097E /* AppSupport.swift in Sources */,
 				EFC7DAAD2FE2C37B00D19857 /* ReportsView.swift in Sources */,
 				EFC7DAAE2FE2C37B00D19857 /* NotificationsView.swift in Sources */,
+				CC5B43C28B294DA592101C46 /* DocumentsView.swift in Sources */,
 				DE0860AD24F14C273F8D2CF4 /* Models.swift in Sources */,
 				C83A00E881A28F12113974C2 /* HubClient.swift in Sources */,
 				E0251FB89023F689673ECF09 /* AuthStore.swift in Sources */,
@@ -488,6 +500,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LF6WZV8K43;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
 				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ArchonHubComplication";
@@ -500,7 +513,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};
@@ -539,8 +552,10 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -579,6 +594,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = LF6WZV8K43;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHubWatch;
 				INFOPLIST_KEY_CLKComplicationPrincipalClass = "$(PRODUCT_MODULE_NAME).ArchonHubComplication";
@@ -591,7 +607,7 @@
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -657,9 +673,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				SDKROOT = watchos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};

@@ -128,9 +128,14 @@ struct BriefingView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            briefs = try await HubClient.shared.get("/api/briefs")
+            print("📋 Fetching briefings from /api/briefs")
+            let response: [DailyBrief]? = try await HubClient.shared.get("/api/briefs")
+            briefs = response ?? []
+            print("✅ Loaded \(briefs.count) briefings")
             errorMessage = ""
         } catch {
+            print("❌ Failed to load briefings: \(error)")
+            briefs = []
             errorMessage = error.localizedDescription
         }
     }
@@ -139,10 +144,13 @@ struct BriefingView: View {
         isGenerating = true
         defer { isGenerating = false }
         do {
-            let _: DailyBrief = try await HubClient.shared.get("/api/briefing")
-            await loadBriefs()
+            print("✨ Generating new briefing via /api/inez/brief...")
+            let brief: DailyBrief = try await HubClient.shared.get("/api/inez/brief")
+            print("✅ Briefing generated successfully")
+            briefs.insert(brief, at: 0)
+            errorMessage = ""
         } catch {
-            // Fall back silently — server may not have Inez module installed
+            print("❌ Failed to generate briefing: \(error)")
             errorMessage = error.localizedDescription
         }
     }

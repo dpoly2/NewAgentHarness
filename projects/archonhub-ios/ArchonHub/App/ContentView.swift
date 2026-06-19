@@ -52,6 +52,13 @@ struct ContentView: View {
             .tabItem {
                 Label("Briefing", systemImage: "newspaper.fill")
             }
+            
+            NavigationStack {
+                DocumentsView()
+            }
+            .tabItem {
+                Label("Documents", systemImage: "doc.text.fill")
+            }
 
             NavigationStack {
                 AutomationsView()

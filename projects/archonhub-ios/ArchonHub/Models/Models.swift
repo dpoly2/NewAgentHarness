@@ -81,7 +81,8 @@ extension DailyBrief: Codable {
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(String.self, forKey: .id)
+        // Generate ID if not provided by server
+        id = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
         createdAt = try c.decodeIfPresent(String.self, forKey: .createdAt)
         if let str = try? c.decode(String.self, forKey: .content) {
             content = str
@@ -146,6 +147,22 @@ struct Report: Codable, Identifiable, Hashable {
     let status: String
     let generatedAt: String?
     let createdAt: String?
+}
+
+struct Document: Codable, Identifiable {
+    let id: String
+    let title: String
+    let docType: String
+    let content: String
+    let format: String
+    let projectSlug: String?
+    let clientId: String?
+    let tags: [String]?
+    let createdBy: String?
+    let version: Int
+    let status: String
+    let createdAt: String
+    let updatedAt: String
 }
 
 struct Conversation: Codable, Identifiable, Hashable {
