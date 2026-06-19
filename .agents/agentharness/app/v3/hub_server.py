@@ -2436,6 +2436,23 @@ if FASTAPI_OK:
         )
         return result
 
+    @app.get("/api/inez/status")
+    async def inez_status(current_user: dict = Depends(get_current_user)):
+        """Return Inez's current awareness state for dashboard HUDs."""
+        del current_user
+        import asyncio
+        try:
+            from inez_agent import generate_status_report
+        except ImportError:
+            raise HTTPException(503, "Inez agent module not available")
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            hub._executor,
+            generate_status_report,
+        )
+        return result
+
 
     @app.get("/api/inez/memory")
     async def inez_memory(

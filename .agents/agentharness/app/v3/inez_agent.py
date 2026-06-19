@@ -54,6 +54,46 @@ except Exception:
 
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
+# ── David's Identity Profile — injected into every Inez prompt ───────────────
+DAVID_PROFILE = """
+OPERATOR IDENTITY PROFILE — David Smith
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Roles:
+  • HP Engineering Leader — Senior Network Engineer, Hewlett Packard Enterprise (primary income)
+  • Founder & Director — Smith Capital Portfolio (holding company, all ventures)
+  • Minister / Preacher — faith-based content, sermons, community leadership
+  • Creative Director — Night King brand (media, design, production)
+  • Head Coach / Athletic Director — XFTC (youth track club, WordPress + mobile app)
+
+Communication Style:
+  • Executive summary first — expand only when asked
+  • Strategic recommendations required — not just information
+  • Flag conflicts, risks, and deadlines proactively
+  • No preamble — get to the point in 10 seconds of spoken content
+  • Analyze → Recommend → Execute
+
+Current Missions (Priority Order):
+  1. ArchonHub — AI operating system, central intelligence build-out
+  2. HP Engineering — daily work, primary income source
+  3. XFTC — youth athletics, WordPress plugin + mobile app
+  4. S2T Designs — web/digital agency, 5 active clients
+  5. PBS Foundation — nonprofit, events + ticket fundraising
+  6. Ministry — sermon writing, faith content
+  7. SmithCap Finance — CFO, bookkeeping, portfolio finance
+  8. Markets — investment intelligence, options strategy
+  9. Nutrue Apparel — e-commerce brand build
+  10. Sigma Signal — newsletter + media publication
+
+Agent Command Network (Inez's team — code names David may use):
+  Atlas    → Research & Intelligence (grants-research-agent, markets-intelligence-desk)
+  Athena   → Strategy & Planning (markets-cio, finance-cfo)
+  Forge    → Development (xftc-plugin-dev, s2t-webdev-agent, xftc-frontend-dev)
+  Ledger   → Finance (finance-cfo, finance-bookkeeper, finance-tax-strategist)
+  Guardian → Legal & Compliance (business-law-project-lead, holdings-legal-agent)
+  Creator  → Design & Brand (nightking-design-agent, nutrue-brand-agent)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
 INEZ_FALLBACK = (
     "I'm Inez, Chief of Staff. I'm currently unable to connect to the AI engine. "
     "Please go to Admin → AI Provider, set your provider and API key, then save."
@@ -471,18 +511,74 @@ def _handle_trip_creation(user_message: str) -> str:
     )
 
 
+def _build_proactive_awareness() -> str:
+    """
+    Scan DB for items Inez should proactively surface:
+    - Urgent/high todos
+    - Todos with approaching due dates
+    - Clients with active blockers
+    Returns a formatted awareness block injected into every prompt.
+    """
+    if not DB_OK:
+        return ""
+    lines = []
+    try:
+        now_str = datetime.now().strftime("%Y-%m-%d")
+        urgent = [t for t in db.list_todos(status="pending")
+                  if t.get("priority") in ("urgent", "high")][:8]
+        if urgent:
+            lines.append("PRIORITY ITEMS NEEDING ATTENTION:")
+            for t in urgent:
+                due = f" [due {t.get('due_date')}]" if t.get("due_date") else ""
+                proj = f" ({t.get('project','')})" if t.get("project") else ""
+                lines.append(f"  [{t.get('priority','').upper()}] {t.get('title','')}{proj}{due}")
+    except Exception:
+        pass
+
+    try:
+        import calendar as _cal
+        from datetime import timedelta
+        week_out = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
+        due_soon = [t for t in db.list_todos(status="pending")
+                    if t.get("due_date") and t["due_date"] <= week_out][:5]
+        if due_soon:
+            lines.append("\nDUE THIS WEEK:")
+            for t in due_soon:
+                lines.append(f"  • {t.get('title','')} — due {t.get('due_date','')} ({t.get('project','')})")
+    except Exception:
+        pass
+
+    try:
+        recent_runs = db.list_runs(limit=5) if hasattr(db, "list_runs") else []
+        active = [r for r in recent_runs if r.get("status") == "running"]
+        if active:
+            lines.append(f"\nACTIVE AGENT RUNS ({len(active)}):")
+            for r in active[:3]:
+                lines.append(f"  • {r.get('agent_id','')} — {r.get('task','')[:80]}")
+    except Exception:
+        pass
+
+    return "\n".join(lines) if lines else ""
+
+
 def _build_system_prompt(history: list[dict]) -> str:
     """Build Inez's full system prompt with live context injected from DB."""
     skill = _load_skill()
     todos = _load_todos_context()
     memory = _load_memory_context()
     conv = _format_conversation_history(history)
+    awareness = _build_proactive_awareness()
 
     # Pull full portfolio context from DB (replaces file-based client roster)
     portfolio = _load_portfolio_context()
     client_roster = _load_client_roster() if not portfolio else ""
 
     full_memory = "\n\n".join(filter(None, [portfolio, client_roster, memory])) or "No prior memory."
+
+    awareness_block = (
+        f"\n\nPROACTIVE AWARENESS (items surfaced automatically — reference these when relevant):\n{awareness}"
+        if awareness else ""
+    )
 
     travel_tools_note = (
         "\n\nTRAVEL TOOLS: When the user asks to plan/create a trip or find hotels, "
@@ -498,7 +594,7 @@ def _build_system_prompt(history: list[dict]) -> str:
         .replace("{memory_context}", full_memory)
         .replace("{conversation_history}", conv)
     )
-    return base + travel_tools_note
+    return DAVID_PROFILE + "\n\n" + base + awareness_block + travel_tools_note
 
 
 def _normalize_agent_id(agent_id: str) -> str:
@@ -800,14 +896,18 @@ def think(
                 synthesis_context = build_synthesis_context(agent_results)
                 if synthesis_context:
                     if emit:
-                        emit("inez_thinking", message="Synthesizing agent results...")
+                        emit("inez_thinking", message="Synthesizing results...")
                     synth_messages = [
                         SystemMessage(content=system_prompt),
                         HumanMessage(content=(
                             f"Original request: {user_message}\n\n"
                             f"{synthesis_context}\n\n"
-                            "Now provide your final synthesized response to the user. "
-                            "Be concise and actionable. Reference what was saved to the database."
+                            "Provide your final synthesized response as Inez, Chief of Staff:\n"
+                            "1. One sentence of situational awareness (what happened, what it means)\n"
+                            "2. Key findings or outputs — be specific, name the things\n"
+                            "3. Your recommendation for next action\n"
+                            "Be concise. Lead with the most important thing. "
+                            "Reference what was saved to the database where relevant."
                         )),
                     ]
                     synth_response = model.invoke(synth_messages)
@@ -889,20 +989,28 @@ def think(
 
 def generate_morning_brief(history: list[dict] = None) -> dict:
     """
-    Generate a morning briefing for David.
+    Generate an Inez Chief of Staff morning briefing for David.
     Returns {"content": str, "error": str|None}
     """
     if not LLM_OK:
         return {"content": INEZ_FALLBACK, "error": "LLM not available"}
 
     system_prompt = _build_system_prompt(history or [])
+    now = datetime.now()
     brief_request = (
-        "Generate my morning briefing. Include:\n"
-        "1. One-sentence executive summary\n"
-        "2. What needs my immediate attention (max 3 items)\n"
-        "3. What agents are working on\n"
-        "4. Key items this week\n\n"
-        "Be direct and specific. Format as clean markdown."
+        f"Generate David's morning briefing for {now.strftime('%A, %B %d')}.\n\n"
+        "Respond as Inez, Chief of Staff — not a chatbot, not a list generator. "
+        "You already reviewed everything. Lead with awareness.\n\n"
+        "Format:\n"
+        "**Good morning, David.** [One sentence — what the operational picture looks like right now.]\n\n"
+        "**Priority Attention:**\n"
+        "1. [Specific item] — [your recommendation]\n"
+        "2. [Specific item] — [your recommendation]\n"
+        "3. [Specific item] — [your recommendation]\n\n"
+        "**Team Status:** [One sentence on what agents are executing or what's queued.]\n\n"
+        "**My Recommendation:** [Single clearest next action for David today.]\n\n"
+        "Pull from: urgent/high todos, approaching deadlines, active runs, client blockers. "
+        "Name specific things — project names, client names, due dates. No vague categories."
     )
 
     try:
@@ -916,6 +1024,48 @@ def generate_morning_brief(history: list[dict] = None) -> dict:
         return {"content": content, "error": None}
     except Exception as exc:
         return {"content": f"Unable to generate briefing: {exc}", "error": str(exc)}
+
+
+def generate_status_report() -> dict:
+    """
+    Generate Inez's current awareness state — used by the /api/inez/status endpoint.
+    Returns structured data for dashboard HUDs (iOS, Watch, Desktop).
+    """
+    awareness = _build_proactive_awareness()
+    todos_context = _load_todos_context()
+
+    urgent_count = 0
+    try:
+        urgent_count = len([t for t in db.list_todos(status="pending")
+                            if t.get("priority") in ("urgent", "high")])
+    except Exception:
+        pass
+
+    missions = []
+    try:
+        projects = db.list_projects()
+        mission_order = [
+            "archonhub", "xftc", "s2tdesigns", "pbs-foundation",
+            "ministry", "smithcap-finance", "markets", "nutrue", "sigma-signal",
+        ]
+        proj_map = {p.get("slug", ""): p for p in projects}
+        for slug in mission_order:
+            p = proj_map.get(slug)
+            if p:
+                missions.append({
+                    "name": p.get("name", slug),
+                    "slug": slug,
+                    "status": p.get("status", "active"),
+                })
+    except Exception:
+        pass
+
+    return {
+        "awareness": awareness or "All systems nominal.",
+        "urgent_count": urgent_count,
+        "missions": missions[:6],
+        "generated_at": datetime.now().isoformat(),
+    }
 
 
 def save_memory(key: str, value: str) -> None:

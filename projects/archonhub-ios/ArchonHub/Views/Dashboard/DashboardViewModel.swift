@@ -5,6 +5,7 @@ import Combine
 final class DashboardViewModel: ObservableObject {
     @Published var health: HealthResponse = .empty
     @Published var recentRuns: [AgentRun] = []
+    @Published var inezStatus: InezStatusResponse?
     @Published var isLoading = false
     @Published var errorMessage = ""
 
@@ -41,6 +42,11 @@ final class DashboardViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             recentRuns = []
+        }
+
+        // Load Inez status separately — non-fatal if Inez module not available
+        if let status = try? await HubClient.shared.get("/api/inez/status") as InezStatusResponse {
+            inezStatus = status
         }
     }
 }

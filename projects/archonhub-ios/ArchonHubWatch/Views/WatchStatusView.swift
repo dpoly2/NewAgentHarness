@@ -2,58 +2,106 @@ import SwiftUI
 
 struct WatchStatusView: View {
     @State private var health = HealthResponse.empty
+    @State private var inezAwareness = ""
+    @State private var inezUrgent = 0
     @State private var isOnline = false
     @State private var lastRefresh = Date.now
     @State private var errorMessage = ""
     @State private var showInezSheet = false
 
+    private let inezPurple = Color(red: 0.49, green: 0.23, blue: 0.93)
+    private let inezLavender = Color(red: 0.77, green: 0.71, blue: 0.99)
+
     var body: some View {
         ScrollView {
             VStack(spacing: 10) {
-                Text("ArchonHub")
-                    .font(.headline)
-                    .foregroundStyle(ArchonTheme.accent)
 
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(isOnline ? ArchonTheme.success : ArchonTheme.error)
-                        .frame(width: 10, height: 10)
-                    Text(isOnline ? "Hub Online" : "Hub Offline")
-                        .font(.caption)
+                // ── Inez Identity Header ──────────────────────────────
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .fill(inezPurple)
+                            .frame(width: 38, height: 38)
+                            .shadow(color: inezPurple.opacity(0.4), radius: 4)
+                        Text("👑")
+                            .font(.subheadline)
+                    }
+                    Text("INEZ")
+                        .font(.caption.weight(.bold))
+                        .tracking(1.5)
+                        .foregroundStyle(inezLavender)
+                    HStack(spacing: 5) {
+                        Circle()
+                            .fill(isOnline ? ArchonTheme.success : ArchonTheme.error)
+                            .frame(width: 6, height: 6)
+                        Text(isOnline ? "Active" : "Offline")
+                            .font(.system(size: 10))
+                            .foregroundStyle(isOnline ? ArchonTheme.success : ArchonTheme.muted)
+                    }
                 }
 
-                Text("▶ \(health.activeRuns) Runs")
-                    .font(.title3.bold())
-                Text("✓ \(health.pendingTodos) Todos")
-                    .font(.title3.bold())
-                if let model = health.llmModel {
-                    Text("⬡ \(model)")
-                        .font(.caption2)
-                        .foregroundStyle(ArchonTheme.accent)
+                // ── Awareness Line ────────────────────────────────────
+                if !inezAwareness.isEmpty {
+                    let firstLine = inezAwareness.components(separatedBy: "\n").first ?? inezAwareness
+                    Text(firstLine)
+                        .font(.system(size: 11))
+                        .foregroundStyle(ArchonTheme.text.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 6)
                 }
 
-                // Ask Inez button
+                // ── Mission Stats ─────────────────────────────────────
+                HStack(spacing: 14) {
+                    VStack(spacing: 3) {
+                        Text("\(health.activeRuns)")
+                            .font(.title3.bold())
+                            .foregroundStyle(inezUrgent > 0 ? ArchonTheme.error : ArchonTheme.text)
+                        Text("Runs")
+                            .font(.system(size: 9))
+                            .foregroundStyle(ArchonTheme.muted)
+                    }
+                    VStack(spacing: 3) {
+                        Text("\(health.pendingTodos)")
+                            .font(.title3.bold())
+                        Text("Todos")
+                            .font(.system(size: 9))
+                            .foregroundStyle(ArchonTheme.muted)
+                    }
+                    if inezUrgent > 0 {
+                        VStack(spacing: 3) {
+                            Text("\(inezUrgent)")
+                                .font(.title3.bold())
+                                .foregroundStyle(ArchonTheme.error)
+                            Text("Urgent")
+                                .font(.system(size: 9))
+                                .foregroundStyle(ArchonTheme.muted)
+                        }
+                    }
+                }
+
+                // ── Inez Button ───────────────────────────────────────
                 Button {
                     showInezSheet = true
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 5) {
                         Text("👑")
-                            .font(.caption)
-                        Text("Ask Inez")
+                            .font(.system(size: 11))
+                        Text("Talk to Inez")
                             .font(.caption.bold())
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color(red: 0.49, green: 0.23, blue: 0.93))
+                .tint(inezPurple)
                 .disabled(!isOnline)
 
-                Text("Updated \(lastRefresh.formatted(date: .omitted, time: .shortened))")
-                    .font(.caption2)
+                // ── Footer ─────────────────────────────────────────────
+                Text(lastRefresh.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 9))
                     .foregroundStyle(ArchonTheme.muted)
 
                 if !errorMessage.isEmpty {
                     Text(errorMessage)
-                        .font(.caption2)
+                        .font(.system(size: 9))
                         .foregroundStyle(ArchonTheme.error)
                         .multilineTextAlignment(.center)
                 }
@@ -63,6 +111,7 @@ struct WatchStatusView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(ArchonTheme.accent)
+                .font(.caption2)
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -90,6 +139,12 @@ struct WatchStatusView: View {
             isOnline = false
             errorMessage = error.localizedDescription
         }
+
+        // Load Inez awareness — non-fatal
+        if let status = try? await HubClient.shared.get("/api/inez/status") as InezStatusResponse {
+            inezAwareness = status.awareness
+            inezUrgent = status.urgentCount
+        }
     }
 }
 
@@ -101,6 +156,9 @@ struct WatchInezSheet: View {
     @State private var response = ""
     @State private var isLoading = false
 
+    private let inezPurple = Color(red: 0.49, green: 0.23, blue: 0.93)
+    private let inezLavender = Color(red: 0.77, green: 0.71, blue: 0.99)
+
     var body: some View {
         ScrollView {
             VStack(spacing: 10) {
@@ -108,7 +166,7 @@ struct WatchInezSheet: View {
                     Text("👑")
                     Text("Inez")
                         .font(.headline)
-                        .foregroundStyle(Color(red: 0.77, green: 0.71, blue: 0.99))
+                        .foregroundStyle(inezLavender)
                 }
 
                 if response.isEmpty {
@@ -118,7 +176,7 @@ struct WatchInezSheet: View {
                         Task { await send() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color(red: 0.49, green: 0.23, blue: 0.93))
+                    .tint(inezPurple)
                     .disabled(draft.isEmpty || isLoading)
                 } else {
                     Text(response)

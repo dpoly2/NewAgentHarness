@@ -186,6 +186,20 @@ struct InezDispatch: Codable, Identifiable, Hashable {
     let task: String?
 }
 
+struct InezMission: Codable, Identifiable, Hashable {
+    var id: String { slug }
+    let name: String
+    let slug: String
+    let status: String
+}
+
+struct InezStatusResponse: Codable {
+    let awareness: String
+    let urgentCount: Int
+    let missions: [InezMission]
+    let generatedAt: String?
+}
+
 struct InezChatResponse: Codable {
     let conversationId: String?
     let inezMessage: String
