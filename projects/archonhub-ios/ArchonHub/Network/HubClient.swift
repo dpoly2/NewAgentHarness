@@ -28,6 +28,8 @@ final class HubClient: ObservableObject {
     private init() {
         self.serverURL = UserDefaults.standard.string(forKey: Keys.serverURL) ?? "https://app.archonhub.app"
         self.token = KeychainWrapper.read(key: Keys.token) ?? ""
+        
+        print("🔑 HubClient initialized - Token: \(token.isEmpty ? "❌ EMPTY" : "✅ Present (\(token.prefix(20))...)")")
 
         Task {
             await checkHealth()
@@ -256,11 +258,13 @@ final class HubClient: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if requiresAuth, token.isEmpty {
+            print("🚫 No token available - requiresAuth: true for \(path)")
             throw APIError.server("Please log in to continue.")
         }
 
         if !token.isEmpty {
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            print("🔐 Request \(method) \(path) with token: \(token.prefix(20))...")
         }
 
         return request
