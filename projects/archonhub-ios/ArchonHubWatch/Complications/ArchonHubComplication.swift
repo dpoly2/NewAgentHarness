@@ -4,7 +4,7 @@ final class ArchonHubComplication: NSObject, CLKComplicationDataSource {
     func getComplicationDescriptors(handler: @escaping ([CLKComplicationDescriptor]) -> Void) {
         let descriptor = CLKComplicationDescriptor(
             identifier: "archonhub.complication",
-            displayName: "ArchonHub",
+            displayName: "Inez",
             supportedFamilies: supportedFamilies()
         )
         handler([descriptor])
@@ -49,7 +49,7 @@ final class ArchonHubComplication: NSObject, CLKComplicationDataSource {
     private func template(for family: CLKComplicationFamily) -> CLKComplicationTemplate? {
         let activeRuns = UserDefaults.standard.integer(forKey: "archonhub.complication.activeRuns")
         let pendingTodos = UserDefaults.standard.integer(forKey: "archonhub.complication.pendingTodos")
-        let summary = activeRuns > 0 ? "\(activeRuns) Runs" : "\(pendingTodos) Todos"
+        let summary = activeRuns > 0 ? "\(activeRuns)▶" : "\(pendingTodos)✓"
 
         switch family {
         case .circularSmall:
@@ -58,16 +58,16 @@ final class ArchonHubComplication: NSObject, CLKComplicationDataSource {
             )
         case .modularSmall:
             return CLKComplicationTemplateModularSmallStackText(
-                line1TextProvider: CLKSimpleTextProvider(text: "Archon"),
+                line1TextProvider: CLKSimpleTextProvider(text: "INEZ"),
                 line2TextProvider: CLKSimpleTextProvider(text: summary)
             )
         case .utilitarianSmall:
             return CLKComplicationTemplateUtilitarianSmallFlat(
-                textProvider: CLKSimpleTextProvider(text: summary)
+                textProvider: CLKSimpleTextProvider(text: "Inez · \(summary)")
             )
         case .graphicCircular:
             return CLKComplicationTemplateGraphicCircularStackText(
-                line1TextProvider: CLKSimpleTextProvider(text: "Hub"),
+                line1TextProvider: CLKSimpleTextProvider(text: "INEZ"),
                 line2TextProvider: CLKSimpleTextProvider(text: "\(activeRuns)")
             )
         default:

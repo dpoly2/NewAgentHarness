@@ -2056,6 +2056,19 @@ if FASTAPI_OK:
                 status_code=500,
             )
 
+    # ── Gmail aliases (same handlers, alternate path prefix) ──────────────
+    @app.get("/api/connectors/oauth/gmail/init")
+    async def gmail_oauth_init(
+        connector_id: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Alias for /google/init — Gmail connectors use this path."""
+        return await google_oauth_init(connector_id=connector_id, current_user=current_user)
+
+    @app.get("/api/connectors/oauth/gmail/callback")
+    async def gmail_oauth_callback(code: str, state: str):
+        """Alias for /google/callback — Gmail OAuth redirect may use this path."""
+        return await google_oauth_callback(code=code, state=state)
 
     @app.get("/api/connectors/oauth/microsoft/init")
     async def microsoft_oauth_init(

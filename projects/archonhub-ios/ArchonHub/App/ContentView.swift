@@ -50,7 +50,7 @@ struct ContentView: View {
                 BriefingView()
             }
             .tabItem {
-                Label("Briefing", systemImage: "newspaper.fill")
+                Label("Briefing", systemImage: "text.badge.star")
             }
             
             NavigationStack {

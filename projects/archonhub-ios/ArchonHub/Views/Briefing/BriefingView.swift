@@ -7,64 +7,118 @@ struct BriefingView: View {
     @State private var errorMessage = ""
     @State private var expandedId: String?
 
+    private let inezPurple = Color(red: 0.49, green: 0.23, blue: 0.93)
+    private let inezLavender = Color(red: 0.77, green: 0.71, blue: 0.99)
+
     private var latest: DailyBrief? { briefs.first }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                // Header
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Daily Briefing")
-                            .font(.largeTitle.bold())
-                        Text(latest.flatMap { ArchonDateFormatter.parse($0.createdAt) }
-                                .map { $0.formatted(date: .complete, time: .omitted) }
-                             ?? "No briefing yet")
-                            .font(.caption)
-                            .foregroundStyle(ArchonTheme.muted)
-                    }
-                    Spacer()
-                    HStack(spacing: 10) {
+                // ── Inez Briefing Header ──────────────────────────────────
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(inezPurple)
+                                .frame(width: 42, height: 42)
+                                .shadow(color: inezPurple.opacity(0.4), radius: 6)
+                            Text("👑")
+                                .font(.subheadline)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(spacing: 6) {
+                                Text("INEZ")
+                                    .font(.headline.weight(.bold))
+                                    .tracking(1.2)
+                                    .foregroundStyle(inezLavender)
+                                Text("·")
+                                    .foregroundStyle(ArchonTheme.muted)
+                                Text("Executive Briefing")
+                                    .font(.subheadline)
+                                    .foregroundStyle(ArchonTheme.muted)
+                            }
+                            Text(latest.flatMap { ArchonDateFormatter.parse($0.createdAt) }
+                                    .map { $0.formatted(date: .complete, time: .omitted) }
+                                 ?? "No briefing on file")
+                                .font(.caption)
+                                .foregroundStyle(ArchonTheme.muted)
+                        }
+                        Spacer()
                         if isGenerating {
-                            ProgressView().tint(ArchonTheme.accent)
+                            ProgressView().tint(inezPurple)
                         } else {
                             Button {
                                 Task { await generateBrief() }
                             } label: {
-                                Label("Generate", systemImage: "sparkles")
-                                    .font(.caption.bold())
+                                HStack(spacing: 4) {
+                                    Image(systemName: "sparkles")
+                                        .font(.caption2)
+                                    Text("Brief Me")
+                                        .font(.caption.bold())
+                                }
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Color(red: 0.49, green: 0.23, blue: 0.93))
+                            .tint(inezPurple)
                             .controlSize(.small)
-                        }
-                        Button { Task { await loadBriefs() } } label: {
-                            Image(systemName: "arrow.clockwise")
-                                .foregroundStyle(ArchonTheme.accent)
                         }
                     }
                 }
+                .padding(14)
+                .background(ArchonTheme.card)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(inezPurple.opacity(0.3), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-                // Latest brief
+                // ── Latest Brief ─────────────────────────────────────────
                 if isLoading && briefs.isEmpty {
                     ProgressView()
-                        .tint(ArchonTheme.accent)
+                        .tint(inezPurple)
                         .frame(maxWidth: .infinity)
                         .archonCard()
                 } else if let brief = latest {
                     briefCard(brief, isLatest: true)
                 } else {
-                    Text(errorMessage.isEmpty ? "No briefings yet. Tap Generate to create one." : errorMessage)
-                        .foregroundStyle(ArchonTheme.muted)
-                        .archonCard()
+                    VStack(spacing: 14) {
+                        Text("👑")
+                            .font(.title)
+                        Text(errorMessage.isEmpty
+                             ? "No briefing on file.\nAsk Inez to brief you on the current situation."
+                             : errorMessage)
+                            .foregroundStyle(ArchonTheme.muted)
+                            .multilineTextAlignment(.center)
+                        if errorMessage.isEmpty {
+                            Button {
+                                Task { await generateBrief() }
+                            } label: {
+                                Label("Generate Briefing", systemImage: "sparkles")
+                                    .font(.caption.bold())
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(inezPurple)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .archonCard()
                 }
 
-                // History
+                // ── History ───────────────────────────────────────────────
                 if briefs.count > 1 {
-                    Text("History")
-                        .font(.title3.bold())
-                        .padding(.top, 4)
+                    HStack {
+                        Text("PRIOR BRIEFINGS")
+                            .font(.caption.weight(.semibold))
+                            .tracking(1)
+                            .foregroundStyle(ArchonTheme.muted)
+                        Spacer()
+                        Button { Task { await loadBriefs() } } label: {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.caption)
+                                .foregroundStyle(ArchonTheme.muted)
+                        }
+                    }
 
                     ForEach(briefs.dropFirst(), id: \.id) { brief in
                         briefCard(brief, isLatest: false)
@@ -75,7 +129,7 @@ struct BriefingView: View {
         }
         .background(ArchonTheme.background.ignoresSafeArea())
         .foregroundStyle(ArchonTheme.text)
-        .navigationTitle("Briefing")
+        .navigationTitle("Inez Briefing")
         .task { if briefs.isEmpty { await loadBriefs() } }
         .refreshable { await loadBriefs() }
     }
@@ -84,10 +138,22 @@ struct BriefingView: View {
         let isExpanded = expandedId == brief.id || isLatest
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                if isLatest {
-                    Label("Today", systemImage: "sun.max.fill")
-                        .font(.caption.bold())
-                        .foregroundStyle(ArchonTheme.warning)
+                HStack(spacing: 6) {
+                    ZStack {
+                        Circle()
+                            .fill(isLatest ? inezPurple : inezPurple.opacity(0.5))
+                            .frame(width: 22, height: 22)
+                        Text("👑")
+                            .font(.system(size: 11))
+                    }
+                    Text("Inez")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(inezLavender)
+                    if isLatest {
+                        Text("· Latest")
+                            .font(.caption2)
+                            .foregroundStyle(ArchonTheme.success)
+                    }
                 }
                 Spacer()
                 Text(ArchonDateFormatter.relativeString(brief.createdAt))
@@ -114,7 +180,13 @@ struct BriefingView: View {
                 }
             }
         }
-        .archonCard(padding: 16)
+        .padding(16)
+        .background(ArchonTheme.card)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isLatest ? inezPurple.opacity(0.25) : ArchonTheme.muted.opacity(0.1), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onTapGesture {
             if !isLatest {
                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -128,13 +200,10 @@ struct BriefingView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            print("📋 Fetching briefings from /api/briefs")
             let response: [DailyBrief]? = try await HubClient.shared.get("/api/briefs")
             briefs = response ?? []
-            print("✅ Loaded \(briefs.count) briefings")
             errorMessage = ""
         } catch {
-            print("❌ Failed to load briefings: \(error)")
             briefs = []
             errorMessage = error.localizedDescription
         }
@@ -144,13 +213,11 @@ struct BriefingView: View {
         isGenerating = true
         defer { isGenerating = false }
         do {
-            print("✨ Generating new briefing via /api/inez/brief...")
             let brief: DailyBrief = try await HubClient.shared.get("/api/inez/brief")
-            print("✅ Briefing generated successfully")
             briefs.insert(brief, at: 0)
             errorMessage = ""
         } catch {
-            print("❌ Failed to generate briefing: \(error)")
+            // Fall back silently — server may not have Inez module installed
             errorMessage = error.localizedDescription
         }
     }
@@ -160,3 +227,4 @@ struct BriefingView: View {
     NavigationStack { BriefingView() }
         .preferredColorScheme(.dark)
 }
+
