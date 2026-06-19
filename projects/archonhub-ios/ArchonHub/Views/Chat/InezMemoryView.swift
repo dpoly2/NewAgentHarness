@@ -6,12 +6,6 @@ struct InezMemoryResponse: Codable {
     let shortTerm: [ShortTermMessage]
     var savedFacts: [SavedFact]
     let dailySessions: [DailySession]
-
-    enum CodingKeys: String, CodingKey {
-        case shortTerm = "short_term"
-        case savedFacts = "saved_facts"
-        case dailySessions = "daily_sessions"
-    }
 }
 
 struct ShortTermMessage: Codable, Identifiable {
@@ -19,11 +13,6 @@ struct ShortTermMessage: Codable, Identifiable {
     let role: String
     let content: String
     let createdAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case role, content
-        case createdAt = "created_at"
-    }
 }
 
 struct SavedFact: Codable, Identifiable {
@@ -31,11 +20,6 @@ struct SavedFact: Codable, Identifiable {
     let key: String
     let value: String
     let updatedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case key, value
-        case updatedAt = "updated_at"
-    }
 }
 
 struct DailySession: Codable, Identifiable {
@@ -50,11 +34,6 @@ struct SessionConversation: Codable, Identifiable {
     let title: String
     let slug: String
     let updatedAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case id, title, slug
-        case updatedAt = "updated_at"
-    }
 }
 
 // MARK: - Main View
@@ -315,14 +294,34 @@ struct InezMemoryView: View {
     private func loadMemory() async {
         isLoading = true
         errorMessage = ""
+        
+        var path = "/api/inez/memory"
+        if let cid = conversationId, !cid.isEmpty {
+            path += "?conversation_id=\(cid)"
+        }
+        
         do {
-            var path = "/api/inez/memory"
-            if let cid = conversationId, !cid.isEmpty {
-                path += "?conversation_id=\(cid)"
-            }
+            print("🧠 Fetching Inez memory from \(path)")
             let result: InezMemoryResponse = try await hubClient.get(path)
             memory = result
+            print("✅ Loaded Inez memory: \(result.shortTerm.count) messages, \(result.savedFacts.count) facts, \(result.dailySessions.count) sessions")
+        } catch let error as DecodingError {
+            print("❌ Decoding error for \(path)")
+            switch error {
+            case .keyNotFound(let key, let context):
+                print("Missing key '\(key.stringValue)': \(context.debugDescription)")
+            case .valueNotFound(let type, let context):
+                print("Missing value of type \(type): \(context.debugDescription)")
+            case .typeMismatch(let type, let context):
+                print("Type mismatch for type \(type): \(context.debugDescription)")
+            case .dataCorrupted(let context):
+                print("Data corrupted: \(context.debugDescription)")
+            @unknown default:
+                print("Unknown decoding error: \(error)")
+            }
+            errorMessage = "Could not decode server response: \(error.localizedDescription)"
         } catch {
+            print("❌ Failed to load memory: \(error)")
             errorMessage = "Could not load memory: \(error.localizedDescription)"
         }
         isLoading = false

@@ -149,6 +149,22 @@ struct Report: Codable, Identifiable, Hashable {
     let createdAt: String?
 }
 
+struct Document: Codable, Identifiable {
+    let id: String
+    let title: String
+    let docType: String
+    let content: String
+    let format: String
+    let projectSlug: String?
+    let clientId: String?
+    let tags: [String]?
+    let createdBy: String?
+    let version: Int
+    let status: String
+    let createdAt: String
+    let updatedAt: String
+}
+
 struct Conversation: Codable, Identifiable, Hashable {
     let id: String
     let title: String
