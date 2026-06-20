@@ -2834,6 +2834,8 @@ class ArchonHubApp:
                     self._ui_queue.put(("toast", f"Device code failed: {exc}", ERROR))
 
         threading.Thread(target=_poll, daemon=True).start()
+
+    def _start_oauth_flow(self, connector_id: str, provider: str):
         """Call hub server to get OAuth URL, open browser, then poll for completion."""
         import urllib.request as _ur
         import json as _json
@@ -2842,7 +2844,6 @@ class ArchonHubApp:
             try:
                 # Fetch auth URL from hub server (requires server running on 8765)
                 url = f"http://localhost:8765/api/connectors/oauth/{provider}/init?connector_id={connector_id}"
-                # We need an auth header — re-use saved token if available
                 req = _ur.Request(url, headers={"Accept": "application/json"})
                 token = getattr(self, "_hub_token", None)
                 if token:
