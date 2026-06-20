@@ -1987,12 +1987,8 @@ if FASTAPI_OK:
     # ── OAuth endpoints ───────────────────────────────────────────────────────
 
     @app.get("/api/connectors/oauth/google/init")
-    async def google_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
-        """Return Google OAuth2 authorization URL for a connector."""
-        del current_user
+    async def google_oauth_init(connector_id: str):
+        """Return Google OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
         connector = hub_db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")
@@ -2058,12 +2054,9 @@ if FASTAPI_OK:
 
     # ── Gmail aliases (same handlers, alternate path prefix) ──────────────
     @app.get("/api/connectors/oauth/gmail/init")
-    async def gmail_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
+    async def gmail_oauth_init(connector_id: str):
         """Alias for /google/init — Gmail connectors use this path."""
-        return await google_oauth_init(connector_id=connector_id, current_user=current_user)
+        return await google_oauth_init(connector_id=connector_id)
 
     @app.get("/api/connectors/oauth/gmail/callback")
     async def gmail_oauth_callback(code: str, state: str):
@@ -2071,12 +2064,8 @@ if FASTAPI_OK:
         return await google_oauth_callback(code=code, state=state)
 
     @app.get("/api/connectors/oauth/microsoft/init")
-    async def microsoft_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
-        """Return Microsoft OAuth2 authorization URL for a connector."""
-        del current_user
+    async def microsoft_oauth_init(connector_id: str):
+        """Return Microsoft OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
         connector = hub_db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")

@@ -612,13 +612,21 @@ _pending_states: dict[str, dict] = {}  # state → {verifier, connector_id, prov
 
 def store_pending_state(state: str, connector_id: str, provider: str,
                         verifier: str = "") -> None:
-    _pending_states[state] = {
+    entry = {
         "connector_id": connector_id,
         "provider":     provider,
         "verifier":     verifier,
         "ts":           time.time(),
     }
-    # Purge stale states (>10 min)
+    # DB-backed storage — survives across process boundaries (desktop ↔ hub server)
+    try:
+        import hub_db
+        hub_db.set_config(f"oauth_state_{state}", entry)
+    except Exception:
+        pass
+    # Also keep in-memory as fallback
+    _pending_states[state] = entry
+    # Purge stale in-memory states (>10 min)
     cutoff = time.time() - 600
     for s in list(_pending_states):
         if _pending_states[s]["ts"] < cutoff:
@@ -626,6 +634,17 @@ def store_pending_state(state: str, connector_id: str, provider: str,
 
 
 def consume_pending_state(state: str) -> dict | None:
+    # Try DB-backed storage first (handles cross-process case)
+    try:
+        import hub_db
+        raw = hub_db.get_config(f"oauth_state_{state}")
+        if raw and isinstance(raw, dict) and raw.get("connector_id"):
+            hub_db.set_config(f"oauth_state_{state}", None)  # mark consumed
+            _pending_states.pop(state, None)
+            return raw
+    except Exception:
+        pass
+    # Fall back to in-memory (same-process case)
     return _pending_states.pop(state, None)
 
 
