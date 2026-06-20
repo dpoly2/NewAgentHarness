@@ -123,8 +123,13 @@ def _creds_from_db(connector_id: str) -> dict:
         c = hub_db.get_connector(connector_id)
         if not c:
             return {}
-        raw = c.get("credentials", "{}")
-        return json.loads(raw) if isinstance(raw, str) else (raw or {})
+        raw = c.get("credentials", {})
+        # hub_db auto-parses JSON fields — raw may already be a dict
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, str) and raw:
+            return json.loads(raw)
+        return {}
     except Exception:
         return {}
 

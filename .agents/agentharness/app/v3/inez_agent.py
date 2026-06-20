@@ -565,8 +565,58 @@ def _load_email_awareness() -> str:
         return ""
 
 
+def _pick_connector(user_message: str) -> "dict | None":
+    """
+    Pick the best matching active connector for a user message.
+    Priority:
+      1. Connector whose email_address or label matches keywords in the message
+      2. Connector labelled 'personal', 'primary', 'main', or containing the user's name
+      3. First active connector (fallback)
+    """
+    if not DB_OK:
+        return None
+    try:
+        connectors = [c for c in db.list_connectors() if c.get("status") == "active"]
+    except Exception:
+        return None
+    if not connectors:
+        return None
+    if len(connectors) == 1:
+        return connectors[0]
+
+    msg_lower = user_message.lower()
+
+    # Step 1: direct mention of email address or label
+    for c in connectors:
+        addr = (c.get("email_address", "") or "").lower()
+        label = (c.get("label", "") or "").lower()
+        if addr and addr in msg_lower:
+            return c
+        if label and label in msg_lower:
+            return c
+    # Step 1b: partial label words (e.g. "sigma", "gulf", "personal")
+    for c in connectors:
+        label = (c.get("label", "") or "").lower()
+        for word in label.split():
+            if len(word) > 3 and word in msg_lower:
+                return c
+
+    # Step 2: prefer connectors labelled as primary/personal
+    _primary_hints = ("personal", "primary", "main", "david", "smith")
+    for hint in _primary_hints:
+        for c in connectors:
+            label = (c.get("label", "") or "").lower()
+            addr = (c.get("email_address", "") or "").lower()
+            if hint in label or hint in addr:
+                return c
+
+    # Step 3: fallback — first active
+    return connectors[0]
+
+
+# Keep old name as alias for callers that don't have a message
 def _get_active_connector() -> "dict | None":
-    """Return the first active email connector."""
+    """Return first active connector (use _pick_connector for context-aware selection)."""
     if not DB_OK:
         return None
     try:
@@ -587,6 +637,7 @@ def _fetch_inbox_context(connector: dict, limit: int = 15) -> str:
     import json as _json
 
     email_addr = connector.get("email_address", "") or connector.get("username", "")
+    label = connector.get("label", "") or email_addr
     auth_type = connector.get("auth_type", "password")
     imap_host = connector.get("imap_host", "")
     imap_port = int(connector.get("imap_port", 993) or 993)
@@ -639,7 +690,7 @@ def _fetch_inbox_context(connector: dict, limit: int = 15) -> str:
         recent_ids = all_ids[-limit:] if len(all_ids) >= limit else all_ids
 
         lines = [
-            f"[EMAIL INBOX — {email_addr}]",
+            f"[EMAIL INBOX — {label} <{email_addr}>]",
             f"Total messages: {len(all_ids)}  |  Unread: {len(unread_ids)}",
             "",
         ]
@@ -1117,10 +1168,11 @@ def think(
     email_read_data = ""
     if _is_email_read_request(user_message):
         try:
-            connector = _get_active_connector()
+            connector = _pick_connector(user_message)
             if connector:
+                label = connector.get("label", "") or connector.get("email_address", "")
                 if emit:
-                    emit("inez_thinking", message=f"Fetching inbox for {connector.get('email_address','your account')}...")
+                    emit("inez_thinking", message=f"Fetching inbox for {label}...")
                 email_read_data = _fetch_inbox_context(connector, limit=20)
             else:
                 email_read_data = "[EMAIL TOOL] No active email accounts connected. Go to Connector tab to add one."
@@ -1131,7 +1183,7 @@ def think(
     email_send_data = ""
     if _is_email_send_request(user_message):
         try:
-            connector = _get_active_connector()
+            connector = _pick_connector(user_message)
             if connector:
                 params = _extract_email_send_params(user_message)
                 if params.get("to") and params.get("subject") and params.get("body"):
