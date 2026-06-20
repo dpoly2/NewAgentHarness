@@ -882,6 +882,8 @@ class ArchonHubApp:
             elif kind == "refresh_connectors":
                 if self._widget_ok("connectors_tree"):
                     self._refresh_connectors()
+            elif kind == "device_code_dialog":
+                self._device_code_dialog(item[1], item[2], item[3])
             elif kind == "refresh_users":
                 if self._widget_ok("users_tree"):
                     self._refresh_users()
@@ -2549,27 +2551,52 @@ class ArchonHubApp:
         if preset["oauth"]:
             # ── OAuth2 mode ──────────────────────────────────────────────
             provider_name = "Google" if provider == "gmail" else "Microsoft"
-            note = (
-                f"Authorize ArchonHub to access your {provider_name} account via OAuth2.\n"
-                f"You need a {'Google Cloud' if provider == 'gmail' else 'Azure App'} Client ID & Secret."
-            )
-            tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
-                     wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
-
-            for lbl, key in [("Client ID *", "oauth_client_id"), ("Client Secret *", "oauth_client_secret")]:
-                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
-                show = "*" if "secret" in key else None
-                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
-
-            # Help link
+            console_name  = "Google Cloud Console" if provider == "gmail" else "Azure App Registration"
             help_url = (
                 "https://console.cloud.google.com/apis/credentials"
                 if provider == "gmail"
                 else "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps"
             )
-            lnk = tk.Label(f, text=f"📋 Open {provider_name} Console →", bg=BG_PANEL,
-                           fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
-            lnk.pack(anchor="w", pady=(4, 0))
+            note = (
+                f"One {console_name} app works for ALL your {provider_name} accounts.\n"
+                f"Create credentials once — then add as many emails as you like."
+            )
+            tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
+                     wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
+
+            # Auto-load saved defaults
+            saved_id  = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
+            saved_sec = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
+            if saved_id and not self._connector_vars["oauth_client_id"].get():
+                self._connector_vars["oauth_client_id"].set(saved_id)
+            if saved_sec and not self._connector_vars["oauth_client_secret"].get():
+                self._connector_vars["oauth_client_secret"].set(saved_sec)
+
+            if saved_id:
+                saved_row = tk.Frame(f, bg=BG_PANEL)
+                saved_row.pack(fill="x", pady=(0, 4))
+                tk.Label(saved_row, text=f"✅ Using saved {provider_name} credentials",
+                         bg=BG_PANEL, fg=SUCCESS, font=("Segoe UI", 9)).pack(side="left")
+                clr = tk.Label(saved_row, text="  🔄 Change", bg=BG_PANEL,
+                               fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
+                clr.pack(side="left")
+                clr.bind("<Button-1>", lambda _e, p=provider: self._clear_oauth_defaults(p))
+
+            # Credential fields
+            secret_lbl = "Client Secret *" if provider == "gmail" else "Client Secret (optional)"
+            for lbl, key in [("Client ID *", "oauth_client_id"), (secret_lbl, "oauth_client_secret")]:
+                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
+                show = "*" if "secret" in key else None
+                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
+
+            # Save-as-defaults + console link row
+            btn_row = tk.Frame(f, bg=BG_PANEL)
+            btn_row.pack(fill="x", pady=(6, 0))
+            self._button(btn_row, "💾 Save as defaults",
+                         lambda p=provider: self._save_oauth_defaults(p)).pack(side="left")
+            lnk = tk.Label(btn_row, text=f"📋 {provider_name} Console →",
+                           bg=BG_PANEL, fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
+            lnk.pack(side="right")
             lnk.bind("<Button-1>", lambda _e: webbrowser.open(help_url))
 
             redirect_note = tk.Label(
@@ -2577,12 +2604,18 @@ class ArchonHubApp:
                 text=f"Redirect URI:  http://localhost:8765/api/connectors/oauth/{provider}/callback",
                 bg=BG_PANEL, fg="#6b7a99", font=("Segoe UI", 8),
             )
-            redirect_note.pack(anchor="w", pady=(2, 8))
+            redirect_note.pack(anchor="w", pady=(4, 8))
 
             # Authorize button
-            btn_label = f"🔐 Authorize with {provider_name}"
-            self._button(self._connector_add_btn_frame, btn_label,
-                         lambda p=provider: self._create_and_authorize(p), accent=True).pack(fill="x")
+            self._button(self._connector_add_btn_frame,
+                         f"🔐 Authorize with {provider_name}",
+                         lambda p=provider: self._create_and_authorize(p),
+                         accent=True).pack(fill="x", pady=(0, 4))
+
+            if provider == "outlook":
+                self._button(self._connector_add_btn_frame,
+                             "🖥 Device Code (no browser redirect)",
+                             self._start_device_code_flow).pack(fill="x")
 
         else:
             # ── Password mode ────────────────────────────────────────────
@@ -2606,8 +2639,17 @@ class ArchonHubApp:
         if not data["label"] or not data["email_address"]:
             self.show_toast("Label and email are required.", WARNING)
             return
-        if not data["oauth_client_id"] or not data["oauth_client_secret"]:
-            self.show_toast("Client ID and Client Secret are required for OAuth.", WARNING)
+
+        # Fall back to saved defaults if fields are empty
+        if not data["oauth_client_id"]:
+            data["oauth_client_id"]     = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
+            data["oauth_client_secret"] = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
+
+        if not data["oauth_client_id"]:
+            self.show_toast("Client ID is required.", WARNING)
+            return
+        if provider == "gmail" and not data["oauth_client_secret"]:
+            self.show_toast("Client Secret is required for Gmail.", WARNING)
             return
 
         preset = self._PROVIDER_PRESETS.get(provider, {})
@@ -2654,7 +2696,144 @@ class ArchonHubApp:
         self._refresh_connectors()
         self.show_toast("Connector added.", SUCCESS)
 
-    def _start_oauth_flow(self, connector_id: str, provider: str):
+    # ── OAuth credential helpers ───────────────────────────────────────────────
+
+    def _save_oauth_defaults(self, provider: str):
+        """Persist current Client ID/Secret to hub_config for reuse across accounts."""
+        client_id  = self._connector_vars["oauth_client_id"].get().strip()
+        client_sec = self._connector_vars["oauth_client_secret"].get().strip()
+        if not client_id:
+            self.show_toast("Enter a Client ID first.", WARNING)
+            return
+        hub_db.set_config(f"oauth_{provider}_client_id", client_id)
+        hub_db.set_config(f"oauth_{provider}_client_secret", client_sec)
+        self.show_toast(f"✅ {provider.title()} credentials saved — will auto-fill for future accounts.", SUCCESS)
+        self._rebuild_connector_form()
+
+    def _clear_oauth_defaults(self, provider: str):
+        """Remove saved default credentials so the user can enter new ones."""
+        hub_db.set_config(f"oauth_{provider}_client_id", "")
+        hub_db.set_config(f"oauth_{provider}_client_secret", "")
+        self._connector_vars["oauth_client_id"].set("")
+        self._connector_vars["oauth_client_secret"].set("")
+        self._rebuild_connector_form()
+
+    def _start_device_code_flow(self):
+        """Create a Microsoft connector then initiate Device Code flow (no browser redirect)."""
+        data = {k: v.get().strip() for k, v in self._connector_vars.items()}
+        if not data["label"] or not data["email_address"]:
+            self.show_toast("Label and email are required.", WARNING)
+            return
+        client_id  = (data["oauth_client_id"]
+                      or hub_db.get_config("oauth_outlook_client_id") or "")
+        client_sec = (data["oauth_client_secret"]
+                      or hub_db.get_config("oauth_outlook_client_secret") or "")
+        if not client_id:
+            self.show_toast("Client ID is required for Device Code flow.", WARNING)
+            return
+
+        preset = self._PROVIDER_PRESETS.get("outlook", {})
+        connector = hub_db.create_connector(
+            label=data["label"],
+            email_address=data["email_address"],
+            provider="outlook",
+            auth_type="oauth2",
+            imap_host=preset.get("imap_host", ""),
+            imap_port=int(preset.get("imap_port", 993)),
+            smtp_host=preset.get("smtp_host", ""),
+            smtp_port=int(preset.get("smtp_port", 587)),
+            username=data["email_address"],
+            oauth_client_id=client_id,
+            oauth_client_secret=client_sec,
+        )
+        connector_id = connector["id"]
+        self._refresh_connectors()
+        self.show_toast("Initiating device code flow…", ACCENT)
+
+        def _do():
+            try:
+                from oauth_connector import MicrosoftOAuth
+                m    = MicrosoftOAuth(client_id, client_sec, connector_id)
+                flow = m.get_device_code_flow()
+                self._ui_queue.put(("device_code_dialog", flow, m, connector_id))
+            except ImportError:
+                self._ui_queue.put(("toast", "msal not installed. Run: pip install msal", ERROR))
+            except Exception as exc:
+                self._ui_queue.put(("toast", f"Device code error: {exc}", ERROR))
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _device_code_dialog(self, flow: dict, ms_oauth, connector_id: str):
+        """Show a dialog with the device code + poll for completion in background."""
+        import time as _t
+
+        user_code = flow.get("user_code", "")
+        verify_uri = flow.get("verification_uri", "https://microsoft.com/devicelogin")
+        expires_in = flow.get("expires_in", 900)
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Microsoft Device Code Authorization")
+        dlg.configure(bg=BG_DARK)
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        tk.Label(dlg, text="🖥  Authorize ArchonHub — Microsoft Device Code",
+                 bg=BG_DARK, fg=TEXT_PRIMARY, font=("Segoe UI", 13, "bold")).pack(pady=(20, 8))
+
+        tk.Label(dlg, text="1. Open your browser and go to:",
+                 bg=BG_DARK, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=24)
+
+        uri_lbl = tk.Label(dlg, text=verify_uri, bg=BG_DARK, fg=ACCENT,
+                           font=("Segoe UI", 10, "underline"), cursor="hand2")
+        uri_lbl.pack(anchor="w", padx=24)
+        uri_lbl.bind("<Button-1>", lambda _: webbrowser.open(verify_uri))
+
+        tk.Label(dlg, text="2. Enter this code when prompted:",
+                 bg=BG_DARK, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=24, pady=(10, 4))
+
+        code_frame = tk.Frame(dlg, bg="#1a0f3a", bd=0, highlightthickness=2,
+                              highlightbackground=ACCENT)
+        code_frame.pack(padx=24, pady=(0, 12))
+        tk.Label(code_frame, text=user_code, bg="#1a0f3a", fg="#c4b5fd",
+                 font=("Courier New", 24, "bold"), padx=20, pady=10).pack()
+
+        # Copy button
+        def _copy():
+            dlg.clipboard_clear()
+            dlg.clipboard_append(user_code)
+            copy_btn.configure(text="✅ Copied!")
+            dlg.after(2000, lambda: copy_btn.configure(text="📋 Copy Code"))
+        copy_btn = self._button(dlg, "📋 Copy Code", _copy)
+        copy_btn.pack(pady=(0, 8))
+
+        status_var = tk.StringVar(value=f"⏳ Waiting for authorization… (expires in {expires_in//60} min)")
+        status_lbl = tk.Label(dlg, textvariable=status_var, bg=BG_DARK, fg=TEXT_MUTED,
+                              font=("Segoe UI", 9), wraplength=340)
+        status_lbl.pack(padx=24, pady=(0, 16))
+
+        cancel_var = [False]
+        def _cancel():
+            cancel_var[0] = True
+            dlg.destroy()
+        self._button(dlg, "Cancel", _cancel).pack(pady=(0, 16))
+
+        def _poll():
+            try:
+                token = ms_oauth.poll_device_code(flow)
+                if cancel_var[0]:
+                    return
+                email = token.get("id_token_claims", {}).get("email", "") or ""
+                self._ui_queue.put(("toast", f"✅ Microsoft account authorized! {email}", SUCCESS))
+                self._ui_queue.put(("refresh_connectors",))
+                try:
+                    dlg.after(0, dlg.destroy)
+                except Exception:
+                    pass
+            except Exception as exc:
+                if not cancel_var[0]:
+                    self._ui_queue.put(("toast", f"Device code failed: {exc}", ERROR))
+
+        threading.Thread(target=_poll, daemon=True).start()
         """Call hub server to get OAuth URL, open browser, then poll for completion."""
         import urllib.request as _ur
         import json as _json
