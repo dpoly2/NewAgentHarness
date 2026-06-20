@@ -1967,7 +1967,7 @@ if FASTAPI_OK:
     @app.post("/api/connectors/{id}/test")
     async def test_connector_endpoint(id: str, current_user: dict = Depends(get_current_user)):
         del current_user
-        connector = hub_db.get_connector(id)
+        connector = db.get_connector(id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         try:
@@ -1975,7 +1975,7 @@ if FASTAPI_OK:
             ok, msg = _test(connector)
         except Exception as exc:
             ok, msg = False, str(exc)
-        hub_db.update_connector(
+        db.update_connector(
             id,
             status="active" if ok else "error",
             last_error="" if ok else msg,
@@ -1989,7 +1989,7 @@ if FASTAPI_OK:
     @app.get("/api/connectors/oauth/google/init")
     async def google_oauth_init(connector_id: str):
         """Return Google OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
-        connector = hub_db.get_connector(connector_id)
+        connector = db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         client_id  = connector.get("oauth_client_id", "")
@@ -2016,7 +2016,7 @@ if FASTAPI_OK:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state. Please retry from the app.</p>", status_code=400)
             connector_id = pending["connector_id"]
             verifier     = pending["verifier"]
-            connector    = hub_db.get_connector(connector_id)
+            connector    = db.get_connector(connector_id)
             if not connector:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
             client_id  = connector.get("oauth_client_id", "")
@@ -2024,7 +2024,7 @@ if FASTAPI_OK:
             g = GoogleOAuth(client_id, client_sec, connector_id)
             token = g.exchange_code(code, verifier)
             import time as _time
-            hub_db.update_connector(
+            db.update_connector(
                 connector_id,
                 auth_type="oauth2",
                 status="active",
@@ -2066,7 +2066,7 @@ if FASTAPI_OK:
     @app.get("/api/connectors/oauth/microsoft/init")
     async def microsoft_oauth_init(connector_id: str):
         """Return Microsoft OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
-        connector = hub_db.get_connector(connector_id)
+        connector = db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         client_id  = connector.get("oauth_client_id", "")
@@ -2092,7 +2092,7 @@ if FASTAPI_OK:
             if not pending:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state.</p>", status_code=400)
             connector_id = pending["connector_id"]
-            connector    = hub_db.get_connector(connector_id)
+            connector    = db.get_connector(connector_id)
             if not connector:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
             client_id  = connector.get("oauth_client_id", "")
@@ -2100,7 +2100,7 @@ if FASTAPI_OK:
             m = MicrosoftOAuth(client_id, client_sec, connector_id)
             token = m.exchange_code(code)
             import time as _time
-            hub_db.update_connector(
+            db.update_connector(
                 connector_id,
                 auth_type="oauth2",
                 status="active",
@@ -3412,3 +3412,4 @@ if __name__ == "__main__":
         access_log=False,
         loop=_loop,
     )
+
