@@ -1,16 +1,4 @@
 .agents/.env
-memory/.jwt_secret
 
 __pycache__/
 *.db
-
-# SQLite WAL/SHM journal files (may contain OAuth tokens/credentials)
-*.db-wal
-*.db-shm
-*.db-journal
-
-# Runtime data files
-*.pid
-.agents/data/logs/
-.agents/data/*.pid
-memory/.jwt_secret

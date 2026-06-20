@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import secrets as _secrets
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -19,8 +17,7 @@ else:
 
 
 DEFAULT_ADMIN_USERNAME = "admin"
-# Read from env — never hardcode. Auto-generated + printed on first run if unset.
-DEFAULT_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+DEFAULT_ADMIN_PASSWORD = "ArchonHub2024!"
 
 DB_PATH = Path(__file__).resolve().parent.parent.parent / "memory" / "runs_v3.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -652,15 +649,6 @@ def init_schema() -> None:
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         if user_count == 0:
             now = _now_iso()
-            _admin_pwd = DEFAULT_ADMIN_PASSWORD
-            if not _admin_pwd:
-                _admin_pwd = _secrets.token_urlsafe(16)
-                print("\n" + "=" * 62)
-                print("  ArchonHub — First Run: Admin Account Created")
-                print(f"  Username : {DEFAULT_ADMIN_USERNAME}")
-                print(f"  Password : {_admin_pwd}")
-                print("  Set ADMIN_PASSWORD in .agents/.env to use a fixed value.")
-                print("=" * 62 + "\n")
             conn.execute(
                 """
                 INSERT INTO users (username, email, hashed_password, role, is_active, created_at, last_login)
@@ -669,7 +657,7 @@ def init_schema() -> None:
                 (
                     DEFAULT_ADMIN_USERNAME,
                     None,
-                    _hash_pw(_admin_pwd),
+                    _hash_pw(DEFAULT_ADMIN_PASSWORD),
                     "admin",
                     1,
                     now,

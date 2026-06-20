@@ -142,39 +142,12 @@ except ImportError:
     MODEL_CATALOG_OK = False
 
 
-def _load_jwt_secret() -> str:
-    """
-    Load the JWT signing secret with this priority:
-      1. JWT_SECRET env var (if set and not the placeholder)
-      2. Persisted secret file at memory/.jwt_secret (auto-generated on first run)
-    The secret is NEVER hardcoded — doing so would allow forging tokens.
-    """
-    env_val = os.environ.get("JWT_SECRET", "")
-    placeholder = "CHANGE-ME-use-a-long-random-string-in-production"
-    if env_val and env_val != placeholder:
-        return env_val
-    secret_file = Path(__file__).resolve().parent.parent.parent / "memory" / ".jwt_secret"
-    if secret_file.exists():
-        stored = secret_file.read_text(encoding="utf-8").strip()
-        if stored:
-            return stored
-    # Generate a new secret, persist it so tokens survive restarts
-    new_secret = os.urandom(32).hex()
-    secret_file.parent.mkdir(parents=True, exist_ok=True)
-    secret_file.write_text(new_secret, encoding="utf-8")
-    print(f"[ArchonHub] JWT secret auto-generated → {secret_file}")
-    print("[ArchonHub] Set JWT_SECRET in .agents/.env for a fixed value.")
-    return new_secret
-
-
-SECRET_KEY = _load_jwt_secret()
+SECRET_KEY = os.environ.get("JWT_SECRET", "archonhub-jwt-secret-change-in-production-2024")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 APP_VERSION = "1.0.0"
 DEFAULT_ADMIN_USERNAME = "admin"
-# Admin password is seeded by hub_db on first run — read from ADMIN_PASSWORD env var.
-# Never stored or logged here.
-DEFAULT_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+DEFAULT_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "ArchonHub2024!")
 security = HTTPBearer(auto_error=False) if FASTAPI_OK else None
 
 

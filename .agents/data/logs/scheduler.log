@@ -191,3 +191,9 @@ ImportError: cannot import name 'get_db' from 'hub_db' (D:\projects\NewAgentHarn
 2026-06-20 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup completed
 2026-06-20 02:00:00 [INFO] archonhub.scheduler: Nightly DB cleanup removed 0 runs older than 90 days
 2026-06-20 03:00:00 [INFO] archonhub.scheduler: Nightly DB backup completed
+2026-06-20 09:15:59 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
+2026-06-20 12:25:58 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
+2026-06-20 12:34:11 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
+2026-06-20 12:35:42 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
+2026-06-20 12:37:39 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
+2026-06-20 12:53:17 [INFO] archonhub.scheduler: Registered 11 built-in scheduler jobs
