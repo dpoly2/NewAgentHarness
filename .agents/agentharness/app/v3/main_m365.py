@@ -2557,20 +2557,28 @@ class ArchonHubApp:
                 if provider == "gmail"
                 else "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps"
             )
+
+            # Clear credential fields whenever provider changes — Google and Microsoft
+            # credentials are completely separate and must never cross-contaminate.
+            last_provider = getattr(self, "_connector_oauth_provider", None)
+            if last_provider != provider:
+                self._connector_vars["oauth_client_id"].set("")
+                self._connector_vars["oauth_client_secret"].set("")
+                self._connector_oauth_provider = provider
+
+            # Load saved defaults for THIS provider
+            saved_id  = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
+            saved_sec = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
+            if saved_id:
+                self._connector_vars["oauth_client_id"].set(saved_id)
+                self._connector_vars["oauth_client_secret"].set(saved_sec)
+
             note = (
                 f"One {console_name} app works for ALL your {provider_name} accounts.\n"
                 f"Create credentials once — then add as many emails as you like."
             )
             tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
                      wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
-
-            # Auto-load saved defaults
-            saved_id  = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
-            saved_sec = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
-            if saved_id and not self._connector_vars["oauth_client_id"].get():
-                self._connector_vars["oauth_client_id"].set(saved_id)
-            if saved_sec and not self._connector_vars["oauth_client_secret"].get():
-                self._connector_vars["oauth_client_secret"].set(saved_sec)
 
             if saved_id:
                 saved_row = tk.Frame(f, bg=BG_PANEL)
@@ -2582,9 +2590,10 @@ class ArchonHubApp:
                 clr.pack(side="left")
                 clr.bind("<Button-1>", lambda _e, p=provider: self._clear_oauth_defaults(p))
 
-            # Credential fields
-            secret_lbl = "Client Secret *" if provider == "gmail" else "Client Secret (optional)"
-            for lbl, key in [("Client ID *", "oauth_client_id"), (secret_lbl, "oauth_client_secret")]:
+            # Credential fields — labelled with provider name so it's unambiguous
+            secret_lbl = f"{provider_name} Client Secret {'*' if provider == 'gmail' else '(optional)'}"
+            for lbl, key in [(f"{provider_name} Client ID *", "oauth_client_id"),
+                             (secret_lbl, "oauth_client_secret")]:
                 tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
                 show = "*" if "secret" in key else None
                 self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
@@ -2619,6 +2628,7 @@ class ArchonHubApp:
 
         else:
             # ── Password mode ────────────────────────────────────────────
+            self._connector_oauth_provider = None  # reset tracker
             for lbl, key, show in [
                 ("IMAP Host",  "imap_host",  None),
                 ("IMAP Port",  "imap_port",  None),
@@ -2716,6 +2726,7 @@ class ArchonHubApp:
         hub_db.set_config(f"oauth_{provider}_client_secret", "")
         self._connector_vars["oauth_client_id"].set("")
         self._connector_vars["oauth_client_secret"].set("")
+        self._connector_oauth_provider = None  # force reload on next rebuild
         self._rebuild_connector_form()
 
     def _start_device_code_flow(self):
