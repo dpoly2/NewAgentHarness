@@ -1128,37 +1128,9 @@ class ArchonHubApp:
                                bg=BG_CANVAS, relief="flat")
         paned.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-        # ── Left panel: Quick Run + Hub Status ───────────────────────────
+        # ── Left panel: Mission HUD ───────────────────────────────────────
         left = tk.Frame(paned, bg=BG_CANVAS, width=340)
         paned.add(left, minsize=300)
-
-        quick = self._card(left, "Quick Run", "Submit a run to Hub or local LangGraph fallback.")
-        quick.pack(fill="x", pady=(0, 10))
-        form = tk.Frame(quick, bg=BG_PANEL)
-        form.pack(fill="x", padx=14, pady=(0, 12))
-
-        tk.Label(form, text="Team", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=2)
-        self.quick_team_combo = self._combo(form, self.quick_team_var, list(AGENT_REGISTRY.keys()))
-        self.quick_team_combo.grid(row=1, column=0, sticky="ew", pady=(0, 6))
-        self.quick_team_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
-
-        tk.Label(form, text="Agent", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=2)
-        self.quick_agent_combo = self._combo(form, self.quick_agent_var, AGENT_REGISTRY[self.quick_team_var.get()])
-        self.quick_agent_combo.grid(row=3, column=0, sticky="ew", pady=(0, 6))
-
-        tk.Label(form, text="Project", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=2)
-        self._combo(form, self.quick_project_var, PROJECTS).grid(row=5, column=0, sticky="ew", pady=(0, 6))
-
-        tk.Label(form, text="Graph", bg=BG_PANEL, fg=TEXT_BODY).grid(row=6, column=0, sticky="w", pady=2)
-        graph_combo = self._combo(form, self.quick_graph_var, GRAPH_NAMES)
-        graph_combo.grid(row=7, column=0, sticky="ew", pady=(0, 6))
-        graph_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
-
-        tk.Label(form, text="Task", bg=BG_PANEL, fg=TEXT_BODY).grid(row=8, column=0, sticky="w", pady=2)
-        self.quick_task_text = self._text_widget(form, height=5)
-        self.quick_task_text.grid(row=9, column=0, sticky="nsew", pady=(0, 8))
-        form.grid_columnconfigure(0, weight=1)
-        self._button(form, "▶ Run Agent", self._submit_quick_run, accent=True).grid(row=10, column=0, sticky="ew")
 
         mission_card = self._card(left, "INEZ — Mission HUD")
         mission_card.pack(fill="x")
