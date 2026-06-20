@@ -189,6 +189,9 @@ class LocalHubClient:
     def post_json(self, path, data):
         return None
 
+    def get_json(self, path, **params):
+        return None
+
     def list_runs(self, limit=100, agent_id=None, project=None, status=None):
         return hub_db.load_runs(limit=limit, agent_id=agent_id, project=project, status=status)
 
@@ -371,6 +374,8 @@ class ArchonHubApp:
         # Inez state
         self._inez_history = []           # list of {role, content} for LLM context
         self._inez_conv_id = None         # current conversation_id (for Hub persistence)
+        self._inez_status = {}            # cached /api/inez/status response
+        self._inez_hud_visible = True     # whether the INEZ awareness HUD strip is shown
 
         self.quick_team_var = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
         self.quick_agent_var = tk.StringVar(value=AGENT_REGISTRY[self.quick_team_var.get()][0])
@@ -850,6 +855,8 @@ class ArchonHubApp:
                 think_run_id = item[1]
                 result       = item[2]
                 self._inez_handle_result(think_run_id, result)
+            elif kind == "inez_status_loaded":
+                self._apply_inez_status()
             elif kind == "refresh_runs":
                 if self._widget_ok("runs_tree"):
                     self._refresh_runs()
@@ -991,10 +998,131 @@ class ArchonHubApp:
             for agent in agents:
                 tk.Label(card, text=f"• {agent}", bg=BG_CARD, fg=TEXT_BODY, anchor="w").pack(fill="x", padx=14, pady=1)
 
+    def _fetch_inez_status(self):
+        """Fetch /api/inez/status from Hub (or local fallback) in a background thread."""
+        def _work():
+            result = {}
+            try:
+                if getattr(self.hub, "online", False):
+                    r = self.hub.get_json("/api/inez/status")
+                    if isinstance(r, dict):
+                        result.update(r)
+            except Exception:
+                pass
+            if not result:
+                try:
+                    from inez_agent import generate_status_report
+                    result = generate_status_report()
+                except Exception:
+                    result = {"awareness": "All systems nominal.", "urgent_count": 0, "missions": []}
+            self._inez_status = result
+            self._ui_queue.put(("inez_status_loaded",))
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _apply_inez_status(self):
+        """Refresh all INEZ HUD widgets with the current self._inez_status data."""
+        status = self._inez_status
+        awareness = status.get("awareness", "All systems nominal.")
+        urgent_count = int(status.get("urgent_count", 0) or 0)
+        missions = status.get("missions", [])
+
+        # ── Mission HUD on home screen ────────────────────────────────────
+        if self._widget_ok("home_urgent_value"):
+            urg_text  = f"  {urgent_count} urgent" if urgent_count > 0 else "  All clear"
+            urg_color = ERROR if urgent_count > 0 else SUCCESS
+            try:
+                self.home_urgent_value.configure(text=urg_text, fg=urg_color)
+            except Exception:
+                pass
+
+        if self._widget_ok("home_awareness_text"):
+            first_line = awareness.split("\n")[0][:120]
+            try:
+                self.home_awareness_text.configure(text=first_line)
+            except Exception:
+                pass
+
+        if hasattr(self, "home_mission_grid"):
+            try:
+                if self.home_mission_grid.winfo_exists():
+                    self._render_mission_grid(self.home_mission_grid, missions)
+            except Exception:
+                pass
+
+        # ── Awareness HUD strip inside Inez chat panel ────────────────────
+        if hasattr(self, "_inez_awareness_frame"):
+            try:
+                if self._inez_awareness_frame.winfo_exists():
+                    if urgent_count > 0 and self._inez_hud_visible:
+                        first_line = awareness.split("\n")[0][:200]
+                        if hasattr(self, "_inez_awareness_label"):
+                            try:
+                                if self._inez_awareness_label.winfo_exists():
+                                    self._inez_awareness_label.configure(text=first_line)
+                            except Exception:
+                                pass
+                        self._inez_awareness_frame.pack(fill="x", after=self._inez_header_frame)
+                    else:
+                        self._inez_awareness_frame.pack_forget()
+            except Exception:
+                pass
+
+        # ── Urgent count label in Inez header ─────────────────────────────
+        if hasattr(self, "_inez_urgent_label"):
+            try:
+                if self._inez_urgent_label.winfo_exists():
+                    urg_text  = f"{urgent_count} need attention" if urgent_count > 0 else ""
+                    urg_color = ERROR if urgent_count > 0 else TEXT_MUTED
+                    self._inez_urgent_label.configure(text=urg_text, fg=urg_color)
+            except Exception:
+                pass
+
+    def _render_mission_grid(self, frame, missions):
+        """Render a 2-column grid of project mission status tiles inside frame."""
+        for child in frame.winfo_children():
+            child.destroy()
+        if not missions:
+            tk.Label(frame, text="No mission data yet", bg=BG_PANEL,
+                     fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
+            return
+        status_color_map = {
+            "active": SUCCESS, "live": SUCCESS, "complete": SUCCESS, "completed": SUCCESS,
+            "pending": WARNING, "pre-launch": WARNING, "planning": WARNING,
+            "paused": TEXT_MUTED, "inactive": TEXT_MUTED,
+        }
+        for idx, m in enumerate(missions[:6]):
+            row, col = divmod(idx, 2)
+            tile = tk.Frame(frame, bg=BG_CARD,
+                            highlightbackground=BORDER_CARD, highlightthickness=1)
+            tile.grid(row=row, column=col, sticky="ew",
+                      padx=(0, 4) if col == 0 else (0, 0), pady=2)
+            s = m.get("status", "unknown").lower()
+            dot_color = status_color_map.get(s, ACCENT)
+            dot_cv = tk.Canvas(tile, width=8, height=8, bg=BG_CARD, highlightthickness=0)
+            dot_cv.create_oval(1, 1, 7, 7, fill=dot_color, outline="")
+            dot_cv.pack(side="left", padx=(6, 3), pady=6)
+            name = (m.get("name") or m.get("slug") or "")[:18]
+            tk.Label(tile, text=name, bg=BG_CARD, fg=TEXT_BODY,
+                     font=("Segoe UI", 9), anchor="w").pack(
+                         side="left", fill="x", expand=True, padx=(0, 6), pady=4)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=1)
+
+    def _inez_quick_send(self, text: str):
+        """Pre-fill and immediately send a quick-action message to Inez."""
+        try:
+            if not hasattr(self, "_chat_input") or not self._chat_input.winfo_exists():
+                return
+        except Exception:
+            return
+        self._chat_input.delete("1.0", "end")
+        self._chat_input.insert("1.0", text)
+        self._inez_send()
+
     def show_home(self):
         self._set_active_nav("Home")
         self._clear_content()
-        self._section_header(self.content, "ArchonHub", "Microsoft 365-inspired control surface for teams, runs, and workflows.")
+        self._section_header(self.content, "Mission Control", "Inez — Chief of Staff · Smith Capital Portfolio")
 
         paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6,
                                bg=BG_CANVAS, relief="flat")
@@ -1032,21 +1160,58 @@ class ArchonHubApp:
         form.grid_columnconfigure(0, weight=1)
         self._button(form, "▶ Run Agent", self._submit_quick_run, accent=True).grid(row=10, column=0, sticky="ew")
 
-        hub_card = self._card(left, "Hub Status")
-        hub_card.pack(fill="x")
-        grid = tk.Frame(hub_card, bg=BG_PANEL)
-        grid.pack(fill="x", padx=14, pady=(0, 12))
-        tk.Label(grid, text="Connection", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=0, column=0, sticky="w", pady=3)
-        self.home_status_value = tk.Label(grid, text="Offline", bg=BG_PANEL, fg=ERROR,
-                                          font=("Segoe UI", 11, "bold"))
-        self.home_status_value.grid(row=0, column=1, sticky="e", pady=3)
-        tk.Label(grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=1, column=0, sticky="w", pady=3)
-        self.home_uptime_value = tk.Label(grid, text="—", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=3)
-        tk.Label(grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=2, column=0, sticky="w", pady=3)
-        self.home_active_runs_value = tk.Label(grid, text="0", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=3)
-        grid.grid_columnconfigure(1, weight=1)
+        mission_card = self._card(left, "INEZ — Mission HUD")
+        mission_card.pack(fill="x")
+
+        # ── Urgency row ──────────────────────────────────────────────────
+        urg_row = tk.Frame(mission_card, bg=BG_PANEL)
+        urg_row.pack(fill="x", padx=14, pady=(0, 4))
+        tk.Label(urg_row, text="⚡", bg=BG_PANEL, fg="#c4b5fd",
+                 font=("Segoe UI", 11)).pack(side="left")
+        self.home_urgent_value = tk.Label(urg_row, text="  Loading...",
+                                          bg=BG_PANEL, fg=TEXT_MUTED,
+                                          font=("Segoe UI", 10, "bold"))
+        self.home_urgent_value.pack(side="left", padx=(4, 0))
+
+        # ── Awareness text ────────────────────────────────────────────────
+        self.home_awareness_text = tk.Label(
+            mission_card, text="Fetching awareness data...",
+            bg=BG_PANEL, fg=TEXT_BODY, wraplength=280, justify="left",
+            font=("Segoe UI", 9))
+        self.home_awareness_text.pack(anchor="w", padx=14, pady=(0, 8))
+
+        # ── Mission grid ──────────────────────────────────────────────────
+        self.home_mission_grid = tk.Frame(mission_card, bg=BG_PANEL)
+        self.home_mission_grid.pack(fill="x", padx=14, pady=(0, 8))
+        self._render_mission_grid(self.home_mission_grid, [])
+
+        # ── Ask Inez CTA ──────────────────────────────────────────────────
+        self._button(mission_card, "👑 Ask Inez", self.show_inez, accent=True).pack(
+            fill="x", padx=14, pady=(0, 8))
+
+        # ── Hub connection status (compact) ───────────────────────────────
+        tk.Frame(mission_card, bg=BORDER_CARD, height=1).pack(fill="x", padx=14, pady=(0, 6))
+        stat_grid = tk.Frame(mission_card, bg=BG_PANEL)
+        stat_grid.pack(fill="x", padx=14, pady=(0, 12))
+        tk.Label(stat_grid, text="Hub", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=0, column=0, sticky="w", pady=2)
+        self.home_status_value = tk.Label(stat_grid, text="Offline",
+                                          bg=BG_PANEL, fg=ERROR,
+                                          font=("Segoe UI", 9, "bold"))
+        self.home_status_value.grid(row=0, column=1, sticky="e", pady=2)
+        tk.Label(stat_grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=1, column=0, sticky="w", pady=2)
+        self.home_uptime_value = tk.Label(stat_grid, text="—",
+                                          bg=BG_PANEL, fg=TEXT_BODY,
+                                          font=("Segoe UI", 9))
+        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=2)
+        tk.Label(stat_grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=2, column=0, sticky="w", pady=2)
+        self.home_active_runs_value = tk.Label(stat_grid, text="0",
+                                               bg=BG_PANEL, fg=TEXT_BODY,
+                                               font=("Segoe UI", 9))
+        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=2)
+        stat_grid.grid_columnconfigure(1, weight=1)
 
         # ── Right panel: Inez Chat ────────────────────────────────────────
         right = tk.Frame(paned, bg=BG_CANVAS)
@@ -1054,33 +1219,97 @@ class ArchonHubApp:
         self._build_inez_chat_panel(right)
 
         self._refresh_home_status()
+        self._fetch_inez_status()
 
     def _build_inez_chat_panel(self, parent):
         """Embed the full Inez chat interface into any parent frame (used on Home + Inez tab)."""
-        # Header
-        top = tk.Frame(parent, bg=BG_PANEL,
-                       highlightbackground=BORDER_CARD, highlightthickness=1)
-        top.pack(fill="x")
+        # ── Header ────────────────────────────────────────────────────────
+        self._inez_header_frame = tk.Frame(parent, bg=BG_PANEL,
+                                           highlightbackground=BORDER_CARD,
+                                           highlightthickness=1)
+        self._inez_header_frame.pack(fill="x")
 
-        av = tk.Canvas(top, width=34, height=34, bg=BG_PANEL, highlightthickness=0)
+        av = tk.Canvas(self._inez_header_frame, width=34, height=34,
+                       bg=BG_PANEL, highlightthickness=0)
         av.create_oval(3, 3, 31, 31, fill="#7c3aed", outline="")
         av.create_text(17, 17, text="👑", font=("Segoe UI", 14))
-        av.pack(side="left", padx=(12, 6), pady=6)
+        av.pack(side="left", padx=(12, 6), pady=8)
 
-        name_col = tk.Frame(top, bg=BG_PANEL)
-        name_col.pack(side="left", pady=6)
-        tk.Label(name_col, text="Inez", bg=BG_PANEL, fg="#c4b5fd",
+        name_col = tk.Frame(self._inez_header_frame, bg=BG_PANEL)
+        name_col.pack(side="left", pady=8)
+        tk.Label(name_col, text="INEZ", bg=BG_PANEL, fg="#c4b5fd",
                  font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(name_col, text="Chief of Staff — Smith Capital Portfolio",
+        tk.Label(name_col, text="Intelligent Neural Executive Zone",
                  bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
+        right_col = tk.Frame(self._inez_header_frame, bg=BG_PANEL)
+        right_col.pack(side="right", padx=14, pady=8)
         hub_online = getattr(self.hub, "online", False)
         dot_color = SUCCESS if hub_online else WARNING
-        dot_text  = "● Hub connected" if hub_online else "● Local mode"
-        tk.Label(top, text=dot_text, bg=BG_PANEL, fg=dot_color,
-                 font=("Segoe UI", 9)).pack(side="right", padx=14)
+        dot_text  = "● ACTIVE" if hub_online else "● LOCAL"
+        tk.Label(right_col, text=dot_text, bg=BG_PANEL, fg=dot_color,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="e")
+        urgent_count = int(self._inez_status.get("urgent_count", 0) or 0)
+        urg_text  = f"{urgent_count} need attention" if urgent_count > 0 else ""
+        urg_color = ERROR if urgent_count > 0 else TEXT_MUTED
+        self._inez_urgent_label = tk.Label(right_col, text=urg_text,
+                                           bg=BG_PANEL, fg=urg_color,
+                                           font=("Segoe UI", 8))
+        self._inez_urgent_label.pack(anchor="e")
 
-        # Bubble area
+        # ── Awareness HUD (collapsible purple strip) ───────────────────────
+        self._inez_awareness_frame = tk.Frame(parent, bg="#1a0f3a",
+                                              highlightbackground="#5b21b6",
+                                              highlightthickness=1)
+        # Only show on build if we already have status data with urgency
+        if urgent_count > 0 and self._inez_hud_visible:
+            self._inez_awareness_frame.pack(fill="x")
+
+        hud_top = tk.Frame(self._inez_awareness_frame, bg="#1a0f3a")
+        hud_top.pack(fill="x", padx=12, pady=(8, 2))
+        tk.Label(hud_top, text="⚡ INEZ AWARENESS", bg="#1a0f3a", fg="#c4b5fd",
+                 font=("Segoe UI", 8, "bold")).pack(side="left")
+
+        def _dismiss_hud():
+            self._inez_hud_visible = False
+            try:
+                self._inez_awareness_frame.pack_forget()
+            except Exception:
+                pass
+
+        tk.Button(hud_top, text="✕", command=_dismiss_hud, bg="#1a0f3a", fg=TEXT_MUTED,
+                  relief="flat", bd=0, cursor="hand2",
+                  font=("Segoe UI", 9)).pack(side="right")
+
+        awareness = self._inez_status.get("awareness", "")
+        first_line = awareness.split("\n")[0][:200] if awareness else "All systems nominal."
+        self._inez_awareness_label = tk.Label(self._inez_awareness_frame,
+                                              text=first_line, bg="#1a0f3a", fg=TEXT_BODY,
+                                              wraplength=500, justify="left",
+                                              font=("Segoe UI", 9))
+        self._inez_awareness_label.pack(anchor="w", padx=12, pady=(0, 8))
+
+        # ── Quick Actions ─────────────────────────────────────────────────
+        qa_frame = tk.Frame(parent, bg=BG_PANEL,
+                            highlightbackground=BORDER_CARD, highlightthickness=1)
+        qa_frame.pack(fill="x")
+        qa_inner = tk.Frame(qa_frame, bg=BG_PANEL)
+        qa_inner.pack(fill="x", padx=12, pady=8)
+        for qa_label, qa_text in [
+            ("Status",          "What's the current status of all missions?"),
+            ("Brief Me",        "Give me a morning briefing."),
+            ("Priorities",      "What needs my immediate attention?"),
+            ("Recommendations", "What do you recommend I focus on today?"),
+        ]:
+            btn = tk.Button(qa_inner, text=qa_label,
+                            command=lambda t=qa_text: self._inez_quick_send(t),
+                            bg="#2d1b69", fg="#c4b5fd", relief="flat", bd=0,
+                            padx=12, pady=4, cursor="hand2",
+                            font=("Segoe UI", 9),
+                            activebackground="#3d2b89", activeforeground="#e9d5ff")
+            btn.pack(side="left", padx=(0, 6))
+
+        # ── Bubble area ───────────────────────────────────────────────────
         bubble_outer = tk.Frame(parent, bg=BG_CANVAS)
         bubble_outer.pack(fill="both", expand=True)
 
@@ -2955,6 +3184,7 @@ class ArchonHubApp:
         self._clear_content()
         self._set_active_nav("Inez")
         self._build_inez_chat_panel(self.content)
+        self._fetch_inez_status()
 
 
     def _inez_send(self):
