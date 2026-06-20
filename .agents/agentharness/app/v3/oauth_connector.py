@@ -134,6 +134,39 @@ def _creds_from_db(connector_id: str) -> dict:
         return {}
 
 
+def get_valid_access_token(connector_id: str) -> str:
+    """
+    Return a fresh, valid access token for any connector (Google or Microsoft).
+    Auto-refreshes using the stored refresh_token if the access token is expired.
+    Raises RuntimeError if the connector doesn't exist or can't be refreshed.
+    """
+    try:
+        import hub_db
+        c = hub_db.get_connector(connector_id)
+    except Exception as e:
+        raise RuntimeError(f"Could not load connector {connector_id}: {e}") from e
+    if not c:
+        raise RuntimeError(f"Connector {connector_id} not found")
+
+    provider = (c.get("provider") or "").lower()
+    client_id = c.get("oauth_client_id", "") or ""
+    client_secret = c.get("oauth_client_secret", "") or ""
+
+    if provider in ("gmail", "google"):
+        g = GoogleOAuth(client_id, client_secret, connector_id)
+        return g.get_valid_token(connector_id)
+    elif provider in ("outlook", "microsoft", "office365"):
+        m = MicrosoftOAuth(client_id, client_secret, connector_id)
+        return m.get_valid_token(connector_id)
+    else:
+        # Generic: return whatever access_token is in credentials
+        creds = _creds_from_db(connector_id)
+        token = creds.get("access_token", "")
+        if not token:
+            raise RuntimeError(f"No access_token found for connector {connector_id}")
+        return token
+
+
 def _save_token(connector_id: str, token_data: dict) -> None:
     try:
         import hub_db

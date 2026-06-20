@@ -661,17 +661,15 @@ def _fetch_inbox_context(connector: dict, limit: int = 15) -> str:
 
         if auth_type == "oauth2":
             try:
-                from oauth_connector import _creds_from_db  # type: ignore
-                creds = _creds_from_db(connector["id"])
-                access_token = creds.get("access_token", "")
-            except Exception:
-                access_token = ""
-            if not access_token:
-                return f"[EMAIL TOOL] No valid OAuth token for {email_addr}. Re-authorize in Connector tab."
-            auth_str = _b64.b64encode(
-                f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01".encode()
-            ).decode()
-            imap.authenticate("XOAUTH2", lambda _: auth_str)
+                from oauth_connector import get_valid_access_token  # type: ignore
+                access_token = get_valid_access_token(connector["id"])
+            except Exception as _tok_err:
+                logger.warning("Token refresh failed: %s", _tok_err)
+                return f"[EMAIL TOOL] Token error for {email_addr}: {_tok_err}. Re-authorize in Connector tab."
+            # imaplib.authenticate() base64-encodes the callback return value itself —
+            # return raw bytes, NOT pre-base64-encoded string
+            raw_auth = f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01".encode()
+            imap.authenticate("XOAUTH2", lambda _: raw_auth)
         else:
             creds_raw = connector.get("credentials", {})
             if isinstance(creds_raw, str):
@@ -768,13 +766,12 @@ def _send_email_tool(connector: dict, to: str, subject: str, body: str) -> str:
 
         if auth_type == "oauth2":
             try:
-                from oauth_connector import _creds_from_db  # type: ignore
-                creds = _creds_from_db(connector["id"])
-                access_token = creds.get("access_token", "")
-            except Exception:
-                access_token = ""
-            if not access_token:
-                return f"[EMAIL SEND FAILED] No valid OAuth token for {email_addr}. Re-authorize in Connector tab."
+                from oauth_connector import get_valid_access_token  # type: ignore
+                access_token = get_valid_access_token(connector["id"])
+            except Exception as _tok_err:
+                logger.warning("SMTP token refresh failed: %s", _tok_err)
+                return f"[EMAIL SEND FAILED] Token error for {email_addr}: {_tok_err}. Re-authorize in Connector tab."
+            # SMTP AUTH XOAUTH2 requires pre-base64-encoded auth string
             auth_str = _b64.b64encode(
                 f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01".encode()
             ).decode()
