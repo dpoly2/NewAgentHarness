@@ -2039,8 +2039,51 @@ class ArchonHubApp:
             tk.Label(self.content, text=f"Org chart failed to load:\n{e}",
                      bg=BG_CANVAS, fg=ERROR, font=("Segoe UI", 11)).pack(expand=True)
             return
-        tab = OrgChartTab(self.content)
+        tab = OrgChartTab(self.content, callbacks={
+            "run_agent":  self._org_run_agent,
+            "ask_inez":   self._org_ask_inez,
+            "view_runs":  self._org_view_runs,
+            "view_skill": self._org_view_skill,
+        })
         tab.pack(fill="both", expand=True)
+
+    def _org_run_agent(self, agent_id: str, agent_label: str):
+        """Called from Org chart — pre-populate and launch Runs tab for this agent."""
+        self.quick_agent_var.set(agent_id)
+        # Find and set the team
+        for team, agents in AGENT_REGISTRY.items():
+            if agent_id in agents:
+                self.quick_team_var.set(team)
+                break
+        self.show_inez()
+        # Pre-fill Inez with a run request
+        msg = f"Run agent {agent_id} ({agent_label}) — what task should I give it?"
+        try:
+            if self._chat_input and self._chat_input.winfo_exists():
+                self._chat_input.delete("1.0", "end")
+                self._chat_input.insert("1.0", msg)
+        except Exception:
+            pass
+
+    def _org_ask_inez(self, agent_id: str, agent_label: str):
+        """Called from Org chart — open Inez tab with a pre-filled question about the agent."""
+        self.show_inez()
+        msg = f"Tell me about the {agent_label} agent ({agent_id}) — what is it responsible for and what's its current status?"
+        try:
+            if self._chat_input and self._chat_input.winfo_exists():
+                self._chat_input.delete("1.0", "end")
+                self._chat_input.insert("1.0", msg)
+        except Exception:
+            pass
+
+    def _org_view_runs(self, agent_id: str):
+        """Called from Org chart — jump to Runs tab filtered to this agent."""
+        self.run_filter_agent_var.set(agent_id)
+        self.show_runs()
+
+    def _org_view_skill(self, agent_id: str, agent_label: str):
+        """Called from Org chart — show skill file in a popup (handled by OrgChartTab itself as fallback)."""
+        pass
 
     # ── Markets ───────────────────────────────────────────────────────────────
 

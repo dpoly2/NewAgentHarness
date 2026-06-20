@@ -6,11 +6,17 @@ Interactive hierarchical org chart for Smith Capital Group.
 Features:
   • Full tree from Smith Capital Group → Divisions → Teams → Agents
   • Canvas-based render with zoom (scroll wheel) and pan (drag)
-  • Clickable nodes — detail panel shows role, skills, status
+  • Expand / collapse subtrees — click the ▾/▸ triangle on parent nodes
+  • Clickable nodes — detail panel with live action buttons
+  • Action buttons: Run Agent · Ask Inez · View Runs · View Skill File
+  • Double-click an agent node to launch Run Agent immediately
+  • Division quick-nav chips — jump to any division in one click
+  • Breadcrumb bar shows current selection path
+  • Drag threshold — short drag does NOT misfire as a click
   • Color-coded divisions
   • Search/filter to highlight agents by name or role
   • Data-driven: agent details pulled from hub_db.agent_registry
-  • Export to PNG (optional, requires Pillow)
+  • Callbacks wired back to main app for cross-tab navigation
 """
 
 from __future__ import annotations
@@ -291,24 +297,39 @@ def _collect_edges(node: dict, out: list) -> None:
 class OrgChartTab(tk.Frame):
     """
     Full org chart panel. Embed in the main content area.
+
+    callbacks (dict) — optional hooks wired to main app:
+        "run_agent"  : fn(agent_id, agent_label)
+        "ask_inez"   : fn(agent_id, agent_label)
+        "view_runs"  : fn(agent_id)
+        "view_skill" : fn(agent_id, agent_label)
     """
 
-    MIN_ZOOM = 0.25
-    MAX_ZOOM = 2.5
+    MIN_ZOOM       = 0.25
+    MAX_ZOOM       = 2.5
+    DRAG_THRESHOLD = 6      # px — less than this = treat as click
+    TOGGLE_RADIUS  = 9      # px — hit area for the ▾/▸ triangle badge
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, callbacks=None, **kwargs):
         super().__init__(parent, bg=BG_DARK, **kwargs)
-        self._zoom        = 0.7
-        self._offset_x    = 0.0
-        self._offset_y    = 40.0
-        self._drag_start  = None
-        self._selected_id: str | None = None
-        self._all_nodes:  list[dict]  = []
-        self._all_edges:  list        = []
-        self._agent_db:   dict[str, dict] = {}  # agent_id → DB record
-        self._search_var  = tk.StringVar()
+        self._cbs             = callbacks or {}
+        self._zoom            = 0.7
+        self._offset_x        = 0.0
+        self._offset_y        = 40.0
+        self._drag_start      = None
+        self._drag_offset_start = None
+        self._drag_dist       = 0.0
+        self._last_click_time = 0.0
+        self._selected_id:    str | None  = None
+        self._selected_node:  dict | None = None
+        self._collapsed:      set[str]    = set()   # IDs of collapsed parents
+        self._all_nodes:      list[dict]  = []
+        self._all_edges:      list        = []
+        self._agent_db:       dict[str, dict] = {}
+        self._node_by_id:     dict[str, dict] = {}
+        self._parent_map:     dict[str, str]  = {}  # child_id → parent_id
+        self._search_var      = tk.StringVar()
         self._search_var.trace_add("write", self._on_search)
-        self._highlighted: set[str] = set()
 
         self._build_ui()
         self._load_data()
@@ -337,31 +358,72 @@ class OrgChartTab(tk.Frame):
         self._btn(top, "−", self._zoom_out).pack(side="right", padx=2, pady=6)
         self._btn(top, "Fit", self._fit_view).pack(side="right", padx=2, pady=6)
         self._btn(top, "+", self._zoom_in).pack(side="right", padx=2, pady=6)
-        self._btn(top, "⟳ Refresh", self._load_data).pack(side="right", padx=8, pady=6)
+        self._btn(top, "⟳", self._load_data).pack(side="right", padx=8, pady=6)
+        self._btn(top, "⊞ Expand All", self._expand_all).pack(side="right", padx=2, pady=6)
+        self._btn(top, "⊟ Collapse All", self._collapse_all).pack(side="right", padx=2, pady=6)
+
+        # ── Division quick-nav chips ──────────────────────────────────────
+        nav = tk.Frame(self, bg=BG_DARK)
+        nav.pack(fill="x", padx=14, pady=(6, 0))
+        tk.Label(nav, text="Jump to:", bg=BG_DARK, fg=TEXT_MUTED,
+                 font=("Segoe UI", 8)).pack(side="left", padx=(0, 8))
+
+        div_chips = [
+            ("🏛  Executive",    "executive-office"),
+            ("🏢  Holdings",     "holdings-div"),
+            ("💼  Finance",      "smithcap-finance"),
+            ("📈  Markets",      "markets-desk"),
+            ("🚀  Portfolio",    "portfolio-div"),
+            ("⚖️  Prof. Svcs",   "prof-services"),
+            ("🌱  Community",    "community-div"),
+        ]
+        for chip_label, node_id in div_chips:
+            btn = tk.Button(
+                nav, text=chip_label,
+                command=lambda nid=node_id: self._jump_to_node(nid),
+                bg=BG_CARD, fg=TEXT_BODY, relief="flat",
+                padx=10, pady=3, cursor="hand2", font=("Segoe UI", 8),
+                activebackground=BG_CANVAS, activeforeground=TEXT_PRIMARY,
+            )
+            btn.pack(side="left", padx=(0, 4))
 
         # ── Legend ─────────────────────────────────────────────────────────
         legend = tk.Frame(self, bg=BG_DARK)
         legend.pack(fill="x", padx=14, pady=(4, 0))
         legend_items = [
-            ("root",      "Smith Capital Group"),
+            ("root",      "Smith Capital"),
             ("executive", "Executive"),
             ("holdings",  "Holdings"),
             ("finance",   "Finance"),
             ("markets",   "Markets"),
-            ("portfolio", "Portfolio Co."),
-            ("legal",     "Professional Services"),
-            ("nonprofit", "Non-Profit / Community"),
+            ("portfolio", "Portfolio"),
+            ("legal",     "Prof. Services"),
+            ("nonprofit", "Non-Profit"),
             ("social",    "Social / Media"),
         ]
         for div, label in legend_items:
             fill, _ = DIV_COLORS.get(div, DIV_COLORS["agent"])
-            dot = tk.Canvas(legend, width=12, height=12, bg=BG_DARK, highlightthickness=0)
-            dot.create_oval(2, 2, 10, 10, fill=fill, outline="")
+            dot = tk.Canvas(legend, width=10, height=10, bg=BG_DARK, highlightthickness=0)
+            dot.create_oval(1, 1, 9, 9, fill=fill, outline="")
             dot.pack(side="left", padx=(8, 2))
             tk.Label(legend, text=label, bg=BG_DARK, fg=TEXT_MUTED,
                      font=("Segoe UI", 8)).pack(side="left", padx=(0, 6))
+        tk.Label(legend, text="  ▾ click to expand/collapse",
+                 bg=BG_DARK, fg=TEXT_MUTED, font=("Segoe UI", 8, "italic")).pack(
+                     side="right", padx=8)
 
-        tk.Frame(self, bg=BORDER, height=1).pack(fill="x", pady=(4, 0))
+        # ── Breadcrumb ─────────────────────────────────────────────────────
+        bc_frame = tk.Frame(self, bg="#0a0f1a",
+                            highlightbackground=BORDER, highlightthickness=1)
+        bc_frame.pack(fill="x")
+        tk.Label(bc_frame, text="📍", bg="#0a0f1a", fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).pack(side="left", padx=(10, 4), pady=4)
+        self._breadcrumb_label = tk.Label(
+            bc_frame, text="Smith Capital Group",
+            bg="#0a0f1a", fg=ACCENT, font=("Segoe UI", 9))
+        self._breadcrumb_label.pack(side="left", pady=4)
+
+        tk.Frame(self, bg=BORDER, height=1).pack(fill="x")
 
         # ── Main split: canvas | detail ────────────────────────────────────
         body = tk.Frame(self, bg=BG_DARK)
@@ -385,12 +447,13 @@ class OrgChartTab(tk.Frame):
         self._canvas.bind("<ButtonPress-1>",   self._on_mouse_press)
         self._canvas.bind("<B1-Motion>",        self._on_drag)
         self._canvas.bind("<ButtonRelease-1>",  self._on_mouse_release)
+        self._canvas.bind("<Double-Button-1>",  self._on_double_click)
         self._canvas.bind("<MouseWheel>",       self._on_mousewheel)
         self._canvas.bind("<Button-4>",         lambda e: self._zoom_step(1.1))
         self._canvas.bind("<Button-5>",         lambda e: self._zoom_step(0.9))
 
         # Detail panel
-        self._detail_frame = tk.Frame(body, bg=BG_PANEL, width=260,
+        self._detail_frame = tk.Frame(body, bg=BG_PANEL, width=280,
                                        highlightbackground=BORDER, highlightthickness=1)
         self._detail_frame.grid(row=0, column=1, sticky="nsew")
         self._detail_frame.pack_propagate(False)
@@ -406,12 +469,12 @@ class OrgChartTab(tk.Frame):
 
         self._detail_name = tk.Label(self._detail_frame, text="—", bg=BG_PANEL,
                                       fg=TEXT_PRIMARY, font=("Segoe UI", 13, "bold"),
-                                      wraplength=230, justify="left")
+                                      wraplength=240, justify="left")
         self._detail_name.pack(anchor="w", padx=14, pady=(10, 2))
 
         self._detail_role = tk.Label(self._detail_frame, text="", bg=BG_PANEL,
                                       fg=ACCENT, font=("Segoe UI", 9))
-        self._detail_role.pack(anchor="w", padx=14, pady=(0, 6))
+        self._detail_role.pack(anchor="w", padx=14, pady=(0, 2))
 
         self._detail_div = tk.Label(self._detail_frame, text="", bg=BG_PANEL,
                                      fg=TEXT_MUTED, font=("Segoe UI", 9))
@@ -419,13 +482,41 @@ class OrgChartTab(tk.Frame):
 
         tk.Frame(self._detail_frame, bg=BORDER, height=1).pack(fill="x", padx=10, pady=8)
 
+        # ── Action buttons (shown for agent nodes) ─────────────────────────
+        self._action_frame = tk.Frame(self._detail_frame, bg=BG_PANEL)
+        self._action_frame.pack(fill="x", padx=14, pady=(0, 6))
+
+        self._btn_run = self._action_btn(
+            self._action_frame, "▶  Run Agent", "#1a4a1a", SUCCESS,
+            lambda: self._action_run_agent())
+        self._btn_run.pack(fill="x", pady=2)
+
+        self._btn_inez = self._action_btn(
+            self._action_frame, "👑  Ask Inez", "#2d1b69", "#c4b5fd",
+            lambda: self._action_ask_inez())
+        self._btn_inez.pack(fill="x", pady=2)
+
+        self._btn_runs = self._action_btn(
+            self._action_frame, "📊  View Runs", "#0a2a3a", ACCENT,
+            lambda: self._action_view_runs())
+        self._btn_runs.pack(fill="x", pady=2)
+
+        self._btn_skill = self._action_btn(
+            self._action_frame, "📄  View Skill File", "#1a1a2e", TEXT_BODY,
+            lambda: self._action_view_skill())
+        self._btn_skill.pack(fill="x", pady=2)
+
+        # Hide action buttons until an agent node is selected
+        self._action_frame.pack_forget()
+
+        tk.Frame(self._detail_frame, bg=BORDER, height=1).pack(fill="x", padx=10, pady=(4, 8))
+
         # DB details area
         db_frame = tk.Frame(self._detail_frame, bg=BG_PANEL)
         db_frame.pack(fill="x", padx=14)
-        self._detail_status = self._detail_kv(db_frame, "Status", "—")
+        self._detail_status  = self._detail_kv(db_frame, "Status",  "—")
         self._detail_project = self._detail_kv(db_frame, "Project", "—")
-        self._detail_type    = self._detail_kv(db_frame, "Type", "—")
-        self._detail_caps    = self._detail_kv(db_frame, "Capabilities", "—")
+        self._detail_children = self._detail_kv(db_frame, "Children", "—")
 
         tk.Frame(self._detail_frame, bg=BORDER, height=1).pack(fill="x", padx=10, pady=8)
 
@@ -444,20 +535,27 @@ class OrgChartTab(tk.Frame):
         vsb2.config(command=self._detail_desc.yview)
         self._detail_desc.configure(state="disabled")
 
+    def _action_btn(self, parent, text, bg, fg, command):
+        return tk.Button(parent, text=text, command=command,
+                         bg=bg, fg=fg, relief="flat", bd=0,
+                         padx=10, pady=6, cursor="hand2",
+                         font=("Segoe UI", 9, "bold"),
+                         activebackground=BG_CANVAS, activeforeground=TEXT_PRIMARY,
+                         anchor="w")
+
     def _detail_kv(self, parent, label: str, default: str) -> tk.Label:
         row = tk.Frame(parent, bg=BG_PANEL)
         row.pack(fill="x", pady=2)
         tk.Label(row, text=label + ":", bg=BG_PANEL, fg=TEXT_MUTED,
-                 font=("Segoe UI", 8), width=12, anchor="w").pack(side="left")
+                 font=("Segoe UI", 8), width=10, anchor="w").pack(side="left")
         val = tk.Label(row, text=default, bg=BG_PANEL, fg=TEXT_BODY,
-                       font=("Segoe UI", 9), anchor="w", wraplength=160, justify="left")
+                       font=("Segoe UI", 9), anchor="w", wraplength=170, justify="left")
         val.pack(side="left", fill="x", expand=True)
         return val
 
     # ── Data loading ──────────────────────────────────────────────────────────
 
     def _load_data(self):
-        """Build the tree, assign positions, pull agent DB records."""
         self._tree = _build_org_tree()
         _assign_positions(self._tree, 0, 0)
 
@@ -465,6 +563,12 @@ class OrgChartTab(tk.Frame):
         self._all_edges = []
         _collect_nodes(self._tree, self._all_nodes)
         _collect_edges(self._tree, self._all_edges)
+
+        # Build lookup maps
+        self._node_by_id = {n["id"]: n for n in self._all_nodes}
+        self._parent_map = {}
+        for parent, child in self._all_edges:
+            self._parent_map[child["id"]] = parent["id"]
 
         # Load agent DB records
         self._agent_db = {}
@@ -475,7 +579,28 @@ class OrgChartTab(tk.Frame):
             except Exception:
                 pass
 
+        self._collapsed.clear()
         self._fit_view()
+
+    # ── Visibility helpers (respects collapse state) ──────────────────────────
+
+    def _is_visible(self, node: dict) -> bool:
+        """Return True if all ancestors are expanded."""
+        nid = node["id"]
+        pid = self._parent_map.get(nid)
+        while pid:
+            if pid in self._collapsed:
+                return False
+            pid = self._parent_map.get(pid)
+        return True
+
+    def _visible_nodes(self) -> list[dict]:
+        return [n for n in self._all_nodes if self._is_visible(n)]
+
+    def _visible_edges(self) -> list[tuple]:
+        return [(p, c) for p, c in self._all_edges
+                if self._is_visible(p) and self._is_visible(c)
+                and p["id"] not in self._collapsed]
 
     # ── Rendering ─────────────────────────────────────────────────────────────
 
@@ -489,13 +614,14 @@ class OrgChartTab(tk.Frame):
 
     def _render(self):
         self._canvas.delete("all")
-        if not self._all_nodes:
+        vis_nodes = self._visible_nodes()
+        if not vis_nodes:
             return
 
         search = self._search_var.get().strip().lower()
 
         # Draw edges first (behind nodes)
-        for parent, child in self._all_edges:
+        for parent, child in self._visible_edges():
             px, py = self._world_to_screen(parent["_x"], parent["_y"] + NODE_H / 2)
             cx, cy = self._world_to_screen(child["_x"],  child["_y"]  - NODE_H / 2)
             mid_y  = (py + cy) / 2
@@ -504,13 +630,12 @@ class OrgChartTab(tk.Frame):
                 fill=BORDER, width=1, smooth=False,
             )
 
-        # Draw nodes
-        for node in self._all_nodes:
+        for node in vis_nodes:
             self._draw_node(node, search)
 
         # Update scroll region
-        all_x = [n["_x"] for n in self._all_nodes]
-        all_y = [n["_y"] for n in self._all_nodes]
+        all_x = [n["_x"] for n in vis_nodes]
+        all_y = [n["_y"] for n in vis_nodes]
         if all_x:
             mx = max(abs(min(all_x)), abs(max(all_x))) + NODE_W
             my = max(all_y) + NODE_H + 40
@@ -519,15 +644,16 @@ class OrgChartTab(tk.Frame):
             self._canvas.configure(scrollregion=(sx1, sy1, sx2, sy2))
 
     def _draw_node(self, node: dict, search: str):
-        nx, ny  = node["_x"], node["_y"]
-        nid     = node["id"]
-        div     = node.get("division", "agent")
+        nx, ny   = node["_x"], node["_y"]
+        nid      = node["id"]
+        div      = node.get("division", "agent")
         fill, border = DIV_COLORS.get(div, DIV_COLORS["agent"])
         selected = (nid == self._selected_id)
         label    = node["label"]
         role     = node.get("role", "")
+        has_kids = bool(node.get("children"))
+        collapsed = nid in self._collapsed
 
-        # Search highlight
         match_search = (search and (search in label.lower() or search in role.lower()
                         or search in nid.lower()))
         if search and not match_search:
@@ -536,9 +662,8 @@ class OrgChartTab(tk.Frame):
 
         x1, y1 = self._world_to_screen(nx - NODE_W / 2, ny - NODE_H / 2)
         x2, y2 = self._world_to_screen(nx + NODE_W / 2, ny + NODE_H / 2)
-        r       = 8 * self._zoom   # corner radius
+        r       = 8 * self._zoom
 
-        # Rounded rectangle via polygon
         pts = [
             x1+r, y1,  x2-r, y1,
             x2,   y1,  x2,   y1+r,
@@ -550,7 +675,7 @@ class OrgChartTab(tk.Frame):
         outline_w = 3 if selected else (2 if match_search else 1)
         outline_c = ACCENT if selected else ("#fff" if match_search else border)
         tag     = f"node_{nid}"
-        box_tag = f"box_{nid}"   # polygon-only tag for outline hover
+        box_tag = f"box_{nid}"
         self._canvas.create_polygon(
             pts, fill=fill, outline=outline_c, width=outline_w,
             smooth=True, tags=(tag, box_tag, "node"),
@@ -558,7 +683,7 @@ class OrgChartTab(tk.Frame):
 
         # Status dot for agents
         if node.get("agent_id") and DB_OK:
-            db_a = self._agent_db.get(node["agent_id"], {})
+            db_a   = self._agent_db.get(node["agent_id"], {})
             status = db_a.get("status", "")
             dot_c  = SUCCESS if status == "active" else (WARNING if status == "idle" else "#555")
             dx, dy = self._world_to_screen(nx + NODE_W / 2 - 8, ny - NODE_H / 2 + 8)
@@ -566,9 +691,37 @@ class OrgChartTab(tk.Frame):
             self._canvas.create_oval(dx-r2, dy-r2, dx+r2, dy+r2,
                                       fill=dot_c, outline="", tags=(tag,))
 
+        # Expand/collapse triangle badge on parent nodes
+        if has_kids and self._zoom > 0.3:
+            tx, ty = self._world_to_screen(nx + NODE_W / 2 - 10, ny + NODE_H / 2 - 10)
+            tri_size = max(6, 8 * self._zoom)
+            tri_sym  = "▸" if collapsed else "▾"
+            tri_tag  = f"toggle_{nid}"
+            self._canvas.create_text(
+                tx, ty, text=tri_sym, fill=ACCENT if not collapsed else WARNING,
+                font=("Segoe UI", int(tri_size)), anchor="center",
+                tags=(tri_tag, tag),
+            )
+            self._canvas.tag_bind(tri_tag, "<Button-1>",
+                                   lambda e, n=node: (self._toggle_collapse(n), "break"))
+            self._canvas.tag_bind(tri_tag, "<Enter>",
+                                   lambda e: self._canvas.configure(cursor="hand2"))
+            self._canvas.tag_bind(tri_tag, "<Leave>",
+                                   lambda e: self._canvas.configure(cursor="fleur"))
+
+        # Collapsed count badge
+        if collapsed and has_kids:
+            hidden = self._count_descendants(node)
+            bx, by = self._world_to_screen(nx - NODE_W / 2 + 10, ny + NODE_H / 2 - 8)
+            self._canvas.create_text(
+                bx, by, text=f"+{hidden}", fill=TEXT_MUTED,
+                font=("Segoe UI", max(6, int(8 * self._zoom))), anchor="w",
+                tags=(tag,),
+            )
+
         # Label text
         font_size = max(6, int(10 * self._zoom))
-        role_size = max(5, int(8 * self._zoom))
+        role_size = max(5, int(8  * self._zoom))
         cx, cy = self._world_to_screen(nx, ny - 5)
         self._canvas.create_text(
             cx, cy, text=_truncate(label, 18), fill=TEXT_PRIMARY,
@@ -581,22 +734,53 @@ class OrgChartTab(tk.Frame):
                 font=("Segoe UI", role_size), anchor="center", tags=(tag,),
             )
 
-        # Bind click
+        # Hover + click bindings
         self._canvas.tag_bind(tag, "<Button-1>",
                                lambda e, n=node: self._on_node_click(n))
         self._canvas.tag_bind(tag, "<Enter>",
-                               lambda e, t=box_tag: self._canvas.itemconfigure(t, outline=ACCENT))
+                               lambda e, t=box_tag: (
+                                   self._canvas.itemconfigure(t, outline=ACCENT),
+                                   self._canvas.configure(cursor="hand2")))
         self._canvas.tag_bind(tag, "<Leave>",
-                               lambda e, t=box_tag, n=node, s=search: self._canvas.itemconfigure(
-                                   t, outline=ACCENT if n["id"]==self._selected_id else
-                                   ("#fff" if s and s in n["label"].lower() else
-                                    DIV_COLORS.get(n.get("division","agent"), DIV_COLORS["agent"])[1])))
+                               lambda e, t=box_tag, n=node, s=search: (
+                                   self._canvas.itemconfigure(
+                                       t, outline=ACCENT if n["id"] == self._selected_id else
+                                       ("#fff" if s and s in n["label"].lower() else
+                                        DIV_COLORS.get(n.get("division", "agent"),
+                                                        DIV_COLORS["agent"])[1])),
+                                   self._canvas.configure(cursor="fleur")))
+
+    def _count_descendants(self, node: dict) -> int:
+        return sum(1 + self._count_descendants(c) for c in node.get("children", []))
 
     # ── Node interaction ──────────────────────────────────────────────────────
 
     def _on_node_click(self, node: dict):
-        self._selected_id = node["id"]
+        self._selected_id   = node["id"]
+        self._selected_node = node
         self._update_detail(node)
+        self._update_breadcrumb(node)
+        self._render()
+
+    def _toggle_collapse(self, node: dict):
+        if not node.get("children"):
+            return
+        nid = node["id"]
+        if nid in self._collapsed:
+            self._collapsed.discard(nid)
+        else:
+            self._collapsed.add(nid)
+        self._render()
+
+    def _expand_all(self):
+        self._collapsed.clear()
+        self._render()
+
+    def _collapse_all(self):
+        """Collapse all non-root parent nodes."""
+        for n in self._all_nodes:
+            if n.get("children") and n["id"] != self._tree["id"]:
+                self._collapsed.add(n["id"])
         self._render()
 
     def _update_detail(self, node: dict):
@@ -606,8 +790,17 @@ class OrgChartTab(tk.Frame):
             div = node.get("division", "agent")
             self._detail_div.configure(text=div.replace("_", " ").title())
 
+            is_agent = bool(node.get("agent_id"))
+            child_count = len(node.get("children", []))
+
+            # Show/hide action buttons
+            if is_agent:
+                self._action_frame.pack(fill="x", padx=14, pady=(0, 6))
+            else:
+                self._action_frame.pack_forget()
+
             # DB record for agents
-            aid = node.get("agent_id", "")
+            aid  = node.get("agent_id", "")
             db_a = self._agent_db.get(aid, {}) if aid else {}
 
             self._detail_status.configure(
@@ -615,14 +808,8 @@ class OrgChartTab(tk.Frame):
                 fg=SUCCESS if db_a.get("status") == "active" else TEXT_BODY,
             )
             self._detail_project.configure(text=db_a.get("project_slug", "—") or "—")
-            self._detail_type.configure(text=db_a.get("type", "—") or "—")
-
-            caps = db_a.get("capabilities", []) or []
-            if isinstance(caps, str):
-                try: caps = __import__("json").loads(caps)
-                except: caps = []
-            self._detail_caps.configure(
-                text=", ".join(caps[:5]) if caps else "—"
+            self._detail_children.configure(
+                text=f"{child_count} sub-nodes" if child_count else "Leaf node"
             )
 
             desc = (db_a.get("description", "") or
@@ -635,23 +822,121 @@ class OrgChartTab(tk.Frame):
         except Exception as e:
             logger.debug("detail update error: %s", e)
 
-    # ── Navigation ────────────────────────────────────────────────────────────
+    def _update_breadcrumb(self, node: dict):
+        path = []
+        nid  = node["id"]
+        while nid:
+            n = self._node_by_id.get(nid)
+            if not n:
+                break
+            path.insert(0, n["label"])
+            nid = self._parent_map.get(nid)
+        crumb = "  ›  ".join(path) if path else node["label"]
+        try:
+            self._breadcrumb_label.configure(text=crumb)
+        except Exception:
+            pass
+
+    # ── Action button handlers ────────────────────────────────────────────────
+
+    def _action_run_agent(self):
+        n = self._selected_node
+        if n and n.get("agent_id"):
+            cb = self._cbs.get("run_agent")
+            if cb:
+                cb(n["agent_id"], n["label"])
+
+    def _action_ask_inez(self):
+        n = self._selected_node
+        if n and n.get("agent_id"):
+            cb = self._cbs.get("ask_inez")
+            if cb:
+                cb(n["agent_id"], n["label"])
+
+    def _action_view_runs(self):
+        n = self._selected_node
+        if n and n.get("agent_id"):
+            cb = self._cbs.get("view_runs")
+            if cb:
+                cb(n["agent_id"])
+
+    def _action_view_skill(self):
+        n = self._selected_node
+        if n and n.get("agent_id"):
+            cb = self._cbs.get("view_skill")
+            if cb:
+                cb(n["agent_id"], n["label"])
+            else:
+                self._show_skill_popup(n["agent_id"], n["label"])
+
+    def _show_skill_popup(self, agent_id: str, agent_label: str):
+        """Fallback: show skill file content in a popup if no callback provided."""
+        import importlib
+        try:
+            import hub_db as _db
+            HERE2 = Path(__file__).parent
+            AGENTS_DIR2 = HERE2.parent.parent.parent
+            skill_dirs = [
+                AGENTS_DIR2 / "agents" / "projects",
+            ]
+            content = None
+            for d in skill_dirs:
+                for f in d.rglob("*.md"):
+                    if agent_id.replace("-", "_") in f.stem or agent_id in f.stem:
+                        content = f.read_text(encoding="utf-8", errors="ignore")
+                        break
+                if content:
+                    break
+        except Exception:
+            content = None
+
+        popup = tk.Toplevel(self)
+        popup.title(f"Skill File — {agent_label}")
+        popup.configure(bg=BG_PANEL)
+        popup.geometry("720x540")
+        tk.Label(popup, text=f"📄 {agent_label}  ({agent_id})",
+                 bg=BG_PANEL, fg=ACCENT,
+                 font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=14, pady=(12, 6))
+        txt_frame = tk.Frame(popup, bg=BG_CARD)
+        txt_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        vsb = tk.Scrollbar(txt_frame)
+        vsb.pack(side="right", fill="y")
+        txt = tk.Text(txt_frame, bg=BG_CARD, fg=TEXT_BODY,
+                      font=("Courier New", 9), relief="flat",
+                      wrap="word", yscrollcommand=vsb.set, padx=10, pady=8)
+        txt.pack(fill="both", expand=True)
+        vsb.config(command=txt.yview)
+        txt.insert("1.0", content or f"Skill file not found for agent: {agent_id}")
+        txt.configure(state="disabled")
+        tk.Button(popup, text="Close", command=popup.destroy,
+                  bg=BG_CARD, fg=TEXT_BODY, relief="flat", padx=12, pady=6,
+                  cursor="hand2").pack(pady=(0, 10))
+
+    # ── Keyboard & mouse navigation ───────────────────────────────────────────
 
     def _on_mouse_press(self, event):
-        self._drag_start = (event.x, event.y)
+        self._drag_start        = (event.x, event.y)
         self._drag_offset_start = (self._offset_x, self._offset_y)
+        self._drag_dist         = 0.0
 
     def _on_drag(self, event):
         if self._drag_start is None:
             return
         dx = event.x - self._drag_start[0]
         dy = event.y - self._drag_start[1]
-        self._offset_x = self._drag_offset_start[0] + dx
-        self._offset_y = self._drag_offset_start[1] + dy
+        self._drag_dist = (dx**2 + dy**2) ** 0.5
+        self._offset_x  = self._drag_offset_start[0] + dx
+        self._offset_y  = self._drag_offset_start[1] + dy
         self._render()
 
     def _on_mouse_release(self, event):
         self._drag_start = None
+
+    def _on_double_click(self, event):
+        """Double-click on an agent node = Run Agent immediately."""
+        n = self._selected_node
+        if n and n.get("agent_id"):
+            self._action_run_agent()
 
     def _on_mousewheel(self, event):
         if event.delta > 0:
@@ -665,43 +950,61 @@ class OrgChartTab(tk.Frame):
         new_zoom = max(self.MIN_ZOOM, min(self.MAX_ZOOM, self._zoom * factor))
         if new_zoom == old_zoom:
             return
-        # Zoom toward pivot point
         if pivot_sx is None:
-            pivot_sx = self._canvas.winfo_width() / 2
+            pivot_sx = self._canvas.winfo_width()  / 2
             pivot_sy = self._canvas.winfo_height() / 2
         wx = (pivot_sx - self._offset_x) / old_zoom
         wy = (pivot_sy - self._offset_y) / old_zoom
-        self._zoom = new_zoom
-        self._offset_x = pivot_sx - wx * new_zoom
-        self._offset_y = pivot_sy - wy * new_zoom
+        self._zoom      = new_zoom
+        self._offset_x  = pivot_sx - wx * new_zoom
+        self._offset_y  = pivot_sy - wy * new_zoom
         self._zoom_lbl.configure(text=f"{int(new_zoom*100)}%")
         self._render()
 
-    def _zoom_in(self):
-        self._zoom_step(1.2)
-
-    def _zoom_out(self):
-        self._zoom_step(0.8)
+    def _zoom_in(self):  self._zoom_step(1.2)
+    def _zoom_out(self): self._zoom_step(0.8)
 
     def _fit_view(self):
-        """Fit the entire tree into the visible canvas area."""
         self.update_idletasks()
-        if not self._all_nodes:
+        vis = self._visible_nodes()
+        if not vis:
             return
-        all_x  = [n["_x"] for n in self._all_nodes]
-        all_y  = [n["_y"] for n in self._all_nodes]
+        all_x  = [n["_x"] for n in vis]
+        all_y  = [n["_y"] for n in vis]
         min_x, max_x = min(all_x) - NODE_W, max(all_x) + NODE_W
         min_y, max_y = min(all_y) - NODE_H, max(all_y) + NODE_H + 20
         tree_w = max_x - min_x
         tree_h = max_y - min_y
-        cw = max(self._canvas.winfo_width(), 800)
+        cw = max(self._canvas.winfo_width(),  800)
         ch = max(self._canvas.winfo_height(), 600)
         zoom_x = cw / tree_w if tree_w else 1
         zoom_y = ch / tree_h if tree_h else 1
-        self._zoom = max(self.MIN_ZOOM, min(self.MAX_ZOOM, min(zoom_x, zoom_y) * 0.9))
-        self._offset_x = cw / 2 - ((min_x + max_x) / 2) * self._zoom
-        self._offset_y = 20 - min_y * self._zoom
+        self._zoom      = max(self.MIN_ZOOM, min(self.MAX_ZOOM, min(zoom_x, zoom_y) * 0.9))
+        self._offset_x  = cw / 2 - ((min_x + max_x) / 2) * self._zoom
+        self._offset_y  = 20 - min_y * self._zoom
         self._zoom_lbl.configure(text=f"{int(self._zoom*100)}%")
+        self._render()
+
+    def _jump_to_node(self, node_id: str):
+        """Pan canvas to centre on the given node, select it."""
+        node = self._node_by_id.get(node_id)
+        if not node:
+            return
+        # Ensure all ancestors are expanded
+        pid = self._parent_map.get(node_id)
+        while pid:
+            self._collapsed.discard(pid)
+            pid = self._parent_map.get(pid)
+        self._selected_id   = node_id
+        self._selected_node = node
+        self._update_detail(node)
+        self._update_breadcrumb(node)
+        # Centre canvas on the node
+        self.update_idletasks()
+        cw = max(self._canvas.winfo_width(),  800)
+        ch = max(self._canvas.winfo_height(), 600)
+        self._offset_x = cw / 2 - node["_x"] * self._zoom
+        self._offset_y = ch / 2 - node["_y"] * self._zoom
         self._render()
 
     # ── Search ────────────────────────────────────────────────────────────────
