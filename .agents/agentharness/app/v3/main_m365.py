@@ -189,6 +189,9 @@ class LocalHubClient:
     def post_json(self, path, data):
         return None
 
+    def get_json(self, path, **params):
+        return None
+
     def list_runs(self, limit=100, agent_id=None, project=None, status=None):
         return hub_db.load_runs(limit=limit, agent_id=agent_id, project=project, status=status)
 
@@ -371,6 +374,8 @@ class ArchonHubApp:
         # Inez state
         self._inez_history = []           # list of {role, content} for LLM context
         self._inez_conv_id = None         # current conversation_id (for Hub persistence)
+        self._inez_status = {}            # cached /api/inez/status response
+        self._inez_hud_visible = True     # whether the INEZ awareness HUD strip is shown
 
         self.quick_team_var = tk.StringVar(value=list(AGENT_REGISTRY.keys())[0])
         self.quick_agent_var = tk.StringVar(value=AGENT_REGISTRY[self.quick_team_var.get()][0])
@@ -850,6 +855,8 @@ class ArchonHubApp:
                 think_run_id = item[1]
                 result       = item[2]
                 self._inez_handle_result(think_run_id, result)
+            elif kind == "inez_status_loaded":
+                self._apply_inez_status()
             elif kind == "refresh_runs":
                 if self._widget_ok("runs_tree"):
                     self._refresh_runs()
@@ -875,6 +882,8 @@ class ArchonHubApp:
             elif kind == "refresh_connectors":
                 if self._widget_ok("connectors_tree"):
                     self._refresh_connectors()
+            elif kind == "device_code_dialog":
+                self._device_code_dialog(item[1], item[2], item[3])
             elif kind == "refresh_users":
                 if self._widget_ok("users_tree"):
                     self._refresh_users()
@@ -991,62 +1000,192 @@ class ArchonHubApp:
             for agent in agents:
                 tk.Label(card, text=f"• {agent}", bg=BG_CARD, fg=TEXT_BODY, anchor="w").pack(fill="x", padx=14, pady=1)
 
+    def _fetch_inez_status(self):
+        """Fetch /api/inez/status from Hub (or local fallback) in a background thread."""
+        def _work():
+            result = {}
+            try:
+                if getattr(self.hub, "online", False):
+                    r = self.hub.get_json("/api/inez/status")
+                    if isinstance(r, dict):
+                        result.update(r)
+            except Exception:
+                pass
+            if not result:
+                try:
+                    from inez_agent import generate_status_report
+                    result = generate_status_report()
+                except Exception:
+                    result = {"awareness": "All systems nominal.", "urgent_count": 0, "missions": []}
+            self._inez_status = result
+            self._ui_queue.put(("inez_status_loaded",))
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _apply_inez_status(self):
+        """Refresh all INEZ HUD widgets with the current self._inez_status data."""
+        status = self._inez_status
+        awareness = status.get("awareness", "All systems nominal.")
+        urgent_count = int(status.get("urgent_count", 0) or 0)
+        missions = status.get("missions", [])
+
+        # ── Mission HUD on home screen ────────────────────────────────────
+        if self._widget_ok("home_urgent_value"):
+            urg_text  = f"  {urgent_count} urgent" if urgent_count > 0 else "  All clear"
+            urg_color = ERROR if urgent_count > 0 else SUCCESS
+            try:
+                self.home_urgent_value.configure(text=urg_text, fg=urg_color)
+            except Exception:
+                pass
+
+        if self._widget_ok("home_awareness_text"):
+            first_line = awareness.split("\n")[0][:120]
+            try:
+                self.home_awareness_text.configure(text=first_line)
+            except Exception:
+                pass
+
+        if hasattr(self, "home_mission_grid"):
+            try:
+                if self.home_mission_grid.winfo_exists():
+                    self._render_mission_grid(self.home_mission_grid, missions)
+            except Exception:
+                pass
+
+        # ── Awareness HUD strip inside Inez chat panel ────────────────────
+        if hasattr(self, "_inez_awareness_frame"):
+            try:
+                if self._inez_awareness_frame.winfo_exists():
+                    if urgent_count > 0 and self._inez_hud_visible:
+                        first_line = awareness.split("\n")[0][:200]
+                        if hasattr(self, "_inez_awareness_label"):
+                            try:
+                                if self._inez_awareness_label.winfo_exists():
+                                    self._inez_awareness_label.configure(text=first_line)
+                            except Exception:
+                                pass
+                        self._inez_awareness_frame.pack(fill="x", after=self._inez_header_frame)
+                    else:
+                        self._inez_awareness_frame.pack_forget()
+            except Exception:
+                pass
+
+        # ── Urgent count label in Inez header ─────────────────────────────
+        if hasattr(self, "_inez_urgent_label"):
+            try:
+                if self._inez_urgent_label.winfo_exists():
+                    urg_text  = f"{urgent_count} need attention" if urgent_count > 0 else ""
+                    urg_color = ERROR if urgent_count > 0 else TEXT_MUTED
+                    self._inez_urgent_label.configure(text=urg_text, fg=urg_color)
+            except Exception:
+                pass
+
+    def _render_mission_grid(self, frame, missions):
+        """Render a 2-column grid of project mission status tiles inside frame."""
+        for child in frame.winfo_children():
+            child.destroy()
+        if not missions:
+            tk.Label(frame, text="No mission data yet", bg=BG_PANEL,
+                     fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w")
+            return
+        status_color_map = {
+            "active": SUCCESS, "live": SUCCESS, "complete": SUCCESS, "completed": SUCCESS,
+            "pending": WARNING, "pre-launch": WARNING, "planning": WARNING,
+            "paused": TEXT_MUTED, "inactive": TEXT_MUTED,
+        }
+        for idx, m in enumerate(missions[:6]):
+            row, col = divmod(idx, 2)
+            tile = tk.Frame(frame, bg=BG_CARD,
+                            highlightbackground=BORDER_CARD, highlightthickness=1)
+            tile.grid(row=row, column=col, sticky="ew",
+                      padx=(0, 4) if col == 0 else (0, 0), pady=2)
+            s = m.get("status", "unknown").lower()
+            dot_color = status_color_map.get(s, ACCENT)
+            dot_cv = tk.Canvas(tile, width=8, height=8, bg=BG_CARD, highlightthickness=0)
+            dot_cv.create_oval(1, 1, 7, 7, fill=dot_color, outline="")
+            dot_cv.pack(side="left", padx=(6, 3), pady=6)
+            name = (m.get("name") or m.get("slug") or "")[:18]
+            tk.Label(tile, text=name, bg=BG_CARD, fg=TEXT_BODY,
+                     font=("Segoe UI", 9), anchor="w").pack(
+                         side="left", fill="x", expand=True, padx=(0, 6), pady=4)
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=1)
+
+    def _inez_quick_send(self, text: str):
+        """Pre-fill and immediately send a quick-action message to Inez."""
+        try:
+            if not hasattr(self, "_chat_input") or not self._chat_input.winfo_exists():
+                return
+        except Exception:
+            return
+        self._chat_input.delete("1.0", "end")
+        self._chat_input.insert("1.0", text)
+        self._inez_send()
+
     def show_home(self):
         self._set_active_nav("Home")
         self._clear_content()
-        self._section_header(self.content, "ArchonHub", "Microsoft 365-inspired control surface for teams, runs, and workflows.")
+        self._section_header(self.content, "Mission Control", "Inez — Chief of Staff · Smith Capital Portfolio")
 
         paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6,
                                bg=BG_CANVAS, relief="flat")
         paned.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-        # ── Left panel: Quick Run + Hub Status ───────────────────────────
+        # ── Left panel: Mission HUD ───────────────────────────────────────
         left = tk.Frame(paned, bg=BG_CANVAS, width=340)
         paned.add(left, minsize=300)
 
-        quick = self._card(left, "Quick Run", "Submit a run to Hub or local LangGraph fallback.")
-        quick.pack(fill="x", pady=(0, 10))
-        form = tk.Frame(quick, bg=BG_PANEL)
-        form.pack(fill="x", padx=14, pady=(0, 12))
+        mission_card = self._card(left, "INEZ — Mission HUD")
+        mission_card.pack(fill="x")
 
-        tk.Label(form, text="Team", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=2)
-        self.quick_team_combo = self._combo(form, self.quick_team_var, list(AGENT_REGISTRY.keys()))
-        self.quick_team_combo.grid(row=1, column=0, sticky="ew", pady=(0, 6))
-        self.quick_team_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
+        # ── Urgency row ──────────────────────────────────────────────────
+        urg_row = tk.Frame(mission_card, bg=BG_PANEL)
+        urg_row.pack(fill="x", padx=14, pady=(0, 4))
+        tk.Label(urg_row, text="⚡", bg=BG_PANEL, fg="#c4b5fd",
+                 font=("Segoe UI", 11)).pack(side="left")
+        self.home_urgent_value = tk.Label(urg_row, text="  Loading...",
+                                          bg=BG_PANEL, fg=TEXT_MUTED,
+                                          font=("Segoe UI", 10, "bold"))
+        self.home_urgent_value.pack(side="left", padx=(4, 0))
 
-        tk.Label(form, text="Agent", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=2)
-        self.quick_agent_combo = self._combo(form, self.quick_agent_var, AGENT_REGISTRY[self.quick_team_var.get()])
-        self.quick_agent_combo.grid(row=3, column=0, sticky="ew", pady=(0, 6))
+        # ── Awareness text ────────────────────────────────────────────────
+        self.home_awareness_text = tk.Label(
+            mission_card, text="Fetching awareness data...",
+            bg=BG_PANEL, fg=TEXT_BODY, wraplength=280, justify="left",
+            font=("Segoe UI", 9))
+        self.home_awareness_text.pack(anchor="w", padx=14, pady=(0, 8))
 
-        tk.Label(form, text="Project", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=2)
-        self._combo(form, self.quick_project_var, PROJECTS).grid(row=5, column=0, sticky="ew", pady=(0, 6))
+        # ── Mission grid ──────────────────────────────────────────────────
+        self.home_mission_grid = tk.Frame(mission_card, bg=BG_PANEL)
+        self.home_mission_grid.pack(fill="x", padx=14, pady=(0, 8))
+        self._render_mission_grid(self.home_mission_grid, [])
 
-        tk.Label(form, text="Graph", bg=BG_PANEL, fg=TEXT_BODY).grid(row=6, column=0, sticky="w", pady=2)
-        graph_combo = self._combo(form, self.quick_graph_var, GRAPH_NAMES)
-        graph_combo.grid(row=7, column=0, sticky="ew", pady=(0, 6))
-        graph_combo.bind("<<ComboboxSelected>>", self._update_quick_agents)
+        # ── Ask Inez CTA ──────────────────────────────────────────────────
+        self._button(mission_card, "👑 Ask Inez", self.show_inez, accent=True).pack(
+            fill="x", padx=14, pady=(0, 8))
 
-        tk.Label(form, text="Task", bg=BG_PANEL, fg=TEXT_BODY).grid(row=8, column=0, sticky="w", pady=2)
-        self.quick_task_text = self._text_widget(form, height=5)
-        self.quick_task_text.grid(row=9, column=0, sticky="nsew", pady=(0, 8))
-        form.grid_columnconfigure(0, weight=1)
-        self._button(form, "▶ Run Agent", self._submit_quick_run, accent=True).grid(row=10, column=0, sticky="ew")
-
-        hub_card = self._card(left, "Hub Status")
-        hub_card.pack(fill="x")
-        grid = tk.Frame(hub_card, bg=BG_PANEL)
-        grid.pack(fill="x", padx=14, pady=(0, 12))
-        tk.Label(grid, text="Connection", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=0, column=0, sticky="w", pady=3)
-        self.home_status_value = tk.Label(grid, text="Offline", bg=BG_PANEL, fg=ERROR,
-                                          font=("Segoe UI", 11, "bold"))
-        self.home_status_value.grid(row=0, column=1, sticky="e", pady=3)
-        tk.Label(grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=1, column=0, sticky="w", pady=3)
-        self.home_uptime_value = tk.Label(grid, text="—", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=3)
-        tk.Label(grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED).grid(row=2, column=0, sticky="w", pady=3)
-        self.home_active_runs_value = tk.Label(grid, text="0", bg=BG_PANEL, fg=TEXT_PRIMARY)
-        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=3)
-        grid.grid_columnconfigure(1, weight=1)
+        # ── Hub connection status (compact) ───────────────────────────────
+        tk.Frame(mission_card, bg=BORDER_CARD, height=1).pack(fill="x", padx=14, pady=(0, 6))
+        stat_grid = tk.Frame(mission_card, bg=BG_PANEL)
+        stat_grid.pack(fill="x", padx=14, pady=(0, 12))
+        tk.Label(stat_grid, text="Hub", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=0, column=0, sticky="w", pady=2)
+        self.home_status_value = tk.Label(stat_grid, text="Offline",
+                                          bg=BG_PANEL, fg=ERROR,
+                                          font=("Segoe UI", 9, "bold"))
+        self.home_status_value.grid(row=0, column=1, sticky="e", pady=2)
+        tk.Label(stat_grid, text="Uptime", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=1, column=0, sticky="w", pady=2)
+        self.home_uptime_value = tk.Label(stat_grid, text="—",
+                                          bg=BG_PANEL, fg=TEXT_BODY,
+                                          font=("Segoe UI", 9))
+        self.home_uptime_value.grid(row=1, column=1, sticky="e", pady=2)
+        tk.Label(stat_grid, text="Active runs", bg=BG_PANEL, fg=TEXT_MUTED,
+                 font=("Segoe UI", 9)).grid(row=2, column=0, sticky="w", pady=2)
+        self.home_active_runs_value = tk.Label(stat_grid, text="0",
+                                               bg=BG_PANEL, fg=TEXT_BODY,
+                                               font=("Segoe UI", 9))
+        self.home_active_runs_value.grid(row=2, column=1, sticky="e", pady=2)
+        stat_grid.grid_columnconfigure(1, weight=1)
 
         # ── Right panel: Inez Chat ────────────────────────────────────────
         right = tk.Frame(paned, bg=BG_CANVAS)
@@ -1054,33 +1193,97 @@ class ArchonHubApp:
         self._build_inez_chat_panel(right)
 
         self._refresh_home_status()
+        self._fetch_inez_status()
 
     def _build_inez_chat_panel(self, parent):
         """Embed the full Inez chat interface into any parent frame (used on Home + Inez tab)."""
-        # Header
-        top = tk.Frame(parent, bg=BG_PANEL,
-                       highlightbackground=BORDER_CARD, highlightthickness=1)
-        top.pack(fill="x")
+        # ── Header ────────────────────────────────────────────────────────
+        self._inez_header_frame = tk.Frame(parent, bg=BG_PANEL,
+                                           highlightbackground=BORDER_CARD,
+                                           highlightthickness=1)
+        self._inez_header_frame.pack(fill="x")
 
-        av = tk.Canvas(top, width=34, height=34, bg=BG_PANEL, highlightthickness=0)
+        av = tk.Canvas(self._inez_header_frame, width=34, height=34,
+                       bg=BG_PANEL, highlightthickness=0)
         av.create_oval(3, 3, 31, 31, fill="#7c3aed", outline="")
         av.create_text(17, 17, text="👑", font=("Segoe UI", 14))
-        av.pack(side="left", padx=(12, 6), pady=6)
+        av.pack(side="left", padx=(12, 6), pady=8)
 
-        name_col = tk.Frame(top, bg=BG_PANEL)
-        name_col.pack(side="left", pady=6)
-        tk.Label(name_col, text="Inez", bg=BG_PANEL, fg="#c4b5fd",
+        name_col = tk.Frame(self._inez_header_frame, bg=BG_PANEL)
+        name_col.pack(side="left", pady=8)
+        tk.Label(name_col, text="INEZ", bg=BG_PANEL, fg="#c4b5fd",
                  font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(name_col, text="Chief of Staff — Smith Capital Portfolio",
+        tk.Label(name_col, text="Intelligent Neural Executive Zone",
                  bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w")
 
+        right_col = tk.Frame(self._inez_header_frame, bg=BG_PANEL)
+        right_col.pack(side="right", padx=14, pady=8)
         hub_online = getattr(self.hub, "online", False)
         dot_color = SUCCESS if hub_online else WARNING
-        dot_text  = "● Hub connected" if hub_online else "● Local mode"
-        tk.Label(top, text=dot_text, bg=BG_PANEL, fg=dot_color,
-                 font=("Segoe UI", 9)).pack(side="right", padx=14)
+        dot_text  = "● ACTIVE" if hub_online else "● LOCAL"
+        tk.Label(right_col, text=dot_text, bg=BG_PANEL, fg=dot_color,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="e")
+        urgent_count = int(self._inez_status.get("urgent_count", 0) or 0)
+        urg_text  = f"{urgent_count} need attention" if urgent_count > 0 else ""
+        urg_color = ERROR if urgent_count > 0 else TEXT_MUTED
+        self._inez_urgent_label = tk.Label(right_col, text=urg_text,
+                                           bg=BG_PANEL, fg=urg_color,
+                                           font=("Segoe UI", 8))
+        self._inez_urgent_label.pack(anchor="e")
 
-        # Bubble area
+        # ── Awareness HUD (collapsible purple strip) ───────────────────────
+        self._inez_awareness_frame = tk.Frame(parent, bg="#1a0f3a",
+                                              highlightbackground="#5b21b6",
+                                              highlightthickness=1)
+        # Only show on build if we already have status data with urgency
+        if urgent_count > 0 and self._inez_hud_visible:
+            self._inez_awareness_frame.pack(fill="x")
+
+        hud_top = tk.Frame(self._inez_awareness_frame, bg="#1a0f3a")
+        hud_top.pack(fill="x", padx=12, pady=(8, 2))
+        tk.Label(hud_top, text="⚡ INEZ AWARENESS", bg="#1a0f3a", fg="#c4b5fd",
+                 font=("Segoe UI", 8, "bold")).pack(side="left")
+
+        def _dismiss_hud():
+            self._inez_hud_visible = False
+            try:
+                self._inez_awareness_frame.pack_forget()
+            except Exception:
+                pass
+
+        tk.Button(hud_top, text="✕", command=_dismiss_hud, bg="#1a0f3a", fg=TEXT_MUTED,
+                  relief="flat", bd=0, cursor="hand2",
+                  font=("Segoe UI", 9)).pack(side="right")
+
+        awareness = self._inez_status.get("awareness", "")
+        first_line = awareness.split("\n")[0][:200] if awareness else "All systems nominal."
+        self._inez_awareness_label = tk.Label(self._inez_awareness_frame,
+                                              text=first_line, bg="#1a0f3a", fg=TEXT_BODY,
+                                              wraplength=500, justify="left",
+                                              font=("Segoe UI", 9))
+        self._inez_awareness_label.pack(anchor="w", padx=12, pady=(0, 8))
+
+        # ── Quick Actions ─────────────────────────────────────────────────
+        qa_frame = tk.Frame(parent, bg=BG_PANEL,
+                            highlightbackground=BORDER_CARD, highlightthickness=1)
+        qa_frame.pack(fill="x")
+        qa_inner = tk.Frame(qa_frame, bg=BG_PANEL)
+        qa_inner.pack(fill="x", padx=12, pady=8)
+        for qa_label, qa_text in [
+            ("Status",          "What's the current status of all missions?"),
+            ("Brief Me",        "Give me a morning briefing."),
+            ("Priorities",      "What needs my immediate attention?"),
+            ("Recommendations", "What do you recommend I focus on today?"),
+        ]:
+            btn = tk.Button(qa_inner, text=qa_label,
+                            command=lambda t=qa_text: self._inez_quick_send(t),
+                            bg="#2d1b69", fg="#c4b5fd", relief="flat", bd=0,
+                            padx=12, pady=4, cursor="hand2",
+                            font=("Segoe UI", 9),
+                            activebackground="#3d2b89", activeforeground="#e9d5ff")
+            btn.pack(side="left", padx=(0, 6))
+
+        # ── Bubble area ───────────────────────────────────────────────────
         bubble_outer = tk.Frame(parent, bg=BG_CANVAS)
         bubble_outer.pack(fill="both", expand=True)
 
@@ -1838,8 +2041,51 @@ class ArchonHubApp:
             tk.Label(self.content, text=f"Org chart failed to load:\n{e}",
                      bg=BG_CANVAS, fg=ERROR, font=("Segoe UI", 11)).pack(expand=True)
             return
-        tab = OrgChartTab(self.content)
+        tab = OrgChartTab(self.content, callbacks={
+            "run_agent":  self._org_run_agent,
+            "ask_inez":   self._org_ask_inez,
+            "view_runs":  self._org_view_runs,
+            "view_skill": self._org_view_skill,
+        })
         tab.pack(fill="both", expand=True)
+
+    def _org_run_agent(self, agent_id: str, agent_label: str):
+        """Called from Org chart — pre-populate and launch Runs tab for this agent."""
+        self.quick_agent_var.set(agent_id)
+        # Find and set the team
+        for team, agents in AGENT_REGISTRY.items():
+            if agent_id in agents:
+                self.quick_team_var.set(team)
+                break
+        self.show_inez()
+        # Pre-fill Inez with a run request
+        msg = f"Run agent {agent_id} ({agent_label}) — what task should I give it?"
+        try:
+            if self._chat_input and self._chat_input.winfo_exists():
+                self._chat_input.delete("1.0", "end")
+                self._chat_input.insert("1.0", msg)
+        except Exception:
+            pass
+
+    def _org_ask_inez(self, agent_id: str, agent_label: str):
+        """Called from Org chart — open Inez tab with a pre-filled question about the agent."""
+        self.show_inez()
+        msg = f"Tell me about the {agent_label} agent ({agent_id}) — what is it responsible for and what's its current status?"
+        try:
+            if self._chat_input and self._chat_input.winfo_exists():
+                self._chat_input.delete("1.0", "end")
+                self._chat_input.insert("1.0", msg)
+        except Exception:
+            pass
+
+    def _org_view_runs(self, agent_id: str):
+        """Called from Org chart — jump to Runs tab filtered to this agent."""
+        self.run_filter_agent_var.set(agent_id)
+        self.show_runs()
+
+    def _org_view_skill(self, agent_id: str, agent_label: str):
+        """Called from Org chart — show skill file in a popup (handled by OrgChartTab itself as fallback)."""
+        pass
 
     # ── Markets ───────────────────────────────────────────────────────────────
 
@@ -2305,27 +2551,61 @@ class ArchonHubApp:
         if preset["oauth"]:
             # ── OAuth2 mode ──────────────────────────────────────────────
             provider_name = "Google" if provider == "gmail" else "Microsoft"
-            note = (
-                f"Authorize ArchonHub to access your {provider_name} account via OAuth2.\n"
-                f"You need a {'Google Cloud' if provider == 'gmail' else 'Azure App'} Client ID & Secret."
-            )
-            tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
-                     wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
-
-            for lbl, key in [("Client ID *", "oauth_client_id"), ("Client Secret *", "oauth_client_secret")]:
-                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
-                show = "*" if "secret" in key else None
-                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
-
-            # Help link
+            console_name  = "Google Cloud Console" if provider == "gmail" else "Azure App Registration"
             help_url = (
                 "https://console.cloud.google.com/apis/credentials"
                 if provider == "gmail"
                 else "https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps"
             )
-            lnk = tk.Label(f, text=f"📋 Open {provider_name} Console →", bg=BG_PANEL,
-                           fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
-            lnk.pack(anchor="w", pady=(4, 0))
+
+            # Clear credential fields whenever provider changes — Google and Microsoft
+            # credentials are completely separate and must never cross-contaminate.
+            last_provider = getattr(self, "_connector_oauth_provider", None)
+            if last_provider != provider:
+                self._connector_vars["oauth_client_id"].set("")
+                self._connector_vars["oauth_client_secret"].set("")
+                self._connector_oauth_provider = provider
+
+            # Load saved defaults for THIS provider
+            saved_id  = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
+            saved_sec = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
+            if saved_id:
+                self._connector_vars["oauth_client_id"].set(saved_id)
+                self._connector_vars["oauth_client_secret"].set(saved_sec)
+
+            note = (
+                f"One {console_name} app works for ALL your {provider_name} accounts.\n"
+                f"Create credentials once — then add as many emails as you like."
+            )
+            tk.Label(f, text=note, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9),
+                     wraplength=280, justify="left").pack(anchor="w", pady=(10, 6))
+
+            if saved_id:
+                saved_row = tk.Frame(f, bg=BG_PANEL)
+                saved_row.pack(fill="x", pady=(0, 4))
+                tk.Label(saved_row, text=f"✅ Using saved {provider_name} credentials",
+                         bg=BG_PANEL, fg=SUCCESS, font=("Segoe UI", 9)).pack(side="left")
+                clr = tk.Label(saved_row, text="  🔄 Change", bg=BG_PANEL,
+                               fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
+                clr.pack(side="left")
+                clr.bind("<Button-1>", lambda _e, p=provider: self._clear_oauth_defaults(p))
+
+            # Credential fields — labelled with provider name so it's unambiguous
+            secret_lbl = f"{provider_name} Client Secret {'*' if provider == 'gmail' else '(optional)'}"
+            for lbl, key in [(f"{provider_name} Client ID *", "oauth_client_id"),
+                             (secret_lbl, "oauth_client_secret")]:
+                tk.Label(f, text=lbl, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(anchor="w", pady=(6, 2))
+                show = "*" if "secret" in key else None
+                self._entry(f, self._connector_vars[key], show=show).pack(fill="x")
+
+            # Save-as-defaults + console link row
+            btn_row = tk.Frame(f, bg=BG_PANEL)
+            btn_row.pack(fill="x", pady=(6, 0))
+            self._button(btn_row, "💾 Save as defaults",
+                         lambda p=provider: self._save_oauth_defaults(p)).pack(side="left")
+            lnk = tk.Label(btn_row, text=f"📋 {provider_name} Console →",
+                           bg=BG_PANEL, fg=ACCENT, font=("Segoe UI", 9, "underline"), cursor="hand2")
+            lnk.pack(side="right")
             lnk.bind("<Button-1>", lambda _e: webbrowser.open(help_url))
 
             redirect_note = tk.Label(
@@ -2333,15 +2613,22 @@ class ArchonHubApp:
                 text=f"Redirect URI:  http://localhost:8765/api/connectors/oauth/{provider}/callback",
                 bg=BG_PANEL, fg="#6b7a99", font=("Segoe UI", 8),
             )
-            redirect_note.pack(anchor="w", pady=(2, 8))
+            redirect_note.pack(anchor="w", pady=(4, 8))
 
             # Authorize button
-            btn_label = f"🔐 Authorize with {provider_name}"
-            self._button(self._connector_add_btn_frame, btn_label,
-                         lambda p=provider: self._create_and_authorize(p), accent=True).pack(fill="x")
+            self._button(self._connector_add_btn_frame,
+                         f"🔐 Authorize with {provider_name}",
+                         lambda p=provider: self._create_and_authorize(p),
+                         accent=True).pack(fill="x", pady=(0, 4))
+
+            if provider == "outlook":
+                self._button(self._connector_add_btn_frame,
+                             "🖥 Device Code (no browser redirect)",
+                             self._start_device_code_flow).pack(fill="x")
 
         else:
             # ── Password mode ────────────────────────────────────────────
+            self._connector_oauth_provider = None  # reset tracker
             for lbl, key, show in [
                 ("IMAP Host",  "imap_host",  None),
                 ("IMAP Port",  "imap_port",  None),
@@ -2362,8 +2649,17 @@ class ArchonHubApp:
         if not data["label"] or not data["email_address"]:
             self.show_toast("Label and email are required.", WARNING)
             return
-        if not data["oauth_client_id"] or not data["oauth_client_secret"]:
-            self.show_toast("Client ID and Client Secret are required for OAuth.", WARNING)
+
+        # Fall back to saved defaults if fields are empty
+        if not data["oauth_client_id"]:
+            data["oauth_client_id"]     = hub_db.get_config(f"oauth_{provider}_client_id")  or ""
+            data["oauth_client_secret"] = hub_db.get_config(f"oauth_{provider}_client_secret") or ""
+
+        if not data["oauth_client_id"]:
+            self.show_toast("Client ID is required.", WARNING)
+            return
+        if provider == "gmail" and not data["oauth_client_secret"]:
+            self.show_toast("Client Secret is required for Gmail.", WARNING)
             return
 
         preset = self._PROVIDER_PRESETS.get(provider, {})
@@ -2410,6 +2706,146 @@ class ArchonHubApp:
         self._refresh_connectors()
         self.show_toast("Connector added.", SUCCESS)
 
+    # ── OAuth credential helpers ───────────────────────────────────────────────
+
+    def _save_oauth_defaults(self, provider: str):
+        """Persist current Client ID/Secret to hub_config for reuse across accounts."""
+        client_id  = self._connector_vars["oauth_client_id"].get().strip()
+        client_sec = self._connector_vars["oauth_client_secret"].get().strip()
+        if not client_id:
+            self.show_toast("Enter a Client ID first.", WARNING)
+            return
+        hub_db.set_config(f"oauth_{provider}_client_id", client_id)
+        hub_db.set_config(f"oauth_{provider}_client_secret", client_sec)
+        self.show_toast(f"✅ {provider.title()} credentials saved — will auto-fill for future accounts.", SUCCESS)
+        self._rebuild_connector_form()
+
+    def _clear_oauth_defaults(self, provider: str):
+        """Remove saved default credentials so the user can enter new ones."""
+        hub_db.set_config(f"oauth_{provider}_client_id", "")
+        hub_db.set_config(f"oauth_{provider}_client_secret", "")
+        self._connector_vars["oauth_client_id"].set("")
+        self._connector_vars["oauth_client_secret"].set("")
+        self._connector_oauth_provider = None  # force reload on next rebuild
+        self._rebuild_connector_form()
+
+    def _start_device_code_flow(self):
+        """Create a Microsoft connector then initiate Device Code flow (no browser redirect)."""
+        data = {k: v.get().strip() for k, v in self._connector_vars.items()}
+        if not data["label"] or not data["email_address"]:
+            self.show_toast("Label and email are required.", WARNING)
+            return
+        client_id  = (data["oauth_client_id"]
+                      or hub_db.get_config("oauth_outlook_client_id") or "")
+        client_sec = (data["oauth_client_secret"]
+                      or hub_db.get_config("oauth_outlook_client_secret") or "")
+        if not client_id:
+            self.show_toast("Client ID is required for Device Code flow.", WARNING)
+            return
+
+        preset = self._PROVIDER_PRESETS.get("outlook", {})
+        connector = hub_db.create_connector(
+            label=data["label"],
+            email_address=data["email_address"],
+            provider="outlook",
+            auth_type="oauth2",
+            imap_host=preset.get("imap_host", ""),
+            imap_port=int(preset.get("imap_port", 993)),
+            smtp_host=preset.get("smtp_host", ""),
+            smtp_port=int(preset.get("smtp_port", 587)),
+            username=data["email_address"],
+            oauth_client_id=client_id,
+            oauth_client_secret=client_sec,
+        )
+        connector_id = connector["id"]
+        self._refresh_connectors()
+        self.show_toast("Initiating device code flow…", ACCENT)
+
+        def _do():
+            try:
+                from oauth_connector import MicrosoftOAuth
+                m    = MicrosoftOAuth(client_id, client_sec, connector_id)
+                flow = m.get_device_code_flow()
+                self._ui_queue.put(("device_code_dialog", flow, m, connector_id))
+            except ImportError:
+                self._ui_queue.put(("toast", "msal not installed. Run: pip install msal", ERROR))
+            except Exception as exc:
+                self._ui_queue.put(("toast", f"Device code error: {exc}", ERROR))
+
+        threading.Thread(target=_do, daemon=True).start()
+
+    def _device_code_dialog(self, flow: dict, ms_oauth, connector_id: str):
+        """Show a dialog with the device code + poll for completion in background."""
+        import time as _t
+
+        user_code = flow.get("user_code", "")
+        verify_uri = flow.get("verification_uri", "https://microsoft.com/devicelogin")
+        expires_in = flow.get("expires_in", 900)
+
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Microsoft Device Code Authorization")
+        dlg.configure(bg=BG_DARK)
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        tk.Label(dlg, text="🖥  Authorize ArchonHub — Microsoft Device Code",
+                 bg=BG_DARK, fg=TEXT_PRIMARY, font=("Segoe UI", 13, "bold")).pack(pady=(20, 8))
+
+        tk.Label(dlg, text="1. Open your browser and go to:",
+                 bg=BG_DARK, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=24)
+
+        uri_lbl = tk.Label(dlg, text=verify_uri, bg=BG_DARK, fg=ACCENT,
+                           font=("Segoe UI", 10, "underline"), cursor="hand2")
+        uri_lbl.pack(anchor="w", padx=24)
+        uri_lbl.bind("<Button-1>", lambda _: webbrowser.open(verify_uri))
+
+        tk.Label(dlg, text="2. Enter this code when prompted:",
+                 bg=BG_DARK, fg=TEXT_MUTED, font=("Segoe UI", 10)).pack(anchor="w", padx=24, pady=(10, 4))
+
+        code_frame = tk.Frame(dlg, bg="#1a0f3a", bd=0, highlightthickness=2,
+                              highlightbackground=ACCENT)
+        code_frame.pack(padx=24, pady=(0, 12))
+        tk.Label(code_frame, text=user_code, bg="#1a0f3a", fg="#c4b5fd",
+                 font=("Courier New", 24, "bold"), padx=20, pady=10).pack()
+
+        # Copy button
+        def _copy():
+            dlg.clipboard_clear()
+            dlg.clipboard_append(user_code)
+            copy_btn.configure(text="✅ Copied!")
+            dlg.after(2000, lambda: copy_btn.configure(text="📋 Copy Code"))
+        copy_btn = self._button(dlg, "📋 Copy Code", _copy)
+        copy_btn.pack(pady=(0, 8))
+
+        status_var = tk.StringVar(value=f"⏳ Waiting for authorization… (expires in {expires_in//60} min)")
+        status_lbl = tk.Label(dlg, textvariable=status_var, bg=BG_DARK, fg=TEXT_MUTED,
+                              font=("Segoe UI", 9), wraplength=340)
+        status_lbl.pack(padx=24, pady=(0, 16))
+
+        cancel_var = [False]
+        def _cancel():
+            cancel_var[0] = True
+            dlg.destroy()
+        self._button(dlg, "Cancel", _cancel).pack(pady=(0, 16))
+
+        def _poll():
+            try:
+                token = ms_oauth.poll_device_code(flow)
+                if cancel_var[0]:
+                    return
+                email = token.get("id_token_claims", {}).get("email", "") or ""
+                self._ui_queue.put(("toast", f"✅ Microsoft account authorized! {email}", SUCCESS))
+                self._ui_queue.put(("refresh_connectors",))
+                try:
+                    dlg.after(0, dlg.destroy)
+                except Exception:
+                    pass
+            except Exception as exc:
+                if not cancel_var[0]:
+                    self._ui_queue.put(("toast", f"Device code failed: {exc}", ERROR))
+
+        threading.Thread(target=_poll, daemon=True).start()
+
     def _start_oauth_flow(self, connector_id: str, provider: str):
         """Call hub server to get OAuth URL, open browser, then poll for completion."""
         import urllib.request as _ur
@@ -2419,7 +2855,6 @@ class ArchonHubApp:
             try:
                 # Fetch auth URL from hub server (requires server running on 8765)
                 url = f"http://localhost:8765/api/connectors/oauth/{provider}/init?connector_id={connector_id}"
-                # We need an auth header — re-use saved token if available
                 req = _ur.Request(url, headers={"Accept": "application/json"})
                 token = getattr(self, "_hub_token", None)
                 if token:
@@ -2955,6 +3390,7 @@ class ArchonHubApp:
         self._clear_content()
         self._set_active_nav("Inez")
         self._build_inez_chat_panel(self.content)
+        self._fetch_inez_status()
 
 
     def _inez_send(self):

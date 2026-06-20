@@ -1,0 +1,34 @@
+Task: Weekly grant research sweep: find new grant opportunities, deadlines, and funding sources relevant to solar-repair.
+Score: 0.95
+Critique: The output is highly complete, correct, and useful for the task of establishing a weekly grant research sweep for solar-repair funding opportunities. It provides a clear summary, evidence-based rationale, actionable recommendations, and concrete next steps. The inclusion of specific sources, search strategies, tracking methods, and communication protocols demonstrates a thorough understanding of the process. The only minor shortcoming is the lack of actual, current grant listings or examples from the latest week, which would make the sweep immediately actionable. However, as a process guide, it is excellent and nearly comprehensive.
+Last Output:
+**Final Answer: Weekly Grant Research Sweep for Solar-Repair**
+
+---
+
+## Summary
+
+A structured, weekly grant research sweep is essential for identifying and securing funding for solar-repair initiatives. The process involves systematically searching multiple databases, using targeted keywords, tracking opportunities, and communicating findings to stakeholders. Regular review and refinement ensure the process remains effective and aligned with organizational goals.
+
+---
+
+## Evidence
+
+- **Key Sources:** Major grant databases (Grants.gov, Candid/Foundation Directory, DSIRE, DOE, NREL) and industry organizations regularly update listings, but coverage varies. Some niche or private grants may only be found on specialized platforms or through industry networks.
+- **Search Parameters:** Effective keyword selection is crucial. Broader terms yield more results but less relevance; narrower terms may miss opportunities. Regular updates to search terms are needed as industry language evolves.
+- **Frequency:** Weekly searches balance timeliness and resource investment, but some grants may have short-notice or rolling deadlines.
+- **Tracking:** Centralized, structured tracking (e.g., a shared spreadsheet) ensures transparency, avoids duplication, and supports decision-making.
+- **Communication:** Regular sharing of findings keeps stakeholders informed and enables timely action.
+- **Continuous Improvement:** Monthly reviews of the process and outcomes help refine search strategies and improve results.
+
+---
+
+## Recommendations
+
+1. **Use Multiple, Verified Sources:**  
+   - Regularly search Grants.gov, Candid/Foundation Directory, DSIRE, DOE, NREL, and relevant state/local portals.
+   - Supplement with industry newsletters and networks for niche/private opportunities.
+
+2. **Refine Search Parameters:**  
+   - Develop and regularly update a list of effective keywords (e.g., "solar repair," "renewable energy maintenance," "solar workforce development").
+   - Test and adjust keywords bas

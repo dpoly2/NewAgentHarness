@@ -123,10 +123,48 @@ def _creds_from_db(connector_id: str) -> dict:
         c = hub_db.get_connector(connector_id)
         if not c:
             return {}
-        raw = c.get("credentials", "{}")
-        return json.loads(raw) if isinstance(raw, str) else (raw or {})
+        raw = c.get("credentials", {})
+        # hub_db auto-parses JSON fields — raw may already be a dict
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, str) and raw:
+            return json.loads(raw)
+        return {}
     except Exception:
         return {}
+
+
+def get_valid_access_token(connector_id: str) -> str:
+    """
+    Return a fresh, valid access token for any connector (Google or Microsoft).
+    Auto-refreshes using the stored refresh_token if the access token is expired.
+    Raises RuntimeError if the connector doesn't exist or can't be refreshed.
+    """
+    try:
+        import hub_db
+        c = hub_db.get_connector(connector_id)
+    except Exception as e:
+        raise RuntimeError(f"Could not load connector {connector_id}: {e}") from e
+    if not c:
+        raise RuntimeError(f"Connector {connector_id} not found")
+
+    provider = (c.get("provider") or "").lower()
+    client_id = c.get("oauth_client_id", "") or ""
+    client_secret = c.get("oauth_client_secret", "") or ""
+
+    if provider in ("gmail", "google"):
+        g = GoogleOAuth(client_id, client_secret, connector_id)
+        return g.get_valid_token(connector_id)
+    elif provider in ("outlook", "microsoft", "office365"):
+        m = MicrosoftOAuth(client_id, client_secret, connector_id)
+        return m.get_valid_token(connector_id)
+    else:
+        # Generic: return whatever access_token is in credentials
+        creds = _creds_from_db(connector_id)
+        token = creds.get("access_token", "")
+        if not token:
+            raise RuntimeError(f"No access_token found for connector {connector_id}")
+        return token
 
 
 def _save_token(connector_id: str, token_data: dict) -> None:
@@ -612,13 +650,21 @@ _pending_states: dict[str, dict] = {}  # state → {verifier, connector_id, prov
 
 def store_pending_state(state: str, connector_id: str, provider: str,
                         verifier: str = "") -> None:
-    _pending_states[state] = {
+    entry = {
         "connector_id": connector_id,
         "provider":     provider,
         "verifier":     verifier,
         "ts":           time.time(),
     }
-    # Purge stale states (>10 min)
+    # DB-backed storage — survives across process boundaries (desktop ↔ hub server)
+    try:
+        import hub_db
+        hub_db.set_config(f"oauth_state_{state}", entry)
+    except Exception:
+        pass
+    # Also keep in-memory as fallback
+    _pending_states[state] = entry
+    # Purge stale in-memory states (>10 min)
     cutoff = time.time() - 600
     for s in list(_pending_states):
         if _pending_states[s]["ts"] < cutoff:
@@ -626,6 +672,17 @@ def store_pending_state(state: str, connector_id: str, provider: str,
 
 
 def consume_pending_state(state: str) -> dict | None:
+    # Try DB-backed storage first (handles cross-process case)
+    try:
+        import hub_db
+        raw = hub_db.get_config(f"oauth_state_{state}")
+        if raw and isinstance(raw, dict) and raw.get("connector_id"):
+            hub_db.set_config(f"oauth_state_{state}", None)  # mark consumed
+            _pending_states.pop(state, None)
+            return raw
+    except Exception:
+        pass
+    # Fall back to in-memory (same-process case)
     return _pending_states.pop(state, None)
 
 

@@ -1550,15 +1550,6 @@ if FASTAPI_OK:
     except Exception:
         pass
 
-    def build_app() -> FastAPI:
-        """
-        Factory function for tests and external callers.
-        Returns the module-level FastAPI app instance.
-        Tests can import hub_server and call build_app() to get a testable app
-        without starting the full server loop.
-        """
-        return app
-
 
     def _scheduler_job_count() -> int:
         try:
@@ -1855,21 +1846,6 @@ if FASTAPI_OK:
             conn.close()
         return {"status": "cleared"}
 
-    @app.delete("/api/notifications/{notification_id}")
-    async def delete_notification(notification_id: int, current_user: dict = Depends(get_current_user)):
-        """Delete a single notification by ID (iOS swipe-to-delete)."""
-        del current_user
-        conn = _db_connection()
-        try:
-            cursor = conn.execute("SELECT id FROM notifications WHERE id = ?", (notification_id,))
-            if cursor.fetchone() is None:
-                raise HTTPException(404, f"Notification {notification_id} not found")
-            conn.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
-            conn.commit()
-        finally:
-            conn.close()
-        return {"status": "deleted", "id": notification_id}
-
 
     @app.get("/api/trips")
     async def list_trips(current_user: dict = Depends(get_current_user)):
@@ -1991,7 +1967,7 @@ if FASTAPI_OK:
     @app.post("/api/connectors/{id}/test")
     async def test_connector_endpoint(id: str, current_user: dict = Depends(get_current_user)):
         del current_user
-        connector = hub_db.get_connector(id)
+        connector = db.get_connector(id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         try:
@@ -1999,7 +1975,7 @@ if FASTAPI_OK:
             ok, msg = _test(connector)
         except Exception as exc:
             ok, msg = False, str(exc)
-        hub_db.update_connector(
+        db.update_connector(
             id,
             status="active" if ok else "error",
             last_error="" if ok else msg,
@@ -2011,13 +1987,9 @@ if FASTAPI_OK:
     # ── OAuth endpoints ───────────────────────────────────────────────────────
 
     @app.get("/api/connectors/oauth/google/init")
-    async def google_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
-        """Return Google OAuth2 authorization URL for a connector."""
-        del current_user
-        connector = hub_db.get_connector(connector_id)
+    async def google_oauth_init(connector_id: str):
+        """Return Google OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
+        connector = db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         client_id  = connector.get("oauth_client_id", "")
@@ -2044,7 +2016,7 @@ if FASTAPI_OK:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state. Please retry from the app.</p>", status_code=400)
             connector_id = pending["connector_id"]
             verifier     = pending["verifier"]
-            connector    = hub_db.get_connector(connector_id)
+            connector    = db.get_connector(connector_id)
             if not connector:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
             client_id  = connector.get("oauth_client_id", "")
@@ -2052,7 +2024,7 @@ if FASTAPI_OK:
             g = GoogleOAuth(client_id, client_sec, connector_id)
             token = g.exchange_code(code, verifier)
             import time as _time
-            hub_db.update_connector(
+            db.update_connector(
                 connector_id,
                 auth_type="oauth2",
                 status="active",
@@ -2082,12 +2054,9 @@ if FASTAPI_OK:
 
     # ── Gmail aliases (same handlers, alternate path prefix) ──────────────
     @app.get("/api/connectors/oauth/gmail/init")
-    async def gmail_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
+    async def gmail_oauth_init(connector_id: str):
         """Alias for /google/init — Gmail connectors use this path."""
-        return await google_oauth_init(connector_id=connector_id, current_user=current_user)
+        return await google_oauth_init(connector_id=connector_id)
 
     @app.get("/api/connectors/oauth/gmail/callback")
     async def gmail_oauth_callback(code: str, state: str):
@@ -2095,13 +2064,9 @@ if FASTAPI_OK:
         return await google_oauth_callback(code=code, state=state)
 
     @app.get("/api/connectors/oauth/microsoft/init")
-    async def microsoft_oauth_init(
-        connector_id: str,
-        current_user: dict = Depends(get_current_user),
-    ):
-        """Return Microsoft OAuth2 authorization URL for a connector."""
-        del current_user
-        connector = hub_db.get_connector(connector_id)
+    async def microsoft_oauth_init(connector_id: str):
+        """Return Microsoft OAuth2 authorization URL for a connector. No auth required — returns only a URL."""
+        connector = db.get_connector(connector_id)
         if not connector:
             raise HTTPException(404, "Connector not found")
         client_id  = connector.get("oauth_client_id", "")
@@ -2127,7 +2092,7 @@ if FASTAPI_OK:
             if not pending:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Invalid or expired state.</p>", status_code=400)
             connector_id = pending["connector_id"]
-            connector    = hub_db.get_connector(connector_id)
+            connector    = db.get_connector(connector_id)
             if not connector:
                 return HTMLResponse("<h3>OAuth Error</h3><p>Connector not found.</p>", status_code=404)
             client_id  = connector.get("oauth_client_id", "")
@@ -2135,7 +2100,7 @@ if FASTAPI_OK:
             m = MicrosoftOAuth(client_id, client_sec, connector_id)
             token = m.exchange_code(code)
             import time as _time
-            hub_db.update_connector(
+            db.update_connector(
                 connector_id,
                 auth_type="oauth2",
                 status="active",
@@ -3447,3 +3412,4 @@ if __name__ == "__main__":
         access_log=False,
         loop=_loop,
     )
+

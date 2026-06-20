@@ -1,0 +1,10 @@
+Task: Send a portfolio-wide reminder to all project leads and specialist agents: Review your assigned todo tasks daily and update the status as soon as items are completed. Monitor compliance and report back any teams or agents not updating their task statuses promptly.
+Score: 1.00
+Critique: The output fully meets the requirements of the task. It clearly communicates the reminder to all project leads and specialist agents, instructs them to review and update their tasks daily, and asks them to monitor compliance and report any issues. The message is complete, correct, and useful for the intended purpose.
+Last Output:
+Portfolio-wide reminder sent:
+
+All project leads and specialist agents:  
+Please review your assigned todo tasks daily and update the status as soon as items are completed. Monitor compliance within your teams and report back any teams or agents who are not updating their task statuses promptly.
+
+Compliance will be monitored and follow-up actions will be taken as needed. Thank you for your cooperation.
