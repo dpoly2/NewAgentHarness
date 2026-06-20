@@ -511,19 +511,291 @@ def _handle_trip_creation(user_message: str) -> str:
     )
 
 
+# ── Email tools ───────────────────────────────────────────────────────────────
+
+_EMAIL_READ_PATTERNS = [
+    r"check(?:ing)?\s+(?:my\s+)?(?:email|inbox|mail|messages?)",
+    r"(?:any\s+)?(?:new\s+)?emails?(?:\s+from)?",
+    r"read\s+(?:my\s+)?(?:email|inbox|mail)",
+    r"what'?s?\s+in\s+(?:my\s+)?(?:email|inbox|mail)",
+    r"unread\s+(?:email|messages?|mail)",
+    r"email\s+summary",
+    r"inbox\s+summary",
+    r"(?:search|find|look\s+for)\s+emails?",
+    r"show\s+(?:me\s+)?(?:my\s+)?(?:email|inbox)",
+]
+
+_EMAIL_SEND_PATTERNS = [
+    r"send\s+(?:an?\s+)?email",
+    r"email\s+(?:to\s+)?[\w.+-]+@",
+    r"write\s+(?:an?\s+)?email",
+    r"draft\s+(?:an?\s+)?email",
+    r"reply\s+to\s+(?:the\s+)?email",
+    r"compose\s+(?:an?\s+)?email",
+    r"forward\s+(?:the\s+)?email",
+]
+
+
+def _is_email_read_request(msg: str) -> bool:
+    return any(re.search(p, msg, re.IGNORECASE) for p in _EMAIL_READ_PATTERNS)
+
+
+def _is_email_send_request(msg: str) -> bool:
+    return any(re.search(p, msg, re.IGNORECASE) for p in _EMAIL_SEND_PATTERNS)
+
+
+def _load_email_awareness() -> str:
+    """Return a formatted block of connected email accounts for Inez's system prompt."""
+    if not DB_OK:
+        return ""
+    try:
+        connectors = db.list_connectors()
+        if not connectors:
+            return "EMAIL ACCOUNTS: None connected. User can add them in Connector tab."
+        lines = ["CONNECTED EMAIL ACCOUNTS (Inez has read + send access to these):"]
+        for c in connectors:
+            status = c.get("status", "unknown")
+            email = c.get("email_address", "") or c.get("username", "")
+            provider = c.get("provider", "")
+            auth = c.get("auth_type", "")
+            icon = "✅" if status == "active" else ("⚠️" if status == "error" else "🔄")
+            lines.append(f"  {icon} {email} ({provider}, {auth}) — {status}  [id: {c.get('id','')}]")
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+def _get_active_connector() -> "dict | None":
+    """Return the first active email connector."""
+    if not DB_OK:
+        return None
+    try:
+        for c in db.list_connectors():
+            if c.get("status") == "active":
+                return c
+    except Exception:
+        pass
+    return None
+
+
+def _fetch_inbox_context(connector: dict, limit: int = 15) -> str:
+    """Fetch recent emails via IMAP and return a formatted context block for Inez."""
+    import imaplib
+    import email as _email_lib
+    from email.header import decode_header as _decode_header
+    import base64 as _b64
+    import json as _json
+
+    email_addr = connector.get("email_address", "") or connector.get("username", "")
+    auth_type = connector.get("auth_type", "password")
+    imap_host = connector.get("imap_host", "")
+    imap_port = int(connector.get("imap_port", 993) or 993)
+
+    if not imap_host:
+        return f"[EMAIL TOOL] No IMAP host configured for {email_addr}."
+
+    try:
+        def _decode_header_val(val: str) -> str:
+            if not val:
+                return ""
+            parts = []
+            for b, enc in _decode_header(val):
+                if isinstance(b, bytes):
+                    parts.append(b.decode(enc or "utf-8", errors="replace"))
+                else:
+                    parts.append(str(b))
+            return " ".join(parts)
+
+        imap = imaplib.IMAP4_SSL(imap_host, imap_port)
+
+        if auth_type == "oauth2":
+            try:
+                from oauth_connector import _creds_from_db  # type: ignore
+                creds = _creds_from_db(connector["id"])
+                access_token = creds.get("access_token", "")
+            except Exception:
+                access_token = ""
+            if not access_token:
+                return f"[EMAIL TOOL] No valid OAuth token for {email_addr}. Re-authorize in Connector tab."
+            auth_str = _b64.b64encode(
+                f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01".encode()
+            ).decode()
+            imap.authenticate("XOAUTH2", lambda _: auth_str)
+        else:
+            creds_raw = connector.get("credentials", {})
+            if isinstance(creds_raw, str):
+                try:
+                    creds_raw = _json.loads(creds_raw)
+                except Exception:
+                    creds_raw = {}
+            password = creds_raw.get("password", "")
+            imap.login(connector.get("username", email_addr), password)
+
+        imap.select("INBOX")
+        _, unseen_data = imap.search(None, "UNSEEN")
+        unread_ids = set(unseen_data[0].split()) if unseen_data[0] else set()
+        _, all_data = imap.search(None, "ALL")
+        all_ids = all_data[0].split() if all_data[0] else []
+        recent_ids = all_ids[-limit:] if len(all_ids) >= limit else all_ids
+
+        lines = [
+            f"[EMAIL INBOX — {email_addr}]",
+            f"Total messages: {len(all_ids)}  |  Unread: {len(unread_ids)}",
+            "",
+        ]
+        for msg_id in reversed(recent_ids):
+            try:
+                _, msg_data = imap.fetch(
+                    msg_id,
+                    "(FLAGS BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])"
+                )
+                for part in msg_data:
+                    if isinstance(part, tuple):
+                        msg = _email_lib.message_from_bytes(part[1])
+                        subject = _decode_header_val(msg.get("Subject", "(no subject)"))[:80]
+                        sender = _decode_header_val(msg.get("From", ""))[:60]
+                        date = (msg.get("Date", "") or "")[:30]
+                        flag = "●" if msg_id in unread_ids else " "
+                        lines.append(f"{flag} [{date}] {sender} — {subject}")
+            except Exception:
+                continue
+
+        imap.logout()
+        return "\n".join(lines)
+    except Exception as e:
+        return f"[EMAIL TOOL] IMAP error for {email_addr}: {e}"
+
+
+def _extract_email_send_params(msg: str) -> dict:
+    """Parse to/subject/body from a natural-language send-email request."""
+    result = {"to": "", "subject": "", "body": ""}
+    to_match = re.search(r"\bto\s+([\w.+-]+@[\w.+-]+\.\w+)", msg, re.IGNORECASE)
+    if to_match:
+        result["to"] = to_match.group(1)
+    subj_match = re.search(
+        r"(?:subject[:\s]+|with subject\s+)[\"']?(.+?)[\"']?(?=\n|body|message|$)",
+        msg, re.IGNORECASE
+    )
+    if subj_match:
+        result["subject"] = subj_match.group(1).strip()[:120]
+    body_match = re.search(
+        r"(?:body[:\s]+|message[:\s]+|saying[:\s]+|content[:\s]+)[\"']?(.+)",
+        msg, re.IGNORECASE | re.DOTALL
+    )
+    if body_match:
+        result["body"] = body_match.group(1).strip()
+    return result
+
+
+def _send_email_tool(connector: dict, to: str, subject: str, body: str) -> str:
+    """Send an email via SMTP and return a status string."""
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    import base64 as _b64
+    import json as _json
+
+    email_addr = connector.get("email_address", "") or connector.get("username", "")
+    auth_type = connector.get("auth_type", "password")
+    smtp_host = connector.get("smtp_host", "")
+    smtp_port = int(connector.get("smtp_port", 587) or 587)
+
+    if not smtp_host:
+        return f"[EMAIL SEND FAILED] No SMTP host configured for {email_addr}."
+
+    try:
+        mime_msg = MIMEMultipart("alternative")
+        mime_msg["From"] = email_addr
+        mime_msg["To"] = to
+        mime_msg["Subject"] = subject
+        mime_msg.attach(MIMEText(body, "plain"))
+
+        smtp = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
+
+        if auth_type == "oauth2":
+            try:
+                from oauth_connector import _creds_from_db  # type: ignore
+                creds = _creds_from_db(connector["id"])
+                access_token = creds.get("access_token", "")
+            except Exception:
+                access_token = ""
+            if not access_token:
+                return f"[EMAIL SEND FAILED] No valid OAuth token for {email_addr}. Re-authorize in Connector tab."
+            auth_str = _b64.b64encode(
+                f"user={email_addr}\x01auth=Bearer {access_token}\x01\x01".encode()
+            ).decode()
+            smtp.docmd("AUTH", f"XOAUTH2 {auth_str}")
+        else:
+            creds_raw = connector.get("credentials", {})
+            if isinstance(creds_raw, str):
+                try:
+                    creds_raw = _json.loads(creds_raw)
+                except Exception:
+                    creds_raw = {}
+            smtp.login(connector.get("username", email_addr), creds_raw.get("password", ""))
+
+        smtp.sendmail(email_addr, [to], mime_msg.as_string())
+        smtp.quit()
+        return f"[EMAIL SENT] ✅ Sent to {to} | Subject: {subject}"
+    except Exception as e:
+        return f"[EMAIL SEND FAILED] {e}"
+
+
+# ── Agent reports + run context ───────────────────────────────────────────────
+
+def _load_active_reports_context() -> str:
+    """Load running agent jobs and recent completed reports for Inez's awareness."""
+    if not DB_OK:
+        return ""
+    lines = []
+    try:
+        recent_runs = db.list_runs(limit=20) if hasattr(db, "list_runs") else []
+        running = [r for r in recent_runs if r.get("status") in ("running", "queued")]
+        completed = [r for r in recent_runs if r.get("status") in ("completed", "complete")][:5]
+        if running:
+            lines.append(f"ACTIVE AGENT RUNS ({len(running)} running/queued):")
+            for r in running[:5]:
+                lines.append(f"  🟡 {r.get('agent_id','')} — {r.get('task','')[:80]} [{r.get('status','')}]")
+        if completed:
+            lines.append(f"\nRECENT COMPLETED RUNS ({len(completed)}):")
+            for r in completed[:3]:
+                score = f" | score: {r.get('reflexion_score','')}" if r.get("reflexion_score") else ""
+                lines.append(f"  ✅ {r.get('agent_id','')} — {r.get('task','')[:60]}{score}")
+    except Exception:
+        pass
+    try:
+        reports = db.list_reports(limit=10)
+        if reports:
+            lines.append(f"\nRECENT REPORTS ({len(reports)}):")
+            for rpt in reports[:5]:
+                proj = f" ({rpt.get('project_slug','')})" if rpt.get("project_slug") else ""
+                gen_by = f" by {rpt.get('generated_by','')}" if rpt.get("generated_by") else ""
+                date = (rpt.get("generated_at", "") or "")[:10]
+                summary_snip = (rpt.get("summary", "") or "")[:80]
+                lines.append(f"  📄 [{date}] {rpt.get('title','')}{proj}{gen_by}")
+                if summary_snip:
+                    lines.append(f"       {summary_snip}")
+    except Exception:
+        pass
+    return "\n".join(lines) if lines else ""
+
+
 def _build_proactive_awareness() -> str:
     """
     Scan DB for items Inez should proactively surface:
     - Urgent/high todos
     - Todos with approaching due dates
-    - Clients with active blockers
+    - Active agent runs + recent reports
+    - Email account errors
     Returns a formatted awareness block injected into every prompt.
     """
     if not DB_OK:
         return ""
     lines = []
     try:
-        now_str = datetime.now().strftime("%Y-%m-%d")
         urgent = [t for t in db.list_todos(status="pending")
                   if t.get("priority") in ("urgent", "high")][:8]
         if urgent:
@@ -536,7 +808,6 @@ def _build_proactive_awareness() -> str:
         pass
 
     try:
-        import calendar as _cal
         from datetime import timedelta
         week_out = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
         due_soon = [t for t in db.list_todos(status="pending")
@@ -548,13 +819,19 @@ def _build_proactive_awareness() -> str:
     except Exception:
         pass
 
+    # Active runs + recent reports
+    reports_block = _load_active_reports_context()
+    if reports_block:
+        lines.append("\n" + reports_block)
+
+    # Email connector errors
     try:
-        recent_runs = db.list_runs(limit=5) if hasattr(db, "list_runs") else []
-        active = [r for r in recent_runs if r.get("status") == "running"]
-        if active:
-            lines.append(f"\nACTIVE AGENT RUNS ({len(active)}):")
-            for r in active[:3]:
-                lines.append(f"  • {r.get('agent_id','')} — {r.get('task','')[:80]}")
+        connectors = db.list_connectors()
+        errored = [c for c in connectors if c.get("status") == "error"]
+        if errored:
+            lines.append("\nEMAIL CONNECTOR ALERTS:")
+            for c in errored:
+                lines.append(f"  ⚠️ {c.get('email_address','')} — authorization error. Re-authorize in Connector tab.")
     except Exception:
         pass
 
@@ -588,13 +865,34 @@ def _build_system_prompt(history: list[dict]) -> str:
         "and confirm the trip has been saved to the Travel tab."
     )
 
+    # Email accounts awareness (always injected so Inez knows what's available)
+    email_awareness = _load_email_awareness()
+    email_section = f"\n\n{email_awareness}" if email_awareness else ""
+
+    email_tools_note = (
+        "\n\nEMAIL TOOLS: You have direct read and send access to the connected email accounts listed above.\n"
+        "• When the user asks to check, summarize, or search email — a pre-execution IMAP tool fetches the inbox.\n"
+        "  Results appear in [EMAIL INBOX TOOL DATA] in the user message. Present them as a clean summary.\n"
+        "• When the user asks you to send/compose/reply to an email — a pre-execution SMTP tool attempts the send.\n"
+        "  Results appear in [EMAIL SEND TOOL DATA]. Confirm success or report the error.\n"
+        "• You can reference which account was used and offer to use a specific account if multiple are connected.\n"
+        "• For reports: agent run results and report summaries appear in PROACTIVE AWARENESS above — "
+        "  reference them when summarizing what agents have completed or what reports are ready."
+    ) if email_awareness else ""
+
     base = (
         skill
         .replace("{todos_context}", todos)
         .replace("{memory_context}", full_memory)
         .replace("{conversation_history}", conv)
     )
-    return DAVID_PROFILE + "\n\n" + base + awareness_block + travel_tools_note
+    return (
+        DAVID_PROFILE + "\n\n" + base
+        + email_section
+        + awareness_block
+        + travel_tools_note
+        + email_tools_note
+    )
 
 
 def _normalize_agent_id(agent_id: str) -> str:
@@ -788,7 +1086,7 @@ def think(
     if emit:
         emit("inez_thinking", message="Inez is analyzing your request...")
 
-    # ── Step 1: Travel pre-fetch (geocode + hotel data → passed as context to agent) ──
+    # ── Step 1a: Travel pre-fetch ─────────────────────────────────────────────
     travel_tool_data = ""
     if _is_travel_request(user_message):
         try:
@@ -814,6 +1112,47 @@ def think(
                         travel_tool_data = "\n".join(lines)
         except Exception as _te:
             logger.warning("Travel pre-fetch error: %s", _te)
+
+    # ── Step 1b: Email read pre-fetch ─────────────────────────────────────────
+    email_read_data = ""
+    if _is_email_read_request(user_message):
+        try:
+            connector = _get_active_connector()
+            if connector:
+                if emit:
+                    emit("inez_thinking", message=f"Fetching inbox for {connector.get('email_address','your account')}...")
+                email_read_data = _fetch_inbox_context(connector, limit=20)
+            else:
+                email_read_data = "[EMAIL TOOL] No active email accounts connected. Go to Connector tab to add one."
+        except Exception as _ee:
+            logger.warning("Email read pre-fetch error: %s", _ee)
+
+    # ── Step 1c: Email send tool ──────────────────────────────────────────────
+    email_send_data = ""
+    if _is_email_send_request(user_message):
+        try:
+            connector = _get_active_connector()
+            if connector:
+                params = _extract_email_send_params(user_message)
+                if params.get("to") and params.get("subject") and params.get("body"):
+                    if emit:
+                        emit("inez_thinking", message=f"Sending email to {params['to']}...")
+                    email_send_data = _send_email_tool(
+                        connector,
+                        to=params["to"],
+                        subject=params["subject"],
+                        body=params["body"],
+                    )
+                else:
+                    # Not enough params extracted — let Inez ask for them
+                    email_send_data = (
+                        "[EMAIL SEND TOOL] Couldn't extract full send parameters from request. "
+                        "Need: recipient email address, subject, and body to send."
+                    )
+            else:
+                email_send_data = "[EMAIL SEND TOOL] No active email account connected."
+        except Exception as _se:
+            logger.warning("Email send tool error: %s", _se)
 
     system_prompt = _build_system_prompt(history)
 
@@ -858,12 +1197,15 @@ def think(
     )
 
     augmented_message = user_message
+    extra_blocks = []
     if travel_tool_data:
-        augmented_message = (
-            f"{user_message}\n\n"
-            f"[PRE-FETCHED TOOL DATA — pass this to the travel agent as context]:\n"
-            f"{travel_tool_data}"
-        )
+        extra_blocks.append(f"[PRE-FETCHED TRAVEL DATA — pass this to the travel agent as context]:\n{travel_tool_data}")
+    if email_read_data:
+        extra_blocks.append(f"[EMAIL INBOX TOOL DATA]:\n{email_read_data}")
+    if email_send_data:
+        extra_blocks.append(f"[EMAIL SEND TOOL DATA]:\n{email_send_data}")
+    if extra_blocks:
+        augmented_message = user_message + "\n\n" + "\n\n".join(extra_blocks)
 
     try:
         model = _llm(temperature=0.3)
