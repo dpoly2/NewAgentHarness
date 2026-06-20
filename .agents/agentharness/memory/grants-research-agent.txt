@@ -1,0 +1,31 @@
+Task: Weekly grant research sweep: find new grant opportunities, deadlines, and funding sources relevant to grants.
+Score: 0.90
+Critique: The output is thorough, well-organized, and provides a comprehensive overview of how to conduct a weekly grant research sweep. It covers best practices, evidence, actionable recommendations, and next steps, making it highly useful for an organization seeking to improve its grant research process. However, it does not include specific examples of new grant opportunities, deadlines, or funding sources discovered in the most recent week, which the task implies should be part of the sweep. Including a sample table or list of current opportunities would make the output fully complete and actionable. Otherwise, the guidance is correct and highly useful.
+Last Output:
+**Final Answer: Weekly Grant Research Sweep – Synthesis and Recommendations**
+
+---
+
+### Summary
+
+A systematic weekly grant research sweep is essential for maximizing funding opportunities. The process involves identifying and searching relevant databases, recording new opportunities, updating deadlines and statuses, and summarizing findings for the team. Success depends on using a mix of federal, state, local, and private sources, maintaining accurate records, and ensuring timely communication.
+
+---
+
+### Evidence
+
+- **Diverse Sources:** Research shows that using multiple databases (Grants.gov, Foundation Directory Online, state/local portals, professional associations, and niche sites like GrantWatch) yields the broadest range of opportunities.
+- **Systematic Search:** Advanced filters and regularly updated keywords improve search relevance and efficiency.
+- **Centralized Tracking:** Shared spreadsheets or grant management software ensure visibility and accountability, reducing the risk of missed deadlines or duplicate efforts.
+- **Regular Updates:** Weekly reviews and automated reminders help prevent missed deadlines and keep the team aligned.
+- **Communication:** Weekly summaries and clear prioritization of urgent/high-value grants improve responsiveness and follow-through.
+
+---
+
+### Recommendations
+
+1. **Diversify Sources:** Continue using a mix of federal, state, local, and private databases. Consider adding niche or emerging sources relevant to your sector.
+2. **Standardize Search Protocols:** Develop and document search strategies, including keywords and filters, to ensure consistency and reduce human error.
+3. **Centralize Tracking:** Use a secure, shared platform (e.g., Google Sheets, Airtable, Salesforce) with clear data fields (grant name, funder, deadline, eligibility, amount, link, notes).
+4. **Automate Reminders:** Set up calendar alerts or project management notifications for key deadlines and status updates.
+5. **Weekly Summaries:** Distribute concise

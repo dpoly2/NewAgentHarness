@@ -1550,15 +1550,6 @@ if FASTAPI_OK:
     except Exception:
         pass
 
-    def build_app() -> FastAPI:
-        """
-        Factory function for tests and external callers.
-        Returns the module-level FastAPI app instance.
-        Tests can import hub_server and call build_app() to get a testable app
-        without starting the full server loop.
-        """
-        return app
-
 
     def _scheduler_job_count() -> int:
         try:
@@ -1854,21 +1845,6 @@ if FASTAPI_OK:
         finally:
             conn.close()
         return {"status": "cleared"}
-
-    @app.delete("/api/notifications/{notification_id}")
-    async def delete_notification(notification_id: int, current_user: dict = Depends(get_current_user)):
-        """Delete a single notification by ID (iOS swipe-to-delete)."""
-        del current_user
-        conn = _db_connection()
-        try:
-            cursor = conn.execute("SELECT id FROM notifications WHERE id = ?", (notification_id,))
-            if cursor.fetchone() is None:
-                raise HTTPException(404, f"Notification {notification_id} not found")
-            conn.execute("DELETE FROM notifications WHERE id = ?", (notification_id,))
-            conn.commit()
-        finally:
-            conn.close()
-        return {"status": "deleted", "id": notification_id}
 
 
     @app.get("/api/trips")

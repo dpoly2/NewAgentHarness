@@ -1,0 +1,46 @@
+Task: Scope and design a unified order/material tracking system for Nutrue Apparel. The system must: 1) Pull and consolidate order data from Square and Shopify, 2) Track materials required per order, order type, and deadlines, 3) Output a prioritized order queue for fulfillment and purchasing. Identify any integration/API needs and recommend tools or automations.
+Score: 0.98
+Critique: The output is highly complete, correct, and useful. It thoroughly addresses all requirements: consolidating order data from Square and Shopify, tracking materials per order and order type, managing deadlines, and outputting a prioritized queue for fulfillment and purchasing. It clearly identifies integration/API needs, recommends specific tools (Airtable, Zapier/Make, custom scripts), and outlines automation and notification strategies. The summary table and next steps provide actionable guidance. The only minor area for improvement is a slightly deeper dive into how the prioritized queue logic would be implemented (e.g., specific prioritization algorithms or sample data flows), but this is a minor omission given the scope. Overall, this is an excellent, actionable system design.
+Last Output:
+Certainly! Here’s a scoped and designed unified order/material tracking system for Nutrue Apparel, tailored to your requirements:
+
+---
+
+## Unified Order/Material Tracking System — Nutrue Apparel
+
+### **Objectives**
+1. **Consolidate Orders:** Pull order data from both Shopify (hoodswag.shop) and Square POS.
+2. **Track Materials:** For each order, track required materials (e.g., blank garments, print types), order type (POD, in-house, custom), and deadlines.
+3. **Prioritized Fulfillment Queue:** Output a single, prioritized queue for fulfillment and purchasing.
+
+---
+
+## 1. **Data Sources & Integration**
+
+### **Shopify**
+- **API:** Shopify Admin API
+- **Data Pulled:** Orders, line items, customer info, fulfillment status, product SKUs, variants, order notes, timestamps.
+
+### **Square**
+- **API:** Square Orders API
+- **Data Pulled:** Orders, items, modifiers, customer info, payment status, timestamps.
+
+### **Integration Needs**
+- **API Access:** Secure API keys for both Shopify and Square.
+- **Order Mapping:** Standardize order fields (e.g., SKU, product name, quantity, order date, fulfillment status) across both platforms.
+- **Automation:** Use middleware (Zapier, Make/Integromat, or custom Node.js/Python script) to fetch and sync orders on a schedule (e.g., every 10 minutes).
+
+---
+
+## 2. **Material Tracking**
+
+### **Per Order**
+- **SKU/Variant Mapping:** Each order line item maps to a material/BOM (Bill of Materials) entry (e.g., “Black Hoodie, XL” → 1x Gildan 18500 Black XL).
+- **Order Type:** Tag each order as:
+  - **POD (Printful):** Auto-fulfilled, materials tracked via Printful API.
+  - **In-House:** Requires manual fulfillment, materials tracked locally.
+  - **Custom:** Special handling, may require additional materials.
+
+### **Material Inventory**
+- **Inventory Source:** Pull current inventory from Printful (via Printful API) and/or local inventory system (Google Sheets, Airtable, or Shopify Inventory API).
+- **Material Shortfall Alerts:** If order demand excee

@@ -1,0 +1,50 @@
+Task: Oversee the development of a unified order/material tracking system for Nutrue Apparel. Confirm requirements with David, coordinate with the e-commerce agent, and flag if a new automation agent or external integration is needed.
+Score: 0.95
+Critique: The output is highly complete, correct, and useful. It provides a clear, actionable plan broken down into logical steps, including confirming requirements, coordinating with the e-commerce agent, assessing the need for additional resources, and outlining immediate next steps. The key questions for David are well-chosen and relevant. The plan also anticipates potential needs for automation or external integration and suggests concrete actions if those needs arise. The only minor area for improvement is to specify how progress and communication will be tracked throughout the project, but this does not significantly detract from the overall quality. The closing question is proactive and appropriate.
+Last Output:
+**Action Plan: Unified Order/Material Tracking System for Nutrue Apparel**
+
+---
+
+### 1. **Confirm Requirements with David**
+- **Objective:** Ensure the tracking system meets Nutrue Apparel’s operational and reporting needs.
+- **Key Questions for David:**
+  - What specific data points do you want to track for orders and materials? (e.g., order status, fulfillment, inventory levels, supplier info)
+  - Which platforms/systems must be integrated? (Shopify, Printful, others?)
+  - What reporting or dashboard features are required? (real-time updates, exportable reports, alerts)
+  - Who needs access to the system, and what permissions should they have?
+  - Any preferred tools or platforms for the tracking system? (Google Sheets, Airtable, custom dashboard, etc.)
+
+---
+
+### 2. **Coordinate with Nutrue E-Commerce Agent**
+- **Tasks:**
+  - Review current Shopify and Printful integration status.
+  - Assess what order and inventory data is already available/exportable.
+  - Identify any gaps in current tracking (e.g., manual steps, missing data, delays).
+  - Determine if Shopify/Printful apps or APIs can automate data sync.
+
+---
+
+### 3. **Assess Need for Additional Resources**
+- **Automation Agent:** If data sync or reporting requires custom scripts, API integrations, or workflow automation.
+- **External Integration:** If existing Shopify/Printful integrations are insufficient, or if a third-party dashboard (e.g., Airtable, Zapier, Make) is needed.
+
+---
+
+### 4. **Flag and Recommend Next Steps**
+- If requirements exceed current agent capabilities, recommend:
+  - Recruiting an automation/integration specialist.
+  - Evaluating third-party tools for rapid deployment.
+
+---
+
+## **Immediate Next Steps**
+
+1. **Send Requirements Checklist to David** (for confirmation).
+2. **Request Current Data Flow Documentation from E-Commerce Agent.**
+3. **Schedule Joint Review** (Project Lead, E-Commerce Agent, David) to finalize scope and resource needs.
+
+---
+
+**Would you like me to draft the requirem

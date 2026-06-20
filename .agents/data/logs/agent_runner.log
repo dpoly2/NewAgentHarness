@@ -1,3 +1,8 @@
 2026-06-12 07:01:10 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=travel_trips op=upsert: could not convert string to float: '<budget>'
 2026-06-12 07:01:51 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=projects op=update: table projects has no column named notes
 2026-06-12 07:03:08 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
+2026-06-17 14:00:08 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
+2026-06-17 15:29:46 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
+2026-06-18 10:55:52 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
+2026-06-18 10:57:53 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
+2026-06-18 11:21:52 [ERROR] archonhub.agent_runner: agent_runner db_write failed table=events_log op=insert: table events_log has no column named agent_id
