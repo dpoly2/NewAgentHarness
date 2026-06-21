@@ -147,7 +147,11 @@ struct SettingsView: View {
                 let data: [String: String]
             }
             
-            let _: [String: Any] = try await hubClient.put(
+            struct ConfigResponse: Decodable {
+                let success: Bool?
+            }
+            
+            let _: ConfigResponse = try await hubClient.put(
                 "/api/config",
                 body: ConfigUpdate(data: ["serpapi_api_key": serpApiKey])
             )
