@@ -1286,7 +1286,11 @@ def think(
     web_search_query = None
     if WEB_SEARCH_OK and SearchAnalyzer.should_search(user_message):
         try:
+            # Try environment variable first, then database config
             api_key = os.environ.get("SERPAPI_API_KEY")
+            if not api_key and DB_OK:
+                api_key = db.get_config("serpapi_api_key")
+            
             if api_key:
                 if emit:
                     emit("inez_thinking", message="🌐 Searching the web...")
@@ -1309,7 +1313,7 @@ def think(
                     if emit:
                         emit("inez_thinking", message=f"✅ Found {len(search_result.sources)} sources")
             else:
-                logger.info("SERPAPI_API_KEY not set — web search skipped")
+                logger.info("SERPAPI_API_KEY not configured — web search skipped")
         except Exception as _ws:
             logger.warning("Web search error: %s", _ws)
 
