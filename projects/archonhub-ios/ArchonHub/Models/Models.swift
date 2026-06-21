@@ -340,3 +340,132 @@ struct PromptTemplate: Codable, Identifiable, Hashable {
     let createdAt: String?
     let updatedAt: String?
 }
+
+// MARK: - Email Cleanup Models
+
+struct EmailCleanupPlan: Codable, Identifiable, Hashable {
+    let id: String
+    let accountId: String
+    let status: String  // pending, approved, executed, rolled_back
+    let totalEmails: Int
+    let suggestedCleanupCount: Int
+    let estimatedSpaceMb: Int
+    let createdAt: String
+    let executedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case accountId = "account_id"
+        case status
+        case totalEmails = "total_emails"
+        case suggestedCleanupCount = "suggested_cleanup_count"
+        case estimatedSpaceMb = "estimated_space_mb"
+        case createdAt = "created_at"
+        case executedAt = "executed_at"
+    }
+}
+
+struct EmailCleanupItem: Codable, Identifiable, Hashable {
+    let id: String
+    let planId: String
+    let emailId: String
+    let category: String
+    let subject: String
+    let fromAddress: String
+    let emailDate: String
+    let sizeBytes: Int
+    let confidence: Double
+    let reason: String
+    let approved: Bool
+    let executed: Bool
+    let action: String
+    let executedAt: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case planId = "plan_id"
+        case emailId = "email_id"
+        case category
+        case subject
+        case fromAddress = "from_address"
+        case emailDate = "email_date"
+        case sizeBytes = "size_bytes"
+        case confidence
+        case reason
+        case approved
+        case executed
+        case action
+        case executedAt = "executed_at"
+    }
+    
+    var categoryIcon: String {
+        switch category {
+        case "newsletter": return "envelope.badge"
+        case "promotion": return "cart"
+        case "social": return "person.2"
+        case "old_thread": return "clock"
+        case "spam": return "trash"
+        default: return "envelope"
+        }
+    }
+    
+    var categoryColor: String {
+        switch category {
+        case "newsletter": return "blue"
+        case "promotion": return "purple"
+        case "social": return "green"
+        case "old_thread": return "orange"
+        case "spam": return "red"
+        default: return "gray"
+        }
+    }
+}
+
+struct EmailCleanupPlanDetail: Codable {
+    let plan: EmailCleanupPlan
+    let items: [EmailCleanupItem]
+    let categories: [String: [EmailCleanupItem]]
+}
+
+struct EmailCleanupSummary: Codable {
+    let totalSuggested: Int
+    let estimatedSpaceMb: Double
+    let breakdown: [String: Int]
+    
+    enum CodingKeys: String, CodingKey {
+        case totalSuggested = "total_suggested"
+        case estimatedSpaceMb = "estimated_space_mb"
+        case breakdown
+    }
+}
+
+struct AnalyzeEmailResponse: Codable {
+    let success: Bool
+    let planId: String
+    let summary: EmailCleanupSummary
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case planId = "plan_id"
+        case summary
+    }
+}
+
+struct EmailCleanupExecuteResponse: Codable {
+    let success: Bool
+    let results: EmailCleanupResults
+    let message: String
+}
+
+struct EmailCleanupResults: Codable {
+    let total: Int
+    let archived: Int
+    let deleted: Int
+    let errors: Int
+    let spaceRecoveredMb: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case total, archived, deleted, errors
+        case spaceRecoveredMb = "space_recovered_mb"
+    }
+}
