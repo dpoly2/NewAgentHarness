@@ -53,7 +53,7 @@ except Exception:
     logger = logging.getLogger("inez")
 
 try:
-    from web_search import BraveSearchClient, SearchAnalyzer, CitationFormatter
+    from web_search import SerpAPIClient, SearchAnalyzer, CitationFormatter
     WEB_SEARCH_OK = True
 except ImportError:
     WEB_SEARCH_OK = False
@@ -1286,11 +1286,11 @@ def think(
     web_search_query = None
     if WEB_SEARCH_OK and SearchAnalyzer.should_search(user_message):
         try:
-            api_key = os.environ.get("BRAVE_API_KEY")
+            api_key = os.environ.get("SERPAPI_API_KEY")
             if api_key:
                 if emit:
                     emit("inez_thinking", message="🌐 Searching the web...")
-                client = BraveSearchClient(api_key)
+                client = SerpAPIClient(api_key)
                 search_result = client.search(user_message, num_results=5)
                 if search_result.sources:
                     web_search_sources = search_result.sources
@@ -1309,7 +1309,7 @@ def think(
                     if emit:
                         emit("inez_thinking", message=f"✅ Found {len(search_result.sources)} sources")
             else:
-                logger.info("BRAVE_API_KEY not set — web search skipped")
+                logger.info("SERPAPI_API_KEY not set — web search skipped")
         except Exception as _ws:
             logger.warning("Web search error: %s", _ws)
 

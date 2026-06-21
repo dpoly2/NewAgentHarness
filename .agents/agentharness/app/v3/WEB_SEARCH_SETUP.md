@@ -1,14 +1,14 @@
 # Web Search Integration for ArchonHub — Setup Guide
 
 **Status:** ✅ Core infrastructure complete  
-**Phase:** Database ready, API client built, awaiting Brave API key
+**Phase:** Database ready, API client built, awaiting SerpAPI API key
 
 ---
 
 ## 📦 What's Been Implemented
 
 ### 1. **Web Search Module** (`web_search.py`)
-- ✅ Brave Search API client
+- ✅ SerpAPI API client
 - ✅ Search result parsing & formatting
 - ✅ Citation tracking (SearchSource, SearchResult classes)
 - ✅ Query analyzer (determines when search is needed)
@@ -26,9 +26,9 @@
 
 ---
 
-## 🔑 Getting Your Brave Search API Key
+## 🔑 Getting Your SerpAPI API Key
 
-### Step 1: Sign Up for Brave Search API
+### Step 1: Sign Up for SerpAPI API
 1. Go to: https://brave.com/search/api/
 2. Click "Get Started" or "Sign Up"
 3. Choose a plan:
@@ -45,10 +45,10 @@
 ```bash
 # Option A: Add to .env file (recommended)
 cd /Users/polysqa/Documents/GitHub/NewAgentHarness/.agents/agentharness
-echo "BRAVE_API_KEY=your_key_here" >> .env
+echo "SERPAPI_API_KEY=your_key_here" >> .env
 
 # Option B: Export temporarily (for testing)
-export BRAVE_API_KEY="your_key_here"
+export SERPAPI_API_KEY="your_key_here"
 ```
 
 ---
@@ -60,7 +60,7 @@ export BRAVE_API_KEY="your_key_here"
 cd /Users/polysqa/Documents/GitHub/NewAgentHarness/.agents/agentharness/app/v3
 
 # Make sure your API key is set
-export BRAVE_API_KEY="your_key_here"
+export SERPAPI_API_KEY="your_key_here"
 
 # Run the test script
 python3 web_search.py
@@ -68,7 +68,7 @@ python3 web_search.py
 
 **Expected Output:**
 ```
-🌐 Searching Brave: 'Tesla stock price today' (limit=3)
+🌐 Searching SerpAPI: 'Tesla stock price today' (limit=3)
 ✅ Found 3 results for 'Tesla stock price today'
 
 Query: Tesla stock price today
@@ -101,7 +101,7 @@ The infrastructure is ready! Here's what needs to be done next:
 ### Phase 1: Basic Integration (Week 1)
 1. **Modify Inez message handler** to:
    - Analyze incoming query with `SearchAnalyzer.should_search()`
-   - If needed, call `BraveSearchClient.search()`
+   - If needed, call `SerpAPISearchClient.search()`
    - Format search results as LLM context
    - Generate response with citations
    - Save citations to database
@@ -227,13 +227,13 @@ delivery numbers announced this morning [cite:2].
 ### "Invalid API key" Error
 ```bash
 # Check your key is set
-echo $BRAVE_API_KEY
+echo $SERPAPI_API_KEY
 
 # If empty, export it
-export BRAVE_API_KEY="your_key_here"
+export SERPAPI_API_KEY="your_key_here"
 
 # Or add to .env permanently
-echo "BRAVE_API_KEY=your_key_here" >> .env
+echo "SERPAPI_API_KEY=your_key_here" >> .env
 ```
 
 ### "Rate limit exceeded" Error
@@ -250,9 +250,9 @@ pip3 install requests
 
 ## 📚 API Documentation
 
-### BraveSearchClient Methods
+### SerpAPISearchClient Methods
 ```python
-client = BraveSearchClient(api_key="your_key")
+client = SerpAPISearchClient(api_key="your_key")
 
 # Basic search
 result = client.search("Tesla stock", num_results=5)
@@ -298,7 +298,7 @@ After integration, track:
 
 ## 📞 Support
 
-- **Brave Search API Docs**: https://brave.com/search/api/docs
+- **SerpAPI API Docs**: https://brave.com/search/api/docs
 - **API Status**: https://status.brave.com
 - **Pricing**: https://brave.com/search/api/#pricing
 
@@ -309,7 +309,7 @@ After integration, track:
 - [x] Install dependencies (bcrypt, passlib, requests)
 - [x] Run database migration (add_citations_schema.py)
 - [x] Create web_search.py module
-- [ ] Get Brave Search API key
+- [ ] Get SerpAPI API key
 - [ ] Test with: `python3 web_search.py`
 - [ ] Integrate with Inez message handler
 - [ ] Update iOS app UI for citations

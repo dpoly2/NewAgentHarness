@@ -6,8 +6,8 @@ This script tests the web search functionality without needing a full server set
 It directly calls the think() function with a search-worthy query.
 
 Usage:
-    # Set your Brave API key first
-    export BRAVE_API_KEY="your_key_here"
+    # Set your SerpAPI API key first
+    export SERPAPI_API_KEY="your_key_here"
     
     # Run the test
     python3 test_inez_search.py
@@ -17,13 +17,13 @@ import os
 import sys
 from datetime import datetime
 
-# Ensure BRAVE_API_KEY is set
-if not os.environ.get("BRAVE_API_KEY"):
-    print("❌ BRAVE_API_KEY not set!")
-    print("\nTo test web search, you need a Brave Search API key:")
+# Ensure SERPAPI_API_KEY is set
+if not os.environ.get("SERPAPI_API_KEY"):
+    print("❌ SERPAPI_API_KEY not set!")
+    print("\nTo test web search, you need a SerpAPI API key:")
     print("1. Sign up at: https://brave.com/search/api/")
     print("2. Copy your API key")
-    print("3. Export it: export BRAVE_API_KEY='your_key_here'")
+    print("3. Export it: export SERPAPI_API_KEY='your_key_here'")
     print("\nOr run without search (will skip web search):")
     print("  python3 test_inez_search.py --no-search")
     if "--no-search" not in sys.argv:
@@ -128,7 +128,7 @@ def main():
         print(f"\n❌ SearchAnalyzer test failed: {e}")
     
     # Test 2: Full Inez integration (only if API key is set)
-    if os.environ.get("BRAVE_API_KEY") and "--no-search" not in sys.argv:
+    if os.environ.get("SERPAPI_API_KEY") and "--no-search" not in sys.argv:
         try:
             test_inez_search()
         except Exception as e:
@@ -136,16 +136,16 @@ def main():
             import traceback
             traceback.print_exc()
     else:
-        print("\n⚠️  Skipping Inez integration test (no BRAVE_API_KEY)")
-        print("   Set BRAVE_API_KEY to test full integration")
+        print("\n⚠️  Skipping Inez integration test (no SERPAPI_API_KEY)")
+        print("   Set SERPAPI_API_KEY to test full integration")
     
     print("\n" + "="*70)
     print("🎯 Next Steps:")
     print("="*70)
-    print("1. If you haven't already, get your Brave API key:")
+    print("1. If you haven't already, get your SerpAPI API key:")
     print("   https://brave.com/search/api/")
     print("\n2. Set the environment variable:")
-    print("   export BRAVE_API_KEY='your_key_here'")
+    print("   export SERPAPI_API_KEY='your_key_here'")
     print("\n3. Start the ArchonHub server:")
     print("   cd /Users/polysqa/Documents/GitHub/NewAgentHarness/.agents/agentharness/app/v3")
     print("   python3 hub_server.py")

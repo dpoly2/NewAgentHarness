@@ -1,7 +1,7 @@
 """
 web_search.py — Real-time Web Search Integration for Inez
 ===========================================================
-Integrates Brave Search API to provide real-time web search
+Integrates SerpAPI (Google Search) to provide real-time web search
 capabilities with source citations for ArchonHub agents.
 """
 
@@ -60,12 +60,12 @@ class SearchResult:
         }
 
 
-class BraveSearchClient:
-    """Client for Brave Search API."""
+class SerpAPIClient:
+    """Client for SerpAPI (Google Search)."""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("BRAVE_API_KEY", "")
-        self.base_url = "https://api.search.brave.com/res/v1/web/search"
+        self.api_key = api_key or os.getenv("SERPAPI_API_KEY", "")
+        self.base_url = "https://serpapi.com/search"
         
     def search(
         self,
@@ -75,7 +75,7 @@ class BraveSearchClient:
         country: str = "us"
     ) -> SearchResult:
         """
-        Perform a web search using Brave Search API.
+        Perform a web search using SerpAPI (Google Search).
         
         Args:
             query: Search query string
@@ -90,42 +90,37 @@ class BraveSearchClient:
             Exception: If API call fails or no API key configured
         """
         if not self.api_key:
-            raise ValueError("Brave Search API key not configured. Set BRAVE_API_KEY environment variable.")
+            raise ValueError("SerpAPI key not configured. Set SERPAPI_API_KEY environment variable.")
         
         if not REQUESTS_OK:
             raise ImportError("requests library not available")
         
-        headers = {
-            "Accept": "application/json",
-            "Accept-Encoding": "gzip",
-            "X-Subscription-Token": self.api_key
-        }
-        
         params = {
             "q": query,
-            "count": min(num_results, 20),
-            "text_decorations": True,
-            "search_lang": search_lang,
-            "country": country
+            "api_key": self.api_key,
+            "num": min(num_results, 20),
+            "hl": search_lang,
+            "gl": country,
+            "engine": "google"
         }
         
         try:
-            logger.info(f"🌐 Searching Brave: '{query}' (limit={num_results})")
-            response = requests.get(self.base_url, headers=headers, params=params, timeout=10)
+            logger.info(f"🌐 Searching Google via SerpAPI: '{query}' (limit={num_results})")
+            response = requests.get(self.base_url, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
             
-            # Parse results
+            # Parse results - SerpAPI returns organic_results
             sources = []
-            web_results = data.get("web", {}).get("results", [])
+            organic_results = data.get("organic_results", [])
             
-            for i, result in enumerate(web_results[:num_results], 1):
+            for i, result in enumerate(organic_results[:num_results], 1):
                 source = SearchSource(
                     id=i,
                     title=result.get("title", ""),
-                    url=result.get("url", ""),
-                    snippet=result.get("description", ""),
-                    published_date=result.get("age"),
+                    url=result.get("link", ""),
+                    snippet=result.get("snippet", ""),
+                    published_date=result.get("date"),
                     source_type="web"
                 )
                 sources.append(source)
@@ -142,13 +137,13 @@ class BraveSearchClient:
             
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 401:
-                logger.error("🚫 Brave Search API: Invalid API key")
-                raise ValueError("Invalid Brave Search API key")
+                logger.error("🚫 SerpAPI: Invalid API key")
+                raise ValueError("Invalid SerpAPI key")
             elif e.response.status_code == 429:
-                logger.error("⏱️ Brave Search API: Rate limit exceeded")
-                raise ValueError("Brave Search rate limit exceeded")
+                logger.error("⏱️ SerpAPI: Rate limit exceeded")
+                raise ValueError("SerpAPI rate limit exceeded")
             else:
-                logger.error(f"❌ Brave Search API error: {e}")
+                logger.error(f"❌ SerpAPI error: {e}")
                 raise
         except Exception as e:
             logger.error(f"❌ Search failed: {e}")
@@ -289,7 +284,7 @@ def format_search_context_for_llm(search_result: SearchResult) -> str:
 
 if __name__ == "__main__":
     # Test search
-    client = BraveSearchClient()
+    client = SerpAPIClient()
     
     query = "Tesla stock price today"
     result = client.search(query, num_results=3)
