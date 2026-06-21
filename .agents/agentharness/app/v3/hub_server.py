@@ -2383,15 +2383,21 @@ if FASTAPI_OK:
         needs_agents = result.get("needs_agents", False)
         error = result.get("error")
 
-        # Store Inez response
-        _create_record("messages", {
+        # Store Inez response (with citations if present)
+        message_data = {
             "id": uuid.uuid4().hex,
             "conversation_id": conv_id,
             "role": "assistant",
             "content": inez_message,
             "agent_id": "inez-chief-of-staff",
             "created_at": _now_iso(),
-        })
+        }
+        # Add citation metadata if present
+        if result.get("has_citations"):
+            message_data["has_citations"] = True
+            message_data["citations"] = json.dumps(result.get("citations", []))
+            message_data["search_query"] = result.get("search_query")
+        _create_record("messages", message_data)
         _update_record("conversations", conv_id, {"updated_at": _now_iso()})
 
         # Enqueue dispatched agent runs
@@ -2412,7 +2418,7 @@ if FASTAPI_OK:
                 })
                 queued_runs.append({"run_id": run_id, "agent_id": agent_id, "project": project})
 
-        return {
+        response_data = {
             "conversation_id": conv_id,
             "inez_message": inez_message,
             "dispatches": dispatches,
@@ -2420,6 +2426,12 @@ if FASTAPI_OK:
             "queued_runs": queued_runs,
             "error": error,
         }
+        # Include citation data if present
+        if result.get("has_citations"):
+            response_data["has_citations"] = True
+            response_data["citations"] = result.get("citations", [])
+            response_data["search_query"] = result.get("search_query")
+        return response_data
 
     @app.get("/api/inez/brief")
     async def inez_morning_brief(current_user: dict = Depends(get_current_user)):

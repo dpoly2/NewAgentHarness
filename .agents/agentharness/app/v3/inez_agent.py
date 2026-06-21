@@ -52,6 +52,13 @@ except Exception:
     import logging
     logger = logging.getLogger("inez")
 
+try:
+    from web_search import BraveSearchClient, SearchAnalyzer, CitationFormatter
+    WEB_SEARCH_OK = True
+except ImportError:
+    WEB_SEARCH_OK = False
+    logger.warning("web_search module not available — web search disabled")
+
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 # ── David's Identity Profile — injected into every Inez prompt ───────────────
@@ -1203,6 +1210,39 @@ def think(
         except Exception as _se:
             logger.warning("Email send tool error: %s", _se)
 
+    # ── Step 1d: Web search tool ──────────────────────────────────────────────
+    web_search_data = ""
+    web_search_sources = []
+    web_search_query = None
+    if WEB_SEARCH_OK and SearchAnalyzer.should_search(user_message):
+        try:
+            api_key = os.environ.get("BRAVE_API_KEY")
+            if api_key:
+                if emit:
+                    emit("inez_thinking", message="🌐 Searching the web...")
+                client = BraveSearchClient(api_key)
+                search_result = client.search(user_message, num_results=5)
+                if search_result.sources:
+                    web_search_sources = search_result.sources
+                    web_search_query = user_message
+                    lines = [f"[WEB SEARCH RESULTS for: '{user_message}']"]
+                    for source in search_result.sources:
+                        lines.append(f"\n[{source.id}] {source.title}")
+                        lines.append(f"    {source.snippet}")
+                        lines.append(f"    Source: {source.url}")
+                    web_search_data = "\n".join(lines)
+                    web_search_data += (
+                        "\n\nINSTRUCTIONS: Use these web sources to provide accurate, up-to-date information. "
+                        "Cite sources inline using [cite:N] where N is the source number. "
+                        "Example: 'Tesla is trading at $242 [cite:1]'"
+                    )
+                    if emit:
+                        emit("inez_thinking", message=f"✅ Found {len(search_result.sources)} sources")
+            else:
+                logger.info("BRAVE_API_KEY not set — web search skipped")
+        except Exception as _ws:
+            logger.warning("Web search error: %s", _ws)
+
     system_prompt = _build_system_prompt(history)
 
     # ── Step 2: Inez analysis — determines what to say and who to dispatch ────
@@ -1253,6 +1293,8 @@ def think(
         extra_blocks.append(f"[EMAIL INBOX TOOL DATA]:\n{email_read_data}")
     if email_send_data:
         extra_blocks.append(f"[EMAIL SEND TOOL DATA]:\n{email_send_data}")
+    if web_search_data:
+        extra_blocks.append(web_search_data)
     if extra_blocks:
         augmented_message = user_message + "\n\n" + "\n\n".join(extra_blocks)
 
@@ -1268,6 +1310,28 @@ def think(
         result = _parse_inez_response(raw)
         result["error"] = None
         result.setdefault("agent_results", [])
+        
+        # ── Format citations if web search was used ───────────────────────────
+        if WEB_SEARCH_OK and web_search_sources:
+            try:
+                inez_msg = result.get("inez_message", "")
+                formatted = CitationFormatter.format_with_citations(inez_msg, web_search_sources)
+                result["inez_message"] = formatted
+                result["has_citations"] = True
+                result["citations"] = [
+                    {
+                        "id": s.id,
+                        "title": s.title,
+                        "url": s.url,
+                        "snippet": s.snippet,
+                    }
+                    for s in web_search_sources
+                ]
+                result["search_query"] = web_search_query
+            except Exception as _cf:
+                logger.warning("Citation formatting error: %s", _cf)
+                # Keep unformatted message if citation formatting fails
+                result["has_citations"] = False
 
         # ── Step 3: Execute dispatches through agent_runner ───────────────────
         dispatches = result.get("dispatches", [])
