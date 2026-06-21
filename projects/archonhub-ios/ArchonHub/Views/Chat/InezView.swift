@@ -1,4 +1,6 @@
 import SwiftUI
+import Speech
+import AVFoundation
 
 // MARK: - Inez Message Model
 
@@ -39,6 +41,13 @@ struct InezView: View {
     @State private var showMemory = false
     @State private var inezStatus: InezStatusResponse?
     @State private var showStatusHUD = true
+    
+    // Voice input state
+    @State private var isRecording = false
+    @State private var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    @State private var recognitionTask: SFSpeechRecognitionTask?
+    @State private var audioEngine = AVAudioEngine()
 
     private let inezPurple = Color(red: 0.49, green: 0.23, blue: 0.93)
     private let inezLavender = Color(red: 0.77, green: 0.71, blue: 0.99)
@@ -484,10 +493,26 @@ struct InezView: View {
 
     private var composer: some View {
         HStack(spacing: 12) {
+            // Microphone button for voice input
+            Button {
+                if isRecording {
+                    stopRecording()
+                } else {
+                    startRecording()
+                }
+            } label: {
+                Image(systemName: isRecording ? "stop.circle.fill" : "mic.fill")
+                    .foregroundStyle(isRecording ? ArchonTheme.error : inezLavender)
+                    .padding(10)
+                    .background(isRecording ? ArchonTheme.error.opacity(0.2) : inezPurple.opacity(0.15))
+                    .clipShape(Circle())
+            }
+            .disabled(isThinking)
+            
             TextField("Message Inez...", text: $draft, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
                 .lineLimit(1...5)
-                .disabled(isThinking)
+                .disabled(isThinking || isRecording)
 
             Button {
                 send(text: draft)
@@ -554,6 +579,108 @@ struct InezView: View {
         } catch {
             // Status is optional — fail silently
         }
+    }
+    
+    // MARK: - Voice Input
+    
+    private func startRecording() {
+        // Request speech recognition authorization
+        SFSpeechRecognizer.requestAuthorization { authStatus in
+            DispatchQueue.main.async {
+                guard authStatus == .authorized else {
+                    errorMessage = "Speech recognition not authorized"
+                    return
+                }
+                
+                guard let recognizer = speechRecognizer, recognizer.isAvailable else {
+                    errorMessage = "Speech recognition not available"
+                    return
+                }
+                
+                do {
+                    try startRecognitionTask()
+                } catch {
+                    errorMessage = "Could not start recording: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+    
+    private func startRecognitionTask() throws {
+        // Cancel any ongoing task
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        
+        // Configure audio session
+        let audioSession = AVAudioSession.sharedInstance()
+        try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        
+        // Create recognition request
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        guard let recognitionRequest = recognitionRequest else {
+            throw NSError(domain: "SpeechError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to create recognition request"])
+        }
+        
+        recognitionRequest.shouldReportPartialResults = true
+        
+        // Get audio input node
+        let inputNode = audioEngine.inputNode
+        
+        // Start recognition task
+        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+            guard let self = self else { return }
+            
+            var isFinal = false
+            
+            if let result = result {
+                // Update draft with transcribed text
+                DispatchQueue.main.async {
+                    self.draft = result.bestTranscription.formattedString
+                }
+                isFinal = result.isFinal
+            }
+            
+            if error != nil || isFinal {
+                // Stop recording on error or final result
+                DispatchQueue.main.async {
+                    self.stopRecording()
+                }
+            }
+        }
+        
+        // Configure audio tap
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+            recognitionRequest.append(buffer)
+        }
+        
+        // Start audio engine
+        audioEngine.prepare()
+        try audioEngine.start()
+        
+        isRecording = true
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+    }
+    
+    private func stopRecording() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        
+        recognitionRequest?.endAudio()
+        recognitionRequest = nil
+        
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        
+        isRecording = false
+        
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
     }
 }
 
