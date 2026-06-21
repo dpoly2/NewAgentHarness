@@ -569,6 +569,8 @@
 				DEVELOPMENT_TEAM = LF6WZV8K43;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ArchonHub needs microphone access to transcribe your voice messages to Inez.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ArchonHub uses speech recognition to convert your voice to text for chatting with Inez.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -623,6 +625,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = ArchonHub;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIStatusBarStyle = UIStatusBarStyleLightContent;
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ArchonHub needs microphone access to transcribe your voice messages to Inez.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "ArchonHub uses speech recognition to convert your voice to text for chatting with Inez.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
