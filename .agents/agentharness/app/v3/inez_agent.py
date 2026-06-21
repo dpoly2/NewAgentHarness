@@ -1102,6 +1102,76 @@ def _parse_inez_response(raw: str) -> dict:
     return result
 
 
+def _generate_followups(user_question: str, inez_response: str) -> list[str]:
+    """
+    Generate 3-5 follow-up question suggestions based on the conversation.
+    
+    These suggestions help the user explore the topic deeper without having to
+    think of the next question themselves.
+    
+    Args:
+        user_question: The original question the user asked
+        inez_response: Inez's answer to that question
+        
+    Returns:
+        List of 3-5 follow-up questions as strings, or empty list on error
+    """
+    if not LLM_OK:
+        return []
+    
+    try:
+        model = _llm(temperature=0.7)  # Higher temp for creativity
+        
+        prompt = f"""You are Inez, Chief of Staff for David Smith's portfolio of ventures.
+
+The user just asked: "{user_question}"
+
+You responded: "{inez_response[:500]}..."
+
+Generate 3-5 specific, actionable follow-up questions the user might want to ask next.
+
+RULES:
+- Make questions concrete and specific (not generic like "Tell me more")
+- Anticipate natural next steps in the conversation
+- Consider David's roles: HP Engineering, XFTC, S2T Designs, PBS Foundation, Markets, Ministry
+- Mix depth (go deeper on same topic) and breadth (explore related topics)
+- Keep questions under 100 characters each
+- Don't repeat information already covered
+
+Format as a JSON array of strings:
+["First follow-up question?", "Second question?", "Third question?"]
+
+ONLY return the JSON array, nothing else."""
+
+        messages = [HumanMessage(content=prompt)]
+        response = model.invoke(messages)
+        raw = response.content if hasattr(response, "content") else str(response)
+        
+        # Extract JSON array
+        raw = raw.strip()
+        if raw.startswith("```json"):
+            raw = raw[7:]
+        if raw.startswith("```"):
+            raw = raw[3:]
+        if raw.endswith("```"):
+            raw = raw[:-3]
+        raw = raw.strip()
+        
+        followups = json.loads(raw)
+        
+        # Validate
+        if isinstance(followups, list) and all(isinstance(q, str) for q in followups):
+            # Limit to 5 questions
+            return followups[:5]
+        else:
+            logger.warning("Follow-up suggestions not in expected format")
+            return []
+            
+    except Exception as e:
+        logger.error("Error generating follow-ups: %s", e)
+        return []
+
+
 def think(
     user_message: str,
     history: list[dict],
@@ -1408,10 +1478,23 @@ def think(
             except Exception:
                 pass
 
+        # ── Generate follow-up question suggestions ──────────────────────────
+        if LLM_OK and result.get("inez_message"):
+            try:
+                if emit:
+                    emit("inez_thinking", message="Generating follow-up suggestions...")
+                followups = _generate_followups(user_message, result["inez_message"])
+                if followups:
+                    result["followup_suggestions"] = followups
+            except Exception as _fs:
+                logger.warning("Follow-up generation error: %s", _fs)
+                # Non-critical — continue without suggestions
+
         if emit:
             emit("inez_response",
                  message=result["inez_message"],
-                 dispatches=result.get("dispatches", []))
+                 dispatches=result.get("dispatches", []),
+                 followup_suggestions=result.get("followup_suggestions", []))
 
         return result
 

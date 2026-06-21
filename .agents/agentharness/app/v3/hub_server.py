@@ -2431,6 +2431,9 @@ if FASTAPI_OK:
             response_data["has_citations"] = True
             response_data["citations"] = result.get("citations", [])
             response_data["search_query"] = result.get("search_query")
+        # Include follow-up suggestions if present
+        if result.get("followup_suggestions"):
+            response_data["followup_suggestions"] = result.get("followup_suggestions", [])
         return response_data
 
     @app.get("/api/inez/brief")
