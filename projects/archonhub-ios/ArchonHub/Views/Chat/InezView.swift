@@ -652,17 +652,14 @@ struct InezView: View {
         let inputNode = audioEngine.inputNode
         
         // Start recognition task
-        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
-            guard let self = self else { return }
-            
-            var isFinal = false
+        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
+            let isFinal = result?.isFinal ?? false
             
             if let result = result {
                 // Update draft with transcribed text
                 DispatchQueue.main.async {
                     self.draft = result.bestTranscription.formattedString
                 }
-                isFinal = result.isFinal
             }
             
             if error != nil || isFinal {
