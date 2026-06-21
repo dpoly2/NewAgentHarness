@@ -42,6 +42,11 @@ struct InezView: View {
     @State private var inezStatus: InezStatusResponse?
     @State private var showStatusHUD = true
     
+    // Prompt templates state
+    @State private var showTemplates = false
+    @State private var templates: [PromptTemplate] = []
+    @State private var isLoadingTemplates = false
+    
     // Voice input state
     @State private var isRecording = false
     @State private var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
@@ -138,6 +143,19 @@ struct InezView: View {
                     }
             }
             .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showTemplates) {
+            NavigationStack {
+                promptTemplatesView
+                    .navigationTitle("Prompt Templates")
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showTemplates = false }
+                        }
+                    }
+            }
+            .presentationDetents([.large])
         }
         .task {
             if messages.isEmpty {
@@ -244,6 +262,12 @@ struct InezView: View {
     private var quickActions: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
+                // Templates button
+                quickActionButton("Templates", icon: "doc.text.fill") {
+                    Task { await loadTemplates() }
+                    showTemplates = true
+                }
+                
                 quickActionButton("Status", icon: "waveform") {
                     send(text: "What's the current status of all missions?")
                 }
@@ -682,7 +706,108 @@ struct InezView: View {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
+    
+    // MARK: - Prompt Templates
+    
+    private var promptTemplatesView: some View {
+        Group {
+            if isLoadingTemplates {
+                ProgressView()
+                    .tint(inezLavender)
+            } else if templates.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "doc.text")
+                        .font(.largeTitle)
+                        .foregroundStyle(ArchonTheme.muted)
+                    Text("No templates available")
+                        .foregroundStyle(ArchonTheme.muted)
+                }
+            } else {
+                List {
+                    ForEach(templatesByCategory(), id: \.category) { group in
+                        Section(header: Text(group.category.uppercased())) {
+                            ForEach(group.templates) { template in
+                                Button {
+                                    useTemplate(template)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        HStack {
+                                            Text(template.title)
+                                                .font(.headline)
+                                                .foregroundStyle(ArchonTheme.text)
+                                            Spacer()
+                                            if template.usageCount > 0 {
+                                                Text("\(template.usageCount)×")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(ArchonTheme.muted)
+                                            }
+                                        }
+                                        Text(template.promptText.prefix(100) + (template.promptText.count > 100 ? "..." : ""))
+                                            .font(.caption)
+                                            .foregroundStyle(ArchonTheme.muted)
+                                            .lineLimit(2)
+                                    }
+                                    .padding(.vertical, 4)
+                                }
+                                .listRowBackground(ArchonTheme.card)
+                            }
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(ArchonTheme.background)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ArchonTheme.background)
+    }
+    
+    private struct TemplateGroup {
+        let category: String
+        let templates: [PromptTemplate]
+    }
+    
+    private func templatesByCategory() -> [TemplateGroup] {
+        let grouped = Dictionary(grouping: templates, by: { $0.category })
+        let sorted = grouped.keys.sorted()
+        return sorted.map { TemplateGroup(category: $0, templates: grouped[$0]!) }
+    }
+    
+    private func useTemplate(_ template: PromptTemplate) {
+        // Fill draft with template text
+        draft = template.promptText
+        
+        // Increment usage count on server (fire and forget)
+        Task {
+            do {
+                let _: [String: Any] = try await HubClient.shared.post(
+                    "/api/prompt-templates/\(template.id)/use",
+                    body: EmptyRequest()
+                )
+            } catch {
+                // Silent fail - usage count is not critical
+            }
+        }
+        
+        // Close templates sheet
+        showTemplates = false
+    }
+    
+    private func loadTemplates() async {
+        isLoadingTemplates = true
+        do {
+            templates = try await HubClient.shared.get("/api/prompt-templates")
+        } catch {
+            errorMessage = "Failed to load templates: \(error.localizedDescription)"
+            templates = []
+        }
+        isLoadingTemplates = false
+    }
 }
+
+// MARK: - Empty Request Helper
+
+private struct EmptyRequest: Codable {}
 
 // MARK: - Bouncing Dots
 

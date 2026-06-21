@@ -325,3 +325,18 @@ struct HubConfig: Codable, Hashable {
         values[key]
     }
 }
+
+// MARK: - Prompt Templates
+
+struct PromptTemplate: Codable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let category: String
+    let promptText: String
+    let agentId: String
+    let projectSlug: String
+    let isSystem: Bool
+    let usageCount: Int
+    let createdAt: String?
+    let updatedAt: String?
+}
