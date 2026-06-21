@@ -56,6 +56,51 @@ final class HubClient: ObservableObject {
     func get<T: Decodable>(_ path: String) async throws -> T {
         try await request(path: path, method: "GET", requiresAuth: true)
     }
+    
+    func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]) async throws -> T {
+        // Construct URL with query parameters
+        var components = URLComponents(string: "\(baseURL)\(path)")
+        components?.queryItems = queryItems
+        
+        guard let url = components?.url else {
+            throw APIError.invalidURL
+        }
+        
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "GET"
+        
+        if !token.isEmpty {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.networkError
+        }
+        
+        guard httpResponse.statusCode == 200 else {
+            if httpResponse.statusCode == 401 {
+                throw APIError.unauthorized
+            }
+            throw APIError.serverError
+        }
+        
+        if T.self == EmptyResponse.self, data.isEmpty {
+            return EmptyResponse() as! T
+        }
+        
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("❌ Decoding error for \(path)")
+                print("Response: \(responseStr.prefix(500))")
+                print("Error: \(error)")
+            }
+            throw APIError.decoding
+        }
+    }
 
     func post<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {
         try await request(path: path, method: "POST", body: body, requiresAuth: true)
