@@ -2857,6 +2857,13 @@
                                             <label>API Token</label>
                                             <input name="api_token" value="${escapeHtml(config?.api_token || '••••••••••••••••')}" readonly />
                                         </div>
+                                        <div class="field">
+                                            <label>SerpAPI Key <span style="color:var(--text-muted);font-weight:400">(for web search)</span></label>
+                                            <input name="serpapi_api_key" type="password" value="${escapeHtml(config?.serpapi_api_key || '')}" placeholder="Your SerpAPI key or leave blank" autocomplete="new-password" />
+                                            <small style="color:var(--text-muted);font-size:0.85em;margin-top:4px;display:block">
+                                                Get free key at <a href="https://serpapi.com/" target="_blank" style="color:var(--accent)">serpapi.com</a> (100 searches/month)
+                                            </small>
+                                        </div>
                                         <div class="form-actions span-2">
                                             <button class="action-btn" type="submit">Save Config</button>
                                         </div>
@@ -2913,7 +2920,7 @@
                     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
                     payload.thread_pool_size = Number(payload.thread_pool_size || 3);
                     try {
-                        await api('PUT', '/api/config', payload);
+                        await api('PUT', '/api/config', { data: payload });
                         showToast('Configuration updated', 'var(--success)');
                     } catch (error) {
                         showToast(error.message || 'Unable to save config', 'var(--error)');
