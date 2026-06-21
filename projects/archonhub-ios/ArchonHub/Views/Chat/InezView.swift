@@ -777,9 +777,12 @@ struct InezView: View {
         // Increment usage count on server (fire and forget)
         Task {
             do {
-                let _: [String: Any] = try await HubClient.shared.post(
+                struct UsageResponse: Decodable {
+                    let success: Bool?
+                }
+                let _: UsageResponse = try await HubClient.shared.post(
                     "/api/prompt-templates/\(template.id)/use",
-                    body: EmptyRequest()
+                    body: EmptyBody()
                 )
             } catch {
                 // Silent fail - usage count is not critical
