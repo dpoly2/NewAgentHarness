@@ -224,6 +224,7 @@ struct InezChatResponse: Codable {
     let needsAgents: Bool
     let queuedRuns: [QueuedRun]?
     let error: String?
+    let followupSuggestions: [String]?
 }
 
 struct QueuedRun: Codable, Identifiable, Hashable {

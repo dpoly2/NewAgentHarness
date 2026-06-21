@@ -7,12 +7,14 @@ struct InezMessage: Identifiable, Hashable {
     let role: InezRole
     let content: String
     let dispatches: [InezDispatch]
+    let followupSuggestions: [String]
     let timestamp: Date
 
-    init(role: InezRole, content: String, dispatches: [InezDispatch] = [], timestamp: Date = .now) {
+    init(role: InezRole, content: String, dispatches: [InezDispatch] = [], followupSuggestions: [String] = [], timestamp: Date = .now) {
         self.role = role
         self.content = content
         self.dispatches = dispatches
+        self.followupSuggestions = followupSuggestions
         self.timestamp = timestamp
     }
 }
@@ -348,6 +350,38 @@ struct InezView: View {
                         }
                     }
                 }
+                
+                // Follow-up suggestions
+                if !msg.followupSuggestions.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("SUGGESTED FOLLOW-UPS")
+                            .font(.caption2.weight(.semibold))
+                            .tracking(0.8)
+                            .foregroundStyle(ArchonTheme.muted)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(msg.followupSuggestions, id: \.self) { question in
+                                    Button {
+                                        send(text: question)
+                                    } label: {
+                                        Text(question)
+                                            .font(.caption)
+                                            .foregroundStyle(inezLavender)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 6)
+                                            .background(inezPurple.opacity(0.1))
+                                            .clipShape(Capsule())
+                                            .overlay(
+                                                Capsule()
+                                                    .stroke(inezPurple.opacity(0.25), lineWidth: 1)
+                                            )
+                                    }
+                                    .disabled(isThinking)
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(minLength: 40)
@@ -498,7 +532,8 @@ struct InezView: View {
                 messages.append(InezMessage(
                     role: .inez,
                     content: response.inezMessage,
-                    dispatches: response.dispatches
+                    dispatches: response.dispatches,
+                    followupSuggestions: response.followupSuggestions ?? []
                 ))
                 await loadStatus()
             } catch {
