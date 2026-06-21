@@ -59,7 +59,11 @@ final class HubClient: ObservableObject {
     
     func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]) async throws -> T {
         // Construct URL with query parameters
-        var components = URLComponents(string: "\(baseURL)\(path)")
+        guard let baseURL = buildURL(for: path) else {
+            throw APIError.invalidURL
+        }
+        
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
         components?.queryItems = queryItems
         
         guard let url = components?.url else {
@@ -76,14 +80,15 @@ final class HubClient: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: urlRequest)
         
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.networkError
+            throw APIError.invalidResponse
         }
         
         guard httpResponse.statusCode == 200 else {
             if httpResponse.statusCode == 401 {
-                throw APIError.unauthorized
+                throw APIError.server("Unauthorized")
             }
-            throw APIError.serverError
+            let message = parseServerError(from: data) ?? "Request failed with status \(httpResponse.statusCode)."
+            throw APIError.server(message)
         }
         
         if T.self == EmptyResponse.self, data.isEmpty {
