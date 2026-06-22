@@ -193,6 +193,13 @@ struct RunRequest: Codable {
 struct InezChatRequest: Codable {
     let message: String
     let conversationId: String?
+    let fileIds: [String]?
+    
+    enum CodingKeys: String, CodingKey {
+        case message
+        case conversationId = "conversation_id"
+        case fileIds = "file_ids"
+    }
 }
 
 struct InezDispatch: Codable, Identifiable, Hashable {

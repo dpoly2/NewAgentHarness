@@ -1,6 +1,80 @@
 import SwiftUI
 import Speech
 import AVFoundation
+import PhotosUI
+import UniformTypeIdentifiers
+
+// MARK: - Pending File Upload Model
+
+struct PendingFileUpload: Identifiable {
+    let id = UUID()
+    let filename: String
+    let data: Data
+    let mimeType: String
+    
+    var icon: String {
+        if mimeType.contains("pdf") {
+            return "doc.text.fill"
+        } else if mimeType.hasPrefix("image/") {
+            return "photo.fill"
+        } else if mimeType.contains("spreadsheet") || mimeType.contains("csv") || mimeType.contains("excel") {
+            return "tablecells.fill"
+        } else {
+            return "doc.fill"
+        }
+    }
+    
+    var formattedSize: String {
+        let kb = Double(data.count) / 1024
+        let mb = kb / 1024
+        
+        if mb >= 1 {
+            return String(format: "%.1f MB", mb)
+        } else {
+            return String(format: "%.0f KB", kb)
+        }
+    }
+}
+
+// MARK: - File Attachment Chip View
+
+struct FileAttachmentChip: View {
+    let file: PendingFileUpload
+    let onRemove: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: file.icon)
+                .font(.caption)
+                .foregroundStyle(.white)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.filename)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                
+                Text(file.formattedSize)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(red: 0.49, green: 0.23, blue: 0.93))
+        )
+    }
+}
 
 // MARK: - Inez Message Model
 
@@ -11,13 +85,15 @@ struct InezMessage: Identifiable, Hashable {
     let dispatches: [InezDispatch]
     let followupSuggestions: [String]
     let timestamp: Date
+    let attachedFiles: [UploadedFile]
 
-    init(role: InezRole, content: String, dispatches: [InezDispatch] = [], followupSuggestions: [String] = [], timestamp: Date = .now) {
+    init(role: InezRole, content: String, dispatches: [InezDispatch] = [], followupSuggestions: [String] = [], timestamp: Date = .now, attachedFiles: [UploadedFile] = []) {
         self.role = role
         self.content = content
         self.dispatches = dispatches
         self.followupSuggestions = followupSuggestions
         self.timestamp = timestamp
+        self.attachedFiles = attachedFiles
     }
 }
 
@@ -53,6 +129,13 @@ struct InezView: View {
     @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     @State private var recognitionTask: SFSpeechRecognitionTask?
     @State private var audioEngine = AVAudioEngine()
+    
+    // File upload state
+    @State private var pendingUploads: [PendingFileUpload] = []
+    @State private var showPhotoPicker = false
+    @State private var showDocumentPicker = false
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var isUploading = false
 
     private let inezPurple = Color(red: 0.49, green: 0.23, blue: 0.93)
     private let inezLavender = Color(red: 0.77, green: 0.71, blue: 0.99)
@@ -334,6 +417,41 @@ struct InezView: View {
                     .padding(.vertical, 10)
                     .background(ArchonTheme.accent.opacity(0.22))
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                
+                // Display file attachments
+                if !msg.attachedFiles.isEmpty {
+                    VStack(alignment: .trailing, spacing: 6) {
+                        ForEach(msg.attachedFiles) { file in
+                            HStack(spacing: 8) {
+                                Image(systemName: file.icon)
+                                    .font(.caption)
+                                    .foregroundStyle(inezPurple)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(file.filename)
+                                        .font(.caption2.bold())
+                                        .foregroundStyle(ArchonTheme.text)
+                                    Text(file.formattedSize)
+                                        .font(.caption2)
+                                        .foregroundStyle(ArchonTheme.muted)
+                                }
+                                
+                                Image(systemName: file.statusIcon)
+                                    .font(.caption2)
+                                    .foregroundStyle(file.parsingStatus == "complete" ? ArchonTheme.success : ArchonTheme.warning)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(ArchonTheme.card)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(ArchonTheme.muted.opacity(0.2), lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+                
                 Text(msg.timestamp, style: .time)
                     .font(.caption2)
                     .foregroundStyle(ArchonTheme.muted)
@@ -516,46 +634,114 @@ struct InezView: View {
     // MARK: - Composer
 
     private var composer: some View {
-        HStack(spacing: 12) {
-            // Microphone button for voice input
-            Button {
-                if isRecording {
-                    stopRecording()
-                } else {
-                    startRecording()
+        VStack(spacing: 0) {
+            // File attachments preview
+            if !pendingUploads.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(pendingUploads) { upload in
+                            FileAttachmentChip(file: upload) {
+                                pendingUploads.removeAll { $0.id == upload.id }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                 }
-            } label: {
-                Image(systemName: isRecording ? "stop.circle.fill" : "mic.fill")
-                    .foregroundStyle(isRecording ? ArchonTheme.error : inezLavender)
-                    .padding(10)
-                    .background(isRecording ? ArchonTheme.error.opacity(0.2) : inezPurple.opacity(0.15))
-                    .clipShape(Circle())
+                .background(ArchonTheme.card)
+                
+                Divider()
             }
-            .disabled(isThinking)
             
-            TextField("Message Inez...", text: $draft, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(1...5)
+            HStack(spacing: 12) {
+                // File attachment button
+                Menu {
+                    Button {
+                        showPhotoPicker = true
+                    } label: {
+                        Label("Photos", systemImage: "photo.fill")
+                    }
+                    
+                    Button {
+                        showDocumentPicker = true
+                    } label: {
+                        Label("Documents", systemImage: "doc.fill")
+                    }
+                } label: {
+                    Image(systemName: "paperclip")
+                        .foregroundStyle(inezLavender)
+                        .padding(10)
+                        .background(inezPurple.opacity(0.15))
+                        .clipShape(Circle())
+                }
                 .disabled(isThinking || isRecording)
+                
+                // Microphone button for voice input
+                Button {
+                    if isRecording {
+                        stopRecording()
+                    } else {
+                        startRecording()
+                    }
+                } label: {
+                    Image(systemName: isRecording ? "stop.circle.fill" : "mic.fill")
+                        .foregroundStyle(isRecording ? ArchonTheme.error : inezLavender)
+                        .padding(10)
+                        .background(isRecording ? ArchonTheme.error.opacity(0.2) : inezPurple.opacity(0.15))
+                        .clipShape(Circle())
+                }
+                .disabled(isThinking)
+                
+                TextField("Message Inez...", text: $draft, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(1...5)
+                    .disabled(isThinking || isRecording)
 
-            Button {
-                send(text: draft)
-            } label: {
-                Image(systemName: isThinking ? "ellipsis" : "paperplane.fill")
-                    .foregroundStyle(ArchonTheme.background)
-                    .padding(10)
-                    .background(isThinking ? ArchonTheme.muted : inezPurple)
-                    .clipShape(Circle())
+                Button {
+                    Task {
+                        await sendWithAttachments()
+                    }
+                } label: {
+                    if isUploading {
+                        ProgressView()
+                            .tint(.white)
+                            .padding(10)
+                            .background(inezPurple)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: isThinking ? "ellipsis" : "paperplane.fill")
+                            .foregroundStyle(ArchonTheme.background)
+                            .padding(10)
+                            .background(isThinking ? ArchonTheme.muted : inezPurple)
+                            .clipShape(Circle())
+                    }
+                }
+                .disabled((draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingUploads.isEmpty) || isThinking || isUploading)
             }
-            .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isThinking)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(ArchonTheme.card)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(ArchonTheme.muted.opacity(0.2))
+                    .frame(height: 1)
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(ArchonTheme.card)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(ArchonTheme.muted.opacity(0.2))
-                .frame(height: 1)
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+        .fileImporter(
+            isPresented: $showDocumentPicker,
+            allowedContentTypes: [.pdf, .commaSeparatedText, .spreadsheet, .text, .plainText],
+            allowsMultipleSelection: false
+        ) { result in
+            if case .success(let urls) = result, let url = urls.first {
+                handleDocumentSelection(url)
+            }
+        }
+        .onChange(of: selectedPhotoItem) { oldValue, newValue in
+            if let item = newValue {
+                handlePhotoSelection(item)
+                selectedPhotoItem = nil
+            }
         }
     }
 
@@ -802,6 +988,181 @@ struct InezView: View {
             templates = []
         }
         isLoadingTemplates = false
+    }
+    
+    // MARK: - File Upload Actions
+    
+    private func sendWithAttachments() async {
+        var uploadedFiles: [UploadedFile] = []
+        
+        // Upload files if any
+        if !pendingUploads.isEmpty {
+            isUploading = true
+            uploadedFiles = await uploadFiles()
+            isUploading = false
+        }
+        
+        // Send message
+        let content = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // If we have files but no text, create a default message
+        let messageText = content.isEmpty && !uploadedFiles.isEmpty 
+            ? "I've uploaded \(uploadedFiles.count) file(s). Please analyze them."
+            : content
+        
+        guard !messageText.isEmpty else { return }
+        
+        draft = ""
+        errorMessage = ""
+        
+        // Add user message with attachments
+        messages.append(InezMessage(
+            role: .user,
+            content: messageText,
+            attachedFiles: uploadedFiles
+        ))
+        
+        isThinking = true
+
+        Task {
+            do {
+                // Include file IDs in the request
+                let fileIds = uploadedFiles.map { $0.fileId }
+                
+                let response: InezChatResponse = try await HubClient.shared.post(
+                    "/api/inez/chat",
+                    body: InezChatRequest(
+                        message: messageText,
+                        conversationId: conversationId,
+                        fileIds: fileIds.isEmpty ? nil : fileIds
+                    )
+                )
+                conversationId = response.conversationId
+                isThinking = false
+                thinkingStep = ""
+
+                messages.append(InezMessage(
+                    role: .inez,
+                    content: response.message,
+                    dispatches: response.dispatches ?? [],
+                    followupSuggestions: response.followupSuggestions ?? []
+                ))
+            } catch {
+                isThinking = false
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+    
+    func handlePhotoSelection(_ item: PhotosPickerItem) {
+        Task {
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                let filename = "image-\(UUID().uuidString.prefix(8)).jpg"
+                let mimeType = "image/jpeg"
+                
+                let upload = PendingFileUpload(
+                    filename: filename,
+                    data: data,
+                    mimeType: mimeType
+                )
+                
+                await MainActor.run {
+                    pendingUploads.append(upload)
+                }
+            }
+        }
+    }
+    
+    func handleDocumentSelection(_ url: URL) {
+        guard url.startAccessingSecurityScopedResource() else { return }
+        defer { url.stopAccessingSecurityScopedResource() }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            let filename = url.lastPathComponent
+            
+            let mimeType: String
+            let ext = url.pathExtension.lowercased()
+            
+            switch ext {
+            case "pdf": mimeType = "application/pdf"
+            case "csv": mimeType = "text/csv"
+            case "xlsx", "xls": mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            case "docx": mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            case "txt": mimeType = "text/plain"
+            case "png": mimeType = "image/png"
+            case "jpg", "jpeg": mimeType = "image/jpeg"
+            default: mimeType = "application/octet-stream"
+            }
+            
+            let upload = PendingFileUpload(
+                filename: filename,
+                data: data,
+                mimeType: mimeType
+            )
+            
+            pendingUploads.append(upload)
+        } catch {
+            print("Error loading document: \(error)")
+        }
+    }
+    
+    func uploadFiles() async -> [UploadedFile] {
+        var uploadedFiles: [UploadedFile] = []
+        
+        for pendingUpload in pendingUploads {
+            do {
+                let boundary = UUID().uuidString
+                var body = Data()
+                
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(pendingUpload.filename)\"\r\n".data(using: .utf8)!)
+                body.append("Content-Type: \(pendingUpload.mimeType)\r\n\r\n".data(using: .utf8)!)
+                body.append(pendingUpload.data)
+                body.append("\r\n".data(using: .utf8)!)
+                
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"filename\"\r\n\r\n".data(using: .utf8)!)
+                body.append(pendingUpload.filename.data(using: .utf8)!)
+                body.append("\r\n".data(using: .utf8)!)
+                
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"mime_type\"\r\n\r\n".data(using: .utf8)!)
+                body.append(pendingUpload.mimeType.data(using: .utf8)!)
+                body.append("\r\n".data(using: .utf8)!)
+                
+                body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+                
+                let url = hubClient.buildURL(for: "api/files/upload")
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                request.httpBody = body
+                
+                let (data, _) = try await URLSession.shared.data(for: request)
+                let response = try JSONDecoder().decode(FileUploadResponse.self, from: data)
+                
+                if response.success, let fileInfo = response.file {
+                    let uploadedFile = UploadedFile(
+                        fileId: fileInfo.fileId,
+                        filename: fileInfo.filename,
+                        fileType: fileInfo.fileType,
+                        mimeType: pendingUpload.mimeType,
+                        fileSize: fileInfo.fileSize,
+                        parsingStatus: fileInfo.status,
+                        uploadedAt: ISO8601DateFormatter().string(from: Date()),
+                        parsedContent: nil,
+                        metadata: nil
+                    )
+                    uploadedFiles.append(uploadedFile)
+                }
+            } catch {
+                print("Upload failed for \(pendingUpload.filename): \(error)")
+            }
+        }
+        
+        pendingUploads.removeAll()
+        return uploadedFiles
     }
 }
 
