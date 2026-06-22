@@ -3998,8 +3998,42 @@ if FASTAPI_OK:
             logger.error(f"Get feedback stats error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
-    # ── Proactive Intelligence API ───────────────────────────────────────────
+    @app.get("/api/feedback/analyze")
+    async def analyze_feedback(days: int = 7, user_id: str = "default_user"):
+        """Analyze feedback patterns and generate learning insights."""
+        try:
+            from feedback_learner import FeedbackLearner
+            
+            learner = FeedbackLearner(DB_PATH)
+            result = await learner.analyze_feedback(days=days, user_id=user_id)
+            
+            return {
+                "success": True,
+                **result
+            }
+        except Exception as e:
+            logger.error(f"Feedback analysis error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
     
+    @app.get("/api/feedback/preferences")
+    async def get_user_preferences(user_id: str = "default_user"):
+        """Get learned style preferences for a user."""
+        try:
+            from feedback_learner import FeedbackLearner
+            
+            learner = FeedbackLearner(DB_PATH)
+            preferences = learner.get_user_preferences(user_id)
+            
+            return {
+                "success": True,
+                "preferences": preferences
+            }
+        except Exception as e:
+            logger.error(f"Get preferences error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    # ── Proactive Intelligence API ───────────────────────────────────────────
+
     @app.get("/api/briefing/morning")
     async def get_morning_briefing(user_id: str = "default_user"):
         """Generate or retrieve today's morning briefing."""
@@ -4072,6 +4106,86 @@ if FASTAPI_OK:
                 conn.close()
         except Exception as e:
             logger.error(f"Briefing history error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.post("/api/monitoring/run")
+    async def run_monitoring(user_id: str = "default_user"):
+        """Run proactive monitoring cycle (deadlines + anomalies)."""
+        try:
+            from proactive_monitor import ProactiveMonitor
+            
+            monitor = ProactiveMonitor(DB_PATH)
+            result = await monitor.run_monitoring(user_id)
+            
+            return result
+        except Exception as e:
+            logger.error(f"Monitoring error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/notifications")
+    async def get_notifications(
+        user_id: str = "default_user",
+        viewed: Optional[bool] = None,
+        limit: int = 50
+    ):
+        """Get notifications for user."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            conn.row_factory = sqlite3.Row
+            try:
+                cursor = conn.cursor()
+                
+                # Build query
+                where_clauses = ["user_id = ?"]
+                params = [user_id]
+                
+                if viewed is not None:
+                    where_clauses.append("viewed = ?")
+                    params.append(1 if viewed else 0)
+                
+                where_sql = " AND ".join(where_clauses)
+                
+                cursor.execute(f"""
+                    SELECT notification_id, type, priority, title, details,
+                           created_at, viewed, dismissed
+                    FROM notifications
+                    WHERE {where_sql}
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, params + [limit])
+                
+                notifications = [dict(row) for row in cursor.fetchall()]
+                
+                return {
+                    "success": True,
+                    "notifications": notifications,
+                    "count": len(notifications)
+                }
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.error(f"Get notifications error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.post("/api/notifications/{notification_id}/dismiss")
+    async def dismiss_notification(notification_id: str):
+        """Mark notification as dismissed."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    UPDATE notifications
+                    SET dismissed = 1, dismissed_at = ?
+                    WHERE notification_id = ?
+                """, (datetime.utcnow().isoformat(), notification_id))
+                conn.commit()
+                
+                return {"success": True}
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.error(f"Dismiss notification error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
     # ── Email Cleanup API ────────────────────────────────────────────────────
