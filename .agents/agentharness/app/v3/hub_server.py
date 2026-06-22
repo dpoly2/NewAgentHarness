@@ -4187,6 +4187,73 @@ if FASTAPI_OK:
         except Exception as e:
             logger.error(f"Dismiss notification error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+    
+    # ── Agent Collaboration API ──────────────────────────────────────────────
+    
+    @app.post("/api/agents/collaborate")
+    async def agent_collaboration(request: dict):
+        """Orchestrate multi-agent collaboration on a task."""
+        try:
+            from agent_orchestrator import AgentOrchestrator
+            
+            query = request.get('query')
+            user_id = request.get('user_id', 'default_user')
+            agents = request.get('agents')  # Optional: explicit agent list
+            
+            if not query:
+                raise HTTPException(status_code=400, detail="Query required")
+            
+            orchestrator = AgentOrchestrator(DB_PATH)
+            result = await orchestrator.orchestrate_collaboration(
+                user_id=user_id,
+                query=query,
+                explicit_agents=agents
+            )
+            
+            return {
+                "success": True,
+                **result
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Agent collaboration error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/agents/capabilities")
+    async def get_agent_capabilities(agent_name: Optional[str] = None):
+        """Get agent capabilities."""
+        try:
+            from agent_orchestrator import AgentOrchestrator
+            
+            orchestrator = AgentOrchestrator(DB_PATH)
+            capabilities = orchestrator.get_agent_capabilities(agent_name)
+            
+            return {
+                "success": True,
+                "agents": capabilities,
+                "count": len(capabilities)
+            }
+        except Exception as e:
+            logger.error(f"Get capabilities error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/agents/conversations/{conversation_id}")
+    async def get_conversation_history(conversation_id: str):
+        """Get agent conversation history."""
+        try:
+            from agent_orchestrator import AgentOrchestrator
+            
+            orchestrator = AgentOrchestrator(DB_PATH)
+            history = orchestrator.get_conversation_history(conversation_id)
+            
+            return {
+                "success": True,
+                "conversation": history
+            }
+        except Exception as e:
+            logger.error(f"Get conversation error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     # ── Email Cleanup API ────────────────────────────────────────────────────
 
