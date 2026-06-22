@@ -3949,6 +3949,82 @@ if FASTAPI_OK:
         except Exception as e:
             logger.error(f"Get feedback stats error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
+    
+    # ── Proactive Intelligence API ───────────────────────────────────────────
+    
+    @app.get("/api/briefing/morning")
+    async def get_morning_briefing(user_id: str = "default_user"):
+        """Generate or retrieve today's morning briefing."""
+        try:
+            from morning_brief import MorningBriefAgent
+            
+            # Check if brief already exists for today
+            conn = sqlite3.connect(str(DB_PATH))
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT brief_id, brief_text, stats_json, created_at
+                    FROM morning_briefs
+                    WHERE user_id = ? AND date(created_at) = date('now')
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                """, (user_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    # Return existing brief
+                    return {
+                        "success": True,
+                        "brief_id": row[0],
+                        "brief_text": row[1],
+                        "stats": json.loads(row[2]) if row[2] else {},
+                        "created_at": row[3],
+                        "cached": True
+                    }
+            finally:
+                conn.close()
+            
+            # Generate new brief
+            agent = MorningBriefAgent(DB_PATH)
+            result = await agent.generate_brief(user_id)
+            
+            return {
+                "success": True,
+                **result,
+                "cached": False
+            }
+        except Exception as e:
+            logger.error(f"Morning briefing error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/briefing/history")
+    async def get_briefing_history(user_id: str = "default_user", limit: int = 30):
+        """Get historical morning briefings."""
+        try:
+            conn = sqlite3.connect(str(DB_PATH))
+            conn.row_factory = sqlite3.Row
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT brief_id, brief_text, stats_json, created_at, viewed
+                    FROM morning_briefs
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                """, (user_id, limit))
+                
+                briefs = [dict(row) for row in cursor.fetchall()]
+                
+                return {
+                    "success": True,
+                    "briefs": briefs,
+                    "count": len(briefs)
+                }
+            finally:
+                conn.close()
+        except Exception as e:
+            logger.error(f"Briefing history error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
 
     # ── Email Cleanup API ────────────────────────────────────────────────────
 
