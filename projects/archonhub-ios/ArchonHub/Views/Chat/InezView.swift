@@ -759,7 +759,7 @@ struct InezView: View {
             do {
                 let response: InezChatResponse = try await HubClient.shared.post(
                     "/api/inez/chat",
-                    body: InezChatRequest(message: content, conversationId: conversationId)
+                    body: InezChatRequest(message: content, conversationId: conversationId, fileIds: nil)
                 )
                 conversationId = response.conversationId
                 isThinking = false
