@@ -32,3 +32,7 @@ pandas>=2.0.0  # CSV/Excel parsing
 openpyxl>=3.1.0  # Excel support for pandas
 python-docx>=1.0.0  # DOCX parsing
 python-multipart>=0.0.6  # FastAPI file uploads
+
+# RAG / Embeddings
+chromadb>=0.4.0  # Vector database for document embeddings
+

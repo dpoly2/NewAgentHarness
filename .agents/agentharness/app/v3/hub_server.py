@@ -3785,6 +3785,54 @@ if FASTAPI_OK:
             logger.error(f"List files error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
+    @app.post("/api/files/{file_id}/embed")
+    async def embed_file(file_id: str):
+        """Generate embeddings for uploaded file to enable semantic search."""
+        try:
+            from document_rag import DocumentEmbedder
+            
+            upload_dir = AGENTS_DIR / "data" / "uploads"
+            chroma_path = HARNESS / "memory" / "chromadb"
+            
+            embedder = DocumentEmbedder(DB_PATH, chroma_path)
+            result = await embedder.embed_file(file_id)
+            
+            if not result.get("success"):
+                raise HTTPException(status_code=400, detail=result.get("error", "Embedding failed"))
+            
+            return result
+        
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Embed file error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/files/search")
+    async def search_documents(query: str, limit: int = 5, file_ids: Optional[str] = None):
+        """Semantic search across all embedded documents."""
+        try:
+            from document_rag import DocumentEmbedder
+            
+            chroma_path = HARNESS / "memory" / "chromadb"
+            embedder = DocumentEmbedder(DB_PATH, chroma_path)
+            
+            # Parse file_ids if provided (comma-separated)
+            file_id_list = file_ids.split(",") if file_ids else None
+            
+            results = await embedder.search(query, limit=limit, file_ids=file_id_list)
+            
+            return {
+                "success": True,
+                "query": query,
+                "results": results,
+                "count": len(results)
+            }
+        
+        except Exception as e:
+            logger.error(f"Document search error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
     # ── Feedback & Learning System API ──────────────────────────────────────
     
     @app.post("/api/messages/{message_id}/feedback")

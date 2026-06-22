@@ -469,3 +469,160 @@ struct EmailCleanupResults: Codable {
         case spaceRecoveredMb = "space_recovered_mb"
     }
 }
+
+// MARK: - File Upload Models
+
+struct UploadedFile: Codable, Identifiable, Hashable {
+    let fileId: String
+    let filename: String
+    let fileType: String  // 'pdf', 'image', 'spreadsheet', 'document'
+    let mimeType: String
+    let fileSize: Int
+    let parsingStatus: String  // 'pending', 'processing', 'complete', 'failed'
+    let uploadedAt: String
+    let parsedContent: String?
+    let metadata: [String: String]?
+    
+    var id: String { fileId }
+    
+    enum CodingKeys: String, CodingKey {
+        case fileId = "file_id"
+        case filename
+        case fileType = "file_type"
+        case mimeType = "mime_type"
+        case fileSize = "file_size"
+        case parsingStatus = "parsing_status"
+        case uploadedAt = "uploaded_at"
+        case parsedContent = "parsed_content"
+        case metadata
+    }
+    
+    var icon: String {
+        switch fileType {
+        case "pdf": return "doc.text.fill"
+        case "image": return "photo.fill"
+        case "spreadsheet": return "tablecells.fill"
+        case "document": return "doc.fill"
+        default: return "doc"
+        }
+    }
+    
+    var formattedSize: String {
+        let kb = Double(fileSize) / 1024
+        let mb = kb / 1024
+        
+        if mb >= 1 {
+            return String(format: "%.1f MB", mb)
+        } else {
+            return String(format: "%.0f KB", kb)
+        }
+    }
+}
+
+struct FileUploadResponse: Codable {
+    let success: Bool
+    let file: UploadFileInfo?
+    
+    struct UploadFileInfo: Codable {
+        let fileId: String
+        let filename: String
+        let fileType: String
+        let fileSize: Int
+        let status: String
+        
+        enum CodingKeys: String, CodingKey {
+            case fileId = "file_id"
+            case filename
+            case fileType = "file_type"
+            case fileSize = "file_size"
+            case status
+        }
+    }
+}
+
+struct FileListResponse: Codable {
+    let success: Bool
+    let files: [UploadedFile]
+    let count: Int
+}
+
+// MARK: - Feedback Models
+
+struct MessageFeedback: Codable {
+    let messageId: String
+    let rating: Int  // 1 or -1
+    let feedbackText: String?
+    let category: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case messageId = "message_id"
+        case rating
+        case feedbackText = "feedback_text"
+        case category
+    }
+}
+
+struct FeedbackResponse: Codable {
+    let success: Bool
+    let feedbackId: String?
+    let rating: Int?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case feedbackId = "feedback_id"
+        case rating
+    }
+}
+
+// MARK: - Morning Briefing Models
+
+struct MorningBrief: Codable, Identifiable {
+    let briefId: String
+    let briefText: String
+    let stats: BriefStats
+    let createdAt: String
+    let cached: Bool?
+    
+    var id: String { briefId }
+    
+    enum CodingKeys: String, CodingKey {
+        case briefId = "brief_id"
+        case briefText = "brief_text"
+        case stats
+        case createdAt = "created_at"
+        case cached
+    }
+    
+    struct BriefStats: Codable {
+        let urgentEmails: Int
+        let todosDue: Int
+        let activeMissions: Int
+        let marketMovers: Int
+        let deadlinesToday: Int
+        
+        enum CodingKeys: String, CodingKey {
+            case urgentEmails = "urgent_emails"
+            case todosDue = "todos_due"
+            case activeMissions = "active_missions"
+            case marketMovers = "market_movers"
+            case deadlinesToday = "deadlines_today"
+        }
+    }
+}
+
+struct BriefingResponse: Codable {
+    let success: Bool
+    let briefId: String?
+    let briefText: String?
+    let stats: MorningBrief.BriefStats?
+    let cached: Bool?
+    
+    enum CodingKeys: String, CodingKey {
+        case success
+        case briefId = "brief_id"
+        case briefText = "brief_text"
+        case stats
+        case cached
+    }
+}
+
