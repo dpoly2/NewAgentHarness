@@ -24,3 +24,11 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 python-dateutil>=2.8.0
 markdown>=3.5
+
+# File Processing
+PyMuPDF>=1.23.0  # PDF parsing
+Pillow>=10.0.0  # Image processing
+pandas>=2.0.0  # CSV/Excel parsing
+openpyxl>=3.1.0  # Excel support for pandas
+python-docx>=1.0.0  # DOCX parsing
+python-multipart>=0.0.6  # FastAPI file uploads

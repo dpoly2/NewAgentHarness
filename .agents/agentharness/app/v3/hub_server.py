@@ -3694,6 +3694,97 @@ if FASTAPI_OK:
         finally:
             hub._clients.discard(websocket)
 
+    # ── File Upload & Document Processing API ────────────────────────────────
+    
+    @app.post("/api/files/upload")
+    async def upload_file(
+        file: bytes = None,
+        filename: str = None,
+        mime_type: str = None,
+        user_id: str = "default_user",
+        conversation_id: Optional[str] = None,
+        message_id: Optional[str] = None
+    ):
+        """Upload a file for processing."""
+        try:
+            from file_processor import FileProcessor
+            
+            # Initialize processor
+            upload_dir = AGENTS_DIR / "data" / "uploads"
+            processor = FileProcessor(DB_PATH, upload_dir)
+            
+            # Save file
+            result = await processor.save_file(
+                file_content=file,
+                filename=filename,
+                mime_type=mime_type,
+                user_id=user_id,
+                conversation_id=conversation_id,
+                message_id=message_id,
+                uploaded_via="ios"
+            )
+            
+            # Trigger async parsing
+            try:
+                parse_result = await processor.parse_file(result["file_id"])
+                result["parsing"] = parse_result
+            except Exception as parse_error:
+                logger.error(f"Parsing error: {parse_error}")
+                result["parsing"] = {"status": "failed", "error": str(parse_error)}
+            
+            return {
+                "success": True,
+                "file": result
+            }
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            logger.error(f"File upload error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/files/{file_id}")
+    async def get_file(file_id: str):
+        """Get file metadata and parsed content."""
+        try:
+            from file_processor import FileProcessor
+            
+            upload_dir = AGENTS_DIR / "data" / "uploads"
+            processor = FileProcessor(DB_PATH, upload_dir)
+            
+            file_data = processor.get_file_metadata(file_id)
+            if not file_data:
+                raise HTTPException(status_code=404, detail="File not found")
+            
+            return {
+                "success": True,
+                "file": file_data
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Get file error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
+    @app.get("/api/files")
+    async def list_files(user_id: str = "default_user", limit: int = 50):
+        """List files uploaded by user."""
+        try:
+            from file_processor import FileProcessor
+            
+            upload_dir = AGENTS_DIR / "data" / "uploads"
+            processor = FileProcessor(DB_PATH, upload_dir)
+            
+            files = processor.list_user_files(user_id, limit)
+            
+            return {
+                "success": True,
+                "files": files,
+                "count": len(files)
+            }
+        except Exception as e:
+            logger.error(f"List files error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
     # ── Email Cleanup API ────────────────────────────────────────────────────
 
     @app.post("/api/email/cleanup/analyze")
