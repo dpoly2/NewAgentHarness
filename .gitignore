@@ -1,4 +1,24 @@
 .agents/.env
 
 __pycache__/
+*.pyc
+*.pyo
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Runtime files
+*.pid
+.agents/data/hub.pid
+.agents/data/logs/
+.agents/agentharness/memory/.jwt_secret
+
+# Backups with potential secrets
+.agents/data/backup/archonhub_backup.json
+.agents/data/backup/*.bak
+
+# Xcode
+*.xcuserstate
+DerivedData/
+*.xcworkspace/xcuserdata/

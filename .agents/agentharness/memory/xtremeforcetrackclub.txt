@@ -1,0 +1,15 @@
+Task: Check inbox for XFTC-related communications and highlight anything requiring immediate action.
+Score: 0.90
+Critique: The output is clear, concise, and highlights two specific XFTC-related communications that require immediate action, fulfilling the main requirements of the task. It also offers to assist further, which is useful. However, it lacks specific details such as sender names, timestamps, or any direct quotes from the emails, which would increase completeness and allow for more precise action. Including these details would make the response more actionable and thorough.
+Last Output:
+Here’s the latest update on your XFTC-related communications:
+
+Two urgent XFTC-related emails require immediate action:
+
+1. Parent’s Schedule Change Request:  
+A parent has requested a change in their child’s schedule. This may require your prompt response to coordinate or confirm the adjustment.
+
+2. League Registration Confirmation:  
+There is a league registration confirmation that may need your review or follow-up to ensure all details are correct and the registration is finalized.
+
+Would you like assistance drafting responses or taking specific actions on either of these items?

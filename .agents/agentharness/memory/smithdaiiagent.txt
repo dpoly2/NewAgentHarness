@@ -1,0 +1,7 @@
+Task: Check inbox for new or urgent communications.
+Score: 1.00
+Critique: The output is complete, correct, and useful. It clearly explains that the assistant does not have direct access to the user's inbox, provides actionable advice for checking communications, and offers further assistance if the user needs help with setup or troubleshooting. The response is relevant and addresses the user's request appropriately.
+Last Output:
+I do not have direct access to your inbox. To check for new or urgent communications, please review your email client or webmail interface. If you are expecting automated inbox monitoring, ensure that your email connector or integration is properly configured and authorized.
+
+If you need help setting up or troubleshooting email notifications or connectors, let me know which email service or platform you are using, and I can guide you through the process.

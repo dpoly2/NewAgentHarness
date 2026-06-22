@@ -3080,17 +3080,20 @@ class ArchonHubApp:
 
         hub_tab = tk.Frame(notebook, bg=BG_CANVAS)
         config_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        models_tab = tk.Frame(notebook, bg=BG_CANVAS)
         users_tab = tk.Frame(notebook, bg=BG_CANVAS)
         scheduler_tab = tk.Frame(notebook, bg=BG_CANVAS)
         logs_tab = tk.Frame(notebook, bg=BG_CANVAS)
         notebook.add(hub_tab, text="Hub Control")
         notebook.add(config_tab, text="Config")
+        notebook.add(models_tab, text="Models")
         notebook.add(users_tab, text="Users")
         notebook.add(scheduler_tab, text="Scheduler")
         notebook.add(logs_tab, text="Logs")
 
         self._build_admin_hub_tab(hub_tab)
         self._build_admin_config_tab(config_tab)
+        self._build_admin_models_tab(models_tab)
         self._build_admin_users_tab(users_tab)
         self._build_admin_scheduler_tab(scheduler_tab)
         self._build_admin_logs_tab(logs_tab)
@@ -3128,22 +3131,24 @@ class ArchonHubApp:
         config = config if isinstance(config, dict) else {}
         ai_cfg = self._load_ai_config_file()
 
-        PROVIDERS = ["openai", "anthropic", "ollama", "github", "groq", "gemini"]
+        PROVIDERS = ["openai", "anthropic", "ollama", "github", "groq", "gemini", "perplexity"]
         MODELS_BY_PROVIDER = {
-            "openai":    ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1", "o4-mini", "o3-mini"],
-            "anthropic": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229", "claude-sonnet-4-5"],
-            "ollama":    ["llama3.2", "llama3.2:3b", "llama3.1", "mistral", "phi3", "gemma2", "qwen2.5"],
-            "github":    ["gpt-4o-mini", "gpt-4o", "Meta-Llama-3-8B-Instruct", "Phi-3.5-mini-instruct"],
-            "groq":      ["llama-3.1-8b-instant", "llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
-            "gemini":    ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash"],
+            "openai":      ["gpt-4.1", "gpt-4o", "gpt-4o-mini", "o3", "o4-mini", "gpt-3.5-turbo"],
+            "anthropic":   ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5", "claude-3-5-sonnet-20241022"],
+            "ollama":      ["llama3.2", "llama3.1", "mistral", "phi3", "gemma2", "codellama", "qwen2.5-coder"],
+            "github":      ["gpt-4o", "gpt-4o-mini", "Meta-Llama-3.1-70B-Instruct", "Mistral-large"],
+            "groq":        ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma2-9b-it"],
+            "gemini":      ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "perplexity":  ["sonar-pro", "sonar", "sonar-reasoning-pro", "sonar-reasoning"],
         }
         BASE_URLS = {
-            "openai":    "https://api.openai.com/v1",
-            "anthropic": "https://api.anthropic.com/v1",
-            "ollama":    "http://localhost:11434/v1",
-            "github":    "https://models.inference.ai.azure.com",
-            "groq":      "https://api.groq.com/openai/v1",
-            "gemini":    "",
+            "openai":      "https://api.openai.com/v1",
+            "anthropic":   "https://api.anthropic.com/v1",
+            "ollama":      "http://localhost:11434/v1",
+            "github":      "https://models.inference.ai.azure.com",
+            "groq":        "https://api.groq.com/openai/v1",
+            "gemini":      "",
+            "perplexity":  "https://api.perplexity.ai",
         }
 
         cur_provider = config.get("llm_provider") or ai_cfg.get("provider", "openai")
@@ -3192,7 +3197,166 @@ class ArchonHubApp:
                 self.admin_url_var.set(default_url)
         self.admin_provider_var.trace_add("write", _on_provider_change)
 
-    def _build_admin_users_tab(self, parent):
+    def _build_admin_models_tab(self, parent):
+        """
+        Models multiselect tab — shows full model catalog grouped by provider.
+        Checkboxes enable/disable each model. Saves via /api/models/toggle.
+        """
+        # ── Load catalog ──────────────────────────────────────────────────────
+        catalog = []
+        providers_info = {}
+        try:
+            raw_catalog = self.hub._get("/api/models")
+            if isinstance(raw_catalog, list):
+                catalog = raw_catalog
+            raw_prov = self.hub._get("/api/models/providers")
+            if isinstance(raw_prov, list):
+                providers_info = {p["provider"]: p for p in raw_prov}
+        except Exception:
+            try:
+                import sys, os
+                sys.path.insert(0, os.path.dirname(__file__))
+                from model_catalog import get_catalog as _mc_get
+                catalog = _mc_get()
+            except Exception:
+                pass
+
+        # ── Group by provider ─────────────────────────────────────────────────
+        grouped: dict[str, list] = {}
+        for m in catalog:
+            grouped.setdefault(m["provider"], []).append(m)
+
+        # ── Scrollable layout ─────────────────────────────────────────────────
+        wrapper, canvas, inner = self._scrollable_area(parent, bg=BG_CANVAS)
+        wrapper.pack(fill="both", expand=True, padx=10, pady=10)
+
+        def _bind_scroll(widget):
+            widget.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+
+        _bind_scroll(inner)
+
+        # Track checkbox vars: key = "provider__model_id" → BooleanVar
+        self._model_vars: dict[str, tk.BooleanVar] = {}
+        self._model_initial: dict[str, bool] = {}
+
+        TIER_COLORS = {"premium": "#f59e0b", "standard": ACCENT, "economy": TEXT_MUTED, "local": SUCCESS}
+        PROV_ICONS = {
+            "openai": "⬡", "anthropic": "◈", "gemini": "◉", "groq": "⚡",
+            "perplexity": "◎", "github": "⌥", "ollama": "◆",
+        }
+
+        for provider, models in grouped.items():
+            pinfo = providers_info.get(provider, {})
+            has_key = pinfo.get("key_configured", False)
+            enabled_count = pinfo.get("enabled_models", sum(1 for m in models if m.get("enabled")))
+            total_count = pinfo.get("total_models", len(models))
+
+            # Provider header row
+            prov_frame = tk.Frame(inner, bg=BG_PANEL, relief="flat", bd=0)
+            prov_frame.pack(fill="x", padx=6, pady=(8, 2))
+            _bind_scroll(prov_frame)
+
+            icon = PROV_ICONS.get(provider, "•")
+            key_badge = ("✓ key set" if has_key else "✗ no key")
+            key_color = SUCCESS if has_key else ERROR
+            hdr = tk.Frame(prov_frame, bg=BG_PANEL)
+            hdr.pack(fill="x", padx=10, pady=6)
+            tk.Label(hdr, text=f"{icon}  {provider.upper()}", bg=BG_PANEL,
+                     fg=TEXT_PRIMARY, font=("Segoe UI", 11, "bold")).pack(side="left")
+            tk.Label(hdr, text=key_badge, bg=BG_PANEL, fg=key_color,
+                     font=("Segoe UI", 9)).pack(side="left", padx=(10, 0))
+            tk.Label(hdr, text=f"{enabled_count}/{total_count} enabled", bg=BG_PANEL,
+                     fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(side="right")
+
+            # Separator line
+            tk.Frame(prov_frame, bg=BG_BORDER, height=1).pack(fill="x", padx=10)
+
+            # Model rows
+            for m in models:
+                key = m.get("key", f"{provider}__{m['model_id']}")
+                enabled = bool(m.get("enabled", False))
+                var = tk.BooleanVar(value=enabled)
+                self._model_vars[key] = var
+                self._model_initial[key] = enabled
+
+                row = tk.Frame(prov_frame, bg=BG_PANEL)
+                row.pack(fill="x", padx=10, pady=2)
+                _bind_scroll(row)
+
+                cb = tk.Checkbutton(row, variable=var, bg=BG_PANEL,
+                                    activebackground=BG_PANEL, selectcolor=BG_INPUT,
+                                    fg=TEXT_PRIMARY, cursor="hand2")
+                cb.pack(side="left")
+
+                tk.Label(row, text=m.get("display", m["model_id"]),
+                         bg=BG_PANEL, fg=TEXT_PRIMARY,
+                         font=("Segoe UI", 9), width=28, anchor="w").pack(side="left")
+
+                # Context window
+                ctx = m.get("context_k", "")
+                if ctx:
+                    tk.Label(row, text=f"{ctx}k", bg=BG_PANEL, fg=TEXT_MUTED,
+                             font=("Segoe UI", 8), width=6).pack(side="left")
+
+                # Tier badge
+                tier = m.get("tier", "")
+                tk.Label(row, text=tier, bg=BG_PANEL,
+                         fg=TIER_COLORS.get(tier, TEXT_MUTED),
+                         font=("Segoe UI", 8), width=8).pack(side="left")
+
+                # Capability chips (first 3)
+                caps = m.get("capabilities", [])[:3]
+                for cap in caps:
+                    tk.Label(row, text=cap, bg=BG_BORDER, fg=TEXT_MUTED,
+                             font=("Segoe UI", 7), padx=4, pady=1,
+                             relief="flat").pack(side="left", padx=2)
+
+        # ── Save / Select-all buttons ─────────────────────────────────────────
+        btn_bar = tk.Frame(parent, bg=BG_CANVAS)
+        btn_bar.pack(fill="x", padx=10, pady=(4, 10))
+
+        def _save_model_toggles():
+            changed = {k: v.get() for k, v in self._model_vars.items()
+                       if v.get() != self._model_initial.get(k)}
+            if not changed:
+                self._toast("No changes to save.", INFO)
+                return
+            errors = 0
+            for key, enabled in changed.items():
+                parts = key.split("__", 1)
+                if len(parts) != 2:
+                    continue
+                prov, mid = parts
+                try:
+                    self.hub.put_json("/api/models/toggle",
+                                      {"provider": prov, "model_id": mid, "enabled": enabled})
+                    self._model_initial[key] = enabled
+                except Exception:
+                    try:
+                        import sys, os
+                        sys.path.insert(0, os.path.dirname(__file__))
+                        from model_catalog import set_model_enabled
+                        set_model_enabled(prov, mid, enabled)
+                        self._model_initial[key] = enabled
+                    except Exception:
+                        errors += 1
+            saved = len(changed) - errors
+            msg = f"Saved {saved} model change(s)."
+            if errors:
+                msg += f" {errors} failed."
+            self._toast(msg, SUCCESS if not errors else WARNING)
+
+        def _select_provider_all(select: bool):
+            for k, v in self._model_vars.items():
+                v.set(select)
+
+        self._button(btn_bar, "Save Changes", _save_model_toggles, accent=True).pack(side="left", padx=4)
+        self._button(btn_bar, "Enable All", lambda: _select_provider_all(True)).pack(side="left", padx=4)
+        self._button(btn_bar, "Disable All", lambda: _select_provider_all(False)).pack(side="left", padx=4)
+        tk.Label(btn_bar, text="Toggle models then click Save Changes",
+                 bg=BG_CANVAS, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(side="left", padx=12)
+
+
         card = self._card(parent, "Users")
         card.pack(fill="both", expand=True, padx=10, pady=10)
         columns = ("id", "username", "email", "role", "is_active", "last_login")

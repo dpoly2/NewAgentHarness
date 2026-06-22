@@ -215,6 +215,11 @@ class HubClient:
         result = self._request("POST", path, data=data, timeout=timeout)
         return result if isinstance(result, dict) else None
 
+    def put_json(self, path, data=None, timeout: float = TIMEOUT) -> dict | None:
+        """Public alias for _put — used by desktop UI for arbitrary PUT calls."""
+        result = self._request("PUT", path, data=data, timeout=timeout)
+        return result if isinstance(result, dict) else None
+
     def get_json(self, path, **params) -> dict | None:
         """Public alias for _get — used by desktop UI for arbitrary GET calls."""
         result = self._get(path, **params)
