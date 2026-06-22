@@ -1043,8 +1043,8 @@ struct InezView: View {
 
                 messages.append(InezMessage(
                     role: .inez,
-                    content: response.message,
-                    dispatches: response.dispatches ?? [],
+                    content: response.inezMessage,
+                    dispatches: response.dispatches,
                     followupSuggestions: response.followupSuggestions ?? []
                 ))
             } catch {
@@ -1133,10 +1133,26 @@ struct InezView: View {
                 
                 body.append("--\(boundary)--\r\n".data(using: .utf8)!)
                 
-                let url = hubClient.buildURL(for: "api/files/upload")
+                // Construct URL manually since buildURL is private
+                let serverURL = hubClient.serverURL
+                guard var components = URLComponents(string: serverURL) else {
+                    throw APIError.invalidURL
+                }
+                components.path = "/api/files/upload"
+                guard let url = components.url else {
+                    throw APIError.invalidURL
+                }
+                
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+                
+                // Add authorization header if available
+                let token = hubClient.currentToken
+                if !token.isEmpty {
+                    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+                
                 request.httpBody = body
                 
                 let (data, _) = try await URLSession.shared.data(for: request)

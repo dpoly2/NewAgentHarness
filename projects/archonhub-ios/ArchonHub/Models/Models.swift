@@ -524,6 +524,15 @@ struct UploadedFile: Codable, Identifiable, Hashable {
             return String(format: "%.0f KB", kb)
         }
     }
+    
+    var statusIcon: String {
+        switch parsingStatus {
+        case "complete": return "checkmark.circle.fill"
+        case "processing": return "clock.fill"
+        case "failed": return "exclamationmark.triangle.fill"
+        default: return "clock.fill"
+        }
+    }
 }
 
 struct FileUploadResponse: Codable {
