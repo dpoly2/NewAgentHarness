@@ -1,0 +1,37 @@
+# Git
+.git/
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Runtime files — never bake into image
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.pid
+memory/.jwt_secret
+.agents/data/logs/
+.agents/data/backup/
+
+# macOS
+.DS_Store
+
+# iOS / Xcode
+projects/
+*.xcuserstate
+DerivedData/
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Env secrets — injected at runtime
+.agents/.env
