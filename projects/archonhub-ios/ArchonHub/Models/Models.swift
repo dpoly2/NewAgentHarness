@@ -654,14 +654,31 @@ struct GlobalMemoryFact: Codable, Identifiable, Hashable {
     let confidence: Double
     let importance: Int
     let usageCount: Int
+    let lastVerified: String?
     let createdAt: String?
     let updatedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id, category, key, value, source, confidence, importance
         case usageCount = "usage_count"
+        case lastVerified = "last_verified"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id          = try c.decode(String.self, forKey: .id)
+        category    = try c.decode(String.self, forKey: .category)
+        key         = try c.decode(String.self, forKey: .key)
+        value       = try c.decode(String.self, forKey: .value)
+        source      = try c.decodeIfPresent(String.self, forKey: .source) ?? "unknown"
+        confidence  = try c.decodeIfPresent(Double.self, forKey: .confidence) ?? 1.0
+        importance  = try c.decodeIfPresent(Int.self, forKey: .importance) ?? 5
+        usageCount  = try c.decodeIfPresent(Int.self, forKey: .usageCount) ?? 0
+        lastVerified = try c.decodeIfPresent(String.self, forKey: .lastVerified)
+        createdAt   = try c.decodeIfPresent(String.self, forKey: .createdAt)
+        updatedAt   = try c.decodeIfPresent(String.self, forKey: .updatedAt)
     }
 
     var categoryIcon: String {
@@ -688,8 +705,8 @@ struct GlobalMemoryFact: Codable, Identifiable, Hashable {
 struct GlobalMemoryResponse: Codable {
     let success: Bool
     let facts: [GlobalMemoryFact]
-    let counts: [String: Int]
-    let categories: [String]
+    let counts: [String: Int]?
+    let categories: [String]?
 }
 
 struct MemoryFactRequest: Codable {

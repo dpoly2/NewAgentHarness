@@ -230,8 +230,8 @@ struct MemoryView: View {
         do {
             let response: GlobalMemoryResponse = try await HubClient.shared.get("/api/memory/global")
             facts = response.facts
-            counts = response.counts
-            categories = response.categories
+            counts = response.counts ?? [:]
+            categories = response.categories ?? []
         } catch {
             errorMessage = error.localizedDescription
         }
