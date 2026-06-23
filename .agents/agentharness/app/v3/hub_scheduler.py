@@ -81,6 +81,7 @@ BUILT_IN_JOBS = (
     ("markets_monthly_portfolio_review", "Markets Monthly P&L Review", {"day":  "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}, "Markets monthly portfolio review"),
     ("nightly_db_cleanup",            "Nightly DB Cleanup",            {"hour": 2,  "minute": 0},                               "Remove runs older than 90 days"),
     ("nightly_db_backup",             "Nightly DB Backup",             {"hour": 3,  "minute": 0},                               "Export critical tables to JSON backup"),
+    ("sync_free_llm_keys",            "Sync Free LLM Keys",            {"hour": 7,  "minute": 15},                              "Fetch and activate free daily LLM API keys"),
 )
 BUILT_IN_JOB_IDS = {job_id for job_id, _, _, _ in BUILT_IN_JOBS}
 
@@ -358,6 +359,25 @@ async def job_markets_monthly_portfolio_review(hub):
         await run_report_job("markets_monthly_portfolio_review")
     except Exception:
         logger.exception("Markets monthly portfolio review generation failed")
+
+
+async def job_sync_free_llm_keys(hub):
+    """Fetch and activate free daily LLM API keys from the public key registry."""
+    logger = get_logger("scheduler")
+    _notify("Free LLM key sync starting...", logger)
+    try:
+        import asyncio
+        from free_llm_keys import sync_free_keys
+        # Run the sync in a thread pool so it doesn't block the event loop
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, sync_free_keys)
+        synced_list = ", ".join(result.get("synced", {}).keys()) or "none"
+        _notify(
+            f"Free LLM keys synced: {len(result.get('synced', {}))} providers activated ({synced_list})",
+            logger,
+        )
+    except Exception:
+        logger.exception("Free LLM key sync failed")
 
 
 async def _run_user_job(hub, job_config: dict):

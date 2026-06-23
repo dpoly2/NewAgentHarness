@@ -4306,6 +4306,70 @@ class ArchonHubApp:
                 self._toast(f"{p.upper()} saved.", SUCCESS)
             self._button(row, "Save", _save_prov_key, accent=True).pack(side="left")
 
+        # ── Section 3: Free LLM Keys ──────────────────────────────────────────
+        free_card = self._card(parent, "🆓 Free Daily LLM Keys")
+        free_card.pack(fill="x", padx=10, pady=(4, 10))
+
+        free_desc = tk.Label(free_card,
+            text="Automatically fetch and activate free daily API keys from the open key registry "
+                 "(aiapiv2.pekpik.com). Supports Claude, Gemini, GPT-5.5, DeepSeek, Grok, Kimi and more. "
+                 "Keys refresh daily — budget $14-$100 per key, expires in 24-48h.",
+            bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9), wraplength=620, justify="left")
+        free_desc.pack(anchor="w", padx=14, pady=(0, 8))
+
+        free_status_var = tk.StringVar(value="Checking last sync...")
+        free_status_lbl = tk.Label(free_card, textvariable=free_status_var,
+                                   bg=BG_PANEL, fg=TEXT_BODY, font=("Segoe UI", 9))
+        free_status_lbl.pack(anchor="w", padx=14, pady=(0, 6))
+
+        def _load_free_status():
+            try:
+                resp = self.hub._get("/api/providers/free-keys-status") or {}
+                last_sync = resp.get("last_sync") or "Never"
+                active = resp.get("active_free_providers") or {}
+                if active:
+                    pnames = ", ".join(f"{p}({v.get('model','?').split('/')[-1]})" for p, v in active.items())
+                    free_status_var.set(f"Last sync: {last_sync}  |  Active: {pnames}")
+                else:
+                    free_status_var.set(f"Last sync: {last_sync}  |  No free keys active yet")
+            except Exception:
+                free_status_var.set("Status unavailable — hub offline?")
+
+        _load_free_status()
+
+        def _run_free_key_sync():
+            free_status_var.set("⏳ Syncing keys, testing each provider...")
+            free_card.update_idletasks()
+
+            def _do_sync():
+                try:
+                    resp = self.hub.post_json("/api/providers/sync-free-keys", {}) or {}
+                    synced = resp.get("synced") or {}
+                    failed = resp.get("failed") or []
+                    total  = resp.get("total_keys_found", 0)
+                    ts     = resp.get("timestamp", "")[:19]
+                    if synced:
+                        pnames = ", ".join(synced.keys())
+                        msg = f"✅ Synced {len(synced)} providers: {pnames}"
+                        self._ui_queue.put(("set_text", free_status_var, msg))
+                        self._ui_queue.put(("call", lambda: self._toast(
+                            f"Free keys activated: {pnames}", SUCCESS)))
+                    else:
+                        self._ui_queue.put(("set_text", free_status_var,
+                            f"⚠ No working keys found ({total} checked, {len(failed)} providers tried)"))
+                        self._ui_queue.put(("call", lambda: self._toast("No free keys available right now", WARNING)))
+                except Exception as e:
+                    self._ui_queue.put(("set_text", free_status_var, f"❌ Sync error: {e}"))
+                    self._ui_queue.put(("call", lambda: self._toast(f"Sync failed: {e}", ERROR)))
+
+            import threading
+            threading.Thread(target=_do_sync, daemon=True).start()
+
+        btn_row = tk.Frame(free_card, bg=BG_PANEL)
+        btn_row.pack(anchor="w", padx=14, pady=(0, 10))
+        self._button(btn_row, "🔄 Sync Free Keys Now", _run_free_key_sync, accent=True).pack(side="left", padx=(0, 8))
+        self._button(btn_row, "↺ Refresh Status", _load_free_status).pack(side="left")
+
     def _build_admin_models_tab(self, parent):
         """
         Models multiselect tab — shows full model catalog grouped by provider.
