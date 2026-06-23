@@ -421,6 +421,7 @@ class ArchonHubApp:
         self.root.after(100, self._poll_queue)
         self.root.after(500, self._poll_hub_events)
         self.root.after(1000, self._update_clock)
+        self.root.after(2000, self._health_fallback_poll)  # direct ping fallback
         self._poll_notifications()
         self.show_home()
 
@@ -528,6 +529,26 @@ class ArchonHubApp:
         self.clock_label.configure(text=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         self._update_status_bar()
         self.root.after(1000, self._update_clock)
+
+    def _health_fallback_poll(self):
+        """Every 5s: if HubClient says offline, do a direct health ping as fallback.
+        Fixes the 5-second WS-reconnect gap where hub is reachable but client shows offline."""
+        import threading as _t
+        def _ping():
+            try:
+                import urllib.request as _ur
+                _ur.urlopen("http://localhost:8765/api/health", timeout=2)
+                if not getattr(self.hub, "online", False):
+                    self.hub._set_online(True)
+                    self._ui_queue.put(("call", self._update_status_bar))
+            except Exception:
+                pass
+        if not getattr(self.hub, "online", False):
+            _t.Thread(target=_ping, daemon=True).start()
+        try:
+            self.root.after(5000, self._health_fallback_poll)
+        except Exception:
+            pass
 
     def _update_status_bar(self):
         try:
