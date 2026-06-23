@@ -263,7 +263,7 @@ struct CodeExecutionView: View {
         Task {
             do {
                 let res: SandboxResult = try await HubClient.shared.post(
-                    path: "/api/sandbox/execute",
+                    "/api/sandbox/execute",
                     body: req
                 )
                 await MainActor.run {
