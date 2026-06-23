@@ -642,3 +642,64 @@ struct BriefingResponse: Codable {
     }
 }
 
+
+// MARK: - Global Memory Models
+
+struct GlobalMemoryFact: Codable, Identifiable, Hashable {
+    let id: String
+    let category: String
+    let key: String
+    let value: String
+    let source: String
+    let confidence: Double
+    let importance: Int
+    let usageCount: Int
+    let createdAt: String?
+    let updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, category, key, value, source, confidence, importance
+        case usageCount = "usage_count"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    var categoryIcon: String {
+        switch category {
+        case "preferences": return "person.fill"
+        case "projects":    return "briefcase.fill"
+        case "people":      return "person.2.fill"
+        case "deadlines":   return "calendar.badge.exclamationmark"
+        case "ministry":    return "book.closed.fill"
+        case "technical":   return "terminal.fill"
+        case "rules":       return "list.bullet.clipboard.fill"
+        case "finance":     return "chart.line.uptrend.xyaxis"
+        default:            return "lightbulb.fill"
+        }
+    }
+
+    var importanceColor: String {
+        if importance >= 9 { return "error" }
+        if importance >= 7 { return "warning" }
+        return "muted"
+    }
+}
+
+struct GlobalMemoryResponse: Codable {
+    let success: Bool
+    let facts: [GlobalMemoryFact]
+    let counts: [String: Int]
+    let categories: [String]
+}
+
+struct MemoryFactRequest: Codable {
+    let category: String
+    let key: String
+    let value: String
+    let importance: Int
+    let source: String
+
+    enum CodingKeys: String, CodingKey {
+        case category, key, value, importance, source
+    }
+}

@@ -893,6 +893,19 @@ def _build_proactive_awareness() -> str:
     return "\n".join(lines) if lines else ""
 
 
+def _load_global_memory_block() -> str:
+    """Load top-N facts from global_memory table for injection into system prompt."""
+    try:
+        import global_memory as gm
+        block = gm.build_memory_block(n=20)
+        # Track usage so important facts surface higher over time
+        facts = gm.load_top_facts(n=20)
+        gm.increment_usage([f["id"] for f in facts])
+        return block
+    except Exception:
+        return ""
+
+
 def _build_system_prompt(history: list[dict]) -> str:
     """Build Inez's full system prompt with live context injected from DB."""
     skill = _load_skill()
@@ -906,6 +919,10 @@ def _build_system_prompt(history: list[dict]) -> str:
     client_roster = _load_client_roster() if not portfolio else ""
 
     full_memory = "\n\n".join(filter(None, [portfolio, client_roster, memory])) or "No prior memory."
+
+    # Global persistent memory — top 20 facts across all sessions
+    global_mem_block = _load_global_memory_block()
+    global_mem_section = f"\n\n{global_mem_block}" if global_mem_block else ""
 
     awareness_block = (
         f"\n\nPROACTIVE AWARENESS (items surfaced automatically — reference these when relevant):\n{awareness}"
@@ -943,6 +960,7 @@ def _build_system_prompt(history: list[dict]) -> str:
     )
     return (
         DAVID_PROFILE + "\n\n" + base
+        + global_mem_section
         + email_section
         + awareness_block
         + travel_tools_note

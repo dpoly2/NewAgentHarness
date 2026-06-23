@@ -4406,7 +4406,132 @@ if FASTAPI_OK:
             logger.error(f"Failed to get cleanup history: {e}")
             raise HTTPException(status_code=500, detail=str(e))
 
-else:
+    # ── Global Memory endpoints ───────────────────────────────────
+
+    @app.get("/api/memory/global")
+    async def list_global_memory(
+        category: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """List all global memory facts, optionally filtered by category."""
+        del current_user
+        try:
+            import global_memory as gm
+            facts = gm.list_facts(category=category, limit=limit, offset=offset)
+            counts = gm.count_facts()
+            return {"success": True, "facts": facts, "counts": counts, "categories": list(gm.CATEGORIES.keys())}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/memory/global/search")
+    async def search_global_memory(
+        q: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Search global memory facts by keyword."""
+        del current_user
+        try:
+            import global_memory as gm
+            results = gm.search_facts(q)
+            return {"success": True, "results": results, "query": q}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    class MemoryFactBody(BaseModel):
+        category: str
+        key: str
+        value: str
+        importance: int = 5
+        source: str = "user"
+        confidence: float = 1.0
+
+    @app.post("/api/memory/global")
+    async def create_global_memory_fact(
+        body: MemoryFactBody,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Create or update a global memory fact."""
+        del current_user
+        try:
+            import global_memory as gm
+            result = gm.upsert_fact(
+                category=body.category,
+                key=body.key,
+                value=body.value,
+                source=body.source,
+                confidence=body.confidence,
+                importance=body.importance,
+            )
+            if "error" in result:
+                raise HTTPException(status_code=400, detail=result["error"])
+            return {"success": True, "fact": result}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.put("/api/memory/global/{fact_id}")
+    async def update_global_memory_fact(
+        fact_id: str,
+        body: MemoryFactBody,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Update an existing global memory fact."""
+        del current_user
+        try:
+            import global_memory as gm
+            result = gm.upsert_fact(
+                category=body.category,
+                key=body.key,
+                value=body.value,
+                source=body.source,
+                confidence=body.confidence,
+                importance=body.importance,
+                fact_id=fact_id,
+            )
+            if "error" in result:
+                raise HTTPException(status_code=400, detail=result["error"])
+            return {"success": True, "fact": result}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.delete("/api/memory/global/{fact_id}")
+    async def delete_global_memory_fact(
+        fact_id: str,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Delete a global memory fact."""
+        del current_user
+        try:
+            import global_memory as gm
+            success = gm.delete_fact(fact_id)
+            return {"success": success}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/memory/global/extract")
+    async def extract_memory_from_conversation(
+        body: dict,
+        current_user: dict = Depends(get_current_user),
+    ):
+        """Extract and store facts from a conversation turn using LLM."""
+        del current_user
+        try:
+            import global_memory as gm
+            user_msg = body.get("user_message", "")
+            agent_resp = body.get("agent_response", "")
+            if not user_msg:
+                raise HTTPException(status_code=400, detail="user_message required")
+            stored = gm.extract_and_store(user_msg, agent_resp, source="agent_learned")
+            return {"success": True, "extracted": len(stored), "facts": stored}
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
     app = None
 
 

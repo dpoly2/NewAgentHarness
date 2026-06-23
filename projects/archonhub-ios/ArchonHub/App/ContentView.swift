@@ -61,6 +61,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                MemoryView()
+            }
+            .tabItem {
+                Label("Memory", systemImage: "brain.head.profile")
+            }
+
+            NavigationStack {
                 AutomationsView()
             }
             .tabItem {
