@@ -3658,8 +3658,14 @@ if FASTAPI_OK:
         await websocket.accept()
         try:
             first_message = await websocket.receive_json()
+        except WebSocketDisconnect:
+            # Client disconnected before sending auth — normal browser navigation
+            return
         except Exception:
-            await websocket.close(code=1008)
+            try:
+                await websocket.close(code=1008)
+            except Exception:
+                pass
             return
         token = None
         if isinstance(first_message, dict) and first_message.get("type") == "auth":
@@ -3670,16 +3676,23 @@ if FASTAPI_OK:
                 if configured and hmac.compare_digest(str(api_token), str(configured)):
                     token = create_access_token({"sub": "api-token", "username": "api-token", "user_id": 0, "role": "admin"})
         if not token or not verify_token(token):
-            await websocket.close(code=1008)
+            try:
+                await websocket.close(code=1008)
+            except Exception:
+                pass
             return
         hub._clients.add(websocket)
-        await websocket.send_json(
-            {
-                "type": "connected",
-                "queue_depth": hub._queue.qsize() if hub._queue else 0,
-                "active_runs": list(hub._active_runs.keys()),
-            }
-        )
+        try:
+            await websocket.send_json(
+                {
+                    "type": "connected",
+                    "queue_depth": hub._queue.qsize() if hub._queue else 0,
+                    "active_runs": list(hub._active_runs.keys()),
+                }
+            )
+        except Exception:
+            hub._clients.discard(websocket)
+            return
         try:
             while True:
                 message = await websocket.receive_json()
@@ -3690,7 +3703,10 @@ if FASTAPI_OK:
         except WebSocketDisconnect:
             pass
         except Exception:
-            await websocket.close(code=1008)
+            try:
+                await websocket.close(code=1008)
+            except Exception:
+                pass
         finally:
             hub._clients.discard(websocket)
 
