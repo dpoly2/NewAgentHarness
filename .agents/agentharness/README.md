@@ -1,143 +1,240 @@
-# AgentHarness — LangGraph + Reflexion Engine
-**Version:** 1.0  
-**Date:** 2026-05-27  
-**Status:** Phase 1–4 Complete
+# ArchonHub — AI Agent Operating System
+
+**Version:** 3.0  
+**Updated:** June 2026  
+**Status:** Active Development
+
+ArchonHub is a self-hosted, multi-agent AI operating system with a FastAPI backend, SQLite database, iOS/watchOS client, and a growing suite of autonomous agents. Agents can browse the web, execute code, manage email, trade paper options, write content, and proactively monitor your world — all driven by a persistent Global Memory of 160+ personal facts extracted from your history.
 
 ---
 
-## What This Is
-
-A self-improving agent layer built on **LangGraph** and **Reflexion** that runs in:
-- ☁️ **Base44** (cloud, always-on, automated)
-- 💻 **Offline** (AgentHarness local tool, LangGraph Studio)
-
-Agents execute tasks, evaluate their own output, and rewrite their skill files
-when they score below 0.75 — automatically getting smarter over time.
-
----
-
-## Directory Structure
+## Architecture
 
 ```
-langgraph/
-├── graphs/
-│   ├── base_agent_graph.py     # Minimal base — wraps reflexion_loop
-│   ├── reflexion_loop.py       # Core Act → Evaluate → Revise graph
-│   ├── research_graph.py       # Multi-hop grant research workflow
-│   └── wordpress_graph.py      # WP Plan → Implement → Verify workflow
-├── nodes/
-│   ├── act_node.py             # Execute task with LLM
-│   ├── evaluate_node.py        # Score output (0.0–1.0), decide revise/save
-│   ├── revise_node.py          # Rewrite skill file from critique
-│   └── memory_node.py          # Load/save memory at run boundaries
-├── state/
-│   └── agent_state.py          # Shared TypedDict — same in all environments
-├── adapters/
-│   ├── base44_adapter.py       # Base44 entities + skills bridge
-│   └── local_adapter.py        # SQLite + filesystem bridge
-├── skills_db/
-│   └── skills_index.json       # Version history for all agent skills
-├── memory/
-│   └── agent_memory.json       # Local cross-run memory store
-├── langgraph.json              # LangGraph Studio config
-├── requirements.txt
-└── README.md
+NewAgentHarness/
+├── .agents/agentharness/
+│   ├── app/v3/                  # Hub Server + all agent modules
+│   │   ├── hub_server.py        # FastAPI server (port 8765, JWT auth)
+│   │   ├── hub_db.py            # SQLite schema + migrations
+│   │   ├── hub_scheduler.py     # Background task scheduler
+│   │   ├── inez_agent.py        # Inez — Chief of Staff AI
+│   │   ├── agent_runner.py      # Agent execution engine
+│   │   ├── agent_orchestrator.py# Multi-agent coordination
+│   │   ├── global_memory.py     # Personal memory engine (160+ facts)
+│   │   ├── code_sandbox.py      # Python execution sandbox (AST security)
+│   │   ├── web_search.py        # SerpAPI web search integration
+│   │   ├── email_analyzer.py    # Email cleanup analysis
+│   │   ├── email_executor.py    # Email bulk action execution
+│   │   ├── document_rag.py      # Document RAG (vector search)
+│   │   ├── markets_tab.py       # Markets + options data
+│   │   ├── paper_trading.py     # Paper trading engine
+│   │   ├── morning_brief.py     # Daily briefing generator
+│   │   ├── llm_router.py        # Multi-provider LLM routing
+│   │   ├── free_llm_keys.py     # Free LLM key pool management
+│   │   ├── model_catalog.py     # LLM model catalog
+│   │   ├── proactive_monitor.py # Proactive event monitoring
+│   │   ├── main_m365.py         # Microsoft 365 integration
+│   │   └── oauth_connector.py   # OAuth2 for external services
+│   └── memory/
+│       ├── runs_v3.db           # SQLite database (gitignored)
+│       ├── inez-chief-of-staff.txt
+│       ├── finance-cfo.txt
+│       ├── markets-project-lead.txt
+│       ├── sigma-signal-writer.txt
+│       ├── solar-marketing-agent.txt
+│       ├── travel-flights-agent.txt
+│       ├── pbs-fundraising-agent.txt
+│       ├── grants-research-agent.txt
+│       ├── yepc-grant-writer-agent.txt
+│       └── yepc-project-manager.txt  (+ 12 more agents)
+├── projects/
+│   ├── archonhub-ios/           # iOS + watchOS app (SwiftUI)
+│   ├── pbs/                     # PBS WordPress plugin
+│   ├── xftc-redevelopment/      # XFTC WordPress theme + plugin
+│   ├── sigma-signal-*/          # Sigma Signal newsletter
+│   └── yepc/                    # YEPC grant management
+├── Dockerfile                   # Docker deployment
+├── docker-compose.yml
+└── .agents/.env                 # API keys (gitignored)
 ```
 
 ---
 
-## Quick Start (Local)
+## Quick Start
+
+### Local (macOS)
 
 ```bash
+cd .agents/agentharness/app/v3
+
 # Install dependencies
-cd .agents/langgraph
-pip install -r requirements.txt
+pip3 install fastapi uvicorn openai serpapi requests
 
-# Set your OpenAI key
-export OPENAI_API_KEY=sk-...
+# Configure API keys
+cp ../.env.example ../.env   # then edit with your keys
 
-# Run any agent
-python3 -c "
-from graphs.reflexion_loop import run_agent
-result = run_agent(
-    agent_id='grants-research-agent',
-    project='xftc',
-    task='Find 3 active grants for youth track programs in Texas under 501c3 nonprofits',
-    environment='local'
-)
-print(result['output'])
-print(f'Score: {result[\"score\"]:.2f}')
-"
-
-# Open LangGraph Studio UI
-langgraph dev
+# Start the server
+python3 hub_server.py
+# → Running at http://localhost:8765
 ```
 
----
+### Docker
 
-## Quick Start (Base44 Cloud)
-
-```python
-# In a Base44 backend function or automation:
-from langgraph.graphs.reflexion_loop import run_agent
-
-result = run_agent(
-    agent_id="xftc-plugin-dev",
-    project="xftc",
-    task="Write a PHP function to register a custom REST API endpoint for athlete leaderboard data",
-    environment="base44"
-)
+```bash
+docker-compose up --build
+# → Running at http://localhost:8765
 ```
 
----
+### Environment Variables (`.agents/.env`)
 
-## How Reflexion Works
-
-```
-load_memory → act → evaluate → [score < 0.75?] → revise → act (loop)
-                                [score >= 0.75] → save_memory → END
-```
-
-1. **load_memory** — pulls prior skill version + critique from storage
-2. **act** — LLM executes task using current skill as context
-3. **evaluate** — scores output on Completion (50%) + Quality (35%) + Efficiency (15%)
-4. **revise** — if score < 0.75, rewrites skill file addressing the critique (max 3×)
-5. **save_memory** — logs run to AgentRunLog entity / SQLite
-
----
-
-## Graphs Available
-
-| Graph | File | Best For |
-|-------|------|----------|
-| `reflexion_loop` | `graphs/reflexion_loop.py` | Any general agent task |
-| `research_graph` | `graphs/research_graph.py` | Grant research, multi-hop info gathering |
-| `wordpress_graph` | `graphs/wordpress_graph.py` | WP plugin dev, page updates, REST API tasks |
-
----
-
-## Entities (Base44)
-
-| Entity | Purpose |
-|--------|---------|
-| `AgentSkillVersion` | Version history for every agent's skill file |
-| `AgentRunLog` | Every run logged with score, critique, revision count |
-
----
-
-## Adding a New Agent
-
-1. Create skill stub: `.agents/skills/my_agent.md`
-2. Add to `skills_db/skills_index.json`
-3. Call `run_agent("my-agent-id", "project-name", "task description")`
-4. The Reflexion loop handles the rest — the agent improves automatically
-
----
-
-## Environment Variables Required
-
-```
+```env
 OPENAI_API_KEY=sk-...
-BASE44_API_KEY=...          # Only needed for base44 environment
-BASE44_APP_ID=6a0bce17b730c0de488b80fb
+OPENAI_MODEL=gpt-4o-mini
+SERPAPI_KEY=...          # Web search
+HUB_PORT=8765
 ```
+
+---
+
+## Features
+
+### 🧠 Global Memory System
+160+ personal facts extracted from 538 ChatGPT conversations using `gpt-4o-mini`. Automatically injected into every Inez prompt for personalised, context-aware responses.
+
+- **Categories:** projects, technical, preferences, people, finance, ministry, rules, deadlines
+- **API:** `GET/POST/PUT/DELETE /api/memory/global`
+- **Auto-learning:** New facts extracted from agent conversations and stored automatically
+- **iOS:** Browse, search, filter, create, edit, and delete facts from the Memory tab
+
+### 🤖 Agents
+
+| Agent | Identity | Capabilities |
+|-------|----------|-------------|
+| **Inez** | Chief of Staff | Orchestrates all agents, manages tasks, email, calendar |
+| **Finance CFO** | CFO | Financial analysis, P&L, budgeting |
+| **Markets** | Options Strategist | NVDA iron condors, covered calls, market analysis |
+| **Sigma Signal** | Content Writer | Newsletter generation, SoulSpeak style content |
+| **Solar Marketing** | Marketing Lead | Solar sales campaigns and lead generation |
+| **Travel** | Travel Agent | Flight search, itinerary planning |
+| **PBS Fundraising** | Fundraising Agent | PBS donor campaigns, event commerce |
+| **Grants Research** | Grant Researcher | Multi-hop grant discovery for nonprofits |
+| **YEPC Grant Writer** | Grant Writer | Full grant application drafting |
+| **YEPC PM** | Project Manager | YEPC project tracking and coordination |
+
+### 🐍 Code Execution Sandbox
+Securely execute Python code server-side and return results to iOS.
+
+- **Security:** AST-based import scanning blocks `os`, `sys`, `subprocess`, `socket`, etc.
+- **Packages:** `pandas`, `numpy`, `matplotlib`, `scipy`, `sklearn` available
+- **Output:** stdout, stderr, generated files (images, CSVs) returned as base64
+- **Modes:** Docker (when available) → subprocess fallback
+- **API:** `POST /api/sandbox/execute`, `GET /api/sandbox/status`
+
+### 🔍 Web Search
+SerpAPI-powered real-time web search integrated into agent workflows.
+
+- Agents auto-search when answering questions about current events, prices, news
+- Configurable via Settings in iOS app
+- API: `POST /api/search`
+
+### 📧 Email Cleanup
+Intelligent email analysis and bulk cleanup with approval workflow.
+
+- Analyses mailbox by sender, age, and size
+- Generates cleanup plan with one-click approval
+- Rollback support
+- API: `GET/POST /api/email/cleanup`
+
+### 📊 Markets & Paper Trading
+Real-time market data, options chain analysis, and paper trading simulation.
+
+- NVDA iron condor strategy tracking
+- Paper portfolio management
+- Morning market brief generation
+
+### 📋 Microsoft 365 Integration
+Full M365 integration via `main_m365.py`:
+- Email read/send via Microsoft Graph API
+- Calendar events and scheduling
+- OneDrive file access
+- Teams messaging
+
+### ☀️ Daily Briefing
+Automated morning brief combining:
+- Pending todos and agent runs
+- Market summary
+- Calendar events
+- Email highlights
+
+---
+
+## API Reference
+
+### Authentication
+All endpoints require JWT bearer token.
+```
+POST /api/auth/login  → { token }
+GET  /api/auth/me
+```
+
+### Agents
+```
+GET    /api/agents                    # List all agents
+POST   /api/runs                      # Start agent run
+GET    /api/runs                      # Run history
+GET    /api/runs/{id}                 # Run detail
+GET    /api/dispatches                # Pending dispatches
+POST   /api/dispatches/{id}/execute   # Execute dispatch
+```
+
+### Global Memory
+```
+GET    /api/memory/global             # List all facts (with counts)
+POST   /api/memory/global             # Create fact
+PUT    /api/memory/global/{id}        # Update fact
+DELETE /api/memory/global/{id}        # Delete fact
+GET    /api/memory/global/search?q=   # Search facts
+POST   /api/memory/global/extract     # Extract facts from conversation
+```
+
+### Code Sandbox
+```
+POST /api/sandbox/execute    # Run Python code
+GET  /api/sandbox/status     # Sandbox availability
+```
+
+### Other
+```
+GET  /api/todos               # Todos list
+POST /api/todos               # Create todo
+GET  /api/briefing            # Daily briefing
+GET  /api/reports             # Agent reports
+GET  /api/documents           # Document library
+POST /api/documents/search    # RAG document search
+GET  /api/models              # LLM model catalog
+POST /api/search              # Web search
+```
+
+---
+
+## iOS & Watch App
+
+See [`projects/archonhub-ios/README.md`](projects/archonhub-ios/README.md) for the full iOS/watchOS client documentation.
+
+---
+
+## Database
+
+SQLite at `.agents/agentharness/memory/runs_v3.db` (gitignored).
+
+Key tables: `users`, `agent_runs`, `dispatches`, `todos`, `global_memory`, `documents`, `email_accounts`, `email_cleanup_plans`, `prompt_templates`, `feedback`, `messages`, `paper_trades`
+
+---
+
+## Security Notes
+
+- `.agents/.env` is gitignored — never commit API keys
+- `runs_v3.db` is gitignored — all personal memory stays local
+- Code sandbox uses AST-level import blocking (no runtime monkey-patching)
+- All API endpoints require JWT authentication
+
