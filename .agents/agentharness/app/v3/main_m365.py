@@ -486,6 +486,7 @@ class ArchonHubApp:
         self.rail.pack(side="left", fill="y")
         self.rail.pack_propagate(False)
 
+        # Logo at the top (fixed, not scrollable)
         rail_top = tk.Frame(self.rail, bg=BG_RAIL)
         rail_top.pack(fill="x", pady=(10, 4))
         _logo_shown = False
@@ -502,21 +503,37 @@ class ArchonHubApp:
         if not _logo_shown:
             tk.Label(rail_top, text="⬡", fg=ACCENT, bg=BG_RAIL, font=("Segoe UI", 20, "bold")).pack()
 
+        # Scrollable canvas for nav buttons
+        rail_canvas = tk.Canvas(self.rail, bg=BG_RAIL, highlightthickness=0, width=60)
+        rail_canvas.pack(fill="both", expand=True)
+        rail_inner = tk.Frame(rail_canvas, bg=BG_RAIL)
+        rail_window = rail_canvas.create_window((0, 0), window=rail_inner, anchor="nw", width=60)
+
+        def _on_rail_configure(_e):
+            rail_canvas.configure(scrollregion=rail_canvas.bbox("all"))
+        rail_inner.bind("<Configure>", _on_rail_configure)
+
+        def _rail_scroll(e):
+            rail_canvas.yview_scroll(int(-1 * (e.delta / 120)), "units")
+        rail_canvas.bind("<MouseWheel>", _rail_scroll)
+        rail_inner.bind("<MouseWheel>", _rail_scroll)
+
         for icon, label, method_name in NAV_ITEMS:
             btn = tk.Label(
-                self.rail,
+                rail_inner,
                 text=icon,
                 bg=BG_RAIL,
                 fg=TEXT_BODY,
                 width=3,
-                pady=12,
+                pady=8,
                 cursor="hand2",
-                font=("Segoe UI Emoji", 16),
+                font=("Segoe UI Emoji", 15),
             )
-            btn.pack(fill="x", padx=6, pady=2)
+            btn.pack(fill="x", padx=4, pady=1)
             btn.bind("<Button-1>", lambda _e, name=method_name: getattr(self, name)())
             btn.bind("<Enter>", lambda _e, widget=btn: widget.configure(bg=BG_HOVER))
             btn.bind("<Leave>", lambda _e, widget=btn, nav=label: self._reset_nav_bg(widget, nav))
+            btn.bind("<MouseWheel>", _rail_scroll)
             ToolTip(btn, label)
             self.nav_buttons[label] = btn
 
