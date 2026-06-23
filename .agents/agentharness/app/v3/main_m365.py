@@ -3085,7 +3085,7 @@ class ArchonHubApp:
         scheduler_tab = tk.Frame(notebook, bg=BG_CANVAS)
         logs_tab = tk.Frame(notebook, bg=BG_CANVAS)
         notebook.add(hub_tab, text="Hub Control")
-        notebook.add(config_tab, text="Config")
+        notebook.add(config_tab, text="Providers")
         notebook.add(models_tab, text="Models")
         notebook.add(users_tab, text="Users")
         notebook.add(scheduler_tab, text="Scheduler")
@@ -3125,8 +3125,11 @@ class ArchonHubApp:
         self._button(buttons, "Open Web Dashboard", lambda: webbrowser.open("http://localhost:8765")).pack(side="left", padx=4)
 
     def _build_admin_config_tab(self, parent):
-        card = self._card(parent, "AI Provider")
-        card.pack(fill="x", padx=10, pady=10)
+        """
+        Providers tab — two sections:
+          1. Active LLM: which provider/model ArchonHub currently uses
+          2. API Keys: per-provider key entry with obfuscation + show/hide toggle
+        """
         config = hub_db.get_config()
         config = config if isinstance(config, dict) else {}
         ai_cfg = self._load_ai_config_file()
@@ -3150,40 +3153,50 @@ class ArchonHubApp:
             "gemini":      "",
             "perplexity":  "https://api.perplexity.ai",
         }
+        PROV_ICONS = {
+            "openai": "⬡", "anthropic": "◈", "gemini": "◉", "groq": "⚡",
+            "perplexity": "◎", "github": "⌥", "ollama": "◆",
+        }
+
+        # ── Section 1: Active LLM ─────────────────────────────────────────────
+        active_card = self._card(parent, "Active LLM")
+        active_card.pack(fill="x", padx=10, pady=(10, 4))
 
         cur_provider = config.get("llm_provider") or ai_cfg.get("provider", "openai")
         cur_model    = config.get("llm_model")    or ai_cfg.get("model",    "gpt-4o-mini")
-        cur_key      = config.get("llm_api_key")  or ai_cfg.get("apiKey",   "")
         cur_url      = config.get("llm_base_url") or ai_cfg.get("baseUrl",  "")
 
         self.admin_provider_var = tk.StringVar(value=cur_provider)
         self.admin_model_var    = tk.StringVar(value=cur_model)
-        self.admin_key_var      = tk.StringVar(value=cur_key)
         self.admin_url_var      = tk.StringVar(value=cur_url or BASE_URLS.get(cur_provider, ""))
         self.admin_threads_var  = tk.IntVar(value=int(config.get("thread_pool_size", 3) or 3))
+        # admin_key_var still needed by _save_admin_config — pull from per-provider key
+        self.admin_key_var = tk.StringVar(value=config.get(f"llm_key_{cur_provider}") or
+                                          config.get("llm_api_key") or ai_cfg.get("apiKey", ""))
 
-        form = tk.Frame(card, bg=BG_PANEL)
+        form = tk.Frame(active_card, bg=BG_PANEL)
         form.pack(fill="x", padx=14, pady=(0, 14))
         form.grid_columnconfigure(0, weight=1)
         form.grid_columnconfigure(1, weight=1)
+        form.grid_columnconfigure(2, weight=1)
 
-        tk.Label(form, text="Provider", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=4)
-        tk.Label(form, text="Model",    bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=1, sticky="w", pady=4, padx=(8, 0))
+        tk.Label(form, text="Active Provider", bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=0, sticky="w", pady=4)
+        tk.Label(form, text="Model",           bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=1, sticky="w", pady=4, padx=(8, 0))
+        tk.Label(form, text="Thread Pool",     bg=BG_PANEL, fg=TEXT_BODY).grid(row=0, column=2, sticky="w", pady=4, padx=(8, 0))
+
         self._combo(form, self.admin_provider_var, PROVIDERS).grid(row=1, column=0, sticky="ew")
         self.admin_model_combo = self._combo(form, self.admin_model_var, MODELS_BY_PROVIDER.get(cur_provider, []))
         self.admin_model_combo.grid(row=1, column=1, sticky="ew", padx=(8, 0))
+        tk.Spinbox(form, from_=1, to=32, textvariable=self.admin_threads_var,
+                   bg=BG_INPUT, fg=TEXT_PRIMARY, relief="flat", width=6).grid(row=1, column=2, sticky="ew", padx=(8, 0))
 
-        tk.Label(form, text="API Key", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=0, sticky="w", pady=4)
-        tk.Label(form, text="Base URL (leave blank for default)", bg=BG_PANEL, fg=TEXT_BODY).grid(row=2, column=1, sticky="w", pady=4, padx=(8, 0))
-        self._entry(form, self.admin_key_var, show="*").grid(row=3, column=0, sticky="ew")
-        self._entry(form, self.admin_url_var).grid(row=3, column=1, sticky="ew", padx=(8, 0))
-
-        tk.Label(form, text="Thread Pool Size", bg=BG_PANEL, fg=TEXT_BODY).grid(row=4, column=0, sticky="w", pady=4)
-        tk.Spinbox(form, from_=1, to=32, textvariable=self.admin_threads_var, bg=BG_INPUT, fg=TEXT_PRIMARY, relief="flat").grid(row=5, column=0, sticky="ew")
+        tk.Label(form, text="Base URL (leave blank for default)", bg=BG_PANEL, fg=TEXT_BODY).grid(
+            row=2, column=0, columnspan=2, sticky="w", pady=(6, 2))
+        self._entry(form, self.admin_url_var).grid(row=3, column=0, columnspan=2, sticky="ew")
 
         btn_row = tk.Frame(form, bg=BG_PANEL)
-        btn_row.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(10, 0))
-        self._button(btn_row, "Save", self._save_admin_config, accent=True).pack(side="left", padx=4)
+        btn_row.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(10, 0))
+        self._button(btn_row, "Save Active LLM", self._save_admin_config, accent=True).pack(side="left", padx=4)
         self._button(btn_row, "Test Connection", self._test_llm_connection).pack(side="left", padx=4)
 
         def _on_provider_change(*_):
@@ -3195,7 +3208,78 @@ class ArchonHubApp:
             default_url = BASE_URLS.get(p, "")
             if default_url:
                 self.admin_url_var.set(default_url)
+            # sync key field to per-provider stored key
+            stored = hub_db.get_config(f"llm_key_{p}") or ""
+            self.admin_key_var.set(stored)
         self.admin_provider_var.trace_add("write", _on_provider_change)
+
+        # ── Section 2: API Keys (one row per provider) ────────────────────────
+        keys_card = self._card(parent, "Provider API Keys")
+        keys_card.pack(fill="x", padx=10, pady=(4, 10))
+
+        desc = tk.Label(keys_card, text="Enter and save each provider's API key independently. Keys are stored encrypted in the hub database.",
+                        bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9), wraplength=620, justify="left")
+        desc.pack(anchor="w", padx=14, pady=(0, 10))
+
+        self._prov_key_vars: dict[str, tk.StringVar] = {}
+        self._prov_enabled_vars: dict[str, tk.BooleanVar] = {}
+
+        for prov in PROVIDERS:
+            stored_key     = hub_db.get_config(f"llm_key_{prov}") or ""
+            stored_enabled = hub_db.get_config(f"llm_enabled_{prov}")
+            # default enabled if key is set
+            is_enabled = (stored_enabled == "1") if stored_enabled is not None else bool(stored_key)
+
+            key_var  = tk.StringVar(value=stored_key)
+            enb_var  = tk.BooleanVar(value=is_enabled)
+            self._prov_key_vars[prov]     = key_var
+            self._prov_enabled_vars[prov] = enb_var
+
+            row = tk.Frame(keys_card, bg=BG_PANEL)
+            row.pack(fill="x", padx=14, pady=3)
+
+            # Enable toggle
+            tk.Checkbutton(row, variable=enb_var, bg=BG_PANEL, activebackground=BG_PANEL,
+                           selectcolor=BG_INPUT, cursor="hand2").pack(side="left")
+
+            # Provider icon + name
+            icon = PROV_ICONS.get(prov, "•")
+            tk.Label(row, text=f"{icon} {prov.upper()}", bg=BG_PANEL, fg=TEXT_PRIMARY,
+                     font=("Segoe UI", 9, "bold"), width=14, anchor="w").pack(side="left", padx=(2, 8))
+
+            # Key status badge
+            badge_txt = "● key set" if stored_key else "○ no key"
+            badge_clr = SUCCESS if stored_key else TEXT_MUTED
+            badge_lbl = tk.Label(row, text=badge_txt, bg=BG_PANEL, fg=badge_clr,
+                                 font=("Segoe UI", 8), width=9)
+            badge_lbl.pack(side="left", padx=(0, 8))
+
+            # Key entry (obfuscated by default)
+            entry = tk.Entry(row, textvariable=key_var, show="*", bg=BG_INPUT, fg=TEXT_PRIMARY,
+                             insertbackground=TEXT_PRIMARY, relief="flat", font=("Segoe UI", 9))
+            entry.pack(side="left", fill="x", expand=True, padx=(0, 4))
+
+            # Show/hide toggle
+            eye_state = {"show": False}
+            def _toggle_eye(e=entry, s=eye_state):
+                s["show"] = not s["show"]
+                e.configure(show="" if s["show"] else "*")
+            self._button(row, "👁", _toggle_eye).pack(side="left", padx=(0, 4))
+
+            # Save button for this provider
+            def _save_prov_key(p=prov, kv=key_var, ev=enb_var, bl=badge_lbl):
+                k = kv.get().strip()
+                hub_db.update_config({
+                    f"llm_key_{p}": k,
+                    f"llm_enabled_{p}": "1" if ev.get() else "0",
+                })
+                bl.configure(text="● key set" if k else "○ no key",
+                             fg=SUCCESS if k else TEXT_MUTED)
+                # if this is the active provider, sync the active key var too
+                if self.admin_provider_var.get() == p:
+                    self.admin_key_var.set(k)
+                self._toast(f"{p.upper()} saved.", SUCCESS)
+            self._button(row, "Save", _save_prov_key, accent=True).pack(side="left")
 
     def _build_admin_models_tab(self, parent):
         """
@@ -3356,7 +3440,7 @@ class ArchonHubApp:
         tk.Label(btn_bar, text="Toggle models then click Save Changes",
                  bg=BG_CANVAS, fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(side="left", padx=12)
 
-
+    def _build_admin_users_tab(self, parent):
         card = self._card(parent, "Users")
         card.pack(fill="both", expand=True, padx=10, pady=10)
         columns = ("id", "username", "email", "role", "is_active", "last_login")
@@ -3425,13 +3509,18 @@ class ArchonHubApp:
         self._refresh_logs()
 
     def _save_admin_config(self):
+        prov = self.admin_provider_var.get()
+        key  = self.admin_key_var.get().strip()
         cfg = {
-            "llm_provider":    self.admin_provider_var.get(),
+            "llm_provider":    prov,
             "llm_model":       self.admin_model_var.get(),
-            "llm_api_key":     self.admin_key_var.get(),
+            "llm_api_key":     key,
             "llm_base_url":    self.admin_url_var.get(),
             "thread_pool_size": int(self.admin_threads_var.get() or 3),
         }
+        if key:
+            cfg[f"llm_key_{prov}"] = key
+            cfg[f"llm_enabled_{prov}"] = "1"
         hub_db.update_config(cfg)
         self._save_ai_config_file({
             "provider": cfg["llm_provider"],
@@ -3440,7 +3529,7 @@ class ArchonHubApp:
             "baseUrl":  cfg["llm_base_url"],
             "enabled":  True,
         })
-        self.show_toast("Config saved.", SUCCESS)
+        self.show_toast("Active LLM saved.", SUCCESS)
 
     def _test_llm_connection(self):
         import threading as _t
