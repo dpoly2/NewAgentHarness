@@ -3353,7 +3353,7 @@ class ArchonHubApp:
                      fg=TEXT_MUTED, font=("Segoe UI", 9)).pack(side="right")
 
             # Separator line
-            tk.Frame(prov_frame, bg=BG_BORDER, height=1).pack(fill="x", padx=10)
+            tk.Frame(prov_frame, bg=BG_HOVER, height=1).pack(fill="x", padx=10)
 
             # Model rows
             for m in models:
@@ -3391,7 +3391,7 @@ class ArchonHubApp:
                 # Capability chips (first 3)
                 caps = m.get("capabilities", [])[:3]
                 for cap in caps:
-                    tk.Label(row, text=cap, bg=BG_BORDER, fg=TEXT_MUTED,
+                    tk.Label(row, text=cap, bg=BG_HOVER, fg=TEXT_MUTED,
                              font=("Segoe UI", 7), padx=4, pady=1,
                              relief="flat").pack(side="left", padx=2)
 
