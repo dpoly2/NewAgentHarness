@@ -703,3 +703,72 @@ struct MemoryFactRequest: Codable {
         case category, key, value, importance, source
     }
 }
+
+// MARK: - Code Sandbox
+
+struct SandboxExecuteRequest: Codable {
+    let code: String
+    let language: String
+    var dataFiles: [String]? = nil
+
+    enum CodingKeys: String, CodingKey {
+        case code, language
+        case dataFiles = "data_files"
+    }
+}
+
+struct SandboxGeneratedFile: Codable, Identifiable {
+    var id: String { name }
+    let name: String
+    let mimeType: String
+    let contentBase64: String
+    let sizeBytes: Int
+
+    enum CodingKeys: String, CodingKey {
+        case name
+        case mimeType = "mime_type"
+        case contentBase64 = "content_base64"
+        case sizeBytes = "size_bytes"
+    }
+}
+
+struct SandboxResult: Codable {
+    let success: Bool
+    let executionId: String
+    let stdout: String
+    let stderr: String
+    let exitCode: Int
+    let executionTimeMs: Int
+    let generatedFiles: [SandboxGeneratedFile]
+    let error: String?
+    let blockedReason: String?
+    let mode: String
+
+    enum CodingKeys: String, CodingKey {
+        case success
+        case executionId = "execution_id"
+        case stdout, stderr
+        case exitCode = "exit_code"
+        case executionTimeMs = "execution_time_ms"
+        case generatedFiles = "generated_files"
+        case error
+        case blockedReason = "blocked_reason"
+        case mode
+    }
+}
+
+struct SandboxStatusResponse: Codable {
+    let success: Bool
+    let available: Bool
+    let mode: String
+    let dockerAvailable: Bool
+    let timeoutSeconds: Int
+    let supportedLanguages: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case success, available, mode
+        case dockerAvailable = "docker_available"
+        case timeoutSeconds = "timeout_seconds"
+        case supportedLanguages = "supported_languages"
+    }
+}
