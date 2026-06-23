@@ -1131,7 +1131,14 @@
         }
 
         function connectWS() {
-            if (!isAuthenticated()) return;
+            if (!isAuthenticated()) {
+                // Token expired — redirect to login instead of silently failing
+                if (getToken()) {
+                    showToast('Session expired — please log in again', 'var(--warning)');
+                    logout();
+                }
+                return;
+            }
             if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
             clearTimeout(state.wsReconnectTimer);
             setWSState('connecting', 'WebSocket connecting');
