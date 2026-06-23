@@ -1,5 +1,76 @@
 import SwiftUI
 
+// MARK: - Activity Hub (Runs, Reports, Briefing, Notifications)
+struct ActivityHubView: View {
+    @State private var selection = 0
+    private let tabs = ["Runs", "Reports", "Briefing", "Alerts"]
+    private let icons = ["play.circle.fill", "newspaper.fill", "text.badge.star", "bolt.fill"]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Section", selection: $selection) {
+                ForEach(tabs.indices, id: \.self) { i in
+                    Text(tabs[i]).tag(i)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(ArchonTheme.card)
+
+            Divider()
+
+            Group {
+                switch selection {
+                case 0: RunsView()
+                case 1: ReportsView()
+                case 2: BriefingView()
+                default: NotificationsView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationTitle(tabs[selection])
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Workspace Hub (Todos, Documents, Memory, Automations)
+struct WorkspaceHubView: View {
+    @State private var selection = 0
+    private let tabs = ["Todos", "Docs", "Memory", "Auto"]
+    private let icons = ["checklist", "doc.text.fill", "brain.head.profile", "bolt.circle.fill"]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Picker("Section", selection: $selection) {
+                ForEach(tabs.indices, id: \.self) { i in
+                    Text(tabs[i]).tag(i)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(ArchonTheme.card)
+
+            Divider()
+
+            Group {
+                switch selection {
+                case 0: TodosView()
+                case 1: DocumentsView()
+                case 2: MemoryView()
+                default: AutomationsView()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .navigationTitle(tabs[selection])
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Root Tab View
 struct ContentView: View {
     var body: some View {
         TabView {
@@ -16,62 +87,19 @@ struct ContentView: View {
             .tabItem {
                 Label("Inez", systemImage: "crown.fill")
             }
-            
-            NavigationStack{
-                ReportsView()
-            }
-            .tabItem{
-                
-                Label("Reports", systemImage: "newspaper.fill")
-            }
-            
+
             NavigationStack {
-                RunsView()
+                ActivityHubView()
             }
-                .tabItem {
-                Label("Runs", systemImage: "play.circle.fill")
+            .tabItem {
+                Label("Activity", systemImage: "chart.xyaxis.line")
             }
 
             NavigationStack {
-                TodosView()
+                WorkspaceHubView()
             }
             .tabItem {
-                Label("Todos", systemImage: "checklist")
-            }
-
-            NavigationStack {
-                NotificationsView()
-            }
-            .tabItem {
-                Label("Notifications", systemImage: "bolt.fill")
-            }
-
-            NavigationStack {
-                BriefingView()
-            }
-            .tabItem {
-                Label("Briefing", systemImage: "text.badge.star")
-            }
-            
-            NavigationStack {
-                DocumentsView()
-            }
-            .tabItem {
-                Label("Documents", systemImage: "doc.text.fill")
-            }
-
-            NavigationStack {
-                MemoryView()
-            }
-            .tabItem {
-                Label("Memory", systemImage: "brain.head.profile")
-            }
-
-            NavigationStack {
-                AutomationsView()
-            }
-            .tabItem {
-                Label("Automations", systemImage: "bolt.circle.fill")
+                Label("Workspace", systemImage: "square.grid.2x2.fill")
             }
 
             NavigationStack {
