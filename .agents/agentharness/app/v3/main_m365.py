@@ -141,14 +141,17 @@ NAV_ITEMS = [
     ("🏠", "Home",     "show_home"),
     ("▶",  "Runs",     "show_runs"),
     ("✓",  "Todos",    "show_todos"),
-    ("📰", "Digest",   "show_digest"),
+    ("📋", "Brief",    "show_brief"),
     ("📊", "Reports",  "show_reports"),
     ("📅", "Schedule", "show_schedule"),
     ("👥", "Clients",  "show_clients"),
     ("✈",  "Travel",   "show_travel"),
     ("📈", "Markets",  "show_markets"),
     ("🏢", "Org",      "show_org"),
+    ("🧠", "Memory",   "show_memory"),
+    ("📁", "Files",    "show_files"),
     ("⚡", "Connect",  "show_connectors"),
+    ("🤖", "Agents",   "show_agents"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
 ]
@@ -190,6 +193,17 @@ class LocalHubClient:
         return None
 
     def get_json(self, path, **params):
+        if path.startswith("/api/notifications"):
+            return hub_db.list_notifications()
+        return None
+
+    def _get(self, path, **params):
+        return self.get_json(path, **params)
+
+    def put_json(self, path, data):
+        return None
+
+    def delete(self, path):
         return None
 
     def list_runs(self, limit=100, agent_id=None, project=None, status=None):
@@ -407,6 +421,7 @@ class ArchonHubApp:
         self.root.after(100, self._poll_queue)
         self.root.after(500, self._poll_hub_events)
         self.root.after(1000, self._update_clock)
+        self._poll_notifications()
         self.show_home()
 
     def _configure_styles(self):
@@ -451,6 +466,14 @@ class ArchonHubApp:
         self.llm_label = tk.Label(self.status_bar, text="⬡ …", fg=ACCENT,
                                   bg=BG_PANEL, font=("Segoe UI", 9))
         self.llm_label.pack(side="left", padx=12)
+        self._notif_count = 0
+        self._notif_btn = tk.Label(self.status_bar, text="🔔", fg=TEXT_MUTED, bg=BG_PANEL,
+                                   font=("Segoe UI Emoji", 13), cursor="hand2")
+        self._notif_btn.pack(side="left", padx=4)
+        self._notif_btn.bind("<Button-1>", lambda _e: self._show_notifications_panel())
+        self._notif_badge = tk.Label(self.status_bar, text="", fg=ERROR, bg=BG_PANEL,
+                                     font=("Segoe UI", 8, "bold"))
+        self._notif_badge.pack(side="left")
         self.clock_label = tk.Label(self.status_bar, text="", fg=TEXT_MUTED, bg=BG_PANEL)
         self.clock_label.pack(side="right", padx=10)
 
@@ -668,6 +691,9 @@ class ArchonHubApp:
         self.toast_label = tk.Label(self.root, text=text, bg=color, fg=BG_RAIL, padx=16, pady=8, font=("Segoe UI", 10, "bold"))
         self.toast_label.place(relx=0.5, rely=0.04, anchor="n")
         self.root.after(3000, lambda: self.toast_label and self.toast_label.winfo_exists() and self.toast_label.destroy())
+
+    def _toast(self, text, color=ACCENT):
+        self.show_toast(text, color)
 
     def ask_pin(self, callback):
         dialog = tk.Toplevel(self.root)
@@ -887,6 +913,26 @@ class ArchonHubApp:
             elif kind == "refresh_users":
                 if self._widget_ok("users_tree"):
                     self._refresh_users()
+            elif kind == "set_text":
+                try:
+                    self._set_text(item[1], item[2])
+                except Exception:
+                    pass
+            elif kind == "call":
+                try:
+                    item[1]()
+                except Exception:
+                    pass
+            elif kind == "call_with_arg":
+                try:
+                    item[1](item[2])
+                except Exception:
+                    pass
+            elif kind == "configure":
+                try:
+                    item[1].configure(**item[2])
+                except Exception:
+                    pass
             elif kind == "notification":
                 self.show_toast(item[1], item[2])
             elif kind == "toast":
@@ -985,6 +1031,93 @@ class ArchonHubApp:
             self.home_active_runs_value.configure(text=str(len(running)))
         except Exception:
             pass
+
+    def _poll_notifications(self):
+        try:
+            if hasattr(self.hub, "_get"):
+                data = self.hub._get("/api/notifications")
+            else:
+                data = self.hub.list_notifications(unread_only=True)
+            items = data if isinstance(data, list) else (data or {}).get("notifications", [])
+            unread = sum(1 for item in (items or []) if not item.get("dismissed") and not item.get("read"))
+            self._notif_count = unread
+            if self._widget_ok("_notif_badge"):
+                self._notif_badge.configure(text=str(unread) if unread else "")
+            if self._widget_ok("_notif_btn"):
+                self._notif_btn.configure(fg=ERROR if unread else TEXT_MUTED)
+        except Exception:
+            if self._widget_ok("_notif_badge"):
+                self._notif_badge.configure(text="")
+        finally:
+            self.root.after(30000, self._poll_notifications)
+
+    def _show_notifications_panel(self):
+        win = tk.Toplevel(self.root)
+        win.title("Notifications")
+        win.geometry("400x500")
+        win.configure(bg=BG_CANVAS)
+        self._section_header(win, "🔔 Notifications", "Recent alerts and system messages.")
+        wrapper, _canvas, inner = self._scrollable_area(win, BG_CANVAS)
+        wrapper.pack(fill="both", expand=True, padx=14, pady=(0, 14))
+
+        def _fetch_notifications():
+            try:
+                if hasattr(self.hub, "_get"):
+                    data = self.hub._get("/api/notifications") or []
+                else:
+                    data = self.hub.list_notifications(unread_only=False) or []
+                return data if isinstance(data, list) else data.get("notifications", [])
+            except Exception:
+                return []
+
+        def _render():
+            for child in inner.winfo_children():
+                child.destroy()
+            notifications = _fetch_notifications()
+            unread = sum(1 for item in notifications if not item.get("dismissed") and not item.get("read"))
+            self._notif_count = unread
+            if self._widget_ok("_notif_badge"):
+                self._notif_badge.configure(text=str(unread) if unread else "")
+            if self._widget_ok("_notif_btn"):
+                self._notif_btn.configure(fg=ERROR if unread else TEXT_MUTED)
+            if not notifications:
+                tk.Label(inner, text="No notifications", bg=BG_CANVAS, fg=TEXT_MUTED,
+                         font=("Segoe UI", 10)).pack(anchor="center", pady=24)
+                return
+            for item in notifications:
+                card = tk.Frame(inner, bg=BG_PANEL, highlightbackground=BORDER_CARD, highlightthickness=1)
+                card.pack(fill="x", pady=6)
+                top = tk.Frame(card, bg=BG_PANEL)
+                top.pack(fill="x", padx=12, pady=(10, 4))
+                tk.Label(top, text=item.get("title", "Notification"), bg=BG_PANEL, fg=TEXT_PRIMARY,
+                         font=("Segoe UI", 10, "bold")).pack(side="left", anchor="w")
+                ts = str(item.get("created_at") or item.get("time") or item.get("timestamp") or "")[:16]
+                tk.Label(top, text=ts, bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 8)).pack(side="right")
+                tk.Label(
+                    card,
+                    text=item.get("body") or item.get("message") or "(no details)",
+                    bg=BG_PANEL,
+                    fg=TEXT_BODY,
+                    justify="left",
+                    wraplength=320,
+                ).pack(fill="x", padx=12, pady=(0, 8))
+
+                def _dismiss(notification_id=item.get("id")):
+                    try:
+                        try:
+                            self.hub.delete(f"/api/notifications/{notification_id}")
+                        except Exception:
+                            self.hub.post_json(f"/api/notifications/{notification_id}/dismiss", {})
+                        self._toast("Notification dismissed.", SUCCESS)
+                    except Exception as exc:
+                        self._toast(f"Notification error: {exc}", ERROR)
+                    _render()
+
+                btn_row = tk.Frame(card, bg=BG_PANEL)
+                btn_row.pack(fill="x", padx=12, pady=(0, 10))
+                self._button(btn_row, "Dismiss", _dismiss).pack(side="right")
+
+        _render()
 
     def _render_agent_cards(self):
         for child in self.agent_cards_container.winfo_children():
@@ -1283,8 +1416,17 @@ class ArchonHubApp:
                             activebackground="#3d2b89", activeforeground="#e9d5ff")
             btn.pack(side="left", padx=(0, 6))
 
-        # ── Bubble area ───────────────────────────────────────────────────
-        bubble_outer = tk.Frame(parent, bg=BG_CANVAS)
+        # ── Bubble area + memory sidebar ──────────────────────────────────
+        chat_shell = tk.Frame(parent, bg=BG_CANVAS)
+        chat_shell.pack(fill="both", expand=True)
+
+        chat_col = tk.Frame(chat_shell, bg=BG_CANVAS)
+        chat_col.pack(side="left", fill="both", expand=True)
+        mem_col = tk.Frame(chat_shell, bg=BG_CANVAS, width=220)
+        mem_col.pack(side="right", fill="y", padx=(8, 0))
+        mem_col.pack_propagate(False)
+
+        bubble_outer = tk.Frame(chat_col, bg=BG_CANVAS)
         bubble_outer.pack(fill="both", expand=True)
 
         chat_canvas = tk.Canvas(bubble_outer, bg=BG_CANVAS, highlightthickness=0, bd=0)
@@ -1313,8 +1455,23 @@ class ArchonHubApp:
             self._chat_messages.append(welcome)
             self._chat_render_bubble(welcome)
 
-        # Input bar
-        input_bar = tk.Frame(parent, bg=BG_PANEL,
+        mem_card = self._card(mem_col, "Memory")
+        mem_card.pack(fill="both", expand=True)
+        self._inez_mem_listbox = tk.Text(
+            mem_card,
+            bg=BG_INPUT,
+            fg=TEXT_PRIMARY,
+            insertbackground=TEXT_PRIMARY,
+            relief="flat",
+            font=("Segoe UI", 9),
+            wrap="word",
+            height=18,
+            state="disabled",
+        )
+        self._inez_mem_listbox.pack(fill="both", expand=True, padx=14, pady=14)
+        self._refresh_inez_memory_sidebar()
+
+        input_bar = tk.Frame(chat_col, bg=BG_PANEL,
                              highlightbackground=BORDER_CARD, highlightthickness=1)
         input_bar.pack(fill="x", side="bottom")
 
@@ -1325,6 +1482,19 @@ class ArchonHubApp:
         self._chat_input.bind("<Return>", lambda e: (self._inez_send(), "break")[1])
         self._chat_input.bind("<Shift-Return>", lambda e: None)
 
+        if not hasattr(self, "_inez_web_search_var"):
+            self._inez_web_search_var = tk.BooleanVar(value=False)
+        tk.Checkbutton(
+            input_bar,
+            text="Web search",
+            variable=self._inez_web_search_var,
+            bg=BG_PANEL,
+            fg=TEXT_BODY,
+            activebackground=BG_PANEL,
+            activeforeground=TEXT_PRIMARY,
+            selectcolor=BG_INPUT,
+            highlightthickness=0,
+        ).pack(side="right", padx=4)
         send_btn = self._button(input_bar, "  Send  ", self._inez_send)
         send_btn.pack(side="right", padx=10, pady=8, ipadx=10, ipady=6)
         tk.Label(input_bar, text="Enter ↵ send  ·  ⇧Enter newline",
@@ -1336,7 +1506,19 @@ class ArchonHubApp:
         self._clear_content()
         self._section_header(self.content, "Runs", "Monitor historical and active agent runs.")
 
-        paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
+        notebook = ttk.Notebook(self.content)
+        notebook.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        runs_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        sandbox_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        notebook.add(runs_tab, text="Runs")
+        notebook.add(sandbox_tab, text="🖥 Sandbox")
+
+        self._build_runs_main_tab(runs_tab)
+        self._build_sandbox_tab(sandbox_tab)
+
+    def _build_runs_main_tab(self, parent):
+        paned = tk.PanedWindow(parent, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
         paned.pack(fill="both", expand=True, padx=20, pady=(0, 20))
         left = tk.Frame(paned, bg=BG_CANVAS, width=420)
         right = tk.Frame(paned, bg=BG_CANVAS)
@@ -1416,6 +1598,108 @@ class ArchonHubApp:
         self.run_log_text.configure(state="disabled")
 
         self._refresh_runs()
+
+    def _build_sandbox_tab(self, parent):
+        """Code execution sandbox tab."""
+        top = tk.Frame(parent, bg=BG_CANVAS)
+        top.pack(fill="x", padx=10, pady=(10, 4))
+
+        status_lbl = tk.Label(top, text="Checking sandbox…", bg=BG_CANVAS, fg=TEXT_MUTED,
+                              font=("Segoe UI", 9))
+        status_lbl.pack(side="left")
+        self._button(top, "▶ Run Code", lambda: self._run_sandbox_code(), accent=True).pack(side="right", padx=4)
+        self._button(
+            top,
+            "Clear",
+            lambda: (
+                self._sandbox_editor.delete("1.0", "end"),
+                self._sandbox_output.configure(state="normal"),
+                self._sandbox_output.delete("1.0", "end"),
+                self._sandbox_output.configure(state="disabled"),
+            ),
+        ).pack(side="right")
+
+        editor_card = self._card(parent, "Code Editor")
+        editor_card.pack(fill="both", expand=True, padx=10, pady=(0, 4))
+        self._sandbox_editor = tk.Text(
+            editor_card,
+            bg=BG_INPUT,
+            fg=TEXT_PRIMARY,
+            insertbackground=TEXT_PRIMARY,
+            font=("Consolas", 10),
+            relief="flat",
+            wrap="none",
+            height=18,
+        )
+        self._sandbox_editor.pack(fill="both", expand=True, padx=10, pady=10)
+        self._sandbox_editor.insert("1.0", "# Enter Python code here\nimport pandas as pd\nprint(pd.__version__)\n")
+
+        out_card = self._card(parent, "Output")
+        out_card.pack(fill="x", padx=10, pady=(0, 10))
+        self._sandbox_output = tk.Text(
+            out_card,
+            bg=BG_INPUT,
+            fg=SUCCESS,
+            font=("Consolas", 9),
+            relief="flat",
+            height=8,
+            state="disabled",
+        )
+        self._sandbox_output.pack(fill="both", expand=True, padx=10, pady=10)
+
+        import threading as _t
+
+        def _check():
+            try:
+                s = self.hub._get("/api/sandbox/status")
+                if s:
+                    docker = "🐳 Docker" if s.get("docker_available") else "⚙ subprocess"
+                    self._ui_queue.put((
+                        "configure",
+                        status_lbl,
+                        {"text": f"Sandbox ready — {docker} mode | timeout {s.get('timeout_seconds', 30)}s", "fg": SUCCESS},
+                    ))
+            except Exception:
+                pass
+
+        _t.Thread(target=_check, daemon=True).start()
+
+    def _run_sandbox_code(self):
+        if not hasattr(self, "_sandbox_editor"):
+            return
+        code = self._sandbox_editor.get("1.0", "end").strip()
+        if not code:
+            return
+        import threading as _t, time
+
+        self._sandbox_output.configure(state="normal")
+        self._sandbox_output.delete("1.0", "end")
+        self._sandbox_output.insert("end", "Running…\n")
+        self._sandbox_output.configure(state="disabled")
+
+        def _run():
+            t0 = time.time()
+            try:
+                result = self.hub.post_json("/api/sandbox/execute", {"code": code, "language": "python"})
+                elapsed = time.time() - t0
+                lines = []
+                if result:
+                    if result.get("stdout"):
+                        lines.append("── stdout ──")
+                        lines.append(result["stdout"])
+                    if result.get("stderr"):
+                        lines.append("── stderr ──")
+                        lines.append(result["stderr"])
+                    if result.get("error"):
+                        lines.append(f"── error: {result['error']} ──")
+                    lines.append(f"\n⏱ {elapsed:.2f}s | exit {result.get('exit_code', 0)}")
+                else:
+                    lines.append("(no output)")
+                self._ui_queue.put(("set_text", self._sandbox_output, "\n".join(lines)))
+            except Exception as e:
+                self._ui_queue.put(("set_text", self._sandbox_output, f"Error: {e}"))
+
+        _t.Thread(target=_run, daemon=True).start()
 
     def _refresh_runs(self, select_run_id=None):
         if not self._widget_ok("runs_tree"):
@@ -1700,6 +1984,93 @@ class ArchonHubApp:
         if self.selected_todo_id:
             hub_db.update_todo(self.selected_todo_id, status="in_progress")
             self._refresh_todos()
+
+    def show_brief(self):
+        self._set_active_nav("Brief")
+        self._clear_content()
+        self._section_header(
+            self.content, "📋 Morning Brief",
+            "AI-generated daily briefing — email, todos, markets, deadlines.",
+            actions=[("🔄 Generate Brief", self._generate_morning_brief)],
+        )
+        stats_row = tk.Frame(self.content, bg=BG_CANVAS)
+        stats_row.pack(fill="x", padx=20, pady=(0, 10))
+        self.brief_total_card = self._stat_card(stats_row, "Total Runs", "0")
+        self.brief_total_card.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.brief_avg_card = self._stat_card(stats_row, "Avg Score", "0.00")
+        self.brief_avg_card.pack(side="left", fill="x", expand=True, padx=8)
+        self.brief_todo_card = self._stat_card(stats_row, "Pending Todos", "0")
+        self.brief_todo_card.pack(side="left", fill="x", expand=True, padx=(8, 0))
+
+        brief_card = self._card(self.content, "Today's Brief")
+        brief_card.pack(fill="both", expand=True, padx=20, pady=(0, 8))
+        self.brief_text = self._text_widget(brief_card, height=20)
+        self.brief_text.pack(fill="both", expand=True, padx=14, pady=14)
+        self.brief_text.configure(state="disabled")
+
+        hist_card = self._card(self.content, "Briefing History")
+        hist_card.pack(fill="x", padx=20, pady=(0, 20))
+        self.brief_history_list = tk.Listbox(hist_card, bg=BG_INPUT, fg=TEXT_PRIMARY,
+                                             relief="flat", height=5, font=("Segoe UI", 9))
+        self.brief_history_list.pack(fill="x", padx=14, pady=(0, 10))
+        self.brief_history_list.bind("<<ListboxSelect>>", self._on_brief_history_select)
+        self._load_brief_content()
+
+    def _generate_morning_brief(self):
+        import threading as _t
+
+        self._toast("Generating brief…", ACCENT)
+
+        def _run():
+            try:
+                result = self.hub.post_json("/api/briefing/morning", {})
+                if result:
+                    content = result.get("content") or result.get("brief") or str(result)
+                    self._ui_queue.put(("set_text", self.brief_text, content))
+                    self._ui_queue.put(("call", self._load_brief_content))
+                    self._ui_queue.put(("toast", "Brief generated!", SUCCESS))
+                else:
+                    self._ui_queue.put(("toast", "Hub offline — showing cached brief.", WARNING))
+                    self._ui_queue.put(("call", self._load_brief_content))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _load_brief_content(self):
+        stats = hub_db.agent_stats()
+        if hasattr(self, "brief_total_card"):
+            self.brief_total_card.value_label.configure(text=str(stats.get("total_runs", 0)))
+            avg = float(stats.get("avg_score", 0.0) or 0.0)
+            self.brief_avg_card.value_label.configure(text=f"{avg:.2f}")
+            self.brief_todo_card.value_label.configure(text=str(len(hub_db.list_todos(status="pending"))))
+        cached = hub_db.get_briefing_cache()
+        if cached and hasattr(self, "brief_text"):
+            content = cached.get("content") if isinstance(cached, dict) else str(cached)
+            self._set_text(self.brief_text, content or "(no brief yet — click Generate Brief)")
+        elif hasattr(self, "brief_text"):
+            self._set_text(self.brief_text, "(no brief yet — click Generate Brief)")
+        if hasattr(self, "brief_history_list"):
+            try:
+                history = self.hub._get("/api/briefing/history") or []
+                self.brief_history_list.delete(0, "end")
+                self._brief_history_data = []
+                for item in (history if isinstance(history, list) else []):
+                    ts = item.get("created_at", "")[:16]
+                    preview = str(item.get("content", "") or item)[:60]
+                    self.brief_history_list.insert("end", f"{ts}  —  {preview}…")
+                    self._brief_history_data.append(item)
+            except Exception:
+                pass
+
+    def _on_brief_history_select(self, _event):
+        if not hasattr(self, "_brief_history_data"):
+            return
+        sel = self.brief_history_list.curselection()
+        if sel and sel[0] < len(self._brief_history_data):
+            item = self._brief_history_data[sel[0]]
+            content = item.get("content") or str(item)
+            self._set_text(self.brief_text, content)
 
     def show_digest(self):
         self._set_active_nav("Digest")
@@ -2393,7 +2764,15 @@ class ArchonHubApp:
         self._clear_content()
         self._section_header(self.content, "Email Connectors", "Manage Gmail, Outlook, and IMAP accounts.")
 
-        paned = tk.PanedWindow(self.content, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
+        notebook = ttk.Notebook(self.content)
+        notebook.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        connectors_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        cleanup_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        notebook.add(connectors_tab, text="Connectors")
+        notebook.add(cleanup_tab, text="📧 Email Cleanup")
+
+        paned = tk.PanedWindow(connectors_tab, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
         paned.pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
         left = tk.Frame(paned, bg=BG_CANVAS, width=540)
@@ -2514,6 +2893,139 @@ class ArchonHubApp:
 
         self._right_nb_connectors = right_nb
         self._refresh_connectors()
+        self._build_email_cleanup_tab(cleanup_tab)
+
+    def _build_email_cleanup_tab(self, parent):
+        top = tk.Frame(parent, bg=BG_CANVAS)
+        top.pack(fill="x", padx=10, pady=10)
+
+        tk.Label(top, text="Connector:", bg=BG_CANVAS, fg=TEXT_BODY).pack(side="left")
+        self._cleanup_connector_var = tk.StringVar()
+        connectors = []
+        try:
+            connectors = self.hub._get("/api/connectors") or []
+            connectors = connectors if isinstance(connectors, list) else connectors.get("connectors", [])
+        except Exception:
+            pass
+        connector_names = [f"{c.get('label', '')} ({c.get('email', '')})" for c in connectors]
+        self._cleanup_connectors_data = connectors
+        combo = self._combo(top, self._cleanup_connector_var, connector_names or ["(no connectors)"])
+        combo.pack(side="left", padx=(8, 16))
+        if connector_names:
+            self._cleanup_connector_var.set(connector_names[0])
+
+        self._button(top, "🔍 Analyze Inbox", self._analyze_email_cleanup, accent=True).pack(side="left")
+
+        self._cleanup_status_lbl = tk.Label(parent, text="Select a connector and click Analyze.",
+                                            bg=BG_CANVAS, fg=TEXT_MUTED, font=("Segoe UI", 9))
+        self._cleanup_status_lbl.pack(anchor="w", padx=10, pady=(0, 8))
+
+        plan_card = self._card(parent, "Cleanup Plan")
+        plan_card.pack(fill="both", expand=True, padx=10, pady=(0, 8))
+        cols = ("category", "count", "action", "status")
+        self.cleanup_tree = ttk.Treeview(plan_card, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("category", "Category", 160), ("count", "Count", 70),
+                            ("action", "Suggested Action", 200), ("status", "Status", 100)]:
+            self.cleanup_tree.heading(col, text=txt)
+            self.cleanup_tree.column(col, width=w, anchor="w")
+        self.cleanup_tree.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        self._cleanup_plan_id = None
+
+        btn_row = tk.Frame(plan_card, bg=BG_PANEL)
+        btn_row.pack(fill="x", padx=14, pady=(0, 10))
+        self._button(btn_row, "✅ Approve Plan", self._approve_cleanup_plan, accent=True).pack(side="left", padx=4)
+        self._button(btn_row, "▶ Execute Plan", self._execute_cleanup_plan).pack(side="left", padx=4)
+        self._button(btn_row, "↩ Rollback", self._rollback_cleanup_plan).pack(side="left", padx=4)
+
+    def _analyze_email_cleanup(self):
+        idx = 0
+        try:
+            for i, c in enumerate(getattr(self, "_cleanup_connectors_data", [])):
+                if f"{c.get('label', '')} ({c.get('email', '')})" == self._cleanup_connector_var.get():
+                    idx = i
+                    break
+        except Exception:
+            pass
+        connectors = getattr(self, "_cleanup_connectors_data", [])
+        if not connectors:
+            self._toast("No connectors available.", WARNING)
+            return
+        connector_id = connectors[idx].get("id") if idx < len(connectors) else None
+        if not connector_id:
+            self._toast("Could not resolve connector ID.", WARNING)
+            return
+        import threading as _t
+
+        self._toast("Analyzing inbox…", ACCENT)
+        if hasattr(self, "_cleanup_status_lbl"):
+            self._cleanup_status_lbl.configure(text="Analyzing inbox… this may take 30-60 seconds.")
+
+        def _run():
+            try:
+                result = self.hub.post_json("/api/email/cleanup/analyze", {"connector_id": connector_id, "limit": 200})
+                if result:
+                    plan_id = result.get("plan_id") or (result.get("plan") or {}).get("id")
+                    categories = result.get("categories") or result.get("items") or []
+                    self._cleanup_plan_id = plan_id
+                    self._ui_queue.put(("call_with_arg", self._populate_cleanup_plan, categories))
+                    self._ui_queue.put(("toast", f"Analysis complete — {len(categories)} categories.", SUCCESS))
+                    self._ui_queue.put(("configure", self._cleanup_status_lbl, {"text": f"Plan ready (ID: {plan_id}). Approve then Execute."}))
+                else:
+                    self._ui_queue.put(("toast", "Analysis returned no data.", WARNING))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Analysis error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _populate_cleanup_plan(self, categories):
+        if not hasattr(self, "cleanup_tree"):
+            return
+        self.cleanup_tree.delete(*self.cleanup_tree.get_children())
+        for cat in (categories if isinstance(categories, list) else []):
+            self.cleanup_tree.insert("", "end", values=(
+                cat.get("category", cat.get("name", "")),
+                cat.get("count", 0),
+                cat.get("action", cat.get("suggested_action", "")),
+                cat.get("status", "pending"),
+            ))
+
+    def _approve_cleanup_plan(self):
+        if not self._cleanup_plan_id:
+            self._toast("No plan to approve. Run analysis first.", WARNING)
+            return
+        try:
+            self.hub.post_json(f"/api/email/cleanup/plans/{self._cleanup_plan_id}/approve", {})
+            self._toast("Plan approved.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Approve error: {e}", ERROR)
+
+    def _execute_cleanup_plan(self):
+        if not self._cleanup_plan_id:
+            self._toast("Approve a plan first.", WARNING)
+            return
+        import threading as _t
+
+        self._toast("Executing cleanup…", ACCENT)
+
+        def _run():
+            try:
+                result = self.hub.post_json(f"/api/email/cleanup/plans/{self._cleanup_plan_id}/execute", {})
+                executed = result.get("executed", 0) if result else 0
+                self._ui_queue.put(("toast", f"Cleanup done — {executed} actions.", SUCCESS))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Execute error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _rollback_cleanup_plan(self):
+        if not self._cleanup_plan_id:
+            self._toast("No plan to rollback.", WARNING)
+            return
+        try:
+            self.hub.post_json(f"/api/email/cleanup/plans/{self._cleanup_plan_id}/rollback", {})
+            self._toast("Rollback complete.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Rollback error: {e}", ERROR)
 
     # ── OAuth presets ────────────────────────────────────────────────────
 
@@ -3060,6 +3572,481 @@ class ArchonHubApp:
             self._refresh_connectors()
             self.show_toast("Connector deleted.", SUCCESS)
 
+
+    def show_memory(self):
+        self._set_active_nav("Memory")
+        self._clear_content()
+        self._section_header(self.content, "🧠 Global Memory",
+                             "Persistent facts and preferences remembered across all sessions.")
+
+        top_row = tk.Frame(self.content, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=20, pady=(0, 10))
+        self._mem_search_var = tk.StringVar()
+        search_entry = self._entry(top_row, self._mem_search_var)
+        search_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        search_entry.insert(0, "Search facts…")
+        search_entry.bind("<FocusIn>", lambda e: search_entry.delete(0, "end") if search_entry.get() == "Search facts…" else None)
+        self._button(top_row, "Search", self._search_memory_facts).pack(side="left", padx=(0, 8))
+        self._button(top_row, "+ Add Fact", self._add_memory_fact, accent=True).pack(side="left")
+
+        card = self._card(self.content, "Facts")
+        card.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        cols = ("category", "subject", "value", "confidence", "usage", "updated")
+        self.mem_tree = ttk.Treeview(card, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("category", "Category", 110), ("subject", "Subject", 140), ("value", "Value", 280),
+                            ("confidence", "Conf.", 60), ("usage", "Used", 50), ("updated", "Updated", 120)]:
+            self.mem_tree.heading(col, text=txt)
+            self.mem_tree.column(col, width=w, anchor="w")
+        sb = ttk.Scrollbar(card, orient="vertical", command=self.mem_tree.yview)
+        self.mem_tree.configure(yscrollcommand=sb.set)
+        self.mem_tree.pack(side="left", fill="both", expand=True, padx=14, pady=(0, 10))
+        sb.pack(side="right", fill="y", pady=(0, 10))
+
+        btn_row = tk.Frame(card, bg=BG_PANEL)
+        btn_row.pack(fill="x", padx=14, pady=(0, 10))
+        self._button(btn_row, "🔄 Refresh", self._refresh_memory_facts).pack(side="left", padx=4)
+        self._button(btn_row, "🗑 Delete Selected", self._delete_memory_fact).pack(side="left", padx=4)
+        self._refresh_memory_facts()
+
+    def _refresh_memory_facts(self, query=""):
+        if not hasattr(self, "mem_tree"):
+            return
+        self.mem_tree.delete(*self.mem_tree.get_children())
+        try:
+            if query:
+                data = self.hub._get(f"/api/memory/global/search?q={query}") or []
+            else:
+                data = self.hub._get("/api/memory/global") or []
+            facts = data if isinstance(data, list) else data.get("facts", [])
+            for f in facts:
+                self.mem_tree.insert("", "end", iid=str(f.get("id", "")),
+                                     values=(f.get("category", ""), f.get("subject", ""), str(f.get("value", ""))[:80],
+                                             f"{float(f.get('confidence', 0)):.2f}", f.get("usage_count", 0),
+                                             str(f.get("updated_at", ""))[:16]))
+        except Exception as e:
+            self._toast(f"Memory load error: {e}", ERROR)
+
+    def _search_memory_facts(self):
+        q = self._mem_search_var.get().strip()
+        if q and q != "Search facts…":
+            self._refresh_memory_facts(query=q)
+
+    def _add_memory_fact(self):
+        win = tk.Toplevel(self.root)
+        win.title("Add Memory Fact")
+        win.configure(bg=BG_PANEL)
+        win.geometry("420x300")
+        for label, key in [("Category", "category"), ("Subject", "subject"), ("Value", "value")]:
+            tk.Label(win, text=label, bg=BG_PANEL, fg=TEXT_BODY).pack(anchor="w", padx=20, pady=(10, 2))
+            var = tk.StringVar()
+            setattr(win, f"_{key}_var", var)
+            self._entry(win, var).pack(fill="x", padx=20)
+
+        def _save():
+            payload = {
+                "category": win._category_var.get(),
+                "subject": win._subject_var.get(),
+                "value": win._value_var.get(),
+            }
+            try:
+                self.hub.post_json("/api/memory/global", payload)
+                self._refresh_memory_facts()
+                self._toast("Fact saved.", SUCCESS)
+                win.destroy()
+            except Exception as e:
+                self._toast(f"Error: {e}", ERROR)
+
+        self._button(win, "Save Fact", _save, accent=True).pack(pady=16)
+
+    def _delete_memory_fact(self):
+        if not hasattr(self, "mem_tree"):
+            return
+        sel = self.mem_tree.selection()
+        if not sel:
+            self._toast("Select a fact first.", WARNING)
+            return
+        fact_id = sel[0]
+        try:
+            self.hub.delete(f"/api/memory/global/{fact_id}")
+            self.mem_tree.delete(fact_id)
+            self._toast("Fact deleted.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Error: {e}", ERROR)
+
+    def show_files(self):
+        self._set_active_nav("Files")
+        self._clear_content()
+        self._section_header(self.content, "📁 Files & Documents",
+                             "Upload files, embed for RAG search, and run semantic queries.")
+
+        search_row = tk.Frame(self.content, bg=BG_CANVAS)
+        search_row.pack(fill="x", padx=20, pady=(0, 10))
+        self._file_search_var = tk.StringVar()
+        se = self._entry(search_row, self._file_search_var)
+        se.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        se.insert(0, "Semantic search across embedded files…")
+        se.bind("<FocusIn>", lambda e: se.delete(0, "end") if se.get().startswith("Semantic") else None)
+        self._button(search_row, "🔍 Search", self._search_files).pack(side="left", padx=(0, 8))
+        self._button(search_row, "📤 Upload File", self._upload_file, accent=True).pack(side="left")
+
+        card = self._card(self.content, "Uploaded Files")
+        card.pack(fill="both", expand=True, padx=20, pady=(0, 8))
+        cols = ("name", "type", "size", "status", "uploaded")
+        self.files_tree = ttk.Treeview(card, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("name", "Name", 200), ("type", "Type", 80), ("size", "Size", 80),
+                            ("status", "Status", 100), ("uploaded", "Uploaded", 130)]:
+            self.files_tree.heading(col, text=txt)
+            self.files_tree.column(col, width=w, anchor="w")
+        sb = ttk.Scrollbar(card, orient="vertical", command=self.files_tree.yview)
+        self.files_tree.configure(yscrollcommand=sb.set)
+        self.files_tree.pack(side="left", fill="both", expand=True, padx=14, pady=(0, 10))
+        sb.pack(side="right", fill="y", pady=(0, 10))
+
+        btn_row = tk.Frame(card, bg=BG_PANEL)
+        btn_row.pack(fill="x", padx=14, pady=(0, 10))
+        self._button(btn_row, "🔄 Refresh", self._refresh_files).pack(side="left", padx=4)
+        self._button(btn_row, "⚙ Embed for RAG", self._embed_selected_file).pack(side="left", padx=4)
+        self._button(btn_row, "🗑 Delete", self._delete_selected_file).pack(side="left", padx=4)
+
+        res_card = self._card(self.content, "Search Results")
+        res_card.pack(fill="x", padx=20, pady=(0, 20))
+        self.file_search_text = self._text_widget(res_card, height=8)
+        self.file_search_text.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        self.file_search_text.configure(state="disabled")
+        self._refresh_files()
+
+    def _refresh_files(self):
+        if not hasattr(self, "files_tree"):
+            return
+        self.files_tree.delete(*self.files_tree.get_children())
+        try:
+            data = self.hub._get("/api/files") or []
+            files = data if isinstance(data, list) else data.get("files", [])
+            for f in files:
+                size_kb = f"{int(f.get('size', 0)) // 1024}KB"
+                self.files_tree.insert("", "end", iid=str(f.get("id", "")),
+                                       values=(f.get("original_filename", f.get("filename", "")),
+                                               f.get("file_type", ""), size_kb,
+                                               f.get("processing_status", ""), str(f.get("created_at", ""))[:16]))
+        except Exception as e:
+            self._toast(f"Files load error: {e}", ERROR)
+
+    def _upload_file(self):
+        from tkinter import filedialog
+        import os, threading as _t
+
+        path = filedialog.askopenfilename(
+            title="Select file to upload",
+            filetypes=[("All files", "*.*"), ("PDFs", "*.pdf"), ("Docs", "*.docx"),
+                       ("Spreadsheets", "*.xlsx *.csv"), ("Images", "*.png *.jpg *.jpeg")]
+        )
+        if not path:
+            return
+        self._toast("Uploading…", ACCENT)
+
+        def _run():
+            try:
+                import requests
+
+                token = getattr(self.hub, "token", None)
+                headers = {"Authorization": f"Bearer {token}"} if token else {}
+                with open(path, "rb") as fh:
+                    resp = requests.post(f"{self.hub.base_url}/api/files/upload",
+                                         files={"file": (os.path.basename(path), fh)},
+                                         headers=headers, timeout=60)
+                if resp.status_code in (200, 201):
+                    self._ui_queue.put(("toast", "File uploaded!", SUCCESS))
+                    self._ui_queue.put(("call", self._refresh_files))
+                else:
+                    self._ui_queue.put(("toast", f"Upload failed: {resp.status_code}", ERROR))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Upload error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _embed_selected_file(self):
+        if not hasattr(self, "files_tree"):
+            return
+        sel = self.files_tree.selection()
+        if not sel:
+            self._toast("Select a file first.", WARNING)
+            return
+        file_id = sel[0]
+        import threading as _t
+
+        self._toast("Embedding…", ACCENT)
+
+        def _run():
+            try:
+                self.hub.post_json(f"/api/files/{file_id}/embed", {})
+                self._ui_queue.put(("toast", "Embedding complete!", SUCCESS))
+                self._ui_queue.put(("call", self._refresh_files))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Embed error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _delete_selected_file(self):
+        if not hasattr(self, "files_tree"):
+            return
+        sel = self.files_tree.selection()
+        if not sel:
+            self._toast("Select a file first.", WARNING)
+            return
+        file_id = sel[0]
+        try:
+            self.hub.delete(f"/api/files/{file_id}")
+            self.files_tree.delete(file_id)
+            self._toast("File deleted.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Delete error: {e}", ERROR)
+
+    def _search_files(self):
+        q = self._file_search_var.get().strip()
+        if not q or q.startswith("Semantic"):
+            return
+        import threading as _t
+
+        self._toast("Searching…", ACCENT)
+
+        def _run():
+            try:
+                results = self.hub.post_json("/api/files/search", {"query": q, "top_k": 8})
+                lines = []
+                rows = results if isinstance(results, list) else results.get("results", []) if isinstance(results, dict) else []
+                for r in rows:
+                    lines.append(f"[{r.get('filename', '')}] (score {float(r.get('score', 0) or 0):.3f})")
+                    lines.append(f"  {str(r.get('text', ''))[:200]}")
+                    lines.append("")
+                text = "\n".join(lines) if lines else "No results found."
+                self._ui_queue.put(("set_text", self.file_search_text, text))
+                self._ui_queue.put(("toast", f"{len(lines) // 3} result(s) found.", SUCCESS))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Search error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def show_agents(self):
+        self._set_active_nav("Agents")
+        self._clear_content()
+        self._section_header(self.content, "🤖 Agents",
+                             "Multi-agent orchestration, prompt templates, and feedback analysis.")
+
+        notebook = ttk.Notebook(self.content)
+        notebook.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+
+        orch_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        tmpl_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        feed_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        notebook.add(orch_tab, text="Orchestrate")
+        notebook.add(tmpl_tab, text="Templates")
+        notebook.add(feed_tab, text="Feedback")
+
+        self._build_agents_orchestrate_tab(orch_tab)
+        self._build_agents_templates_tab(tmpl_tab)
+        self._build_agents_feedback_tab(feed_tab)
+
+    def _build_agents_orchestrate_tab(self, parent):
+        card = self._card(parent, "Multi-Agent Collaboration")
+        card.pack(fill="x", padx=10, pady=10)
+
+        tk.Label(card, text="Query — agents will collaborate to answer:",
+                 bg=BG_PANEL, fg=TEXT_BODY).pack(anchor="w", padx=14, pady=(8, 4))
+        self._orch_query_var = tk.StringVar()
+        self._entry(card, self._orch_query_var).pack(fill="x", padx=14, pady=(0, 8))
+
+        cap_row = tk.Frame(card, bg=BG_PANEL)
+        cap_row.pack(fill="x", padx=14, pady=(0, 8))
+        self._button(cap_row, "▶ Collaborate", self._run_agent_collaboration, accent=True).pack(side="left", padx=4)
+        self._button(cap_row, "View Capabilities", self._show_agent_capabilities).pack(side="left", padx=4)
+
+        res_card = self._card(parent, "Collaboration Result")
+        res_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        self._orch_result_text = self._text_widget(res_card, height=20)
+        self._orch_result_text.pack(fill="both", expand=True, padx=14, pady=14)
+        self._orch_result_text.configure(state="disabled")
+
+    def _run_agent_collaboration(self):
+        query = getattr(self, "_orch_query_var", tk.StringVar()).get().strip()
+        if not query:
+            self._toast("Enter a query first.", WARNING)
+            return
+        import threading as _t
+
+        self._toast("Collaborating…", ACCENT)
+
+        def _run():
+            try:
+                result = self.hub.post_json("/api/agents/collaborate", {"query": query, "user_id": self.username})
+                if result:
+                    resp = result.get("response") or result.get("result") or str(result)
+                    agents_used = result.get("agents_used", [])
+                    header = f"Agents used: {', '.join(agents_used)}\n{'─' * 60}\n\n" if agents_used else ""
+                    self._ui_queue.put(("set_text", self._orch_result_text, header + resp))
+                else:
+                    self._ui_queue.put(("toast", "No response from collaboration.", WARNING))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Collaboration error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _show_agent_capabilities(self):
+        import threading as _t
+
+        def _run():
+            try:
+                caps = self.hub._get("/api/agents/capabilities") or []
+                lines = []
+                for c in (caps if isinstance(caps, list) else []):
+                    lines.append(f"• {c.get('agent_id', '')}: {c.get('description', '')}")
+                    if c.get("capabilities"):
+                        lines.append(f"  Skills: {', '.join(c['capabilities'][:5])}")
+                text = "\n".join(lines) or "No capabilities data."
+                self._ui_queue.put(("set_text", self._orch_result_text, text))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _build_agents_templates_tab(self, parent):
+        top_row = tk.Frame(parent, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=10, pady=(10, 4))
+        self._button(top_row, "+ New Template", self._new_prompt_template, accent=True).pack(side="left", padx=4)
+        self._button(top_row, "🔄 Refresh", self._refresh_prompt_templates).pack(side="left", padx=4)
+
+        card = self._card(parent, "Prompt Templates")
+        card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        cols = ("name", "category", "description", "uses")
+        self.tmpl_tree = ttk.Treeview(card, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("name", "Name", 160), ("category", "Category", 100),
+                            ("description", "Description", 260), ("uses", "Uses", 50)]:
+            self.tmpl_tree.heading(col, text=txt)
+            self.tmpl_tree.column(col, width=w, anchor="w")
+        sb = ttk.Scrollbar(card, orient="vertical", command=self.tmpl_tree.yview)
+        self.tmpl_tree.configure(yscrollcommand=sb.set)
+        self.tmpl_tree.pack(side="left", fill="both", expand=True, padx=14, pady=(0, 10))
+        sb.pack(side="right", fill="y", pady=(0, 10))
+        btn_row = tk.Frame(card, bg=BG_PANEL)
+        btn_row.pack(fill="x", padx=14, pady=(0, 10))
+        self._button(btn_row, "🗑 Delete Selected", self._delete_prompt_template).pack(side="left", padx=4)
+        self._refresh_prompt_templates()
+
+    def _refresh_prompt_templates(self):
+        if not hasattr(self, "tmpl_tree"):
+            return
+        self.tmpl_tree.delete(*self.tmpl_tree.get_children())
+        try:
+            data = self.hub._get("/api/prompt-templates") or []
+            templates = data if isinstance(data, list) else data.get("templates", [])
+            for t in templates:
+                self.tmpl_tree.insert("", "end", iid=str(t.get("id", "")),
+                                      values=(t.get("name", ""), t.get("category", ""), str(t.get("description", ""))[:60],
+                                              t.get("use_count", 0)))
+        except Exception as e:
+            self._toast(f"Templates load error: {e}", ERROR)
+
+    def _new_prompt_template(self):
+        win = tk.Toplevel(self.root)
+        win.title("New Prompt Template")
+        win.configure(bg=BG_PANEL)
+        win.geometry("520x420")
+        fields = {}
+        for label, key, multiline in [("Name", "name", False), ("Category", "category", False),
+                                      ("Description", "description", False), ("Template", "template", True)]:
+            tk.Label(win, text=label, bg=BG_PANEL, fg=TEXT_BODY).pack(anchor="w", padx=20, pady=(10, 2))
+            if multiline:
+                t = tk.Text(win, bg=BG_INPUT, fg=TEXT_PRIMARY, insertbackground=TEXT_PRIMARY,
+                            font=("Segoe UI", 9), relief="flat", height=8)
+                t.pack(fill="both", padx=20, expand=True)
+                fields[key] = t
+            else:
+                var = tk.StringVar()
+                self._entry(win, var).pack(fill="x", padx=20)
+                fields[key] = var
+
+        def _save():
+            payload = {
+                "name": fields["name"].get(),
+                "category": fields["category"].get(),
+                "description": fields["description"].get(),
+                "template": fields["template"].get("1.0", "end").strip(),
+            }
+            try:
+                self.hub.post_json("/api/prompt-templates", payload)
+                self._refresh_prompt_templates()
+                self._toast("Template saved.", SUCCESS)
+                win.destroy()
+            except Exception as e:
+                self._toast(f"Error: {e}", ERROR)
+
+        self._button(win, "Save Template", _save, accent=True).pack(pady=12)
+
+    def _delete_prompt_template(self):
+        if not hasattr(self, "tmpl_tree"):
+            return
+        sel = self.tmpl_tree.selection()
+        if not sel:
+            self._toast("Select a template first.", WARNING)
+            return
+        try:
+            self.hub.delete(f"/api/prompt-templates/{sel[0]}")
+            self.tmpl_tree.delete(sel[0])
+            self._toast("Template deleted.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Delete error: {e}", ERROR)
+
+    def _build_agents_feedback_tab(self, parent):
+        top_row = tk.Frame(parent, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=10, pady=(10, 4))
+        self._button(top_row, "🔄 Load Feedback Stats", self._refresh_feedback, accent=True).pack(side="left", padx=4)
+
+        stats_card = self._card(parent, "Feedback Summary")
+        stats_card.pack(fill="x", padx=10, pady=(0, 8))
+        self._feedback_stats_text = self._text_widget(stats_card, height=6)
+        self._feedback_stats_text.pack(fill="both", expand=True, padx=14, pady=14)
+        self._feedback_stats_text.configure(state="disabled")
+
+        pref_card = self._card(parent, "Learned Style Preferences")
+        pref_card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        cols = ("dimension", "preference", "confidence")
+        self.pref_tree = ttk.Treeview(pref_card, columns=cols, show="headings")
+        for col, txt, w in [("dimension", "Dimension", 160), ("preference", "Preference", 280), ("confidence", "Confidence", 90)]:
+            self.pref_tree.heading(col, text=txt)
+            self.pref_tree.column(col, width=w, anchor="w")
+        self.pref_tree.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        self._refresh_feedback()
+
+    def _refresh_feedback(self):
+        import threading as _t
+
+        def _run():
+            try:
+                stats = self.hub._get("/api/feedback/stats") or {}
+                prefs_result = self.hub._get("/api/feedback/preferences") or {}
+                lines = []
+                if stats:
+                    lines.append(f"Total feedback items: {stats.get('total', 0)}")
+                    lines.append(f"Positive: {stats.get('positive', 0)}  |  Negative: {stats.get('negative', 0)}")
+                    lines.append(f"Corrections: {stats.get('corrections', 0)}")
+                    lines.append(f"Avg rating: {float(stats.get('avg_rating', 0)):.2f}")
+                else:
+                    lines.append("(no feedback data yet)")
+                self._ui_queue.put(("set_text", self._feedback_stats_text, "\n".join(lines)))
+                prefs = prefs_result.get("preferences", []) if isinstance(prefs_result, dict) else []
+
+                def _load_prefs():
+                    if not hasattr(self, "pref_tree"):
+                        return
+                    self.pref_tree.delete(*self.pref_tree.get_children())
+                    for p in prefs:
+                        self.pref_tree.insert("", "end", values=(
+                            p.get("dimension", ""), p.get("preference", ""), f"{float(p.get('confidence', 0)):.2f}"))
+
+                self._ui_queue.put(("call", _load_prefs))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Feedback error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
 
     def show_admin(self):
         if not self.admin_unlocked:
@@ -3639,10 +4626,50 @@ class ArchonHubApp:
 
     # ── Chat ─────────────────────────────────────────────────────────────────
 
+    def _refresh_inez_memory_sidebar(self):
+        if not hasattr(self, "_inez_mem_listbox"):
+            return
+        try:
+            data = self.hub._get("/api/memory/global") or []
+            facts = data if isinstance(data, list) else data.get("facts", [])
+            self._inez_mem_listbox.configure(state="normal")
+            self._inez_mem_listbox.delete("1.0", "end")
+            for f in facts[:15]:
+                line = f"[{f.get('category', '')}] {f.get('subject', '')}: {str(f.get('value', ''))[:60]}\n"
+                self._inez_mem_listbox.insert("end", line)
+            self._inez_mem_listbox.configure(state="disabled")
+        except Exception:
+            pass
+
+    def _inez_with_search_context(self, message):
+        if not getattr(self, "_inez_web_search_var", None) or not self._inez_web_search_var.get():
+            return message
+        try:
+            import urllib.parse as _urlparse
+
+            data = self.hub._get(f"/api/search?q={_urlparse.quote(message)}")
+            rows = data if isinstance(data, list) else data.get("results", []) if isinstance(data, dict) else []
+            lines = []
+            for item in rows[:5]:
+                title = item.get("title") or item.get("source") or item.get("filename") or item.get("url") or "Result"
+                snippet = item.get("snippet") or item.get("content") or item.get("text") or ""
+                url = item.get("url", "")
+                lines.append(f"- {title}")
+                if snippet:
+                    lines.append(f"  {str(snippet)[:240]}")
+                if url:
+                    lines.append(f"  {url}")
+            if lines:
+                return "Web search context:\n" + "\n".join(lines) + f"\n\nUser message:\n{message}"
+        except Exception:
+            pass
+        return message
+
     def show_inez(self):
         self._clear_content()
         self._set_active_nav("Inez")
         self._build_inez_chat_panel(self.content)
+        self._refresh_inez_memory_sidebar()
         self._fetch_inez_status()
 
 
@@ -3679,8 +4706,9 @@ class ArchonHubApp:
         if getattr(self.hub, "online", False):
             def _hub_think():
                 try:
+                    send_task = self._inez_with_search_context(task)
                     resp = self.hub.post_json("/api/inez/chat", {
-                        "message": task,
+                        "message": send_task,
                         "conversation_id": self._inez_conv_id,
                     }, timeout=_HUB_LLM_TIMEOUT)
                     if resp:
@@ -3692,7 +4720,8 @@ class ArchonHubApp:
         else:
             try:
                 from inez_agent import think_async
-                think_async(task, self._inez_history, _on_inez_result)
+                send_task = self._inez_with_search_context(task)
+                think_async(send_task, self._inez_history, _on_inez_result)
             except ImportError:
                 self._ui_queue.put(("inez_result", think_run_id, {
                     "inez_message": "Inez agent module not available. Check that inez_agent.py is in the app/v3 folder.",
