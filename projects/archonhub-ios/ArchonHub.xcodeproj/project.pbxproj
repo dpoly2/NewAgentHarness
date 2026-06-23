@@ -43,6 +43,8 @@
 		EFC7DAAE2FE2C37B00D19857 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */; };
 		CC5B43C28B294DA592101C46 /* DocumentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 350E96CBA9E748C989C262F9 /* DocumentsView.swift */; };
 		F2D4E85A1C7B3A0E9F6D2C4B /* ModelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C3A94E7D2F1E0A5C8B9D3F /* ModelsView.swift */; };
+		AA11BB22CC33DD44EE55FF66 /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF67 /* MemoryView.swift */; };
+		BB22CC33DD44EE55FF66AA11 /* CodeExecutionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF66AA12 /* CodeExecutionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +83,8 @@
 		EFC7DAA92FE2C37A00D19857 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		EFC7DAAB2FE2C37A00D19857 /* ReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportsView.swift; sourceTree = "<group>"; };
 		350E96CBA9E748C989C262F9 /* DocumentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentsView.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF67 /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF66AA12 /* CodeExecutionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeExecutionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +150,8 @@
 				A3F8E924C15D48B09E31D6F7 /* Automations */,
 				C9D2F17A3E5B8C0A4D1E6F2B /* Models */,
 				9FF79E57F616E4AB6B52CEE4 /* Settings */,
+				AA11BB22CC33DD44EE55FF68 /* Memory */,
+				BB22CC33DD44EE55FF66AA13 /* Sandbox */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -351,6 +357,22 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		AA11BB22CC33DD44EE55FF68 /* Memory */ = {
+			isa = PBXGroup;
+			children = (
+				AA11BB22CC33DD44EE55FF67 /* MemoryView.swift */,
+			);
+			path = Memory;
+			sourceTree = "<group>";
+		};
+		BB22CC33DD44EE55FF66AA13 /* Sandbox */ = {
+			isa = PBXGroup;
+			children = (
+				BB22CC33DD44EE55FF66AA12 /* CodeExecutionView.swift */,
+			);
+			path = Sandbox;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -471,6 +493,8 @@
 				10460059F48D240AE12A2074 /* InezView.swift in Sources */,
 				A5C832F1E7294B608DAF3210 /* InezMemoryView.swift in Sources */,
 				DF43F03467AB226C9CAF2136 /* SettingsView.swift in Sources */,
+				AA11BB22CC33DD44EE55FF66 /* MemoryView.swift in Sources */,
+				BB22CC33DD44EE55FF66AA11 /* CodeExecutionView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
