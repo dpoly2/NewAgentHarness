@@ -18,7 +18,10 @@ import base64
 import json
 import os
 import platform
-import resource
+if platform.system() in ("Darwin", "Linux"):
+    import resource
+else:
+    resource = None  # type: ignore[assignment]
 import subprocess
 import sys
 import tempfile
