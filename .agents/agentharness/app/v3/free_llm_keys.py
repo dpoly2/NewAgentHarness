@@ -46,7 +46,8 @@ logger = get_logger("free_llm_keys")
 README_URL = "https://raw.githubusercontent.com/alistaitsacle/free-llm-api-keys/main/README.md"
 BASE_URL = "https://aiapiv2.pekpik.com/v1"
 FETCH_TIMEOUT = 15  # seconds for README fetch
-TEST_TIMEOUT = 10   # seconds for key test call
+TEST_TIMEOUT = 6    # seconds per key test call
+MAX_CANDIDATES = 3  # max keys to test per provider before giving up
 
 # Regex: captures key and model from a markdown table row
 # e.g.  | `sk-abc123...` | claude-opus-4-7 | 🆕 New | $20 | ...
@@ -174,7 +175,7 @@ def find_working_key(candidates: list[dict]) -> dict | None:
             seen.add(c["key"])
             unique.append(c)
 
-    for entry in unique:
+    for entry in unique[:MAX_CANDIDATES]:
         logger.debug("Testing key ...%s for %s", entry["key"][-6:], entry["model"])
         if _test_key(entry["key"], entry["model"]):
             logger.info("Found working key for %s (%s)", entry["provider"], entry["model"])

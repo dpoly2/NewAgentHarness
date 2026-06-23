@@ -4338,16 +4338,17 @@ class ArchonHubApp:
         _load_free_status()
 
         def _run_free_key_sync():
-            free_status_var.set("⏳ Syncing keys, testing each provider...")
+            free_status_var.set("⏳ Syncing keys — fetching README & testing providers...")
             free_card.update_idletasks()
 
             def _do_sync():
                 try:
-                    resp = self.hub.post_json("/api/providers/sync-free-keys", {}) or {}
+                    # Use a long timeout — sync can take 60–120s testing all providers
+                    resp = self.hub._request("POST", "/api/providers/sync-free-keys",
+                                             data={}, timeout=180) or {}
                     synced = resp.get("synced") or {}
                     failed = resp.get("failed") or []
                     total  = resp.get("total_keys_found", 0)
-                    ts     = resp.get("timestamp", "")[:19]
                     if synced:
                         pnames = ", ".join(synced.keys())
                         msg = f"✅ Synced {len(synced)} providers: {pnames}"
@@ -4356,7 +4357,7 @@ class ArchonHubApp:
                             f"Free keys activated: {pnames}", SUCCESS)))
                     else:
                         self._ui_queue.put(("set_text", free_status_var,
-                            f"⚠ No working keys found ({total} checked, {len(failed)} providers tried)"))
+                            f"⚠ No working keys found ({total} keys checked, {len(failed)} providers tried)"))
                         self._ui_queue.put(("call", lambda: self._toast("No free keys available right now", WARNING)))
                 except Exception as e:
                     self._ui_queue.put(("set_text", free_status_var, f"❌ Sync error: {e}"))
@@ -4622,17 +4623,24 @@ class ArchonHubApp:
 
     def _test_llm_connection(self):
         import threading as _t
-        self.show_toast("Testing connection…", ACCENT)
+        self.show_toast("Testing connection… (30s timeout)", ACCENT)
         def _run():
-            try:
+            import concurrent.futures
+            def _do_test():
                 from hub_nodes import _llm
                 llm = _llm()
                 from langchain_core.messages import HumanMessage
                 resp = llm.invoke([HumanMessage(content="Reply with exactly: OK")])
-                text = getattr(resp, "content", str(resp))[:80]
-                self._ui_queue.put(("toast", f"✅ Connected — {text}", SUCCESS))
-            except Exception as exc:
-                self._ui_queue.put(("toast", f"❌ {exc}", ERROR))
+                return getattr(resp, "content", str(resp))[:80]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(_do_test)
+                try:
+                    text = future.result(timeout=30)
+                    self._ui_queue.put(("toast", f"✅ Connected — {text}", SUCCESS))
+                except concurrent.futures.TimeoutError:
+                    self._ui_queue.put(("toast", "❌ Test timed out (30s) — provider may be slow or offline", ERROR))
+                except Exception as exc:
+                    self._ui_queue.put(("toast", f"❌ {exc}", ERROR))
         _t.Thread(target=_run, daemon=True).start()
 
     def _load_ai_config_file(self) -> dict:
