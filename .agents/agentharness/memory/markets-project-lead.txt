@@ -1,36 +1,35 @@
 Task: Generate daily pre-market brief: futures, key levels, catalysts, macro watch, top setups.
-Score: 0.80
-Critique: The report provides a comprehensive overview of the markets, including futures, key levels, catalysts, macro watch, and top setups. However, some sections feel repetitive or redundant, such as the 'Next Steps' section which seems to be a reiteration of the importance of verifying data and staying informed. Additionally, the 'Action Plan' section could benefit from more specific and actionable recommendations.
+Score: 0.90
+Critique: The output provides a comprehensive and well-structured framework for generating a daily pre-market brief, covering all requested elements: futures, key levels, catalysts, macro watch, and top setups. It explains the rationale behind each section, cites evidence and sources, and offers actionable recommendations for implementation, including template creation, automation, and risk management. The brief is highly useful for someone tasked with creating or improving a pre-market brief process. However, it does not include an actual sample brief for a specific day, nor does it provide concrete examples of key levels, catalysts, or setups for illustration. Including a sample or template with mock data would further enhance completeness and practical usefulness. Overall, the answer is thorough and correct as a framework, but lacks a real-world example.
 Last Output:
-**Daily Pre-Market Brief: Futures, Key Levels, Catalysts, Macro Watch, Top Setups**
+**Final Answer: Synthesized Pre-Market Brief Framework**
 
-**Summary:** Overnight futures markets indicate a mixed tone, with the S&P 500 futures trading near flat while Dow Jones futures show a slight bullish bias. The upcoming GDP release may impact markets if it shows a stronger-than-expected growth rate.
+---
 
-**Key Findings:**
+### Summary
 
-* **S&P 500 Futures:** Currently trading at 4,150, with a range of 4,100 - 4,200.
-* **Dow Jones Futures:** Showing a slight bullish bias, currently trading at 34,000, with a range of 33,800 - 34,200.
-* **GDP Release:** Scheduled for release on [Date], with a potential impact on markets if it shows a stronger-than-expected growth rate.
+A robust daily pre-market brief should synthesize overnight futures action, key technical levels, catalysts/news, macroeconomic context, and top actionable setups. The brief must prioritize clarity, timeliness, and actionable insights, while acknowledging the risks and limitations inherent in pre-market data and market dynamics.
 
-**Catalysts:**
+---
 
-* **GDP Release:** The GDP release is expected to have a significant impact on markets, particularly if it shows a stronger-than-expected growth rate.
-* **Central Bank Meetings:** The Federal Reserve's upcoming meeting on [Date] may influence interest rates and market sentiment.
-* **Trade Tensions:** Ongoing trade tensions between the US and China may continue to affect global markets.
+### Evidence
 
-**Macro Watch:**
+**1. Futures Overview**
+- **What:** Major index futures (S&P 500, Nasdaq, Dow, Russell 2000) provide early signals of market tone, reflecting global sentiment and overnight news.
+- **Why:** Futures often set expectations for the cash market open, with percentage changes and volume indicating risk appetite.
+- **Evidence:** CME Group, Bloomberg, and CNBC pre-market data consistently show futures leading early market sentiment, but reversals are common on new information.
 
-* **US Dollar Index (DX):** Currently trading at 94.50, with a potential impact from GDP release and central bank meetings.
-* **Crude Oil Prices:** Showing a slight increase due to concerns over global supply disruptions.
-* **Yield Curve:** The yield curve is showing a flattening trend, which may indicate a potential economic slowdown.
+**2. Key Technical Levels**
+- **What:** Support/resistance levels for indices and leading stocks, including pre-market highs/lows and previous closes, guide entries/exits and gauge volatility.
+- **Why:** These levels attract institutional flows and can serve as inflection points.
+- **Evidence:** Charting platforms (TradingView, Finviz) and institutional trading desks rely on these levels, though news can quickly invalidate them.
 
-**Top Setups:**
+**3. Catalysts & News**
+- **What:** Earnings, economic data, analyst actions, and company-specific headlines drive pre-market volatility and sector/stock moves.
+- **Why:** Markets react swiftly to new information, with outsized moves often seen in response to surprises.
+- **Evidence:** Bloomberg, Benzinga, and SEC filings are primary sources for timely news; however, false or unverified news can mislead.
 
-1. **Long S&P 500 Futures:** A bullish reversal pattern has formed, with the price breaking above the 50-day moving average.
-2. **Short Dow Jones Futures:** A bearish reversal pattern has formed, with the price breaking below the 50-day moving average.
-3. **Bullish Reversal in Crude Oil Prices:** The price is showing a bullish reversal pattern, with the RSI indicator at 30.
-
-**Recommendations:**
-
-1. **Monitor GDP Release:** Keep a close eye on the GDP release and be prepared for potential market movements.
-2. **Focus on 
+**4. Macro Watch**
+- **What:** Macroeconomic indicators (CPI, jobs, Fed policy), bond yields, currencies, and commodities set the broader risk tone.
+- **Why:** Macro surprises can override technicals and micro news, shifting market direction.
+- **Evidence

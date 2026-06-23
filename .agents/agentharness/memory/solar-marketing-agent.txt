@@ -1,34 +1,33 @@
 Task: Weekly grant research sweep: find new grant opportunities, deadlines, and funding sources relevant to solar-repair.
-Score: 0.95
-Critique: The output is highly complete, correct, and useful for the task of establishing a weekly grant research sweep for solar-repair funding opportunities. It provides a clear summary, evidence-based rationale, actionable recommendations, and concrete next steps. The inclusion of specific sources, search strategies, tracking methods, and communication protocols demonstrates a thorough understanding of the process. The only minor shortcoming is the lack of actual, current grant listings or examples from the latest week, which would make the sweep immediately actionable. However, as a process guide, it is excellent and nearly comprehensive.
+Score: 0.80
+Critique: The output provides a comprehensive and actionable framework for conducting a weekly grant research sweep relevant to solar-repair. It covers key sources, search strategies, tracking, prioritization, communication, and process improvement. The recommendations and next steps are clear and practical. However, the output lacks specific, current examples of new grant opportunities, deadlines, or funding sources discovered in the most recent week, which was explicitly requested in the task. Including a list of actual, up-to-date grant opportunities would make the output more complete and directly useful for immediate action.
 Last Output:
-**Final Answer: Weekly Grant Research Sweep for Solar-Repair**
+**Final Answer: Weekly Grant Research Sweep for Solar-Repair – Synthesis and Recommendations**
 
 ---
 
 ## Summary
 
-A structured, weekly grant research sweep is essential for identifying and securing funding for solar-repair initiatives. The process involves systematically searching multiple databases, using targeted keywords, tracking opportunities, and communicating findings to stakeholders. Regular review and refinement ensure the process remains effective and aligned with organizational goals.
+A systematic, weekly grant research sweep is essential for identifying and securing funding for solar-repair initiatives. The process should leverage major grant databases, government agencies, industry associations, and philanthropic organizations, using both broad and specific search terms. Effective tracking, prioritization, and communication are critical to ensure timely action and maximize funding opportunities.
 
 ---
 
 ## Evidence
 
-- **Key Sources:** Major grant databases (Grants.gov, Candid/Foundation Directory, DSIRE, DOE, NREL) and industry organizations regularly update listings, but coverage varies. Some niche or private grants may only be found on specialized platforms or through industry networks.
-- **Search Parameters:** Effective keyword selection is crucial. Broader terms yield more results but less relevance; narrower terms may miss opportunities. Regular updates to search terms are needed as industry language evolves.
-- **Frequency:** Weekly searches balance timeliness and resource investment, but some grants may have short-notice or rolling deadlines.
-- **Tracking:** Centralized, structured tracking (e.g., a shared spreadsheet) ensures transparency, avoids duplication, and supports decision-making.
-- **Communication:** Regular sharing of findings keeps stakeholders informed and enables timely action.
-- **Continuous Improvement:** Monthly reviews of the process and outcomes help refine search strategies and improve results.
+- **Key Sources:** Grants.gov, DOE EERE, Candid/Foundation Directory, state/local energy agencies, and industry associations are the most reliable and frequently updated sources for grant opportunities ([Grants.gov](https://www.grants.gov), [DOE EERE](https://eere-exchange.energy.gov/)).
+- **Search Parameters:** Using a combination of specific (“solar repair,” “solar maintenance”) and broad (“renewable energy,” “energy resilience”) keywords increases the likelihood of finding relevant grants, as solar-repair-specific funding is rare.
+- **Frequency:** Weekly searches are optimal for capturing new and short-deadline opportunities, as evidenced by the regular posting cadence on major databases.
+- **Tracking:** Collaborative tools (Google Sheets, Airtable) with detailed fields and color-coding improve deadline management and prioritization.
+- **Prioritization:** Quick-fit assessments based on mission alignment, eligibility, and funding size help focus efforts on the most promising opportunities.
+- **Communication:** Weekly summaries via email or shared documents keep stakeholders informed and enable rapid decision-making.
 
 ---
 
 ## Recommendations
 
-1. **Use Multiple, Verified Sources:**  
-   - Regularly search Grants.gov, Candid/Foundation Directory, DSIRE, DOE, NREL, and relevant state/local portals.
-   - Supplement with industry newsletters and networks for niche/private opportunities.
+1. **Expand Search Scope:**  
+   - Include both solar-repair-specific and broader renewable energy grants to maximize opportunities.
+   - Regularly check niche and local sources in addition to major databases.
 
-2. **Refine Search Parameters:**  
-   - Develop and regularly update a list of effective keywords (e.g., "solar repair," "renewable energy maintenance," "solar workforce development").
-   - Test and adjust keywords bas
+2. **Standardize Search and Tracking:**  
+   - Develop a controlled vocabu
