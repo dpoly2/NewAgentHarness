@@ -2378,13 +2378,13 @@ if FASTAPI_OK:
             conn.close()
 
 
-    @app.get("/api/memory/{agent_id}")
+    @app.get("/api/memory/agents/{agent_id}")
     async def get_memory(agent_id: str, current_user: dict = Depends(get_current_user)):
         del current_user
         return {"agent_id": agent_id, "data": _memory_dict(agent_id)}
 
 
-    @app.put("/api/memory/{agent_id}")
+    @app.put("/api/memory/agents/{agent_id}")
     async def update_memory(agent_id: str, body: MemoryUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
         return {"agent_id": agent_id, "data": _upsert_memory(agent_id, body.data)}
