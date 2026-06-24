@@ -15,17 +15,16 @@ Search is currently a SerpAPI-backed freshness surface. It complements internal 
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/search | search_conversations | Bearer JWT | 2294 |
-
+| GET | /api/search | search_conversations | Bearer JWT | .agents/agentharness/app/v3/routers/search.py |
 ## Detailed Endpoints
 
 ### GET `/api/search`
 
 - **Handler:** `search_conversations`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2294`
+- **Source:** `.agents/agentharness/app/v3/routers/search.py`
 
 #### Request Body
 
@@ -80,8 +79,7 @@ curl -X GET http://localhost:8765/api/search \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/web_search.py`
+- `.agents/agentharness/app/v3/routers/search.py`
 
 ## Implementation Checklist
 
@@ -103,60 +101,6 @@ curl -X GET http://localhost:8765/api/search \
 - Some product-level contracts in the portfolio README are more ambitious than the local implementation. Where that happens, the docs note the current code path and the intended contract.
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
-
-## Extra Source Anchors
-
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/web_search.py`
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
 
 ## Usage Tips
 

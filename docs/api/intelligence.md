@@ -15,20 +15,19 @@ These endpoints expose the four-layer self-improvement system: reflexion, auto-m
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/intelligence/summary | intelligence_summary | Bearer JWT | 4658 |
-| GET | /api/intelligence/skills | intelligence_skills | Bearer JWT | 4668 |
-| GET | /api/intelligence/patterns | intelligence_patterns | Bearer JWT | 4679 |
-| GET | /api/intelligence/agent/{agent_id} | intelligence_agent | Bearer JWT | 4693 |
-
+| GET | /api/intelligence/summary | intelligence_summary | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
+| GET | /api/intelligence/skills | intelligence_skills | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
+| GET | /api/intelligence/patterns | intelligence_patterns | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
+| GET | /api/intelligence/agent/{agent_id} | intelligence_agent | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
 ## Detailed Endpoints
 
 ### GET `/api/intelligence/summary`
 
 - **Handler:** `intelligence_summary`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4658`
+- **Source:** `.agents/agentharness/app/v3/routers/intelligence.py`
 
 #### Request Body
 
@@ -58,7 +57,7 @@ curl -X GET http://localhost:8765/api/intelligence/summary \
 
 - **Handler:** `intelligence_skills`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4668`
+- **Source:** `.agents/agentharness/app/v3/routers/intelligence.py`
 
 #### Request Body
 
@@ -88,7 +87,7 @@ curl -X GET http://localhost:8765/api/intelligence/skills \
 
 - **Handler:** `intelligence_patterns`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4679`
+- **Source:** `.agents/agentharness/app/v3/routers/intelligence.py`
 
 #### Request Body
 
@@ -118,7 +117,7 @@ curl -X GET http://localhost:8765/api/intelligence/patterns \
 
 - **Handler:** `intelligence_agent`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4693`
+- **Source:** `.agents/agentharness/app/v3/routers/intelligence.py`
 
 #### Request Body
 
@@ -165,7 +164,7 @@ curl -X GET http://localhost:8765/api/intelligence/agent/{agent_id} \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py:4656-4685`
+- `.agents/agentharness/app/v3/routers/intelligence.py`
 - `.agents/agentharness/app/v3/progressive_intelligence.py`
 
 ## Implementation Checklist
@@ -189,7 +188,3 @@ curl -X GET http://localhost:8765/api/intelligence/agent/{agent_id} \
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
 
-## Extra Source Anchors
-
-- `.agents/agentharness/app/v3/hub_server.py:4656-4685`
-- `.agents/agentharness/app/v3/progressive_intelligence.py`

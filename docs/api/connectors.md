@@ -8,28 +8,28 @@ Connectors unify IMAP/SMTP credentials, OAuth token storage, and higher-level in
 - Error payloads are returned as `{"detail": "error message"}` with the relevant HTTP status.
 - Timestamps should be treated as ISO 8601 UTC strings; older rows may omit trailing `Z` because the local engine uses naive UTC serialization in a few places.
 ## Endpoint Index
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/connectors | list_connectors | Bearer JWT | 1905 |
-| POST | /api/connectors | create_connector | Bearer JWT | 1911 |
-| PUT | /api/connectors/{id} | update_connector | Bearer JWT | 1948 |
-| DELETE | /api/connectors/{id} | delete_connector | Bearer JWT | 1959 |
-| POST | /api/connectors/{id}/test | test_connector_endpoint | Bearer JWT | 1967 |
-| GET | /api/connectors/oauth/google/init | google_oauth_init | Public | 1989 |
-| GET | /api/connectors/oauth/google/callback | google_oauth_callback | Public | 2009 |
-| GET | /api/connectors/oauth/gmail/init | gmail_oauth_init | Public | 2056 |
-| GET | /api/connectors/oauth/gmail/callback | gmail_oauth_callback | Public | 2061 |
-| GET | /api/connectors/oauth/microsoft/init | microsoft_oauth_init | Public | 2066 |
-| GET | /api/connectors/oauth/microsoft/callback | microsoft_oauth_callback | Public | 2086 |
-| GET | /api/integrations | list_integrations | Bearer JWT | 3416 |
-| POST | /api/integrations | upsert_integration | Bearer JWT | 3436 |
-| GET | /api/integrations/{id} | get_integration | Bearer JWT (admin) | 3449 |
-| DELETE | /api/integrations/{id} | delete_integration | Bearer JWT (admin) | 3457 |
+| GET | /api/connectors | list_connectors | Bearer JWT | .agents/agentharness/app/v3/routers/connectors.py |
+| POST | /api/connectors | create_connector | Bearer JWT | .agents/agentharness/app/v3/routers/connectors.py |
+| PUT | /api/connectors/{id} | update_connector | Bearer JWT | .agents/agentharness/app/v3/routers/connectors.py |
+| DELETE | /api/connectors/{id} | delete_connector | Bearer JWT | .agents/agentharness/app/v3/routers/connectors.py |
+| POST | /api/connectors/{id}/test | test_connector_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/google/init | google_oauth_init | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/google/callback | google_oauth_callback | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/gmail/init | gmail_oauth_init | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/gmail/callback | gmail_oauth_callback | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/microsoft/init | microsoft_oauth_init | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/connectors/oauth/microsoft/callback | microsoft_oauth_callback | Public | .agents/agentharness/app/v3/routers/connectors.py |
+| GET | /api/integrations | list_integrations | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| POST | /api/integrations | upsert_integration | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| GET | /api/integrations/{id} | get_integration | Admin JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| DELETE | /api/integrations/{id} | delete_integration | Admin JWT | .agents/agentharness/app/v3/routers/knowledge.py |
 ## Detailed Endpoints
 ### GET `/api/connectors`
 - **Handler:** `list_connectors`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1905`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -48,7 +48,7 @@ curl -X GET http://localhost:8765/api/connectors \
 ### POST `/api/connectors`
 - **Handler:** `create_connector`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1911`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ curl -X POST http://localhost:8765/api/connectors \
 ### PUT `/api/connectors/{id}`
 - **Handler:** `update_connector`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1948`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ curl -X PUT http://localhost:8765/api/connectors/{id} \
 ### DELETE `/api/connectors/{id}`
 - **Handler:** `delete_connector`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1959`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -134,7 +134,7 @@ curl -X DELETE http://localhost:8765/api/connectors/{id} \
 ### POST `/api/connectors/{id}/test`
 - **Handler:** `test_connector_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1967`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8765/api/connectors/{id}/test \
 ### GET `/api/connectors/oauth/google/init`
 - **Handler:** `google_oauth_init`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1989`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -172,7 +172,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/google/init \
 ### GET `/api/connectors/oauth/google/callback`
 - **Handler:** `google_oauth_callback`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2009`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -191,7 +191,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/google/callback \
 ### GET `/api/connectors/oauth/gmail/init`
 - **Handler:** `gmail_oauth_init`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2056`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -210,7 +210,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/gmail/init \
 ### GET `/api/connectors/oauth/gmail/callback`
 - **Handler:** `gmail_oauth_callback`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2061`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -229,7 +229,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/gmail/callback \
 ### GET `/api/connectors/oauth/microsoft/init`
 - **Handler:** `microsoft_oauth_init`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2066`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -248,7 +248,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/microsoft/init \
 ### GET `/api/connectors/oauth/microsoft/callback`
 - **Handler:** `microsoft_oauth_callback`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2086`
+- **Source:** `.agents/agentharness/app/v3/routers/connectors.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -267,7 +267,7 @@ curl -X GET http://localhost:8765/api/connectors/oauth/microsoft/callback \
 ### GET `/api/integrations`
 - **Handler:** `list_integrations`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3416`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -288,7 +288,7 @@ curl -X GET http://localhost:8765/api/integrations \
 ### POST `/api/integrations`
 - **Handler:** `upsert_integration`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3436`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -318,8 +318,8 @@ curl -X POST http://localhost:8765/api/integrations \
 ```
 ### GET `/api/integrations/{id}`
 - **Handler:** `get_integration`
-- **Auth required:** Admin Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3449`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -337,8 +337,8 @@ curl -X GET http://localhost:8765/api/integrations/{id} \
 ```
 ### DELETE `/api/integrations/{id}`
 - **Handler:** `delete_integration`
-- **Auth required:** Admin Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3457`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -368,6 +368,6 @@ curl -X DELETE http://localhost:8765/api/integrations/{id} \
 - [Microsoft 365 integration](../features/m365-integration.md)
 - [Email cleanup](email.md)
 ## Source References
-- `.agents/agentharness/app/v3/oauth_connector.py`
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/hub_db.py`
+
+- `.agents/agentharness/app/v3/routers/connectors.py`
+- `.agents/agentharness/app/v3/routers/knowledge.py`

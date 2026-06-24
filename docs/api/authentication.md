@@ -15,19 +15,18 @@ ArchonHub exposes a compact auth surface: login, self-registration (admin-gated 
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| POST | /api/auth/login | login | Public | 1628 |
-| POST | /api/auth/register | register | Public | 1644 |
-| GET | /api/auth/me | me | Bearer JWT | 1658 |
-
+| POST | /api/auth/login | login | Public | .agents/agentharness/app/v3/routers/auth_routes.py |
+| POST | /api/auth/register | register | Public | .agents/agentharness/app/v3/routers/auth_routes.py |
+| GET | /api/auth/me | me | Bearer JWT | .agents/agentharness/app/v3/routers/auth_routes.py |
 ## Detailed Endpoints
 
 ### POST `/api/auth/login`
 
 - **Handler:** `login`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1628`
+- **Source:** `.agents/agentharness/app/v3/routers/auth_routes.py`
 
 #### Request Body
 
@@ -39,6 +38,10 @@ ArchonHub exposes a compact auth surface: login, self-registration (admin-gated 
 #### Response Schema
 
 - Returns `{ token, user }` in practice; the iOS client decodes the token as `accessToken`. Treat this as a compatibility point to verify when changing auth payloads.
+
+#### Rate Limiting
+
+**Rate limiting:** Returns HTTP `429 Too Many Requests` after 10 failed login attempts from the same IP address within a 5-minute window.
 
 #### Example
 
@@ -65,7 +68,7 @@ curl -X POST http://localhost:8765/api/auth/login \
 
 - **Handler:** `register`
 - **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1644`
+- **Source:** `.agents/agentharness/app/v3/routers/auth_routes.py`
 
 #### Request Body
 
@@ -105,7 +108,7 @@ curl -X POST http://localhost:8765/api/auth/register \
 
 - **Handler:** `me`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1658`
+- **Source:** `.agents/agentharness/app/v3/routers/auth_routes.py`
 
 #### Request Body
 
@@ -153,9 +156,9 @@ curl -X GET http://localhost:8765/api/auth/me \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py:145-151`
-- `.agents/agentharness/app/v3/hub_server.py:717-785`
-- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift:42-54`
+- `.agents/agentharness/app/v3/routers/auth_routes.py`
+- `.agents/agentharness/app/v3/core/auth.py`
+- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift`
 
 ## Implementation Checklist
 
@@ -178,8 +181,3 @@ curl -X GET http://localhost:8765/api/auth/me \
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
 
-## Extra Source Anchors
-
-- `.agents/agentharness/app/v3/hub_server.py:145-151`
-- `.agents/agentharness/app/v3/hub_server.py:717-785`
-- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift:42-54`

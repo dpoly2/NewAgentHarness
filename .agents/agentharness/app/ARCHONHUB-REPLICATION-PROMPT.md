@@ -12,7 +12,7 @@ You are building **ArchonHub v1.0.0** — an always-on AI agent orchestration pl
 ### SYSTEM OVERVIEW
 
 ArchonHub has three surfaces:
-1. **Hub Server** (`hub_server.py`) — FastAPI backend, port 8765, REST API + WebSocket + APScheduler
+1. **Hub Server** (`hub_server.py` + `core/` + `routers/`) — modular FastAPI backend, port 8765, REST API + WebSocket + APScheduler
 2. **Desktop App** (`main_m365.py`) — Python Tkinter, M365-style UI, connects to Hub
 3. **Web Dashboard** (`web/index.html`) — Single-file SPA served by Hub
 
@@ -30,7 +30,17 @@ Logs: `.agents/data/logs/`
 ├── .env                           # (user provides — not created by you)
 ├── agentharness/
 │   ├── app/v3/
-│   │   ├── hub_server.py
+│   │   ├── hub_server.py       # App factory (~245 lines)
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   ├── database.py
+│   │   │   ├── auth.py
+│   │   │   ├── hub.py
+│   │   │   └── models.py
+│   │   ├── routers/
+│   │   │   ├── __init__.py
+│   │   │   └── [28 domain router files — see architecture docs]
 │   │   ├── hub_db.py
 │   │   ├── hub_nodes.py
 │   │   ├── hub_scheduler.py
@@ -46,6 +56,8 @@ Logs: `.agents/data/logs/`
 └── agents/projects/               # Populated separately with .md files
 launch_v3.ps1                      # At repo root
 ```
+
+**Server runtime requirements:** run Uvicorn with a single worker; warn on startup if `JWT_SECRET` is still the factory default; apply CORS from `CORS_ORIGINS`; rate-limit failed logins with HTTP `429`; enforce a 15-second WebSocket auth timeout (`1008` on failure); and return `{"detail":"internal server error"}` from the global exception handler.
 
 ---
 
@@ -189,19 +201,23 @@ APScheduler AsyncIOScheduler with timezone `America/Chicago`.
 
 ---
 
-### MODULE 4: hub_server.py
+### MODULE 4: hub_server.py + core/ + routers/
 
-FastAPI application. Port 8765.
+`hub_server.py` is the FastAPI app factory and WebSocket entrypoint. Shared internals live in `core/`; all REST domains live in `routers/`.
 
 **Auth setup:**
 - JWT with `SECRET_KEY = "archonhub-jwt-secret-change-in-production-2024"`, `ALGORITHM = "HS256"`, 24-hour expiry
+- Warn on startup if `JWT_SECRET` is still the factory default
+- Enforce `CORS_ORIGINS` from environment (default `*`; production should be `https://app.archonhub.app,http://localhost:8765,http://localhost:3000`)
 - `POST /api/auth/login` — accepts `{username, password}`, returns `{access_token, token_type, user}`
+- Failed login attempts are rate-limited per IP: 10 failures in 5 minutes → HTTP `429`
 - `POST /api/auth/register` — admin-only after first user
 - `GET /api/auth/me` — returns current user
 - `X-API-Token` header as alternate admin auth
 - `get_current_user()` and `get_admin_user()` FastAPI dependencies
+- Global exception handler returns `{"detail":"internal server error"}` for unhandled 500s
 
-**HubServer class** with:
+**`core/hub.py` HubServer class** with:
 - `_queue: asyncio.Queue` — job submission queue
 - `_active_runs: dict` — run_id → cancel_flag
 - `_clients: set` — connected WebSocket clients
@@ -211,14 +227,23 @@ FastAPI application. Port 8765.
 - `async _worker_loop()` — pulls from queue, runs `run_graph()` in thread pool
 - `cancel_run(run_id)` — sets cancel_flag Event
 
-**Startup** (`@app.on_event("startup")`):
+**Startup** (`lifespan` in `hub_server.py`):
 - `init_schema()`
 - Seed admin user if no users in DB
 - Start scheduler via `build_scheduler(hub)`
 - Start `_worker_loop()` background task
 - Write PID to `.agents/data/hub.pid`
 
-**REST endpoints — implement all of these:**
+**Core modules to implement:**
+
+- `core/config.py` — paths, env vars, JWT defaults, CORS origin parsing, app version, PID file
+- `core/database.py` — schema init plus shared SQLite CRUD helpers
+- `core/auth.py` — JWT helpers, auth dependencies, rate limiting, exception handler
+- `core/hub.py` — `HubServer`, `hub` singleton, scheduler builder, emit helpers
+- `core/models.py` — shared Pydantic request/response models
+- `routers/*.py` — 28 domain routers mounted by `hub_server.py`
+
+**REST endpoints — implement across routers:**
 
 ```
 GET  /api/health         → {status, app, version, uptime, active_runs, queue_depth, ws_clients, scheduler_jobs, thread_pool, langgraph_ok, pending_todos, total_runs}
@@ -274,8 +299,8 @@ GET/POST        /api/users
 GET/PUT/DELETE  /api/users/{id}
 ```
 
-**WebSocket endpoint** (`/ws`):
-- Accept connection, verify JWT token
+**WebSocket endpoint** (`/ws` in `hub_server.py`):
+- Accept connection, require `{ "type": "auth", "token": "<jwt>" }` within 15 seconds, verify JWT token
 - Add to `_clients` set
 - Send `{type: "connected", ...}` on join
 - Listen for client messages (e.g., ping/pong)
@@ -284,7 +309,7 @@ GET/PUT/DELETE  /api/users/{id}
 
 **Static files:** Mount `.agents/agentharness/app/v3/web` at `/web`, add redirect `/` → `/web`
 
-**CORS:** Allow all origins (local-first design)
+**CORS:** Read allowed origins from `CORS_ORIGINS`; default to `*` locally, tighten for production.
 
 ---
 
@@ -481,7 +506,7 @@ const ws = new WebSocket(`ws://${location.host}/ws`);
 11. **Cancel flag** — `threading.Event` passed through AgentState so long-running LangGraph executions can be cancelled mid-run
 12. **Score threshold** — 0.75 triggers revision; max_revisions default is 2
 13. **Logging** — use `ah_logging.py` for structured per-module logging to `.agents/data/logs/`
-14. **CORS** — open for local dev; comment saying "lock down for production"
+14. **CORS** — configure via `CORS_ORIGINS`; default `*` for local-only use, production value `https://app.archonhub.app,http://localhost:8765,http://localhost:3000`
 
 ---
 
@@ -490,7 +515,7 @@ const ws = new WebSocket(`ws://${location.host}/ws`);
 1. `hub_db.py` — schema + all CRUD
 2. `hub_nodes.py` — LangGraph nodes + graph builders
 3. `hub_scheduler.py` — scheduler jobs
-4. `hub_server.py` — FastAPI server wiring everything together
+4. `hub_server.py` + `core/` + `routers/` — FastAPI app factory and modular API surface
 5. `hub_client.py` — desktop↔hub bridge
 6. `web/index.html` — web dashboard
 7. `main_m365.py` — Tkinter desktop app
@@ -563,4 +588,3 @@ After building, verify:
 - [ ] iPhone login screen connects to Hub and authenticates
 - [ ] Watch app shows Hub status on status screen
 - [ ] Watch complication registers in ClockKit
-

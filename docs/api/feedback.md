@@ -15,21 +15,20 @@ Feedback routes collect explicit reaction data, store corrections, expose aggreg
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| POST | /api/messages/{message_id}/feedback | submit_feedback | Public | 3854 |
-| POST | /api/corrections | submit_correction | Public | 3910 |
-| GET | /api/feedback/stats | get_feedback_stats | Public | 3967 |
-| GET | /api/feedback/analyze | analyze_feedback | Public | 4017 |
-| GET | /api/feedback/preferences | get_user_preferences | Public | 4034 |
-
+| POST | /api/messages/{message_id}/feedback | submit_feedback | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| POST | /api/corrections | submit_correction | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| GET | /api/feedback/stats | get_feedback_stats | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| GET | /api/feedback/analyze | analyze_feedback | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| GET | /api/feedback/preferences | get_user_preferences | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
 ## Detailed Endpoints
 
 ### POST `/api/messages/{message_id}/feedback`
 
 - **Handler:** `submit_feedback`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3854`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/feedback.py`
 
 #### Request Body
 
@@ -61,8 +60,8 @@ curl -X POST http://localhost:8765/api/messages/{message_id}/feedback \
 ### POST `/api/corrections`
 
 - **Handler:** `submit_correction`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3910`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/feedback.py`
 
 #### Request Body
 
@@ -94,8 +93,8 @@ curl -X POST http://localhost:8765/api/corrections \
 ### GET `/api/feedback/stats`
 
 - **Handler:** `get_feedback_stats`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3967`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/feedback.py`
 
 #### Request Body
 
@@ -122,8 +121,8 @@ curl -X GET http://localhost:8765/api/feedback/stats \
 ### GET `/api/feedback/analyze`
 
 - **Handler:** `analyze_feedback`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4017`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/feedback.py`
 
 #### Request Body
 
@@ -150,8 +149,8 @@ curl -X GET http://localhost:8765/api/feedback/analyze \
 ### GET `/api/feedback/preferences`
 
 - **Handler:** `get_user_preferences`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4034`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/feedback.py`
 
 #### Request Body
 
@@ -196,6 +195,4 @@ curl -X GET http://localhost:8765/api/feedback/preferences \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/add_feedback_system.py`
-- `.agents/agentharness/app/v3/feedback_learner.py`
+- `.agents/agentharness/app/v3/routers/feedback.py`

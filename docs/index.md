@@ -12,7 +12,7 @@ _Generated on 2026-06-24 03:23 UTC from the current local ArchonHub codebase._
 
 ## System Snapshot
 
-- **Backend:** FastAPI hub server (`hub_server.py`) plus helper modules such as `hub_db.py`, `global_memory.py`, `code_sandbox.py`, `web_search.py`, `document_rag.py`, `oauth_connector.py`, `progressive_intelligence.py`, `hub_scheduler.py`, and `proactive_monitor.py`.
+- **Backend:** Modular FastAPI hub server — `hub_server.py` is a ~245-line app factory; all route logic lives in `routers/` (28 files) and shared internals in `core/` (config, database, auth, hub, models). Helper modules: `hub_db.py`, `hub_scheduler.py`, `hub_nodes.py`, `llm_router.py`, and optional satellites (`global_memory.py`, `code_sandbox.py`, `web_search.py`, `document_rag.py`, `oauth_connector.py`, `progressive_intelligence.py`, `proactive_monitor.py`).
 - **Database:** SQLite at `.agents/agentharness/memory/runs_v3.db`.
 - **Agent plane:** Base44 skill files in `.agents/agents/projects/**` plus local ArchonHub orchestration.
 - **Client plane:** SwiftUI app and Apple Watch companion.
@@ -116,8 +116,10 @@ _Generated on 2026-06-24 03:23 UTC from the current local ArchonHub codebase._
 
 | Path | Purpose |
 | --- | --- |
-| `.agents/agentharness/app/v3/hub_server.py` | Main FastAPI server and WebSocket endpoint |
-| `.agents/agentharness/app/v3/hub_db.py` | SQLite schema and CRUD helpers |
+| `.agents/agentharness/app/v3/hub_server.py` | App factory — lifespan, CORS, router registration, `/ws` endpoint (~245 lines) |
+| `.agents/agentharness/app/v3/core/` | Shared internals: config, database, auth, HubServer class, Pydantic models |
+| `.agents/agentharness/app/v3/routers/` | 28 domain APIRouter files (agents, runs, inez, memory, connectors, …) |
+| `.agents/agentharness/app/v3/hub_db.py` | SQLite schema migrations (legacy layer called by core/database.py) |
 | `.agents/agentharness/memory/runs_v3.db` | Main local SQLite database |
 | `.agents/agentharness/memory/*.txt` | Per-agent local memory snapshots |
 | `.agents/agents/projects/**` | Skill files / system prompts for agents |

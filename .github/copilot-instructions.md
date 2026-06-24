@@ -13,7 +13,48 @@ AgentHarness is a multi-agent AI operating system built on two parallel planes:
 ```
 .agents/
   agentharness/           # Local Python engine (ArchonHub)
-    app/v3/               # Hub server, desktop app, LLM router, tests
+    app/v3/               # ArchonHub server — modular package layout
+      hub_server.py       # ~245-line app factory (lifespan + router registration + /ws)
+      core/               # Shared internals — no routes
+        config.py         # Paths, env vars, constants (DB_PATH, SECRET_KEY, CORS_ORIGINS)
+        database.py       # SQLite connection, CRUD helpers, schema init
+        auth.py           # JWT, passwords, get_current_user, login rate limiter
+        hub.py            # HubServer class, worker loop, broadcast, make_emit
+        models.py         # All 30+ Pydantic request/response models
+      routers/            # 28 domain APIRouter files (~200 lines each)
+        auth_routes.py    # /api/auth/*
+        runs.py           # /api/runs, /api/queue
+        agents.py         # /api/agents CRUD + collaborate + capabilities
+        inez.py           # /api/inez/*
+        memory.py         # /api/memory + /api/memory/global
+        todos.py          # /api/todos
+        notifications.py  # /api/notifications + /api/monitoring/notifications
+        connectors.py     # /api/connectors + OAuth callbacks
+        projects.py       # /api/projects + /api/clients
+        conversations.py  # /api/conversations + messages
+        scheduler.py      # /api/scheduler
+        skills.py         # /api/skills
+        briefing.py       # /api/briefing + /api/briefs + morning/history
+        files.py          # /api/files + /api/files/_search
+        feedback.py       # /api/feedback + /api/corrections
+        email_cleanup.py  # /api/email/cleanup/*
+        knowledge.py      # /api/knowledge + /api/documents + /api/integrations
+        sandbox.py        # /api/sandbox
+        intelligence.py   # /api/intelligence
+        reports.py        # /api/reports
+        models_api.py     # /api/models (catalog, toggle, providers)
+        config_api.py     # /api/config + /api/stats + /api/health
+        users.py          # /api/users
+        automations.py    # /api/automations
+        search.py         # /api/search + /api/context + /api/events
+        prompt_templates.py # /api/prompt-templates
+        providers.py      # /api/providers + /api/import
+        trips.py          # /api/trips
+      hub_db.py           # SQLite schema migrations (legacy layer)
+      hub_nodes.py        # LangGraph node functions
+      hub_scheduler.py    # APScheduler job definitions
+      web/                # Single-file web dashboard
+      tests/              # Test suites
     graphs/               # LangGraph agent graphs (reflexion_loop, research_graph, wordpress_graph)
     nodes/                # Individual graph nodes (act, evaluate, revise, memory)
     state/                # AgentState TypedDict
@@ -142,6 +183,16 @@ Always stored in `.agents/.env` — never hardcoded. WordPress agents use app pa
 
 ### BOOTSTRAP.md
 `.agents/BOOTSTRAP.md` is the first-run onboarding script for new agent sessions. It should be deleted after the agent has (1) completed at least one real task and (2) saved an agent name to `IDENTITY.md`. Do not modify it for permanent behavior changes — put those in `.agents/rules/` instead.
+
+### ArchonHub Server — Security Posture (v1.2)
+Key rules enforced server-side — do not regress these:
+- **Single worker** — `workers=1` always. Multiple workers cause split-brain with the in-process job queue and WebSocket broadcast set.
+- **JWT secret** — server logs a startup warning if `JWT_SECRET` is still the default. Change it in `.agents/.env` for any non-personal deployment.
+- **CORS** — production CORS is locked to `https://app.archonhub.app` via `CORS_ORIGINS` in `.env`. Localhost origins are allowed for local dev.
+- **Login rate limiting** — `POST /api/auth/login` returns HTTP 429 after 10 attempts from the same IP within 5 minutes.
+- **WebSocket auth timeout** — the server closes the connection with code 1008 if the client does not send `{"type":"auth","token":"..."}` within 15 seconds.
+- **All routes require Bearer JWT** — only `/api/auth/login`, `/api/auth/register`, and `/` are public. Routes that were previously open (capabilities, collaborate, conversation history) now require auth.
+- **Renamed endpoints** — `/api/files/search` is now `/api/files/_search`; the second notifications handler is `/api/monitoring/notifications` (not `/api/notifications`).
 
 ### MCP Servers
 Configured in `.agents/mcps/config.json`. Currently empty; add MCP server entries there to enable tool extensions.

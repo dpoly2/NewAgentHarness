@@ -24,6 +24,10 @@ The WebSocket contract documents both the initial auth handshake and the event p
       "type": "string",
       "description": "Associated agent id if applicable."
     },
+    "token": {
+      "type": "string",
+      "description": "JWT used only in the initial auth message."
+    },
     "message": {
       "type": "string",
       "description": "Human-readable message."
@@ -51,6 +55,7 @@ The WebSocket contract documents both the initial auth handshake and the event p
 | type | string | no | Event type. |
 | run_id | string | no | Associated run id if applicable. |
 | agent_id | string | no | Associated agent id if applicable. |
+| token | string | no | JWT used only in the initial auth message. |
 | message | string | no | Human-readable message. |
 | summary | string | no | One-line summary for completion events. |
 | db_writes | array | no | Database write summaries. |
@@ -60,6 +65,7 @@ The WebSocket contract documents both the initial auth handshake and the event p
 
 - Target URL in local mode is `ws://localhost:8765/ws`.
 - Current server implementation expects an initial JSON auth message after connect.
+- After connecting, the client must send `{"type":"auth","token":"<jwt>"}` within **15 seconds** or the server closes the connection with WebSocket close code `1008 (Policy Violation)`.
 - Common events include connected, run updates, notifications, and ping/pong heartbeats.
 
 ## Example
@@ -89,8 +95,8 @@ The WebSocket contract documents both the initial auth handshake and the event p
 
 ## Source References
 
-- `User request contract`
-- `.agents/agentharness/app/v3/hub_server.py:3656-3712`
+- `.agents/agentharness/app/v3/hub_server.py`
+- `.agents/agentharness/app/v3/core/auth.py`
 
 ## Implementation Checklist
 
@@ -112,83 +118,6 @@ The WebSocket contract documents both the initial auth handshake and the event p
 - Some product-level contracts in the portfolio README are more ambitious than the local implementation. Where that happens, the docs note the current code path and the intended contract.
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
 
 ## Usage Tips
 

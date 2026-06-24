@@ -15,25 +15,24 @@ Automations are named workflows with trigger configuration, run history, and att
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/automations | list_automations | Bearer JWT | 3173 |
-| POST | /api/automations | create_automation | Bearer JWT | 3188 |
-| GET | /api/automations/{id} | get_automation | Bearer JWT | 3202 |
-| PUT | /api/automations/{id} | update_automation | Bearer JWT | 3210 |
-| DELETE | /api/automations/{id} | delete_automation | Bearer JWT | 3220 |
-| POST | /api/automations/{id}/trigger | trigger_automation | Bearer JWT | 3227 |
-| GET | /api/automations/{id}/runs | list_automation_runs | Bearer JWT | 3244 |
-| GET | /api/automations/{id}/documents | list_automation_docs | Bearer JWT | 3250 |
-| POST | /api/automations/{id}/documents | create_automation_doc | Bearer JWT | 3256 |
-
+| GET | /api/automations | list_automations | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| POST | /api/automations | create_automation | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| GET | /api/automations/{id} | get_automation | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| PUT | /api/automations/{id} | update_automation | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| DELETE | /api/automations/{id} | delete_automation | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| POST | /api/automations/{id}/trigger | trigger_automation | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| GET | /api/automations/{id}/runs | list_automation_runs | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| GET | /api/automations/{id}/documents | list_automation_docs | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
+| POST | /api/automations/{id}/documents | create_automation_doc | Bearer JWT | .agents/agentharness/app/v3/routers/automations.py |
 ## Detailed Endpoints
 
 ### GET `/api/automations`
 
 - **Handler:** `list_automations`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3173`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -63,7 +62,7 @@ curl -X GET http://localhost:8765/api/automations \
 
 - **Handler:** `create_automation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3188`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -103,7 +102,7 @@ curl -X POST http://localhost:8765/api/automations \
 
 - **Handler:** `get_automation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3202`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -131,7 +130,7 @@ curl -X GET http://localhost:8765/api/automations/{id} \
 
 - **Handler:** `update_automation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3210`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -170,7 +169,7 @@ curl -X PUT http://localhost:8765/api/automations/{id} \
 
 - **Handler:** `delete_automation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3220`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -198,7 +197,7 @@ curl -X DELETE http://localhost:8765/api/automations/{id} \
 
 - **Handler:** `trigger_automation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3227`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -226,7 +225,7 @@ curl -X POST http://localhost:8765/api/automations/{id}/trigger \
 
 - **Handler:** `list_automation_runs`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3244`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -254,7 +253,7 @@ curl -X GET http://localhost:8765/api/automations/{id}/runs \
 
 - **Handler:** `list_automation_docs`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3250`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -282,7 +281,7 @@ curl -X GET http://localhost:8765/api/automations/{id}/documents \
 
 - **Handler:** `create_automation_doc`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3256`
+- **Source:** `.agents/agentharness/app/v3/routers/automations.py`
 
 #### Request Body
 
@@ -338,5 +337,4 @@ curl -X POST http://localhost:8765/api/automations/{id}/documents \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/hub_db.py`
+- `.agents/agentharness/app/v3/routers/automations.py`

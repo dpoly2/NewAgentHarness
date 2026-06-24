@@ -15,21 +15,20 @@ Inez is the executive agent surface for the system. These routes handle conversa
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| POST | /api/inez/chat | inez_chat | Bearer JWT | 2609 |
-| GET | /api/inez/brief | inez_morning_brief | Bearer JWT | 2740 |
-| GET | /api/inez/status | inez_status | Bearer JWT | 2757 |
-| GET | /api/inez/memory | inez_memory | Bearer JWT | 2775 |
-| DELETE | /api/inez/memory/facts/{key} | delete_inez_fact | Bearer JWT | 2832 |
-
+| POST | /api/inez/chat | inez_chat | Bearer JWT | .agents/agentharness/app/v3/routers/inez.py |
+| GET | /api/inez/brief | inez_morning_brief | Bearer JWT | .agents/agentharness/app/v3/routers/inez.py |
+| GET | /api/inez/status | inez_status | Bearer JWT | .agents/agentharness/app/v3/routers/inez.py |
+| GET | /api/inez/memory | inez_memory | Bearer JWT | .agents/agentharness/app/v3/routers/inez.py |
+| DELETE | /api/inez/memory/facts/{key} | delete_inez_fact | Bearer JWT | .agents/agentharness/app/v3/routers/inez.py |
 ## Detailed Endpoints
 
 ### POST `/api/inez/chat`
 
 - **Handler:** `inez_chat`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2609`
+- **Source:** `.agents/agentharness/app/v3/routers/inez.py`
 
 #### Request Body
 
@@ -62,7 +61,7 @@ curl -X POST http://localhost:8765/api/inez/chat \
 
 - **Handler:** `inez_morning_brief`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2740`
+- **Source:** `.agents/agentharness/app/v3/routers/inez.py`
 
 #### Request Body
 
@@ -90,7 +89,7 @@ curl -X GET http://localhost:8765/api/inez/brief \
 
 - **Handler:** `inez_status`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2757`
+- **Source:** `.agents/agentharness/app/v3/routers/inez.py`
 
 #### Request Body
 
@@ -118,7 +117,7 @@ curl -X GET http://localhost:8765/api/inez/status \
 
 - **Handler:** `inez_memory`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2775`
+- **Source:** `.agents/agentharness/app/v3/routers/inez.py`
 
 #### Request Body
 
@@ -146,7 +145,7 @@ curl -X GET http://localhost:8765/api/inez/memory \
 
 - **Handler:** `delete_inez_fact`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2832`
+- **Source:** `.agents/agentharness/app/v3/routers/inez.py`
 
 #### Request Body
 
@@ -192,6 +191,4 @@ curl -X DELETE http://localhost:8765/api/inez/memory/facts/{key} \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/inez_agent.py`
-- `.agents/agentharness/app/v3/global_memory.py`
+- `.agents/agentharness/app/v3/routers/inez.py`

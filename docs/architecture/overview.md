@@ -19,7 +19,8 @@ ArchonHub is the local, self-hosted plane of the AgentHarness ecosystem. It pair
 ┌──────────────────────────┐         ┌──────────▼──────────┐         ┌──────────────────────────┐
 │ iOS SwiftUI App          │  HTTPS  │  ArchonHub Hub      │  SQLite │ runs_v3.db               │
 │ watchOS Companion        ├────────►│  FastAPI + WS       ├────────►│ core + feature tables    │
-│ HubClient + AuthStore    │         │  hub_server.py      │         │ memory + reports + RAG   │
+│ HubClient + AuthStore    │         │  app factory +      │         │ memory + reports + RAG   │
+│                          │         │  routers/core       │         │                          │
 └────────────┬─────────────┘         └─────┬─────────┬─────┘         └──────────────────────────┘
              │                             │         │
              │ WS `/ws`                    │         │ imports / jobs / helpers
@@ -45,8 +46,13 @@ ArchonHub is the local, self-hosted plane of the AgentHarness ecosystem. It pair
 
 | Component | Primary file(s) | Role |
 | --- | --- | --- |
-| Hub server | `.agents/agentharness/app/v3/hub_server.py` | Defines HTTP API, WebSocket server, auth, queue, and orchestration glue. |
-| Database layer | `.agents/agentharness/app/v3/hub_db.py` | Creates schema and provides CRUD helpers across core and feature tables. |
+| Hub entrypoint | `.agents/agentharness/app/v3/hub_server.py` | App factory (~245 lines) that wires lifespan, CORS, `/ws`, `/`, `/web`, and router registration. |
+| Core config | `.agents/agentharness/app/v3/core/config.py` | Centralizes paths, env vars, JWT defaults, CORS origins, and version metadata. |
+| Core database | `.agents/agentharness/app/v3/core/database.py` | Owns schema initialization plus shared SQLite CRUD and query helpers. |
+| Core auth | `.agents/agentharness/app/v3/core/auth.py` | JWT create/verify helpers, current/admin-user dependencies, login rate limiting, and global exception handler. |
+| Core hub runtime | `.agents/agentharness/app/v3/core/hub.py` | Defines `HubServer`, the `hub` singleton, worker loop, scheduler wiring, and emit helpers. |
+| Core models | `.agents/agentharness/app/v3/core/models.py` | Holds the shared Pydantic request/response models used across routers. |
+| API routers | `.agents/agentharness/app/v3/routers/*.py` | 28 domain routers partition the REST surface by feature area (`auth_routes.py`, `runs.py`, `agents.py`, etc.). |
 | Global Memory | `.agents/agentharness/app/v3/global_memory.py` | Persistent fact store plus prompt injection helpers. |
 | Progressive Intelligence | `.agents/agentharness/app/v3/progressive_intelligence.py` | Reflexion scoring, skill levels, auto-memory, and pattern detection. |
 | Sandbox | `.agents/agentharness/app/v3/code_sandbox.py` | Restricted Python execution with AST screening and Docker/subprocess modes. |
@@ -98,10 +104,18 @@ POST /api/runs
 ## Authentication Model
 
 - JWT Bearer is the main mechanism for HTTP routes.
-- WebSocket clients authenticate by sending an initial `{ "type": "auth", "token": "..." }` message after connection.
+- WebSocket clients authenticate by sending an initial `{ "type": "auth", "token": "..." }` message within 15 seconds of connection or the server closes the socket with code `1008`.
 - `X-API-Token` fallback exists for automation use cases through `hub_config.api_token`.
 - Default seeded admin credentials are `admin / ArchonHub2024!` unless overridden by `.agents/.env`.
 - Current source code uses `HS256` and a 24-hour expiry constant; stakeholder-facing docs often describe a 30-day token target. Treat that difference as a product gap to resolve.
+
+## Security Architecture
+
+- CORS is activated through `CORS_ORIGINS`; if unset the server allows `*`, while production uses `https://app.archonhub.app,http://localhost:8765,http://localhost:3000`.
+- `POST /api/auth/login` applies IP-based rate limiting and returns HTTP `429` after 10 failed attempts within 5 minutes.
+- Startup logs a warning if `JWT_SECRET` is still the factory default, but the process continues booting.
+- A global exception handler catches unhandled server errors and returns `{"detail":"internal server error"}` instead of exposing tracebacks.
+- The modular split keeps HTTP entrypoints in `routers/` and sensitive shared logic in `core/`, reducing the blast radius of future changes.
 
 ## Runtime Dependencies
 
@@ -143,7 +157,12 @@ POST /api/runs
 ## Source References
 
 - `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/hub_db.py`
+- `.agents/agentharness/app/v3/core/config.py`
+- `.agents/agentharness/app/v3/core/database.py`
+- `.agents/agentharness/app/v3/core/auth.py`
+- `.agents/agentharness/app/v3/core/hub.py`
+- `.agents/agentharness/app/v3/core/models.py`
+- `.agents/agentharness/app/v3/routers/`
 - `.agents/agentharness/app/v3/hub_scheduler.py`
 - `.agents/agentharness/app/v3/global_memory.py`
 - `.agents/agentharness/app/v3/progressive_intelligence.py`
@@ -170,20 +189,6 @@ POST /api/runs
 - Some product-level contracts in the portfolio README are more ambitious than the local implementation. Where that happens, the docs note the current code path and the intended contract.
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
 
 ## Usage Tips
 

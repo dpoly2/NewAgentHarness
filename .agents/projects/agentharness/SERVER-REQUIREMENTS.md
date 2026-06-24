@@ -4,7 +4,7 @@
 **Date:** 2026-05-28
 **Status:** Requirements — Pending Approval
 **Preceded by:** SERVER-CONCEPT.md
-**Affects:** main_m365.py (desktop client), new hub_server.py (server)
+**Affects:** main_m365.py (desktop client), modular ArchonHub server (`hub_server.py` app factory + `core/` + `routers/`)
 
 ---
 
@@ -17,7 +17,7 @@ Build a lightweight local server process ("AgentHarness Hub") that handles agent
 - This is NOT a cloud deployment. The Hub runs on David's local Windows machine.
 - The desktop app is NOT deprecated. All current features remain intact.
 - No external database. SQLite only.
-- No authentication/security layer in Phase 1 (localhost only).
+- No external identity provider in Phase 1; local JWT auth, rate limiting, CORS, and WebSocket auth are still required.
 - No paid hosted infrastructure in Phase 1.
 
 ### 1.3 Success Criteria
@@ -34,7 +34,7 @@ Build a lightweight local server process ("AgentHarness Hub") that handles agent
 
 ### 2.1 Process Model
 
-**REQ-HUB-01:** Hub server SHALL be a single Python process running FastAPI + Uvicorn on `localhost:8765`.
+**REQ-HUB-01:** Hub server SHALL be a single Python process running FastAPI + Uvicorn on `localhost:8765`, with `hub_server.py` acting as the app factory and entrypoint.
 
 **REQ-HUB-02:** Hub SHALL support three startup modes:
 - `a` — Direct process: `python hub_server.py` (development/testing)
@@ -46,6 +46,7 @@ Build a lightweight local server process ("AgentHarness Hub") that handles agent
 - APScheduler initialization and job reload from DB
 - WebSocket server binding
 - Loading all pending scheduled runs
+- CORS middleware activation from `CORS_ORIGINS`
 
 **REQ-HUB-04:** Hub SHALL write a PID file to `.agents/data/hub.pid` on start and remove it on clean shutdown.
 
@@ -61,6 +62,29 @@ Build a lightweight local server process ("AgentHarness Hub") that handles agent
   "scheduler_jobs": 4
 }
 ```
+
+### 2.1A Modular Server Structure
+
+**REQ-HUB-06:** The server SHALL be organized as:
+- `hub_server.py` — app factory, lifespan, CORS, `/ws`, `/`, `/web`, router registration
+- `core/config.py` — paths, env vars, JWT defaults, CORS parsing, version metadata
+- `core/database.py` — schema init and shared SQLite CRUD helpers
+- `core/auth.py` — JWT helpers, auth dependencies, login rate limiting, global exception handler
+- `core/hub.py` — `HubServer`, `hub` singleton, scheduler builder, emit helpers
+- `core/models.py` — shared Pydantic models
+- `routers/*.py` — domain APIRouter modules (`auth_routes.py`, `runs.py`, `agents.py`, etc.)
+
+### 2.1B Security Requirements
+
+**REQ-SEC-01:** `POST /api/auth/login` SHALL apply IP-based rate limiting and return HTTP `429` after 10 failed attempts within 5 minutes.
+
+**REQ-SEC-02:** WebSocket clients SHALL send `{"type":"auth","token":"<jwt>"}` within 15 seconds of connect or be closed with code `1008`.
+
+**REQ-SEC-03:** Startup SHALL log a warning if `JWT_SECRET` is still the factory default; this warning SHALL NOT block boot.
+
+**REQ-SEC-04:** CORS SHALL be controlled by `CORS_ORIGINS` as a comma-separated env var. Default is `*`. Production value is `https://app.archonhub.app,http://localhost:8765,http://localhost:3000`.
+
+**REQ-SEC-05:** Unhandled server errors SHALL return `{"detail":"internal server error"}` and SHALL NOT expose internal tracebacks.
 
 ---
 
@@ -485,7 +509,7 @@ CREATE TABLE IF NOT EXISTS hub_config (
 - Queue depth + pause/resume queue controls
 - Thread pool size slider (1-10)
 - Scheduled jobs list with next fire time + Cancel buttons
-- "Start Hub" / "Stop Hub" buttons (launches/kills hub_server.py subprocess)
+- "Start Hub" / "Stop Hub" buttons (launches/kills the modular Hub server subprocess via `hub_server.py`)
 - Hub log viewer (tail of `.agents/data/logs/hub_*.log`)
 - "Launch as Windows Service" button
 
@@ -500,11 +524,13 @@ AgentHarness/
 │   │   └── app/
 │   │       └── v3/
 │   │           ├── main_m365.py          (desktop client — modified)
-│   │           ├── hub_server.py         (NEW — FastAPI server)
+│   │           ├── hub_server.py         (NEW — FastAPI app factory / entrypoint)
+│   │           ├── core/                 (NEW — config, database, auth, hub runtime, models)
+│   │           ├── routers/              (NEW — domain APIRouter modules)
 │   │           ├── hub_client.py         (NEW — HubClient class for desktop)
 │   │           ├── hub_nodes.py          (NEW — shared LangGraph nodes, extracted from main_m365.py)
 │   │           ├── hub_scheduler.py      (NEW — APScheduler setup + built-in jobs)
-│   │           ├── hub_db.py             (NEW — Hub SQLite schema + helpers)
+│   │           ├── hub_db.py             (LEGACY / compatibility shim if retained)
 │   │           ├── hub_start.ps1         (NEW — Windows start script for Hub)
 │   │           ├── hub_install_service.ps1 (NEW — Windows service registration)
 │   │           ├── install.ps1           (UPDATED — installs Hub dependencies too)
@@ -529,7 +555,7 @@ AgentHarness/
 **Scope:** Get the Hub running and the desktop talking to it.
 1. Create `hub_db.py` — schema + helpers for new tables
 2. Create `hub_nodes.py` — extract node functions from main_m365.py (shared code)
-3. Create `hub_server.py` — FastAPI app, job queue, thread pool, WebSocket
+3. Create `hub_server.py`, `core/`, and `routers/` — FastAPI app factory, shared internals, job queue, thread pool, WebSocket, and domain routers
 4. Implement REST endpoints: `/api/run/submit`, `/api/runs`, `/api/health`
 5. Implement WebSocket: `run_started`, `node_update`, `run_complete`, `notif`
 6. Create `hub_client.py` — HubClient class with fallback mode

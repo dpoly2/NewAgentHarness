@@ -94,12 +94,6 @@ Inez response completes
 }
 ```
 
-## Operational Notes
-
-- `build_memory_block()` applies a fixed display order so prompt context feels coherent to the agent.
-- Agent-focused memory blocks deliberately bias towards categories that matter for the role (for example, finance gets finance/projects/people/rules).
-- Global Memory is a shared substrate for Inez, morning briefing, proactive monitoring, and progressive intelligence.
-
 ## Related Documentation
 
 - [Memory API](../api/memory.md)
@@ -132,41 +126,6 @@ Inez response completes
 - Some product-level contracts in the portfolio README are more ambitious than the local implementation. Where that happens, the docs note the current code path and the intended contract.
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
 
 ## Usage Tips
 

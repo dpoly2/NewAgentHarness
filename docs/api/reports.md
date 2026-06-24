@@ -15,21 +15,20 @@ Reports give ArchonHub a durable, human-readable output layer on top of runs, sc
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/reports | list_reports_endpoint | Bearer JWT | 3515 |
-| GET | /api/reports/types/summary | report_types_summary | Bearer JWT | 3531 |
-| GET | /api/reports/{report_id} | get_report_endpoint | Bearer JWT | 3541 |
-| DELETE | /api/reports/{report_id} | delete_report_endpoint | Bearer JWT (admin) | 3552 |
-| POST | /api/reports/run | run_report_endpoint | Bearer JWT (admin) | 3562 |
-
+| GET | /api/reports | list_reports_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/reports.py |
+| GET | /api/reports/types/summary | report_types_summary | Bearer JWT | .agents/agentharness/app/v3/routers/reports.py |
+| GET | /api/reports/{report_id} | get_report_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/reports.py |
+| DELETE | /api/reports/{report_id} | delete_report_endpoint | Admin JWT | .agents/agentharness/app/v3/routers/reports.py |
+| POST | /api/reports/run | run_report_endpoint | Admin JWT | .agents/agentharness/app/v3/routers/reports.py |
 ## Detailed Endpoints
 
 ### GET `/api/reports`
 
 - **Handler:** `list_reports_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3515`
+- **Source:** `.agents/agentharness/app/v3/routers/reports.py`
 
 #### Request Body
 
@@ -59,7 +58,7 @@ curl -X GET http://localhost:8765/api/reports \
 
 - **Handler:** `report_types_summary`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3531`
+- **Source:** `.agents/agentharness/app/v3/routers/reports.py`
 
 #### Request Body
 
@@ -87,7 +86,7 @@ curl -X GET http://localhost:8765/api/reports/types/summary \
 
 - **Handler:** `get_report_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3541`
+- **Source:** `.agents/agentharness/app/v3/routers/reports.py`
 
 #### Request Body
 
@@ -114,8 +113,8 @@ curl -X GET http://localhost:8765/api/reports/{report_id} \
 ### DELETE `/api/reports/{report_id}`
 
 - **Handler:** `delete_report_endpoint`
-- **Auth required:** Admin Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3552`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/reports.py`
 
 #### Request Body
 
@@ -142,8 +141,8 @@ curl -X DELETE http://localhost:8765/api/reports/{report_id} \
 ### POST `/api/reports/run`
 
 - **Handler:** `run_report_endpoint`
-- **Auth required:** Admin Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3562`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/reports.py`
 
 #### Request Body
 
@@ -190,5 +189,4 @@ curl -X POST http://localhost:8765/api/reports/run \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py:3511-3577`
-- `.agents/agentharness/app/v3/report_monitor.py`
+- `.agents/agentharness/app/v3/routers/reports.py`

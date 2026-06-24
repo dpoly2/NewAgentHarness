@@ -15,22 +15,21 @@ This group exposes the model catalog, per-model enable/disable flags, task-based
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/models | list_models | Bearer JWT | 3581 |
-| PUT | /api/models/toggle | toggle_model | Bearer JWT (admin) | 3589 |
-| POST | /api/models/route | route_model | Bearer JWT | 3598 |
-| GET | /api/models/providers | list_providers | Bearer JWT | 3612 |
-| POST | /api/providers/sync-free-keys | sync_free_llm_keys_endpoint | Bearer JWT | 4554 |
-| GET | /api/providers/free-keys-status | free_keys_status | Bearer JWT | 4571 |
-
+| GET | /api/models | list_models | Bearer JWT | .agents/agentharness/app/v3/routers/models_api.py |
+| PUT | /api/models/toggle | toggle_model | Admin JWT | .agents/agentharness/app/v3/routers/models_api.py |
+| POST | /api/models/route | route_model | Bearer JWT | .agents/agentharness/app/v3/routers/models_api.py |
+| GET | /api/models/providers | list_providers | Bearer JWT | .agents/agentharness/app/v3/routers/models_api.py |
+| POST | /api/providers/sync-free-keys | sync_free_llm_keys_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/providers.py |
+| GET | /api/providers/free-keys-status | free_keys_status | Bearer JWT | .agents/agentharness/app/v3/routers/providers.py |
 ## Detailed Endpoints
 
 ### GET `/api/models`
 
 - **Handler:** `list_models`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3581`
+- **Source:** `.agents/agentharness/app/v3/routers/models_api.py`
 
 #### Request Body
 
@@ -57,8 +56,8 @@ curl -X GET http://localhost:8765/api/models \
 ### PUT `/api/models/toggle`
 
 - **Handler:** `toggle_model`
-- **Auth required:** Admin Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3589`
+- **Auth required:** Admin JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/models_api.py`
 
 #### Request Body
 
@@ -92,7 +91,7 @@ curl -X PUT http://localhost:8765/api/models/toggle \
 
 - **Handler:** `route_model`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3598`
+- **Source:** `.agents/agentharness/app/v3/routers/models_api.py`
 
 #### Request Body
 
@@ -125,7 +124,7 @@ curl -X POST http://localhost:8765/api/models/route \
 
 - **Handler:** `list_providers`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3612`
+- **Source:** `.agents/agentharness/app/v3/routers/models_api.py`
 
 #### Request Body
 
@@ -153,7 +152,7 @@ curl -X GET http://localhost:8765/api/models/providers \
 
 - **Handler:** `sync_free_llm_keys_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4554`
+- **Source:** `.agents/agentharness/app/v3/routers/providers.py`
 
 #### Request Body
 
@@ -186,7 +185,7 @@ curl -X POST http://localhost:8765/api/providers/sync-free-keys \
 
 - **Handler:** `free_keys_status`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4571`
+- **Source:** `.agents/agentharness/app/v3/routers/providers.py`
 
 #### Request Body
 
@@ -231,6 +230,5 @@ curl -X GET http://localhost:8765/api/providers/free-keys-status \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/model_catalog.py`
-- `.agents/agentharness/app/v3/llm_router.py`
-- `.agents/agentharness/app/v3/hub_server.py:3581-3618`
+- `.agents/agentharness/app/v3/routers/models_api.py`
+- `.agents/agentharness/app/v3/routers/providers.py`

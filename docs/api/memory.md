@@ -15,23 +15,22 @@ The memory surface covers both per-agent key/value memory and the higher-value G
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/memory/agents/{agent_id} | get_memory | Bearer JWT | 2381 |
-| PUT | /api/memory/agents/{agent_id} | update_memory | Bearer JWT | 2387 |
-| GET | /api/memory/global | list_global_memory | Bearer JWT | 4427 |
-| POST | /api/memory/global | create_global_memory_fact | Bearer JWT | 4466 |
-| PUT | /api/memory/global/{fact_id} | update_global_memory_fact | Bearer JWT | 4491 |
-| DELETE | /api/memory/global/{fact_id} | delete_global_memory_fact | Bearer JWT | 4518 |
-| POST | /api/memory/global/extract | extract_memory_from_conversation | Bearer JWT | 4532 |
-
+| GET | /api/memory/agents/{agent_id} | get_memory | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| PUT | /api/memory/agents/{agent_id} | update_memory | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| GET | /api/memory/global | list_global_memory | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| POST | /api/memory/global | create_global_memory_fact | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| PUT | /api/memory/global/{fact_id} | update_global_memory_fact | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| DELETE | /api/memory/global/{fact_id} | delete_global_memory_fact | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
+| POST | /api/memory/global/extract | extract_memory_from_conversation | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
 ## Detailed Endpoints
 
 ### GET `/api/memory/agents/{agent_id}`
 
 - **Handler:** `get_memory`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2381`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -59,7 +58,7 @@ curl -X GET http://localhost:8765/api/memory/agents/{agent_id} \
 
 - **Handler:** `update_memory`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2387`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -91,7 +90,7 @@ curl -X PUT http://localhost:8765/api/memory/agents/{agent_id} \
 
 - **Handler:** `list_global_memory`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4427`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -121,7 +120,7 @@ curl -X GET http://localhost:8765/api/memory/global \
 
 - **Handler:** `create_global_memory_fact`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4466`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -151,7 +150,7 @@ curl -X POST http://localhost:8765/api/memory/global \
 
 - **Handler:** `update_global_memory_fact`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4491`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -181,7 +180,7 @@ curl -X PUT http://localhost:8765/api/memory/global/{fact_id} \
 
 - **Handler:** `delete_global_memory_fact`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4518`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -209,7 +208,7 @@ curl -X DELETE http://localhost:8765/api/memory/global/{fact_id} \
 
 - **Handler:** `extract_memory_from_conversation`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4532`
+- **Source:** `.agents/agentharness/app/v3/routers/memory.py`
 
 #### Request Body
 
@@ -260,6 +259,5 @@ curl -X POST http://localhost:8765/api/memory/global/extract \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py:4428-4550`
+- `.agents/agentharness/app/v3/routers/memory.py`
 - `.agents/agentharness/app/v3/global_memory.py`
-- `.agents/agentharness/app/v3/add_global_memory.py`

@@ -15,22 +15,21 @@ The briefing surface covers quick operational summaries, the dedicated morning b
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/briefing | get_briefing | Bearer JWT | 2999 |
-| GET | /api/briefing/morning | get_morning_briefing | Public | 4053 |
-| GET | /api/briefing/history | get_briefing_history | Public | 4098 |
-| GET | /api/briefs | list_briefs | Bearer JWT | 2844 |
-| POST | /api/briefs | create_brief | Bearer JWT | 2853 |
-| DELETE | /api/briefs | unknown | Bearer JWT | 0 |
-
+| GET | /api/briefing | get_briefing | Bearer JWT | .agents/agentharness/app/v3/routers/config_api.py |
+| GET | /api/briefing/morning | get_morning_briefing | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
+| GET | /api/briefing/history | get_briefing_history | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
+| GET | /api/briefs | list_briefs | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
+| POST | /api/briefs | create_brief | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
+| DELETE | /api/briefs/{id} | delete_brief | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
 ## Detailed Endpoints
 
 ### GET `/api/briefing`
 
 - **Handler:** `get_briefing`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2999`
+- **Source:** `.agents/agentharness/app/v3/routers/config_api.py`
 
 #### Request Body
 
@@ -57,8 +56,8 @@ curl -X GET http://localhost:8765/api/briefing \
 ### GET `/api/briefing/morning`
 
 - **Handler:** `get_morning_briefing`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4053`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/briefing.py`
 
 #### Request Body
 
@@ -85,8 +84,8 @@ curl -X GET http://localhost:8765/api/briefing/morning \
 ### GET `/api/briefing/history`
 
 - **Handler:** `get_briefing_history`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4098`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/briefing.py`
 
 #### Request Body
 
@@ -114,7 +113,7 @@ curl -X GET http://localhost:8765/api/briefing/history \
 
 - **Handler:** `list_briefs`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2844`
+- **Source:** `.agents/agentharness/app/v3/routers/briefing.py`
 
 #### Request Body
 
@@ -142,7 +141,7 @@ curl -X GET http://localhost:8765/api/briefs \
 
 - **Handler:** `create_brief`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2853`
+- **Source:** `.agents/agentharness/app/v3/routers/briefing.py`
 
 #### Request Body
 
@@ -171,11 +170,11 @@ curl -X POST http://localhost:8765/api/briefs \
 }
 ```
 
-### DELETE `/api/briefs`
+### DELETE `/api/briefs/{id}`
 
-- **Handler:** `unknown`
+- **Handler:** `delete_brief`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:0`
+- **Source:** `.agents/agentharness/app/v3/routers/briefing.py`
 
 #### Request Body
 
@@ -188,7 +187,7 @@ No JSON body; use query/path parameters only.
 #### Example
 
 ```bash
-curl -X DELETE http://localhost:8765/api/briefs \
+curl -X DELETE http://localhost:8765/api/briefs/{id} \
   -H 'Authorization: Bearer <jwt>'
 ```
 
@@ -220,6 +219,5 @@ curl -X DELETE http://localhost:8765/api/briefs \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/morning_brief.py`
-- `.agents/agentharness/app/v3/hub_scheduler.py`
+- `.agents/agentharness/app/v3/routers/config_api.py`
+- `.agents/agentharness/app/v3/routers/briefing.py`

@@ -15,21 +15,20 @@ Todos are one of the most reused entities in the system: the dashboard, workspac
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/todos | get_todos | Bearer JWT | 1745 |
-| POST | /api/todos | create_todo | Bearer JWT | 1762 |
-| GET | /api/todos/{id} | get_todo | Bearer JWT | 1786 |
-| PUT | /api/todos/{id} | update_todo | Bearer JWT | 1795 |
-| DELETE | /api/todos/{id} | delete_todo | Bearer JWT | 1807 |
-
+| GET | /api/todos | get_todos | Bearer JWT | .agents/agentharness/app/v3/routers/todos.py |
+| POST | /api/todos | create_todo | Bearer JWT | .agents/agentharness/app/v3/routers/todos.py |
+| GET | /api/todos/{id} | get_todo | Bearer JWT | .agents/agentharness/app/v3/routers/todos.py |
+| PUT | /api/todos/{id} | update_todo | Bearer JWT | .agents/agentharness/app/v3/routers/todos.py |
+| DELETE | /api/todos/{id} | delete_todo | Bearer JWT | .agents/agentharness/app/v3/routers/todos.py |
 ## Detailed Endpoints
 
 ### GET `/api/todos`
 
 - **Handler:** `get_todos`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1745`
+- **Source:** `.agents/agentharness/app/v3/routers/todos.py`
 
 #### Request Body
 
@@ -59,7 +58,7 @@ curl -X GET http://localhost:8765/api/todos \
 
 - **Handler:** `create_todo`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1762`
+- **Source:** `.agents/agentharness/app/v3/routers/todos.py`
 
 #### Request Body
 
@@ -98,7 +97,7 @@ curl -X POST http://localhost:8765/api/todos \
 
 - **Handler:** `get_todo`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1786`
+- **Source:** `.agents/agentharness/app/v3/routers/todos.py`
 
 #### Request Body
 
@@ -126,7 +125,7 @@ curl -X GET http://localhost:8765/api/todos/{id} \
 
 - **Handler:** `update_todo`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1795`
+- **Source:** `.agents/agentharness/app/v3/routers/todos.py`
 
 #### Request Body
 
@@ -164,7 +163,7 @@ curl -X PUT http://localhost:8765/api/todos/{id} \
 
 - **Handler:** `delete_todo`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1807`
+- **Source:** `.agents/agentharness/app/v3/routers/todos.py`
 
 #### Request Body
 
@@ -209,5 +208,4 @@ curl -X DELETE http://localhost:8765/api/todos/{id} \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/hub_db.py`
+- `.agents/agentharness/app/v3/routers/todos.py`

@@ -15,20 +15,19 @@ Scheduler routes let the UI and administrators inspect persisted schedules, crea
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/scheduler | list_scheduler | Bearer JWT | 2900 |
-| POST | /api/scheduler | create_scheduler_job | Bearer JWT | 2912 |
-| DELETE | /api/scheduler/{id} | delete_scheduler_job | Bearer JWT | 2951 |
-| POST | /api/scheduler/{id}/trigger | trigger_scheduler_job | Bearer JWT | 2965 |
-
+| GET | /api/scheduler | list_scheduler | Bearer JWT | .agents/agentharness/app/v3/routers/scheduler.py |
+| POST | /api/scheduler | create_scheduler_job | Bearer JWT | .agents/agentharness/app/v3/routers/scheduler.py |
+| DELETE | /api/scheduler/{id} | delete_scheduler_job | Bearer JWT | .agents/agentharness/app/v3/routers/scheduler.py |
+| POST | /api/scheduler/{id}/trigger | trigger_scheduler_job | Bearer JWT | .agents/agentharness/app/v3/routers/scheduler.py |
 ## Detailed Endpoints
 
 ### GET `/api/scheduler`
 
 - **Handler:** `list_scheduler`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2900`
+- **Source:** `.agents/agentharness/app/v3/routers/scheduler.py`
 
 #### Request Body
 
@@ -56,7 +55,7 @@ curl -X GET http://localhost:8765/api/scheduler \
 
 - **Handler:** `create_scheduler_job`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2912`
+- **Source:** `.agents/agentharness/app/v3/routers/scheduler.py`
 
 #### Request Body
 
@@ -94,7 +93,7 @@ curl -X POST http://localhost:8765/api/scheduler \
 
 - **Handler:** `delete_scheduler_job`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2951`
+- **Source:** `.agents/agentharness/app/v3/routers/scheduler.py`
 
 #### Request Body
 
@@ -122,7 +121,7 @@ curl -X DELETE http://localhost:8765/api/scheduler/{id} \
 
 - **Handler:** `trigger_scheduler_job`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:2965`
+- **Source:** `.agents/agentharness/app/v3/routers/scheduler.py`
 
 #### Request Body
 
@@ -168,5 +167,5 @@ curl -X POST http://localhost:8765/api/scheduler/{id}/trigger \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
+- `.agents/agentharness/app/v3/routers/scheduler.py`
 - `.agents/agentharness/app/v3/hub_scheduler.py`

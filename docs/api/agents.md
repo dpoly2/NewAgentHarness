@@ -8,27 +8,27 @@ This surface covers the live agent registry, queued work, and historical runs. I
 - Error payloads are returned as `{"detail": "error message"}` with the relevant HTTP status.
 - Timestamps should be treated as ISO 8601 UTC strings; older rows may omit trailing `Z` because the local engine uses naive UTC serialization in a few places.
 ## Endpoint Index
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| POST | /api/runs | create_run | Bearer JWT | 1693 |
-| GET | /api/runs | list_runs | Bearer JWT | 1700 |
-| POST | /api/runs/{run_id}/cancel | cancel_run | Bearer JWT | 1712 |
-| GET | /api/queue | get_queue | Bearer JWT | 1722 |
-| POST | /api/queue/pause | pause_queue | Bearer JWT | 1731 |
-| POST | /api/queue/resume | resume_queue | Bearer JWT | 1738 |
-| GET | /api/agents | list_agents_endpoint | Bearer JWT | 3057 |
-| POST | /api/agents | upsert_agent_endpoint | Bearer JWT | 3075 |
-| GET | /api/agents/{agent_id} | get_agent_endpoint | Bearer JWT | 3123 |
-| PUT | /api/agents/{agent_id} | update_agent_endpoint | Bearer JWT | 3132 |
-| DELETE | /api/agents/{agent_id} | delete_agent_endpoint | Bearer JWT | 3155 |
-| GET | /api/agents/capabilities | get_agent_capabilities | Public | 4239 |
-| GET | /api/agents/conversations/{conversation_id} | get_conversation_history | Public | 4257 |
-| POST | /api/agents/collaborate | agent_collaboration | Public | 4209 |
+| POST | /api/runs | create_run | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| GET | /api/runs | list_runs | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| POST | /api/runs/{run_id}/cancel | cancel_run | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| GET | /api/queue | get_queue | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| POST | /api/queue/pause | pause_queue | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| POST | /api/queue/resume | resume_queue | Bearer JWT | .agents/agentharness/app/v3/routers/runs.py |
+| GET | /api/agents | list_agents_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| POST | /api/agents | upsert_agent_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| GET | /api/agents/{agent_id} | get_agent_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| PUT | /api/agents/{agent_id} | update_agent_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| DELETE | /api/agents/{agent_id} | delete_agent_endpoint | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| GET | /api/agents/capabilities | get_agent_capabilities | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| GET | /api/agents/conversations/{conversation_id} | get_conversation_history | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| POST | /api/agents/collaborate | agent_collaboration | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
 ## Detailed Endpoints
 ### POST `/api/runs`
 - **Handler:** `create_run`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1693`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ curl -X POST http://localhost:8765/api/runs \
 ### GET `/api/runs`
 - **Handler:** `list_runs`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1700`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -77,7 +77,7 @@ curl -X GET http://localhost:8765/api/runs \
 ### POST `/api/runs/{run_id}/cancel`
 - **Handler:** `cancel_run`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1712`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -96,7 +96,7 @@ curl -X POST http://localhost:8765/api/runs/{run_id}/cancel \
 ### GET `/api/queue`
 - **Handler:** `get_queue`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1722`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -115,7 +115,7 @@ curl -X GET http://localhost:8765/api/queue \
 ### POST `/api/queue/pause`
 - **Handler:** `pause_queue`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1731`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -134,7 +134,7 @@ curl -X POST http://localhost:8765/api/queue/pause \
 ### POST `/api/queue/resume`
 - **Handler:** `resume_queue`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:1738`
+- **Source:** `.agents/agentharness/app/v3/routers/runs.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8765/api/queue/resume \
 ### GET `/api/agents`
 - **Handler:** `list_agents_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3057`
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -174,7 +174,7 @@ curl -X GET http://localhost:8765/api/agents \
 ### POST `/api/agents`
 - **Handler:** `upsert_agent_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3075`
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -208,7 +208,7 @@ curl -X POST http://localhost:8765/api/agents \
 ### GET `/api/agents/{agent_id}`
 - **Handler:** `get_agent_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3123`
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -227,7 +227,7 @@ curl -X GET http://localhost:8765/api/agents/{agent_id} \
 ### PUT `/api/agents/{agent_id}`
 - **Handler:** `update_agent_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3132`
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -260,7 +260,7 @@ curl -X PUT http://localhost:8765/api/agents/{agent_id} \
 ### DELETE `/api/agents/{agent_id}`
 - **Handler:** `delete_agent_endpoint`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3155`
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -278,8 +278,8 @@ curl -X DELETE http://localhost:8765/api/agents/{agent_id} \
 ```
 ### GET `/api/agents/capabilities`
 - **Handler:** `get_agent_capabilities`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4239`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -299,8 +299,8 @@ curl -X GET http://localhost:8765/api/agents/capabilities \
 ```
 ### GET `/api/agents/conversations/{conversation_id}`
 - **Handler:** `get_conversation_history`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4257`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -318,8 +318,8 @@ curl -X GET http://localhost:8765/api/agents/conversations/{conversation_id} \
 ```
 ### POST `/api/agents/collaborate`
 - **Handler:** `agent_collaboration`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4209`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/agents.py`
 #### Request Body
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -355,6 +355,7 @@ curl -X POST http://localhost:8765/api/agents/collaborate \
 - [Dispatch contract](../contracts/dispatch-contract.md)
 - [WebSocket](websocket.md)
 ## Source References
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/hub_db.py`
-- `.agents/agentharness/app/v3/hub_scheduler.py`
+
+- `.agents/agentharness/app/v3/routers/runs.py`
+- `.agents/agentharness/app/v3/routers/agents.py`
+- `.agents/agentharness/app/v3/core/hub.py`

@@ -4,7 +4,7 @@ _Generated from the current ArchonHub source tree on 2026-06-24 03:23 UTC._
 
 ## Overview
 
-The WebSocket surface gives clients near-real-time visibility into queue/runs/notifications. The iOS client uses `HubClient.connectWebSocket()` with Bearer auth headers, while the server currently expects an initial JSON auth message after accept.
+The WebSocket surface gives clients near-real-time visibility into queue/runs/notifications. The server requires an initial JSON auth message after connect and enforces a 15-second authentication timeout.
 
 ## Authentication and Response Rules
 
@@ -15,17 +15,16 @@ The WebSocket surface gives clients near-real-time visibility into queue/runs/no
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| WEBSOCKET | /ws | websocket_endpoint | WebSocket auth message | 3656 |
-
+| WEBSOCKET | /ws | websocket_endpoint | WS auth message | .agents/agentharness/app/v3/hub_server.py |
 ## Detailed Endpoints
 
 ### WEBSOCKET `/ws`
 
 - **Handler:** `websocket_endpoint`
 - **Auth required:** Send an initial auth message after connect.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3656`
+- **Source:** `.agents/agentharness/app/v3/hub_server.py`
 
 #### Request Body
 
@@ -37,7 +36,7 @@ The WebSocket surface gives clients near-real-time visibility into queue/runs/no
 
 #### Response Schema
 
-- After connect, send `{ "type": "auth", "token": "<jwt>" }`. On success the server returns `{ "type": "connected", "queue_depth": <int>, "active_runs": [...] }` and then emits run / notification events.
+- After connect, send `{ "type": "auth", "token": "<jwt>" }` within 15 seconds. On success the server returns `{ "type": "connected", "queue_depth": <int>, "active_runs": [...] }` and then emits run / notification events. Connections that do not authenticate in time are closed with code `1008 (Policy Violation)`.
 
 #### Example
 
@@ -77,8 +76,9 @@ curl -X WEBSOCKET http://localhost:8765/ws \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py:3656-3712`
-- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift:122-140`
+- `.agents/agentharness/app/v3/hub_server.py`
+- `.agents/agentharness/app/v3/core/auth.py`
+- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift`
 
 ## Implementation Checklist
 
@@ -100,53 +100,6 @@ curl -X WEBSOCKET http://localhost:8765/ws \
 - Some product-level contracts in the portfolio README are more ambitious than the local implementation. Where that happens, the docs note the current code path and the intended contract.
 - The iOS app is a first-class consumer for many of these contracts; decoding expectations were cross-checked against `Models.swift` and `HubClient.swift`.
 - Base44 and ArchonHub run in parallel. These docs focus on the local engine unless a section explicitly calls out the cloud plane.
-
-## Extra Source Anchors
-
-- `.agents/agentharness/app/v3/hub_server.py:3656-3712`
-- `projects/archonhub-ios/ArchonHub/Network/HubClient.swift:122-140`
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
-
-## Usage Tips
-
-- Prefer the documented example payloads as contract tests when wiring a new client.
-- Treat nullable fields as nullable in downstream consumers, especially older rows in SQLite.
-- Reuse the shared response envelope and auth conventions to keep client code predictable.
-- When an endpoint fans out to background work, rely on notifications or run history instead of assuming immediate completion.
 
 ## Usage Tips
 

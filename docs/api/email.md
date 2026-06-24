@@ -15,22 +15,21 @@ ArchonHub can analyze an inbox, generate a cleanup plan, collect human approval,
 
 ## Endpoint Index
 
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| POST | /api/email/cleanup/analyze | analyze_email_cleanup | Public | 4276 |
-| GET | /api/email/cleanup/plans | list_cleanup_plans | Public | 4301 |
-| GET | /api/email/cleanup/plans/{plan_id} | get_cleanup_plan | Public | 4324 |
-| PUT | /api/email/cleanup/plans/{plan_id}/approve | approve_cleanup_items | Public | 4343 |
-| POST | /api/email/cleanup/plans/{plan_id}/execute | execute_cleanup_plan | Public | 4375 |
-| GET | /api/email/cleanup/history | get_cleanup_history | Public | 4396 |
-
+| POST | /api/email/cleanup/analyze | analyze_email_cleanup | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
+| GET | /api/email/cleanup/plans | list_cleanup_plans | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
+| GET | /api/email/cleanup/plans/{plan_id} | get_cleanup_plan | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
+| PUT | /api/email/cleanup/plans/{plan_id}/approve | approve_cleanup_items | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
+| POST | /api/email/cleanup/plans/{plan_id}/execute | execute_cleanup_plan | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
+| GET | /api/email/cleanup/history | get_cleanup_history | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
 ## Detailed Endpoints
 
 ### POST `/api/email/cleanup/analyze`
 
 - **Handler:** `analyze_email_cleanup`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4276`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -62,8 +61,8 @@ curl -X POST http://localhost:8765/api/email/cleanup/analyze \
 ### GET `/api/email/cleanup/plans`
 
 - **Handler:** `list_cleanup_plans`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4301`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -90,8 +89,8 @@ curl -X GET http://localhost:8765/api/email/cleanup/plans \
 ### GET `/api/email/cleanup/plans/{plan_id}`
 
 - **Handler:** `get_cleanup_plan`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4324`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -118,8 +117,8 @@ curl -X GET http://localhost:8765/api/email/cleanup/plans/{plan_id} \
 ### PUT `/api/email/cleanup/plans/{plan_id}/approve`
 
 - **Handler:** `approve_cleanup_items`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4343`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -151,8 +150,8 @@ curl -X PUT http://localhost:8765/api/email/cleanup/plans/{plan_id}/approve \
 ### POST `/api/email/cleanup/plans/{plan_id}/execute`
 
 - **Handler:** `execute_cleanup_plan`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4375`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -179,8 +178,8 @@ curl -X POST http://localhost:8765/api/email/cleanup/plans/{plan_id}/execute \
 ### GET `/api/email/cleanup/history`
 
 - **Handler:** `get_cleanup_history`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:4396`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/email_cleanup.py`
 
 #### Request Body
 
@@ -225,7 +224,4 @@ curl -X GET http://localhost:8765/api/email/cleanup/history \
 
 ## Source References
 
-- `.agents/agentharness/app/v3/hub_server.py`
-- `.agents/agentharness/app/v3/email_analyzer.py`
-- `.agents/agentharness/app/v3/email_executor.py`
-- `.agents/agentharness/app/v3/oauth_connector.py`
+- `.agents/agentharness/app/v3/routers/email_cleanup.py`

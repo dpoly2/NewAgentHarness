@@ -8,28 +8,28 @@ This group covers hand-authored documents, structured knowledge entries, raw fil
 - Error payloads are returned as `{"detail": "error message"}` with the relevant HTTP status.
 - Timestamps should be treated as ISO 8601 UTC strings; older rows may omit trailing `Z` because the local engine uses naive UTC serialization in a few places.
 ## Endpoint Index
-| Method | Path | Handler | Auth | Line |
+| Method | Path | Handler | Auth | Source File |
 | --- | --- | --- | --- | --- |
-| GET | /api/documents | list_documents | Bearer JWT | 3354 |
-| POST | /api/documents | create_document | Bearer JWT | 3372 |
-| GET | /api/documents/{id} | get_document | Bearer JWT | 3386 |
-| PUT | /api/documents/{id} | update_document | Bearer JWT | 3394 |
-| DELETE | /api/documents/{id} | delete_document_ep | Bearer JWT | 3404 |
-| GET | /api/knowledge | list_knowledge | Bearer JWT | 3275 |
-| POST | /api/knowledge | create_knowledge | Bearer JWT | 3309 |
-| GET | /api/knowledge/{id} | get_knowledge | Bearer JWT | 3322 |
-| PUT | /api/knowledge/{id} | update_knowledge | Bearer JWT | 3330 |
-| DELETE | /api/knowledge/{id} | delete_knowledge | Bearer JWT | 3342 |
-| POST | /api/files/upload | upload_file | Public | 3715 |
-| GET | /api/files/{file_id} | get_file | Public | 3761 |
-| GET | /api/files | list_files | Public | 3784 |
-| POST | /api/files/{file_id}/embed | embed_file | Public | 3804 |
-| GET | /api/files/search | search_documents | Public | 3827 |
+| GET | /api/documents | list_documents | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| POST | /api/documents | create_document | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| GET | /api/documents/{id} | get_document | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| PUT | /api/documents/{id} | update_document | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| DELETE | /api/documents/{id} | delete_document_ep | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| GET | /api/knowledge | list_knowledge | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| POST | /api/knowledge | create_knowledge | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| GET | /api/knowledge/{id} | get_knowledge | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| PUT | /api/knowledge/{id} | update_knowledge | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| DELETE | /api/knowledge/{id} | delete_knowledge | Bearer JWT | .agents/agentharness/app/v3/routers/knowledge.py |
+| POST | /api/files/upload | upload_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| GET | /api/files/{file_id} | get_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| GET | /api/files | list_files | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| POST | /api/files/{file_id}/embed | embed_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| GET | /api/files/_search | search_documents | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
 ## Detailed Endpoints
 ### GET `/api/documents`
 - **Handler:** `list_documents`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3354`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -50,7 +50,7 @@ curl -X GET http://localhost:8765/api/documents \
 ### POST `/api/documents`
 - **Handler:** `create_document`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3372`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -80,7 +80,7 @@ curl -X POST http://localhost:8765/api/documents \
 ### GET `/api/documents/{id}`
 - **Handler:** `get_document`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3386`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -99,7 +99,7 @@ curl -X GET http://localhost:8765/api/documents/{id} \
 ### PUT `/api/documents/{id}`
 - **Handler:** `update_document`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3394`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -126,7 +126,7 @@ curl -X PUT http://localhost:8765/api/documents/{id} \
 ### DELETE `/api/documents/{id}`
 - **Handler:** `delete_document_ep`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3404`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -145,7 +145,7 @@ curl -X DELETE http://localhost:8765/api/documents/{id} \
 ### GET `/api/knowledge`
 - **Handler:** `list_knowledge`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3275`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -166,7 +166,7 @@ curl -X GET http://localhost:8765/api/knowledge \
 ### POST `/api/knowledge`
 - **Handler:** `create_knowledge`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3309`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -196,7 +196,7 @@ curl -X POST http://localhost:8765/api/knowledge \
 ### GET `/api/knowledge/{id}`
 - **Handler:** `get_knowledge`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3322`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -215,7 +215,7 @@ curl -X GET http://localhost:8765/api/knowledge/{id} \
 ### PUT `/api/knowledge/{id}`
 - **Handler:** `update_knowledge`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3330`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 | Field | Type | Default / Rule |
 | --- | --- | --- |
@@ -243,7 +243,7 @@ curl -X PUT http://localhost:8765/api/knowledge/{id} \
 ### DELETE `/api/knowledge/{id}`
 - **Handler:** `delete_knowledge`
 - **Auth required:** Bearer JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3342`
+- **Source:** `.agents/agentharness/app/v3/routers/knowledge.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -261,8 +261,8 @@ curl -X DELETE http://localhost:8765/api/knowledge/{id} \
 ```
 ### POST `/api/files/upload`
 - **Handler:** `upload_file`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3715`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/files.py`
 #### Request Body
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -289,8 +289,8 @@ curl -X POST http://localhost:8765/api/files/upload \
 ```
 ### GET `/api/files/{file_id}`
 - **Handler:** `get_file`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3761`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/files.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -308,8 +308,8 @@ curl -X GET http://localhost:8765/api/files/{file_id} \
 ```
 ### GET `/api/files`
 - **Handler:** `list_files`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3784`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/files.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -327,8 +327,8 @@ curl -X GET http://localhost:8765/api/files \
 ```
 ### POST `/api/files/{file_id}/embed`
 - **Handler:** `embed_file`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3804`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/files.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
@@ -344,17 +344,17 @@ curl -X POST http://localhost:8765/api/files/{file_id}/embed \
   "data": "see endpoint-specific payload"
 }
 ```
-### GET `/api/files/search`
+### GET `/api/files/_search`
 - **Handler:** `search_documents`
-- **Auth required:** No JWT required.
-- **Source:** `.agents/agentharness/app/v3/hub_server.py:3827`
+- **Auth required:** Bearer JWT required.
+- **Source:** `.agents/agentharness/app/v3/routers/files.py`
 #### Request Body
 No JSON body; use query/path parameters only.
 #### Response Schema
 - Runs semantic search over embedded file chunks.
 #### Example
 ```bash
-curl -X GET http://localhost:8765/api/files/search \
+curl -X GET http://localhost:8765/api/files/_search \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer <jwt>' \
   -d '{"value": "example"}'
@@ -380,6 +380,6 @@ curl -X GET http://localhost:8765/api/files/search \
 - [iOS documents view](../ios/views.md)
 - [Database schema](../architecture/database-schema.md)
 ## Source References
-- `.agents/agentharness/app/v3/hub_server.py:3713-4130`
-- `.agents/agentharness/app/v3/file_processor.py`
-- `.agents/agentharness/app/v3/document_rag.py`
+
+- `.agents/agentharness/app/v3/routers/knowledge.py`
+- `.agents/agentharness/app/v3/routers/files.py`
