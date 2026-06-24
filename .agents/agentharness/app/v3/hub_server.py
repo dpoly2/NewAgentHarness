@@ -42,6 +42,7 @@ try:
         WebSocket,
         WebSocketDisconnect,
         BackgroundTasks,
+        Request,
         status,
         Header,
         Query,
@@ -142,7 +143,8 @@ except ImportError:
     MODEL_CATALOG_OK = False
 
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "archonhub-jwt-secret-change-in-production-2024")
+_JWT_SECRET_DEFAULT = "archonhub-jwt-secret-change-in-production-2024"
+SECRET_KEY = os.environ.get("JWT_SECRET", _JWT_SECRET_DEFAULT)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 APP_VERSION = "1.0.0"
@@ -1194,6 +1196,28 @@ class HubServer:
 
 hub = HubServer()
 
+# ── Simple IP-based rate limiter for login endpoint ──────────────────────────
+import time as _time
+_login_attempts: dict[str, list[float]] = {}
+_LOGIN_MAX_ATTEMPTS = 10
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
+
+
+def _check_login_rate_limit(client_ip: str) -> None:
+    """Raise 429 if too many login attempts from this IP in the window."""
+    now = _time.monotonic()
+    window_start = now - _LOGIN_WINDOW_SECONDS
+    attempts = _login_attempts.get(client_ip, [])
+    # Prune old attempts
+    attempts = [t for t in attempts if t > window_start]
+    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Too many login attempts. Try again in {_LOGIN_WINDOW_SECONDS // 60} minutes.",
+        )
+    attempts.append(now)
+    _login_attempts[client_ip] = attempts
+
 
 def make_emit(run_id: str):
     async def _emit(event_type: str, **kwargs: Any):
@@ -1511,6 +1535,15 @@ if FASTAPI_OK:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         _init_schema()
+        # Warn loudly if running with the default insecure JWT secret
+        if SECRET_KEY == _JWT_SECRET_DEFAULT:
+            import warnings
+            warnings.warn(
+                "ArchonHub is using the default JWT_SECRET. "
+                "Set JWT_SECRET in .env to a random value before exposing this server.",
+                stacklevel=1,
+            )
+            hub.logger.warning("SECURITY: JWT_SECRET is set to the default insecure value. Set JWT_SECRET in .env!")
         hub._queue = asyncio.Queue()
         hub._loop = asyncio.get_running_loop()
         for pending_job in _load_pending_jobs():
@@ -1543,7 +1576,23 @@ if FASTAPI_OK:
 
 
     app = FastAPI(title="ArchonHub", version="1.0.0", lifespan=lifespan)
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    _cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+    _cors_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()] if _cors_origins_env else ["*"]
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.exception_handler(Exception)
+    async def _unhandled_exception_handler(request: Any, exc: Exception) -> JSONResponse:
+        hub.logger.exception("Unhandled exception for %s %s", request.method, request.url.path)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
 
     try:
         app.mount("/web", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
@@ -1626,7 +1675,9 @@ if FASTAPI_OK:
 
 
     @app.post("/api/auth/login")
-    async def login(body: LoginRequest):
+    async def login(body: LoginRequest, request: Request):
+        client_ip = request.client.host if request.client else "unknown"
+        _check_login_rate_limit(client_ip)
         user = _authenticate_user(body.username, body.password)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
@@ -1795,7 +1846,7 @@ if FASTAPI_OK:
     @app.put("/api/todos/{id}")
     async def update_todo(id: str, body: TodoUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         todo = _update_record("todos", id, updates, json_fields={"tags"})
         if not todo:
@@ -1886,7 +1937,7 @@ if FASTAPI_OK:
     @app.put("/api/trips/{id}")
     async def update_trip(id: str, body: TripUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         trip = _update_record("travel_trips", id, updates)
         if not trip:
@@ -1948,7 +1999,7 @@ if FASTAPI_OK:
     @app.put("/api/connectors/{id}")
     async def update_connector(id: str, body: ConnectorUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         connector = _update_record("email_connectors", id, updates, json_fields={"credentials"})
         if not connector:
@@ -2168,7 +2219,7 @@ if FASTAPI_OK:
     @app.put("/api/projects/{id}")
     async def update_project(id: str, body: ProjectUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         project = _update_record("projects", id, updates, json_fields={"tags"})
         if not project:
@@ -2225,7 +2276,7 @@ if FASTAPI_OK:
     @app.put("/api/clients/{id}")
     async def update_client(id: str, body: ClientUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         client = _update_record("clients", id, updates)
         if not client:
@@ -3033,7 +3084,7 @@ if FASTAPI_OK:
     @app.put("/api/users/{id}")
     async def update_user(id: int, body: UserUpdate, admin_user: dict = Depends(get_admin_user)):
         del admin_user
-        updates = {key: value for key, value in body.model_dump().items() if value is not None}
+        updates = {key: value for key, value in body.model_dump(exclude_unset=True).items()}
         if "is_active" in updates:
             updates["is_active"] = 1 if updates["is_active"] else 0
         user = _update_record("users", id, updates)
@@ -3132,7 +3183,7 @@ if FASTAPI_OK:
     @app.put("/api/agents/{agent_id}")
     async def update_agent_endpoint(agent_id: str, body: AgentUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         conn = _db_connection()
         try:
@@ -3210,7 +3261,7 @@ if FASTAPI_OK:
     @app.put("/api/automations/{id}")
     async def update_automation(id: str, body: AutomationUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         rec = _update_record("automations", id, updates, json_fields=_AUTO_JSON)
         if not rec:
@@ -3330,7 +3381,7 @@ if FASTAPI_OK:
     @app.put("/api/knowledge/{id}")
     async def update_knowledge(id: str, body: KnowledgeUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         if "is_active" in updates:
             updates["is_active"] = 1 if updates["is_active"] else 0
@@ -3394,7 +3445,7 @@ if FASTAPI_OK:
     @app.put("/api/documents/{id}")
     async def update_document(id: str, body: DocumentUpdate, current_user: dict = Depends(get_current_user)):
         del current_user
-        updates = {k: v for k, v in body.model_dump().items() if v is not None}
+        updates = {k: v for k, v in body.model_dump(exclude_unset=True).items()}
         updates["updated_at"] = _now_iso()
         rec = _update_record("documents", id, updates, json_fields=_DOC_JSON)
         if not rec:
@@ -3657,7 +3708,13 @@ if FASTAPI_OK:
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
         try:
-            first_message = await websocket.receive_json()
+            first_message = await asyncio.wait_for(websocket.receive_json(), timeout=15.0)
+        except asyncio.TimeoutError:
+            try:
+                await websocket.close(code=1008)
+            except Exception:
+                pass
+            return
         except WebSocketDisconnect:
             # Client disconnected before sending auth — normal browser navigation
             return
@@ -3717,12 +3774,13 @@ if FASTAPI_OK:
         file: bytes = None,
         filename: str = None,
         mime_type: str = None,
-        user_id: str = "default_user",
         conversation_id: Optional[str] = None,
-        message_id: Optional[str] = None
+        message_id: Optional[str] = None,
+        current_user: dict = Depends(get_current_user),
     ):
         """Upload a file for processing."""
         try:
+            user_id = current_user.get("username", "default_user")
             from file_processor import FileProcessor
             
             # Initialize processor
@@ -3759,7 +3817,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/files/{file_id}")
-    async def get_file(file_id: str):
+    async def get_file(file_id: str, _: dict = Depends(get_current_user)):
         """Get file metadata and parsed content."""
         try:
             from file_processor import FileProcessor
@@ -3782,9 +3840,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/files")
-    async def list_files(user_id: str = "default_user", limit: int = 50):
+    async def list_files(limit: int = 50, current_user: dict = Depends(get_current_user)):
         """List files uploaded by user."""
         try:
+            user_id = current_user.get("username", "default_user")
             from file_processor import FileProcessor
             
             upload_dir = AGENTS_DIR / "data" / "uploads"
@@ -3802,7 +3861,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/files/{file_id}/embed")
-    async def embed_file(file_id: str):
+    async def embed_file(file_id: str, _: dict = Depends(get_current_user)):
         """Generate embeddings for uploaded file to enable semantic search."""
         try:
             from document_rag import DocumentEmbedder
@@ -3824,8 +3883,8 @@ if FASTAPI_OK:
             logger.error(f"Embed file error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
-    @app.get("/api/files/search")
-    async def search_documents(query: str, limit: int = 5, file_ids: Optional[str] = None):
+    @app.get("/api/files/_search")
+    async def search_documents(query: str, limit: int = 5, file_ids: Optional[str] = None, _: dict = Depends(get_current_user)):
         """Semantic search across all embedded documents."""
         try:
             from document_rag import DocumentEmbedder
@@ -3852,13 +3911,13 @@ if FASTAPI_OK:
     # ── Feedback & Learning System API ──────────────────────────────────────
     
     @app.post("/api/messages/{message_id}/feedback")
-    async def submit_feedback(message_id: str, request: dict):
+    async def submit_feedback(message_id: str, request: dict, current_user: dict = Depends(get_current_user)):
         """Submit thumbs up/down feedback on a message."""
         try:
             rating = request.get("rating")  # 1 or -1
             feedback_text = request.get("feedback_text", "")
             category = request.get("category", "other")
-            user_id = request.get("user_id", "default_user")
+            user_id = current_user.get("username", "default_user")
             
             if rating not in [1, -1]:
                 raise HTTPException(status_code=400, detail="Rating must be 1 or -1")
@@ -3908,13 +3967,13 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/corrections")
-    async def submit_correction(request: dict):
+    async def submit_correction(request: dict, current_user: dict = Depends(get_current_user)):
         """Submit a user correction to learn from."""
         try:
             message_id = request.get("message_id")
             corrected_intent = request.get("corrected_intent")
             correction_text = request.get("correction_text")
-            user_id = request.get("user_id", "default_user")
+            user_id = current_user.get("username", "default_user")
             correction_type = request.get("correction_type", "clarification")
             
             if not all([message_id, corrected_intent, correction_text]):
@@ -3965,9 +4024,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/feedback/stats")
-    async def get_feedback_stats(user_id: str = "default_user"):
+    async def get_feedback_stats(current_user: dict = Depends(get_current_user)):
         """Get feedback statistics for a user."""
         try:
+            user_id = current_user.get("username", "default_user")
             conn = sqlite3.connect(str(DB_PATH))
             conn.row_factory = sqlite3.Row
             try:
@@ -4015,9 +4075,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/feedback/analyze")
-    async def analyze_feedback(days: int = 7, user_id: str = "default_user"):
+    async def analyze_feedback(days: int = 7, current_user: dict = Depends(get_current_user)):
         """Analyze feedback patterns and generate learning insights."""
         try:
+            user_id = current_user.get("username", "default_user")
             from feedback_learner import FeedbackLearner
             
             learner = FeedbackLearner(DB_PATH)
@@ -4032,9 +4093,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/feedback/preferences")
-    async def get_user_preferences(user_id: str = "default_user"):
+    async def get_user_preferences(current_user: dict = Depends(get_current_user)):
         """Get learned style preferences for a user."""
         try:
+            user_id = current_user.get("username", "default_user")
             from feedback_learner import FeedbackLearner
             
             learner = FeedbackLearner(DB_PATH)
@@ -4051,9 +4113,10 @@ if FASTAPI_OK:
     # ── Proactive Intelligence API ───────────────────────────────────────────
 
     @app.get("/api/briefing/morning")
-    async def get_morning_briefing(user_id: str = "default_user"):
+    async def get_morning_briefing(current_user: dict = Depends(get_current_user)):
         """Generate or retrieve today's morning briefing."""
         try:
+            user_id = current_user.get("username", "default_user")
             from morning_brief import MorningBriefAgent
             
             # Check if brief already exists for today
@@ -4096,9 +4159,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/briefing/history")
-    async def get_briefing_history(user_id: str = "default_user", limit: int = 30):
+    async def get_briefing_history(limit: int = 30, current_user: dict = Depends(get_current_user)):
         """Get historical morning briefings."""
         try:
+            user_id = current_user.get("username", "default_user")
             conn = sqlite3.connect(str(DB_PATH))
             conn.row_factory = sqlite3.Row
             try:
@@ -4125,9 +4189,10 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/api/monitoring/run")
-    async def run_monitoring(user_id: str = "default_user"):
+    async def run_monitoring(current_user: dict = Depends(get_current_user)):
         """Run proactive monitoring cycle (deadlines + anomalies)."""
         try:
+            user_id = current_user.get("username", "default_user")
             from proactive_monitor import ProactiveMonitor
             
             monitor = ProactiveMonitor(DB_PATH)
@@ -4138,14 +4203,15 @@ if FASTAPI_OK:
             logger.error(f"Monitoring error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
-    @app.get("/api/notifications")
-    async def get_notifications(
-        user_id: str = "default_user",
+    @app.get("/api/monitoring/notifications")
+    async def get_monitoring_notifications(
         viewed: Optional[bool] = None,
-        limit: int = 50
+        limit: int = 50,
+        current_user: dict = Depends(get_current_user),
     ):
         """Get notifications for user."""
         try:
+            user_id = current_user.get("username", "default_user")
             conn = sqlite3.connect(str(DB_PATH))
             conn.row_factory = sqlite3.Row
             try:
@@ -4183,8 +4249,8 @@ if FASTAPI_OK:
             logger.error(f"Get notifications error: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
-    @app.post("/api/notifications/{notification_id}/dismiss")
-    async def dismiss_notification(notification_id: str):
+    @app.post("/api/monitoring/notifications/{notification_id}/dismiss")
+    async def dismiss_monitoring_notification(notification_id: str, _: dict = Depends(get_current_user)):
         """Mark notification as dismissed."""
         try:
             conn = sqlite3.connect(str(DB_PATH))
@@ -4207,13 +4273,13 @@ if FASTAPI_OK:
     # ── Agent Collaboration API ──────────────────────────────────────────────
     
     @app.post("/api/agents/collaborate")
-    async def agent_collaboration(request: dict):
+    async def agent_collaboration(request: dict, current_user: dict = Depends(get_current_user)):
         """Orchestrate multi-agent collaboration on a task."""
         try:
             from agent_orchestrator import AgentOrchestrator
             
             query = request.get('query')
-            user_id = request.get('user_id', 'default_user')
+            user_id = current_user.get("username", "default_user")
             agents = request.get('agents')  # Optional: explicit agent list
             
             if not query:
@@ -4237,7 +4303,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/agents/capabilities")
-    async def get_agent_capabilities(agent_name: Optional[str] = None):
+    async def get_agent_capabilities(agent_name: Optional[str] = None, _: dict = Depends(get_current_user)):
         """Get agent capabilities."""
         try:
             from agent_orchestrator import AgentOrchestrator
@@ -4255,7 +4321,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.get("/api/agents/conversations/{conversation_id}")
-    async def get_conversation_history(conversation_id: str):
+    async def get_conversation_history(conversation_id: str, _: dict = Depends(get_current_user)):
         """Get agent conversation history."""
         try:
             from agent_orchestrator import AgentOrchestrator
@@ -4274,7 +4340,7 @@ if FASTAPI_OK:
     # ── Email Cleanup API ────────────────────────────────────────────────────
 
     @app.post("/api/email/cleanup/analyze")
-    async def analyze_email_cleanup(request: dict):
+    async def analyze_email_cleanup(request: dict, _: dict = Depends(get_current_user)):
         """Analyze inbox and generate cleanup plan."""
         try:
             from email_analyzer import EmailAnalyzer
@@ -4299,7 +4365,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/api/email/cleanup/plans")
-    async def list_cleanup_plans():
+    async def list_cleanup_plans(_: dict = Depends(get_current_user)):
         """List all cleanup plans."""
         try:
             conn = sqlite3.connect(str(DB_PATH))
@@ -4322,7 +4388,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/api/email/cleanup/plans/{plan_id}")
-    async def get_cleanup_plan(plan_id: str):
+    async def get_cleanup_plan(plan_id: str, _: dict = Depends(get_current_user)):
         """Get cleanup plan details with categorized emails."""
         try:
             from email_analyzer import EmailAnalyzer
@@ -4341,7 +4407,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.put("/api/email/cleanup/plans/{plan_id}/approve")
-    async def approve_cleanup_items(plan_id: str, request: dict):
+    async def approve_cleanup_items(plan_id: str, request: dict, _: dict = Depends(get_current_user)):
         """Approve specific cleanup items."""
         try:
             item_ids = request.get('item_ids', [])
@@ -4373,7 +4439,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/api/email/cleanup/plans/{plan_id}/execute")
-    async def execute_cleanup_plan(plan_id: str, background_tasks: BackgroundTasks):
+    async def execute_cleanup_plan(plan_id: str, background_tasks: BackgroundTasks, _: dict = Depends(get_current_user)):
         """Execute approved cleanup items."""
         try:
             from email_executor import EmailCleanupExecutor
@@ -4394,7 +4460,7 @@ if FASTAPI_OK:
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.get("/api/email/cleanup/history")
-    async def get_cleanup_history():
+    async def get_cleanup_history(_: dict = Depends(get_current_user)):
         """Get cleanup execution history and statistics."""
         try:
             conn = sqlite3.connect(str(DB_PATH))
@@ -4712,17 +4778,12 @@ if __name__ == "__main__":
         raise SystemExit("FastAPI is not installed")
 
     import sys as _sys
-    import multiprocessing as _mp
 
-    # Windows: multiprocessing workers can't inherit sockets (WinError 10022)
-    # and each worker would get an isolated hub instance (breaks WebSocket broadcast).
-    # Use a single worker with asyncio on Windows; use multiple workers on Linux/macOS.
-    if _sys.platform == "win32":
-        _workers = 1
-        _loop = "asyncio"
-    else:
-        _workers = min(4, max(2, _mp.cpu_count()))
-        _loop = "auto"
+    # Single worker required: hub uses an in-process asyncio.Queue and in-memory
+    # WebSocket client set — multiple processes each get isolated state and
+    # broadcasts / job-queue entries would diverge across workers.
+    _workers = 1
+    _loop = "asyncio" if _sys.platform == "win32" else "auto"
 
     port = int(os.environ.get("HUB_PORT", 8765))
     host = os.environ.get("HUB_HOST", "0.0.0.0")
