@@ -50,6 +50,7 @@ if FASTAPI_OK:
         projects,
         prompt_templates,
         providers,
+        plans,
         reports,
         runs,
         sandbox,
@@ -214,6 +215,7 @@ if FASTAPI_OK:
             users.router,
             config_api.router,
             providers.router,
+            plans.router,
         ):
             app.include_router(_router, prefix='/api')
         return app

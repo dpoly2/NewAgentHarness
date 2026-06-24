@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -433,6 +434,28 @@ def _fallback_init_schema() -> None:
                 content TEXT,
                 created_at TEXT
             );
+            CREATE TABLE IF NOT EXISTS implementation_plans (
+                plan_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                project TEXT DEFAULT '',
+                status TEXT DEFAULT 'draft',
+                authored_by TEXT DEFAULT 'human',
+                graph_json TEXT,
+                preflight_json TEXT,
+                version INTEGER DEFAULT 1,
+                run_id TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS plan_node_events (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                node_id TEXT,
+                event_type TEXT NOT NULL,
+                payload_json TEXT,
+                timestamp TEXT,
+                FOREIGN KEY (plan_id) REFERENCES implementation_plans(plan_id)
+            );
             CREATE INDEX IF NOT EXISTS idx_runs_agent_status_created ON runs (agent_id, status, created_at);
             CREATE INDEX IF NOT EXISTS idx_job_queue_status ON job_queue (status);
             CREATE INDEX IF NOT EXISTS idx_todos_status ON todos (status);
@@ -450,14 +473,51 @@ def _fallback_init_schema() -> None:
         conn.close()
 
 
+def _ensure_plan_schema() -> None:
+    conn = _db_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS implementation_plans (
+                plan_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                project TEXT DEFAULT '',
+                status TEXT DEFAULT 'draft',
+                authored_by TEXT DEFAULT 'human',
+                graph_json TEXT,
+                preflight_json TEXT,
+                version INTEGER DEFAULT 1,
+                run_id TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS plan_node_events (
+                id TEXT PRIMARY KEY,
+                plan_id TEXT NOT NULL,
+                node_id TEXT,
+                event_type TEXT NOT NULL,
+                payload_json TEXT,
+                timestamp TEXT,
+                FOREIGN KEY (plan_id) REFERENCES implementation_plans(plan_id)
+            );
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _init_schema() -> None:
     if db and hasattr(db, "init_schema"):
         try:
             db.init_schema()  # type: ignore[attr-defined]
+            _ensure_plan_schema()
             return
         except Exception:
             pass
     _fallback_init_schema()
+    _ensure_plan_schema()
 
 
 def _config_value(key: str, default: Any = None) -> Any:
@@ -843,3 +903,123 @@ def _save_skill(agent_id: str, content: str, version: Optional[int] = None) -> d
     _create_record("skills", record)
     _write_skill_content(agent_id, content)
     return _latest_skill(agent_id)
+
+
+# ── Plan helpers ───────────────────────────────────────────────────────────────
+
+def _save_plan(plan: dict) -> dict:
+    """Insert or replace a full plan dict."""
+    conn = _db_connection()
+    now = _now_iso()
+    plan_id = plan.get("plan_id") or uuid.uuid4().hex
+    plan["plan_id"] = plan_id
+    plan["updated_at"] = now
+    if not plan.get("created_at"):
+        plan["created_at"] = now
+    preflight_report = plan.pop("preflight_report", None)
+    preflight_json = _json_dumps(preflight_report)
+    graph_json = _json_dumps(plan)
+    plan["preflight_report"] = preflight_report
+    try:
+        with conn:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO implementation_plans
+                (plan_id, title, project, status, authored_by, graph_json, preflight_json, version, run_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    plan_id,
+                    plan.get("title", ""),
+                    plan.get("project", ""),
+                    plan.get("status", "draft"),
+                    plan.get("authored_by", "human"),
+                    graph_json,
+                    preflight_json,
+                    plan.get("version", 1),
+                    plan.get("run_id"),
+                    plan.get("created_at", now),
+                    now,
+                ),
+            )
+    finally:
+        conn.close()
+    return plan
+
+
+def _load_plan(plan_id: str) -> dict | None:
+    """Load a plan by ID, reconstituting graph_json + preflight_json."""
+    conn = _db_connection()
+    try:
+        row = conn.execute(
+            "SELECT graph_json, preflight_json FROM implementation_plans WHERE plan_id = ?",
+            (plan_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return None
+    plan = _json_loads(row[0], {})
+    if not isinstance(plan, dict):
+        return None
+    plan["preflight_report"] = _json_loads(row[1])
+    return plan
+
+
+def _list_plans(project: Optional[str] = None, status: Optional[str] = None, limit: int = 50) -> list[dict]:
+    """List plans as summary rows (no full graph_json for performance)."""
+    conn = _db_connection()
+    wheres: list[str] = []
+    params: list[Any] = []
+    if project:
+        wheres.append("project = ?")
+        params.append(project)
+    if status:
+        wheres.append("status = ?")
+        params.append(status)
+    where_clause = ("WHERE " + " AND ".join(wheres)) if wheres else ""
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT plan_id, title, project, status, authored_by, version, run_id, created_at, updated_at
+            FROM implementation_plans {where_clause}
+            ORDER BY updated_at DESC LIMIT ?
+            """,
+            (*params, limit),
+        ).fetchall()
+    finally:
+        conn.close()
+    cols = ["plan_id", "title", "project", "status", "authored_by", "version", "run_id", "created_at", "updated_at"]
+    return [dict(zip(cols, row)) for row in rows]
+
+
+def _append_plan_event(plan_id: str, node_id: Optional[str], event_type: str, payload: dict) -> None:
+    """Append a plan node event to the audit log."""
+    conn = _db_connection()
+    try:
+        with conn:
+            conn.execute(
+                "INSERT INTO plan_node_events (id, plan_id, node_id, event_type, payload_json, timestamp) VALUES (?,?,?,?,?,?)",
+                (uuid.uuid4().hex, plan_id, node_id, event_type, _json_dumps(payload), _now_iso()),
+            )
+    finally:
+        conn.close()
+
+
+def _get_plan_events(plan_id: str, limit: int = 200) -> list[dict]:
+    """Get event log for a plan."""
+    conn = _db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT id, plan_id, node_id, event_type, payload_json, timestamp FROM plan_node_events WHERE plan_id = ? ORDER BY timestamp ASC LIMIT ?",
+            (plan_id, limit),
+        ).fetchall()
+    finally:
+        conn.close()
+    cols = ["id", "plan_id", "node_id", "event_type", "payload_json", "timestamp"]
+    result = []
+    for row in rows:
+        item = dict(zip(cols, row))
+        item["payload"] = _json_loads(item.pop("payload_json", "{}"), {})
+        result.append(item)
+    return result

@@ -685,6 +685,40 @@
             .stats-grid { grid-template-columns: 1fr; }
             th:nth-child(n+5), td:nth-child(n+5) { display: none; }
         }
+
+        /* ── Plan Canvas ─────────────────────────────────────────── */
+        .plan-canvas-wrap { position: relative; background: #0d1117; border-radius: 8px; border: 1px solid rgba(45,212,255,0.12); overflow: hidden; }
+        .plan-canvas-wrap svg { display: block; width: 100%; }
+        .plan-node { cursor: pointer; }
+        .plan-node rect { rx: 6; transition: filter 0.2s; }
+        .plan-node:hover rect { filter: brightness(1.3); }
+        .plan-node text { font-family: system-ui, sans-serif; font-size: 12px; fill: #e8eaf0; pointer-events: none; }
+        .plan-node.status-pending rect { fill: #1c2230; stroke: #4a5568; }
+        .plan-node.status-ready rect { fill: #1a2744; stroke: #2d84ff; }
+        .plan-node.status-running rect { fill: #1a2744; stroke: #2d84ff; animation: plan-pulse 1.4s infinite; }
+        .plan-node.status-done rect { fill: #0a2a1a; stroke: #00c864; }
+        .plan-node.status-blocked rect { fill: #2a1010; stroke: #ff4444; }
+        .plan-node.status-skipped rect { fill: #1c2230; stroke: #4a5568; opacity: 0.5; }
+        .plan-node.role-human_gate rect { stroke: #f59e0b; }
+        .plan-node.role-milestone rect { fill: #1a1a2e; stroke: #a78bfa; }
+        .plan-node.role-decision polygon { fill: #1a1a2e; stroke: #f59e0b; }
+        @keyframes plan-pulse { 0%,100% { stroke-width: 2; } 50% { stroke-width: 4; } }
+        .plan-edge line, .plan-edge path { stroke: #4a5568; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+        .plan-edge.kind-dependency line { stroke-dasharray: 6 3; }
+        .plan-edge.kind-handoff line { stroke: #a78bfa; }
+        .plan-evidence-panel { background: #0d1117; border: 1px solid rgba(45,212,255,0.12); border-radius: 8px; padding: 16px; margin-top: 12px; }
+        .plan-evidence-item { border-left: 3px solid #2d84ff; padding: 8px 12px; margin: 8px 0; background: rgba(45,132,255,0.06); border-radius: 0 6px 6px 0; font-size: 13px; }
+        .plan-evidence-item.type-error { border-color: #ff4444; background: rgba(255,68,68,0.06); }
+        .plan-evidence-item.type-review_finding { border-color: #f59e0b; background: rgba(245,158,11,0.06); }
+        .plan-issue-error { color: #ff4444; font-size: 13px; }
+        .plan-issue-warning { color: #f59e0b; font-size: 13px; }
+        .plan-status-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .plan-status-draft { background: rgba(74,85,104,0.3); color: #a0aec0; }
+        .plan-status-preflight_passed { background: rgba(0,200,100,0.15); color: #00c864; }
+        .plan-status-approved { background: rgba(45,132,255,0.2); color: #2d84ff; }
+        .plan-status-running { background: rgba(45,132,255,0.3); color: #60a5fa; }
+        .plan-status-done { background: rgba(0,200,100,0.2); color: #00c864; }
+        .plan-status-blocked, .plan-status-abandoned { background: rgba(255,68,68,0.2); color: #ff4444; }
     </style>
 </head>
 <body class="sidebar-expanded">
@@ -745,6 +779,7 @@
         const navItems = [
             { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
             { id: 'runs', icon: '▶', label: 'Runs' },
+            { id: 'plans', icon: '🗺', label: 'Plans' },
             { id: 'queue', icon: '⏳', label: 'Queue' },
             { id: 'todos', icon: '📋', label: 'Todos' },
             { id: 'schedule', icon: '📅', label: 'Schedule' },
@@ -783,7 +818,8 @@
             mobileNavOpen: false,
             hubOnline: false,
             wsState: 'offline',
-            health: null
+            health: null,
+            currentPlanId: null
         };
 
         let ws = null;
@@ -1199,6 +1235,7 @@
         }
 
         function handleWSEvent(event) {
+            handlePlanWSEvent(event);
             if (event.type === 'node_update') { updateRunProgress(event); }
             if (event.type === 'todo_update') { if (state.currentPage === 'todos') showTodos(); }
             if (event.type === 'notif') {
@@ -1259,6 +1296,7 @@
                 login: showLogin,
                 dashboard: showDashboard,
                 runs: showRuns,
+                plans: showPlans,
                 queue: showQueue,
                 todos: showTodos,
                 schedule: showSchedule,
@@ -2982,6 +3020,335 @@
                 await navigate(page, true);
             } catch {
                 logout();
+            }
+        }
+
+
+        // ── Plan Graph ────────────────────────────────────────────────────────
+
+        function planStatusBadge(status) {
+            return `<span class="plan-status-badge plan-status-${escapeHtml(status)}">${escapeHtml(status)}</span>`;
+        }
+
+        async function showPlans() {
+            if (!(await requireAuth())) return;
+            state.currentPlanId = null;
+            setLoading('Plans', 'Loading implementation plans…');
+            try {
+                const data = await api('GET', '/api/plans');
+                const plans = data?.plans || [];
+                renderShell(
+                    'Plans',
+                    'Author, preflight, and execute implementation plan graphs.',
+                    !plans.length
+                        ? emptyState('No plans yet', 'Create a plan to get started.')
+                        : `
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr><th>Title</th><th>Project</th><th>Status</th><th>Author</th><th>Updated</th><th>Actions</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        ${plans.map((plan) => `
+                                            <tr>
+                                                <td><strong>${escapeHtml(plan.title)}</strong></td>
+                                                <td>${escapeHtml(plan.project || '—')}</td>
+                                                <td>${planStatusBadge(plan.status || 'draft')}</td>
+                                                <td>${escapeHtml(plan.authored_by || '—')}</td>
+                                                <td>${fmtRelative(plan.updated_at)}</td>
+                                                <td><button class="secondary-btn" data-open-plan="${escapeHtml(plan.plan_id)}">Open</button></td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `,
+                    `<button class="secondary-btn" id="newPlanBtn">+ New Plan</button>`
+                );
+                $('#newPlanBtn')?.addEventListener('click', () => showCreatePlan());
+                $$('[data-open-plan]').forEach((button) => button.addEventListener('click', () => showPlanDetail(button.dataset.openPlan)));
+            } catch (error) {
+                renderShell('Plans', 'Author, preflight, and execute implementation plan graphs.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load plans')}</div>`);
+            }
+        }
+
+        async function showPlanDetail(planId) {
+            if (!planId) return;
+            state.currentPlanId = planId;
+            setLoading('Plan Detail', 'Loading implementation plan…');
+            try {
+                const data = await api('GET', `/api/plans/${planId}`);
+                renderPlanDetail(data.plan);
+            } catch (error) {
+                renderShell('Plans', 'Author, preflight, and execute implementation plan graphs.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load plan')}</div>`, `<button class="ghost-btn" id="backPlansBtn">← Back</button>`);
+                $('#backPlansBtn')?.addEventListener('click', () => showPlans());
+            }
+        }
+
+        function renderPlanDetail(plan) {
+            const report = plan.preflight_report;
+            const reportHtml = report ? `
+                <div class="panel" style="margin-bottom:16px">
+                    <h3>Preflight Report — ${report.passed ? '<span style="color:var(--success)">✅ Passed</span>' : '<span style="color:var(--error)">❌ Failed</span>'}</h3>
+                    <p style="color:#6b7a99;font-size:13px">Simulated order: ${(report.simulated_order || []).join(' → ') || '—'}</p>
+                    ${(report.issues || []).map((issue) => `<div class="plan-issue-${issue.severity}">${issue.severity === 'error' ? '✖' : '⚠'} ${issue.node_id ? `[${escapeHtml(issue.node_id)}] ` : ''}${escapeHtml(issue.message)}</div>`).join('')}
+                    ${!(report.issues || []).length ? '<p style="color:var(--success);font-size:13px">No issues found.</p>' : ''}
+                </div>
+            ` : '';
+
+            renderShell(
+                'Plans',
+                plan.objective || 'Implementation plan detail',
+                `
+                    <div id="planDetailWrap">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+                            <div>
+                                <h2 style="margin:0 0 6px">${escapeHtml(plan.title)}</h2>
+                                <p style="color:#6b7a99;margin:0">${escapeHtml(plan.objective || '')}</p>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                                ${planStatusBadge(plan.status || 'draft')}
+                                ${['draft', 'preflight_passed'].includes(plan.status) ? '<button class="secondary-btn" id="runPreflightBtn">▶ Run Preflight</button>' : ''}
+                                ${plan.status === 'preflight_passed' ? '<button class="success-btn" id="approvePlanBtn">✅ Approve</button>' : ''}
+                                ${plan.status === 'approved' ? '<button class="secondary-btn" id="executePlanBtn">🚀 Execute</button>' : ''}
+                                ${['draft','preflight_passed','approved'].includes(plan.status) ? '<button class="danger-btn" id="abandonPlanBtn">Abandon</button>' : ''}
+                            </div>
+                        </div>
+                        ${reportHtml}
+                        <div class="plan-canvas-wrap" style="min-height:260px;margin-bottom:16px" id="planCanvasWrap">${renderPlanSVG(plan)}</div>
+                        <div id="planEvidencePanel"></div>
+                        <div class="panel" style="margin-top:16px" id="planNodeListWrap">${renderPlanNodeList(plan)}</div>
+                    </div>
+                `,
+                `<button class="ghost-btn" id="backPlansBtn">← Back</button>`
+            );
+
+            $('#backPlansBtn')?.addEventListener('click', () => showPlans());
+            $('#runPreflightBtn')?.addEventListener('click', () => runPreflight(plan.plan_id));
+            $('#approvePlanBtn')?.addEventListener('click', () => approvePlan(plan.plan_id));
+            $('#executePlanBtn')?.addEventListener('click', () => executePlan(plan.plan_id));
+            $('#abandonPlanBtn')?.addEventListener('click', () => abandonPlan(plan.plan_id));
+            $$('.plan-node[data-node-id]').forEach((el) => {
+                el.addEventListener('click', () => showNodeEvidence(plan, el.dataset.nodeId));
+            });
+        }
+
+        function renderPlanSVG(plan) {
+            const nodes = plan.nodes || [];
+            const edges = plan.edges || [];
+            if (!nodes.length) return '<p style="padding:20px;color:#6b7a99">No nodes defined.</p>';
+
+            const NODE_W = 160, NODE_H = 48, PAD_X = 40, PAD_Y = 60;
+            const statusColorMap = { pending:'#4a5568', ready:'#2d84ff', running:'#2d84ff', done:'#00c864', blocked:'#ff4444', skipped:'#4a5568' };
+            const statusFillMap = { pending:'#1c2230', ready:'#1a2744', running:'#1a2744', done:'#0a2a1a', blocked:'#2a1010', skipped:'#1c2230' };
+            const levels = {};
+            const inDeg = {};
+            const adj = {};
+
+            nodes.forEach((node) => { inDeg[node.id] = 0; adj[node.id] = []; });
+            nodes.forEach((node) => (node.depends_on || []).forEach((dep) => { if (inDeg[dep] !== undefined) inDeg[node.id] += 1; }));
+            edges.forEach((edge) => { if (adj[edge.from_node]) adj[edge.from_node].push(edge.to_node); });
+
+            const roots = nodes.filter((node) => inDeg[node.id] === 0).map((node) => node.id);
+            roots.forEach((nodeId) => { levels[nodeId] = 0; });
+            const queue = [...roots];
+            while (queue.length) {
+                const current = queue.shift();
+                (adj[current] || []).forEach((child) => {
+                    if (levels[child] === undefined || levels[child] <= levels[current]) {
+                        levels[child] = levels[current] + 1;
+                        queue.push(child);
+                    }
+                });
+            }
+            nodes.forEach((node) => { if (levels[node.id] === undefined) levels[node.id] = 0; });
+
+            const byLevel = {};
+            nodes.forEach((node) => {
+                byLevel[levels[node.id]] = byLevel[levels[node.id]] || [];
+                byLevel[levels[node.id]].push(node);
+            });
+            const numericLevels = Object.keys(byLevel).map(Number);
+            const maxLevel = numericLevels.length ? Math.max(...numericLevels) : 0;
+            const svgH = (maxLevel + 1) * (NODE_H + PAD_Y) + PAD_Y;
+            const maxPerLevel = Math.max(...Object.values(byLevel).map((group) => group.length));
+            const svgW = Math.max(600, maxPerLevel * (NODE_W + PAD_X) + PAD_X * 2);
+            const pos = {};
+
+            Object.entries(byLevel).forEach(([level, levelNodes]) => {
+                const y = PAD_Y + Number(level) * (NODE_H + PAD_Y);
+                const totalW = levelNodes.length * NODE_W + Math.max(0, levelNodes.length - 1) * PAD_X;
+                const startX = (svgW - totalW) / 2;
+                levelNodes.forEach((node, index) => {
+                    pos[node.id] = { x: startX + index * (NODE_W + PAD_X), y };
+                });
+            });
+
+            const edgeSvg = edges.map((edge) => {
+                const from = pos[edge.from_node];
+                const to = pos[edge.to_node];
+                if (!from || !to) return '';
+                const x1 = from.x + NODE_W / 2;
+                const y1 = from.y + NODE_H;
+                const x2 = to.x + NODE_W / 2;
+                const y2 = to.y;
+                const dash = edge.kind === 'dependency' ? 'stroke-dasharray="6 3"' : '';
+                const color = edge.kind === 'handoff' ? '#a78bfa' : '#4a5568';
+                return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.5" ${dash} marker-end="url(#arrowhead)"/>`;
+            }).join('');
+
+            const nodeSvg = nodes.map((node) => {
+                const p = pos[node.id];
+                if (!p) return '';
+                const fill = statusFillMap[node.status] || '#1c2230';
+                const stroke = statusColorMap[node.status] || '#4a5568';
+                const label = String(node.label || '').length > 20 ? `${String(node.label).slice(0, 19)}…` : String(node.label || '');
+                const icon = node.status === 'done' ? '✓ ' : node.status === 'blocked' ? '✗ ' : node.role === 'human_gate' ? '👤 ' : '';
+                return `<g class="plan-node status-${escapeHtml(node.status || 'pending')} role-${escapeHtml(node.role || 'work')}" data-node-id="${escapeHtml(node.id)}" transform="translate(${p.x},${p.y})">
+                    <rect width="${NODE_W}" height="${NODE_H}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+                    <text x="${NODE_W / 2}" y="18" text-anchor="middle" font-size="11" fill="#a0aec0">${escapeHtml(node.role || 'work')}</text>
+                    <text x="${NODE_W / 2}" y="34" text-anchor="middle" font-size="12" fill="#e8eaf0" font-weight="600">${escapeHtml(icon + label)}</text>
+                </g>`;
+            }).join('');
+
+            return `<svg viewBox="0 0 ${svgW} ${svgH}" style="min-height:${Math.max(180, svgH)}px">
+                <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4a5568"/></marker></defs>
+                ${edgeSvg}${nodeSvg}
+            </svg>`;
+        }
+
+        function renderPlanNodeList(plan) {
+            const nodes = plan.nodes || [];
+            return `<h3>Nodes</h3><table><thead><tr><th>ID</th><th>Role</th><th>Agent</th><th>Status</th><th>Evidence</th></tr></thead><tbody>${nodes.map((node) => `
+                <tr>
+                    <td><strong>${escapeHtml(node.id)}</strong><br><small style="color:#6b7a99">${escapeHtml((node.purpose || '').slice(0, 60))}</small></td>
+                    <td>${escapeHtml(node.role || 'work')}</td>
+                    <td>${escapeHtml(node.agent_id || '—')}</td>
+                    <td>${planStatusBadge(node.status || 'pending')}${node.blocked_reason ? `<br><small style="color:var(--error)">${escapeHtml(node.blocked_reason)}</small>` : ''}</td>
+                    <td>${(node.evidence || []).length} item(s)</td>
+                </tr>
+            `).join('')}</tbody></table>`;
+        }
+
+        function showNodeEvidence(plan, nodeId) {
+            const node = (plan.nodes || []).find((item) => item.id === nodeId);
+            if (!node) return;
+            const panel = $('#planEvidencePanel');
+            if (!panel) return;
+            const evidence = node.evidence || [];
+            panel.innerHTML = `<div class="plan-evidence-panel">
+                <h3 style="margin:0 0 12px">Evidence — ${escapeHtml(node.label)}</h3>
+                ${!evidence.length ? '<p style="color:#6b7a99">No evidence yet.</p>' : evidence.map((item) => `
+                    <div class="plan-evidence-item type-${escapeHtml(item.type)}">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:4px;gap:12px;flex-wrap:wrap">
+                            <strong>${escapeHtml(item.type)}</strong>
+                            <span style="color:#6b7a99;font-size:11px">${escapeHtml(item.source)} · ${fmtRelative(item.timestamp)}</span>
+                        </div>
+                        <pre style="margin:0;white-space:pre-wrap;font-size:12px;color:#a0aec0">${escapeHtml((item.content || '').slice(0, 800))}</pre>
+                        ${item.ref ? `<a href="${escapeHtml(item.ref)}" target="_blank" style="font-size:11px;color:#2d84ff">↗ Reference</a>` : ''}
+                    </div>
+                `).join('')}
+                <button class="ghost-btn" style="margin-top:8px" id="closePlanEvidenceBtn">✕ Close</button>
+            </div>`;
+            $('#closePlanEvidenceBtn')?.addEventListener('click', () => { panel.innerHTML = ''; });
+        }
+
+        async function runPreflight(planId) {
+            showToast('Running preflight…', 'var(--accent)');
+            try {
+                const data = await api('POST', `/api/plans/${planId}/preflight`);
+                showToast(data.report?.passed ? 'Preflight passed ✅' : 'Preflight found issues ⚠', data.report?.passed ? 'var(--success)' : 'var(--warning)');
+                showPlanDetail(planId);
+            } catch (error) {
+                showToast(`Preflight error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        async function approvePlan(planId) {
+            if (!confirm('Approve this plan for execution?')) return;
+            try {
+                await api('POST', `/api/plans/${planId}/approve`);
+                showToast('Plan approved', 'var(--success)');
+                showPlanDetail(planId);
+            } catch (error) {
+                showToast(`Error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        async function executePlan(planId) {
+            if (!confirm('Start execution of this plan?')) return;
+            try {
+                const data = await api('POST', `/api/plans/${planId}/execute`);
+                showToast(`Execution started — run ${shortId(data.run_id, 8)}`, 'var(--success)');
+                showPlanDetail(planId);
+            } catch (error) {
+                showToast(`Error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        async function abandonPlan(planId) {
+            if (!confirm('Abandon this plan?')) return;
+            try {
+                await api('POST', `/api/plans/${planId}/abandon`);
+                showToast('Plan abandoned', 'var(--warning)');
+                showPlans();
+            } catch (error) {
+                showToast(`Error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        async function showCreatePlan() {
+            renderShell(
+                'Plans',
+                'Create a new implementation plan graph.',
+                `
+                    <div class="panel section-stack">
+                        <div class="field"><label for="newPlanTitle">Title</label><input id="newPlanTitle" placeholder="Implement feature X" /></div>
+                        <div class="field"><label for="newPlanObjective">Objective</label><textarea id="newPlanObjective" rows="2" placeholder="What this plan achieves"></textarea></div>
+                        <div class="field"><label for="newPlanProject">Project</label><input id="newPlanProject" placeholder="project-slug" /></div>
+                        <div class="field"><label for="newPlanNodes">Nodes (JSON array)</label><textarea id="newPlanNodes" rows="10" style="font-family:monospace" placeholder='[{"id":"step1","label":"First step","purpose":"Do the first thing","agent_id":"human","exit_criteria":["step done"]}]'></textarea></div>
+                        <div class="field"><label for="newPlanEdges">Edges (JSON array, optional)</label><textarea id="newPlanEdges" rows="4" style="font-family:monospace" placeholder='[{"from_node":"step1","to_node":"step2","kind":"sequence"}]'></textarea></div>
+                        <div class="form-actions">
+                            <button class="secondary-btn" id="submitCreatePlanBtn">Create Plan</button>
+                            <button class="ghost-btn" id="cancelCreatePlanBtn">Cancel</button>
+                        </div>
+                    </div>
+                `
+            );
+            $('#submitCreatePlanBtn')?.addEventListener('click', () => submitCreatePlan());
+            $('#cancelCreatePlanBtn')?.addEventListener('click', () => showPlans());
+        }
+
+        async function submitCreatePlan() {
+            const title = $('#newPlanTitle')?.value?.trim();
+            const objective = $('#newPlanObjective')?.value?.trim();
+            const project = $('#newPlanProject')?.value?.trim();
+            let nodes;
+            let edges;
+            try { nodes = JSON.parse($('#newPlanNodes')?.value || '[]'); } catch { showToast('Invalid nodes JSON', 'var(--error)'); return; }
+            try { edges = JSON.parse($('#newPlanEdges')?.value || '[]'); } catch { showToast('Invalid edges JSON', 'var(--error)'); return; }
+            if (!title || !objective || !nodes.length) {
+                showToast('Title, objective, and at least one node are required', 'var(--warning)');
+                return;
+            }
+            try {
+                const data = await api('POST', '/api/plans', { title, objective, project, nodes, edges });
+                showToast('Plan created', 'var(--success)');
+                showPlanDetail(data.plan.plan_id);
+            } catch (error) {
+                showToast(`Error creating plan: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        function handlePlanWSEvent(event) {
+            if (!event.type || !String(event.type).startsWith('plan.')) return;
+            if (state.currentPage === 'plans' && state.currentPlanId && event.plan_id === state.currentPlanId) {
+                if (['plan.node.start', 'plan.node.done', 'plan.node.blocked', 'plan.node.evidence', 'plan.done', 'plan.preflight.done', 'plan.approved'].includes(event.type)) {
+                    showPlanDetail(state.currentPlanId);
+                }
+            }
+            if (state.currentPage === 'plans' && ['plan.created', 'plan.done', 'plan.abandoned'].includes(event.type) && !state.currentPlanId) {
+                showPlans();
             }
         }
 
