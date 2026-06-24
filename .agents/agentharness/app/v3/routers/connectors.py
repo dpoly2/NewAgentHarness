@@ -110,7 +110,7 @@ async def test_connector_endpoint(id: str, _: dict = Depends(get_current_user)):
 # ── OAuth endpoints ───────────────────────────────────────────────────────────
 
 @router.get("/connectors/oauth/google/init")
-async def google_oauth_init(connector_id: str):
+async def google_oauth_init(connector_id: str, current_user: dict = Depends(get_current_user)):
     connector = _get_record("email_connectors", connector_id, json_fields={"credentials"})
     if not connector:
         raise HTTPException(404, "Connector not found")
@@ -184,7 +184,7 @@ async def gmail_oauth_callback(code: str, state: str):
 
 
 @router.get("/connectors/oauth/microsoft/init")
-async def microsoft_oauth_init(connector_id: str):
+async def microsoft_oauth_init(connector_id: str, current_user: dict = Depends(get_current_user)):
     connector = _get_record("email_connectors", connector_id, json_fields={"credentials"})
     if not connector:
         raise HTTPException(404, "Connector not found")

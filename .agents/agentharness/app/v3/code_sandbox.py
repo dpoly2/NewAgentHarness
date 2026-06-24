@@ -45,8 +45,8 @@ ALLOWED_IMPORTS = {
     "pandas", "numpy", "matplotlib", "matplotlib.pyplot", "seaborn",
     "scipy", "sklearn", "statsmodels", "json", "csv", "math", "datetime",
     "collections", "itertools", "functools", "re", "string", "textwrap",
-    "decimal", "fractions", "statistics", "random", "io", "base64",
-    "pathlib", "typing", "dataclasses", "enum", "abc", "copy",
+    "decimal", "fractions", "statistics", "random", "base64",
+    "typing", "dataclasses", "enum", "abc", "copy",
 }
 
 # Top-level imports blocked in user code (via AST scan)
@@ -55,6 +55,7 @@ BLOCKED_IMPORTS = {
     "shutil", "ctypes", "multiprocessing", "threading", "importlib",
     "pkgutil", "imp", "zipfile", "tarfile", "gzip", "ftplib", "smtplib",
     "paramiko", "fabric", "pexpect",
+    "io", "pathlib",  # can access arbitrary filesystem paths
 }
 
 # Blocked code patterns (string-level, before AST)
@@ -66,6 +67,7 @@ BLOCKED_PATTERNS = [
     "globals()",
     "locals()",
     "open(",
+    "getattr(",
     "builtins",
 ]
 
@@ -207,8 +209,11 @@ def _run_docker(code: str, exec_id: str, data_files: list[dict]) -> SandboxResul
         # Write any uploaded data files
         for df in data_files:
             try:
+                safe_name = Path(df["name"]).name  # strip any directory traversal
+                if not safe_name or safe_name.startswith("."):
+                    continue
                 content = base64.b64decode(df["content_b64"])
-                (wdir / df["name"]).write_bytes(content)
+                (wdir / safe_name).write_bytes(content)
             except Exception:
                 pass
         
@@ -291,8 +296,11 @@ def _run_subprocess(code: str, exec_id: str, data_files: list[dict]) -> SandboxR
         # Write data files
         for df in data_files:
             try:
+                safe_name = Path(df["name"]).name  # strip any directory traversal
+                if not safe_name or safe_name.startswith("."):
+                    continue
                 content = base64.b64decode(df["content_b64"])
-                (wdir / df["name"]).write_bytes(content)
+                (wdir / safe_name).write_bytes(content)
             except Exception:
                 pass
         

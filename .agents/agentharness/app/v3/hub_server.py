@@ -70,6 +70,9 @@ if FASTAPI_OK:
             import warnings
             warnings.warn('ArchonHub is using the default JWT_SECRET. Set JWT_SECRET in .env!', stacklevel=1)
             hub.logger.warning('SECURITY: JWT_SECRET is set to the default insecure value. Set JWT_SECRET in .env!')
+        _default_admin_pw = "ArchonHub2024!"
+        if os.environ.get('ADMIN_PASSWORD', _default_admin_pw) == _default_admin_pw:
+            hub.logger.warning('SECURITY: ADMIN_PASSWORD is set to the default insecure value. Set ADMIN_PASSWORD in .env!')
         for pending_job in _load_pending_jobs():
             payload = pending_job.get('job_data') if isinstance(pending_job.get('job_data'), dict) else {}
             merged = {**payload, **pending_job}
@@ -100,10 +103,11 @@ if FASTAPI_OK:
 
     def build_app() -> FastAPI:
         app = FastAPI(title='ArchonHub', version=APP_VERSION, lifespan=lifespan)
+        _wildcard_cors = _cors_origins == ['*']
         app.add_middleware(
             CORSMiddleware,
             allow_origins=_cors_origins,
-            allow_credentials=True,
+            allow_credentials=not _wildcard_cors,  # credentials=True is unsafe with allow_origins='*'
             allow_methods=['*'],
             allow_headers=['*'],
         )
