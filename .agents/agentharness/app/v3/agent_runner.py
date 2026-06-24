@@ -371,9 +371,16 @@ def run_agent(
         except Exception:
             pass
 
-    # 3. Build system prompt
+    # 3. Build system prompt (inject skill level badge)
+    try:
+        import progressive_intelligence as pi
+        skill_badge = pi.inject_skill_context(agent_id, "")[: 300]
+    except Exception:
+        skill_badge = ""
+
     system = (
-        skill_content
+        skill_badge
+        + skill_content
         + "\n\n"
         + (f"Memory/Prior context:\n{memory}\n\n" if memory else "")
         + (f"Additional context:\n{extra_context}\n\n" if extra_context else "")
@@ -445,6 +452,23 @@ def run_agent(
             )
         except Exception:
             pass
+
+    # 10. Progressive Intelligence post-run hook (reflexion + skill tracking)
+    pi_meta = {}
+    try:
+        import progressive_intelligence as pi
+        pi_meta = pi.post_run_hook(
+            agent_id=agent_id,
+            task=task,
+            output=parsed.get("response", raw),
+            run_id=run_id,
+            success=True,
+        )
+        if pi_meta.get("skill_rewritten"):
+            logger.info("PI reflexion rewrote skill file for %s (score=%.2f)",
+                        agent_id, pi_meta.get("reflexion_score", 0))
+    except Exception:
+        pass
 
     _emit("agent_complete",
           summary=parsed.get("summary","")[:200],

@@ -1512,6 +1512,21 @@ def think(
                 logger.warning("Follow-up generation error: %s", _fs)
                 # Non-critical — continue without suggestions
 
+        # ── Progressive Intelligence: auto-extract memory + record patterns ──
+        try:
+            import progressive_intelligence as pi
+            new_facts = pi.auto_extract_memory(user_message, result.get("inez_message", ""))
+            if new_facts:
+                logger.info("PI auto-extracted %d new memory facts from conversation", len(new_facts))
+            # Record topic patterns from the conversation
+            pi._record_topics_from_text(
+                user_message + " " + result.get("inez_message", "")[:200],
+                agent_id="inez",
+                user_id="default",
+            )
+        except Exception:
+            pass
+
         if emit:
             emit("inez_response",
                  message=result["inez_message"],
