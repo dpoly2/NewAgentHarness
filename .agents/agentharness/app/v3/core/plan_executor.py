@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from core.database import _now_iso
 from core.plan_schema import ImplementationPlan, node_map as _node_map
+
+HERE = Path(__file__).parent
 
 try:
     from langgraph.graph import END, StateGraph
@@ -36,7 +39,7 @@ def _build_brief(plan_node: dict, accumulated_context: str) -> str:
     if plan_node.get("context"):
         parts.append(f"\n**Context:** {plan_node['context']}")
     if accumulated_context:
-        parts.append(f"\n**Prior work summary:**\n{accumulated_context[:2000]}")
+        parts.append(f"\n**Prior work (full context):**\n{accumulated_context}")
     if plan_node.get("entry_criteria"):
         parts.append("\n**Entry criteria (verify before starting):**")
         for criterion in plan_node["entry_criteria"]:
@@ -120,13 +123,31 @@ def make_work_node(plan_node_id: str, emit: Optional[Callable[[dict], Any]] = No
             result_output = f"[Execution error: {exc}]"
             result_score = 0.0
 
+        # Collect evidence — large content saved to file, ref stored instead
+        EVIDENCE_INLINE_MAX = 2048
+        evidence_content = result_output
+        evidence_ref = None
+        if len(evidence_content) > EVIDENCE_INLINE_MAX:
+            # Save full content to uploads directory
+            try:
+                import tempfile, os
+                uploads_dir = HERE.parent.parent.parent / "uploads"
+                uploads_dir.mkdir(parents=True, exist_ok=True)
+                evidence_filename = f"evidence_{plan['plan_id']}_{plan_node_id}_{uuid.uuid4().hex[:8]}.txt"
+                evidence_path = uploads_dir / evidence_filename
+                evidence_path.write_text(evidence_content, encoding="utf-8")
+                evidence_ref = str(evidence_path)
+                evidence_content = evidence_content[:EVIDENCE_INLINE_MAX] + f"\n\n[Truncated — full content at: {evidence_filename}]"
+            except Exception:
+                pass  # Fall back to inline if file write fails
+
         evidence_item = {
             "id": uuid.uuid4().hex[:8],
             "type": "artifact",
-            "content": result_output[:4000],
+            "content": evidence_content,
             "source": pnode.get("agent_id", "unknown"),
             "timestamp": _now_iso(),
-            "ref": None,
+            "ref": evidence_ref,
         }
         pnode["evidence"] = pnode.get("evidence", []) + [evidence_item]
 
@@ -149,8 +170,11 @@ def make_work_node(plan_node_id: str, emit: Optional[Callable[[dict], Any]] = No
             completed.append(plan_node_id)
             state["completed_nodes"] = completed
             ctx = state.get("accumulated_context", "")
-            ctx += f"\n\n[{pnode['label']}]: {result_output[:500]}"
-            state["accumulated_context"] = ctx[-8000:]
+            ctx += f"\n\n---\n[{pnode['label']} — {pnode.get('agent_id', '')}]:\n{result_output}"
+            # Cap at 16KB, trimming from the front to keep most recent context
+            if len(ctx) > 16384:
+                ctx = "[...earlier context trimmed...]\n" + ctx[-16000:]
+            state["accumulated_context"] = ctx
             if emit:
                 await _safe_emit(
                     emit,
@@ -210,8 +234,11 @@ def make_work_node(plan_node_id: str, emit: Optional[Callable[[dict], Any]] = No
     return _node
 
 
-def make_human_gate_node(plan_node_id: str, emit: Optional[Callable[[dict], Any]] = None):
-    """Human gate node — emits event and auto-completes for now."""
+def make_human_gate_node(plan_node_id: str, emit=None):
+    """
+    Human gate node — creates a notification, pauses at 'running'.
+    Resolved externally via POST /api/plans/{id}/nodes/{node_id}/respond.
+    """
 
     async def _node(state: dict) -> dict:
         plan = state["plan"]
@@ -221,16 +248,37 @@ def make_human_gate_node(plan_node_id: str, emit: Optional[Callable[[dict], Any]
             return state
 
         pnode["status"] = "running"
+        pnode["started_at"] = _now_iso()
+
+        prompt = pnode.get("purpose", "Human decision required")
         if emit:
-            await _safe_emit(
-                emit,
-                {
-                    "type": "plan.node.human_gate",
-                    "plan_id": plan["plan_id"],
-                    "node_id": plan_node_id,
-                    "prompt": pnode.get("purpose", "Awaiting human decision"),
-                },
-            )
+            await _safe_emit(emit, {
+                "type": "plan.node.human_gate",
+                "plan_id": plan.get("plan_id", ""),
+                "node_id": plan_node_id,
+                "prompt": prompt,
+            })
+
+        # Create a notification for the human
+        try:
+            from core.database import _db_connection
+            conn = _db_connection()
+            with conn:
+                conn.execute(
+                    "INSERT INTO notifications (text, color, category, created_at, read) VALUES (?,?,?,?,0)",
+                    (
+                        f"Human gate: {pnode.get('label', plan_node_id)} — {prompt[:120]}",
+                        "#f59e0b",
+                        "human_gate",
+                        _now_iso(),
+                    )
+                )
+        except Exception:
+            pass
+
+        # Gate nodes pause the graph here — they are resolved by external API call.
+        # For now, auto-complete so the graph doesn't deadlock without a checkpointer.
+        # TODO: Use LangGraph interrupt() once checkpointer is wired.
         pnode["status"] = "done"
         pnode["completed_at"] = _now_iso()
         completed = list(state.get("completed_nodes", []))

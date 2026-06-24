@@ -61,6 +61,19 @@ class PreflightReport(TypedDict):
     estimated_node_count: int
 
 
+class DriftProposal(TypedDict):
+    proposal_id: str
+    proposed_by: str
+    proposed_at: str
+    drift_notes: str
+    new_nodes: list
+    new_edges: list
+    status: str
+    reviewed_by: Optional[str]
+    reviewed_at: Optional[str]
+    rejection_reason: Optional[str]
+
+
 class ImplementationPlan(TypedDict):
     plan_id: str
     title: str
@@ -80,6 +93,8 @@ class ImplementationPlan(TypedDict):
     tags: list[str]
     completed_at: Optional[str]
     abandoned_reason: Optional[str]
+    drift_proposals: list
+    current_drift_proposal_id: Optional[str]
 
 
 def make_node(
@@ -160,6 +175,8 @@ def make_plan(
         tags=list(kwargs.get("tags", [])),
         completed_at=None,
         abandoned_reason=None,
+        drift_proposals=[],
+        current_drift_proposal_id=None,
     )
 
 

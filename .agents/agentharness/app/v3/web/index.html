@@ -368,6 +368,9 @@
         }
         .form-grid .span-2 { grid-column: span 2; }
         .form-actions { justify-content: flex-end; margin-top: 4px; }
+        .tab-bar { display: flex; gap: 2px; margin-bottom: 12px; }
+        .tab-btn { padding: 6px 16px; border: 1px solid rgba(45,212,255,0.2); background: transparent; color: #6b7a99; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .tab-btn.active { background: rgba(45,212,255,0.12); color: #e8eaf0; border-color: rgba(45,212,255,0.4); }
         table { width: 100%; border-collapse: collapse; }
         th, td {
             padding: 12px 10px;
@@ -3087,6 +3090,9 @@
 
         function renderPlanDetail(plan) {
             const report = plan.preflight_report;
+            const proposal = plan.status === 'drift_pending'
+                ? (plan.drift_proposals || []).find((p) => p.proposal_id === plan.current_drift_proposal_id)
+                : null;
             const reportHtml = report ? `
                 <div class="panel" style="margin-bottom:16px">
                     <h3>Preflight Report — ${report.passed ? '<span style="color:var(--success)">✅ Passed</span>' : '<span style="color:var(--error)">❌ Failed</span>'}</h3>
@@ -3106,7 +3112,15 @@
                                 <h2 style="margin:0 0 6px">${escapeHtml(plan.title)}</h2>
                                 <p style="color:#6b7a99;margin:0">${escapeHtml(plan.objective || '')}</p>
                             </div>
-                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+                                ${proposal ? `<div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:8px;width:100%">
+                                    <strong style="color:#f59e0b">⚠ Drift Proposed</strong>
+                                    <p style="color:#a0aec0;font-size:13px;margin:4px 0">${escapeHtml(proposal.drift_notes?.slice(0,200) || '')}</p>
+                                    <div style="display:flex;gap:8px;margin-top:8px">
+                                        <button class="success-btn" style="background:rgba(0,200,100,0.2);color:#00c864" onclick="approveDrift('${plan.plan_id}')">✅ Approve Drift</button>
+                                        <button class="danger-btn" style="background:rgba(255,68,68,0.15);color:#ff4444" onclick="rejectDrift('${plan.plan_id}')">✗ Reject</button>
+                                    </div>
+                                </div>` : ''}
                                 ${planStatusBadge(plan.status || 'draft')}
                                 ${['draft', 'preflight_passed'].includes(plan.status) ? '<button class="secondary-btn" id="runPreflightBtn">▶ Run Preflight</button>' : ''}
                                 ${plan.status === 'preflight_passed' ? '<button class="success-btn" id="approvePlanBtn">✅ Approve</button>' : ''}
@@ -3141,6 +3155,7 @@
             const NODE_W = 160, NODE_H = 48, PAD_X = 40, PAD_Y = 60;
             const statusColorMap = { pending:'#4a5568', ready:'#2d84ff', running:'#2d84ff', done:'#00c864', blocked:'#ff4444', skipped:'#4a5568' };
             const statusFillMap = { pending:'#1c2230', ready:'#1a2744', running:'#1a2744', done:'#0a2a1a', blocked:'#2a1010', skipped:'#1c2230' };
+            const parallelStages = plan.preflight_report?.parallel_stages || [];
             const levels = {};
             const inDeg = {};
             const adj = {};
@@ -3197,6 +3212,33 @@
                 return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="1.5" ${dash} marker-end="url(#arrowhead)"/>`;
             }).join('');
 
+            // TODO: Migrate to React Flow (https://reactflow.dev)
+            // Decision: Replace this SVG canvas with a React Flow component.
+            // Migration plan:
+            //   1. Add a React build step (Vite/Next.js) for the web/ dashboard
+            //   2. Install: npm install reactflow
+            //   3. Replace renderPlanSVG() with <ReactFlow nodes={...} edges={...} />
+            //   4. Use ReactFlow's built-in ELK/Dagre layout for auto-positioning
+            //   5. Node types: WorkNode, ReviewNode, DecisionNode, HumanGateNode, MilestoneNode
+            //   6. Edge types: sequence (solid), dependency (dashed), handoff (purple)
+            //   7. Custom node components show status ring, evidence count badge, agent avatar
+            // Current: functional SVG canvas used until React build is set up.
+            const stageBgs = Object.entries(byLevel).map(([lvl, ns]) => {
+                if (ns.length < 2) return '';
+                const ys = ns.map((n) => pos[n.id]?.y).filter((y) => y !== undefined);
+                if (!ys.length) return '';
+                const minY = Math.min(...ys) - 6;
+                const stageW = svgW - PAD_X;
+                return `<rect x="${PAD_X/2}" y="${minY}" width="${stageW}" height="${NODE_H + 12}"
+                        rx="4" fill="rgba(45,132,255,0.04)" stroke="rgba(45,132,255,0.1)" stroke-dasharray="4 3" stroke-width="1"/>
+                        <text x="${PAD_X/2 + 4}" y="${minY + 12}" font-size="10" fill="rgba(45,132,255,0.4)">parallel</text>`;
+            }).join('');
+            const stageLabels = Object.entries(byLevel).map(([lvl, ns], index) => {
+                const y = pos[ns[0]?.id]?.y;
+                if (y === undefined) return '';
+                const fromPreflight = parallelStages[Number(lvl)]?.length ? ` (${parallelStages[Number(lvl)].length} node${parallelStages[Number(lvl)].length === 1 ? '' : 's'})` : '';
+                return `<text x="8" y="${y + 16}" font-size="11" fill="rgba(160,174,192,0.7)">Stage ${index + 1}${fromPreflight}</text>`;
+            }).join('');
             const nodeSvg = nodes.map((node) => {
                 const p = pos[node.id];
                 if (!p) return '';
@@ -3213,7 +3255,7 @@
 
             return `<svg viewBox="0 0 ${svgW} ${svgH}" style="min-height:${Math.max(180, svgH)}px">
                 <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4a5568"/></marker></defs>
-                ${edgeSvg}${nodeSvg}
+                ${stageBgs}${stageLabels}${edgeSvg}${nodeSvg}
             </svg>`;
         }
 
@@ -3297,6 +3339,28 @@
             }
         }
 
+        async function approveDrift(planId) {
+            if (!confirm('Approve drift and add new nodes to plan?')) return;
+            try {
+                const data = await api('POST', `/api/plans/${planId}/drift/approve`);
+                showToast(`Drift approved — plan v${data.new_version}`, 'var(--success)');
+                showPlanDetail(planId);
+            } catch (error) {
+                showToast(`Error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
+        async function rejectDrift(planId) {
+            const reason = prompt('Rejection reason (optional):') || '';
+            try {
+                await api('POST', `/api/plans/${planId}/drift/reject`, { rejection_reason: reason });
+                showToast('Drift rejected — execution resumes', 'var(--warning)');
+                showPlanDetail(planId);
+            } catch (error) {
+                showToast(`Error: ${error.message || error}`, 'var(--error)');
+            }
+        }
+
         async function showCreatePlan() {
             renderShell(
                 'Plans',
@@ -3306,8 +3370,17 @@
                         <div class="field"><label for="newPlanTitle">Title</label><input id="newPlanTitle" placeholder="Implement feature X" /></div>
                         <div class="field"><label for="newPlanObjective">Objective</label><textarea id="newPlanObjective" rows="2" placeholder="What this plan achieves"></textarea></div>
                         <div class="field"><label for="newPlanProject">Project</label><input id="newPlanProject" placeholder="project-slug" /></div>
-                        <div class="field"><label for="newPlanNodes">Nodes (JSON array)</label><textarea id="newPlanNodes" rows="10" style="font-family:monospace" placeholder='[{"id":"step1","label":"First step","purpose":"Do the first thing","agent_id":"human","exit_criteria":["step done"]}]'></textarea></div>
-                        <div class="field"><label for="newPlanEdges">Edges (JSON array, optional)</label><textarea id="newPlanEdges" rows="4" style="font-family:monospace" placeholder='[{"from_node":"step1","to_node":"step2","kind":"sequence"}]'></textarea></div>
+                        <div class="tab-bar">
+                            <button class="tab-btn active" id="tabJsonBtn" onclick="switchPlanTab('json')">JSON</button>
+                            <button class="tab-btn" id="tabYamlBtn" onclick="switchPlanTab('yaml')">YAML</button>
+                        </div>
+                        <div id="tabJsonContent">
+                            <div class="field"><label for="newPlanNodes">Nodes (JSON array)</label><textarea id="newPlanNodes" rows="10" style="font-family:monospace;margin-bottom:12px" placeholder='[{"id":"step1","label":"First step","purpose":"Do the first thing","agent_id":"human","exit_criteria":["step done"]}]'></textarea></div>
+                            <div class="field"><label for="newPlanEdges">Edges (JSON array, optional)</label><textarea id="newPlanEdges" rows="4" style="font-family:monospace;margin-bottom:16px" placeholder='[{"from_node":"step1","to_node":"step2","kind":"sequence"}]'></textarea></div>
+                        </div>
+                        <div id="tabYamlContent" style="display:none">
+                            <div class="field"><label for="newPlanYaml">YAML Plan Definition</label><textarea id="newPlanYaml" rows="16" style="font-family:monospace;margin-bottom:16px" placeholder="title: My Plan&#10;objective: What this achieves&#10;project: my-project&#10;nodes:&#10;  - id: step1&#10;    label: First Step&#10;    purpose: Do the first thing&#10;    agent: human&#10;    exit:&#10;      - step is done&#10;  - id: step2&#10;    label: Second Step&#10;    purpose: Do the second thing&#10;    agent: my-agent&#10;    deps: [step1]&#10;    exit:&#10;      - output verified"></textarea></div>
+                        </div>
                         <div class="form-actions">
                             <button class="secondary-btn" id="submitCreatePlanBtn">Create Plan</button>
                             <button class="ghost-btn" id="cancelCreatePlanBtn">Cancel</button>
@@ -3319,7 +3392,27 @@
             $('#cancelCreatePlanBtn')?.addEventListener('click', () => showPlans());
         }
 
+        function switchPlanTab(tab) {
+            $('#tabJsonContent').style.display = tab === 'json' ? '' : 'none';
+            $('#tabYamlContent').style.display = tab === 'yaml' ? '' : 'none';
+            $('#tabJsonBtn').classList.toggle('active', tab === 'json');
+            $('#tabYamlBtn').classList.toggle('active', tab === 'yaml');
+        }
+
         async function submitCreatePlan() {
+            const isYaml = $('#tabYamlContent') && $('#tabYamlContent').style.display !== 'none';
+            if (isYaml) {
+                const yamlText = $('#newPlanYaml')?.value?.trim();
+                if (!yamlText) { showToast('YAML content is required', 'var(--warning)'); return; }
+                try {
+                    const data = await api('POST', '/api/plans/from-yaml', { yaml_text: yamlText });
+                    showToast('Plan created from YAML', 'var(--success)');
+                    showPlanDetail(data.plan.plan_id);
+                } catch (error) {
+                    showToast(`Error: ${error.message || error}`, 'var(--error)');
+                }
+                return;
+            }
             const title = $('#newPlanTitle')?.value?.trim();
             const objective = $('#newPlanObjective')?.value?.trim();
             const project = $('#newPlanProject')?.value?.trim();
@@ -3343,9 +3436,15 @@
         function handlePlanWSEvent(event) {
             if (!event.type || !String(event.type).startsWith('plan.')) return;
             if (state.currentPage === 'plans' && state.currentPlanId && event.plan_id === state.currentPlanId) {
-                if (['plan.node.start', 'plan.node.done', 'plan.node.blocked', 'plan.node.evidence', 'plan.done', 'plan.preflight.done', 'plan.approved'].includes(event.type)) {
+                if (['plan.node.start', 'plan.node.done', 'plan.node.blocked', 'plan.node.evidence', 'plan.done', 'plan.preflight.done', 'plan.approved', 'plan.drift.proposed', 'plan.drift.approved', 'plan.drift.rejected'].includes(event.type)) {
                     showPlanDetail(state.currentPlanId);
                 }
+            }
+            if (event.type === 'plan.drift.proposed' || event.type === 'plan.drift.approved' || event.type === 'plan.drift.rejected') {
+                if (state.currentPlanId && event.plan_id === state.currentPlanId) {
+                    showPlanDetail(state.currentPlanId);
+                }
+                else if (state.currentPage === 'plans') showPlans();
             }
             if (state.currentPage === 'plans' && ['plan.created', 'plan.done', 'plan.abandoned'].includes(event.type) && !state.currentPlanId) {
                 showPlans();
