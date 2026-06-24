@@ -92,6 +92,9 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
 SERPAPI_KEY=...          # Web search
 HUB_PORT=8765
+# Security — set these before exposing the server:
+JWT_SECRET=<random-32-byte-hex>   # python -c "import secrets; print(secrets.token_hex(32))"
+CORS_ORIGINS=https://app.archonhub.app,http://localhost:8765
 ```
 
 ---
@@ -213,6 +216,8 @@ GET  /api/documents           # Document library
 POST /api/documents/search    # RAG document search
 GET  /api/models              # LLM model catalog
 POST /api/search              # Web search
+GET  /api/files/_search       # Semantic doc search (note: _search, not /search)
+GET  /api/monitoring/notifications  # Proactive monitoring alerts
 ```
 
 ---
@@ -237,4 +242,7 @@ Key tables: `users`, `agent_runs`, `dispatches`, `todos`, `global_memory`, `docu
 - `runs_v3.db` is gitignored — all personal memory stays local
 - Code sandbox uses AST-level import blocking (no runtime monkey-patching)
 - All API endpoints require JWT authentication
+- Set `JWT_SECRET` in `.env` to a random value — server logs a security warning on startup if using the default
+- Set `CORS_ORIGINS=https://app.archonhub.app,http://localhost:8765` in `.env` to restrict browser access (defaults to `*` when unset)
+- Login endpoint is rate-limited: 10 attempts per IP per 5-minute window
 

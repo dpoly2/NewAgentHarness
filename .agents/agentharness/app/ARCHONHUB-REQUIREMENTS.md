@@ -1,5 +1,5 @@
 # ArchonHub — Product Requirements Document
-**Version:** 1.1.0  
+**Version:** 1.2.0  
 **Last Updated:** June 2026  
 **Owner:** Smith Capital Portfolio
 
@@ -98,7 +98,11 @@ markdown>=3.5
 | `ANTHROPIC_API_KEY` | Optional | Claude model support |
 | `OPENAI_MODEL` | Optional | Default: `gpt-4o-mini` |
 | `HUB_PORT` | Optional | Default: `8765` |
-| `ADMIN_PASSWORD` | Optional | Override default admin password |
+| `HUB_HOST` | Optional | Default: `0.0.0.0` — use `127.0.0.1` for localhost-only |
+| `JWT_SECRET` | ✅ **Production** | Random 32-byte hex string. Server logs a loud warning and refuses to operate securely if this is the default. Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `ADMIN_PASSWORD` | Optional | Override default admin password (`ArchonHub2024!`) — change on first login |
+| `CORS_ORIGINS` | Optional | Comma-separated allowed origins. Defaults to `*` (open). **Lock down for production**, e.g. `https://app.archonhub.app,http://localhost:8765` |
+| `LOG_LEVEL` | Optional | `DEBUG` / `INFO` / `WARNING` / `ERROR` (default: `INFO`) |
 
 ---
 
@@ -110,19 +114,22 @@ markdown>=3.5
 - Serves WebSocket at `/ws`
 - Serves static web dashboard at `/web` (redirected from `/`)
 - Auto-docs at `/docs` (Swagger UI)
-- CORS enabled for all origins (local-first design)
+- **Single-worker** uvicorn process (multi-worker is intentionally disabled — hub uses in-process asyncio.Queue and WebSocket client set; multiple workers would split state)
+- CORS origins configurable via `CORS_ORIGINS` env var (defaults to `*` for local dev; set to `https://app.archonhub.app` or your domain in production)
 - Startup creates SQLite schema, seeds default admin user, starts scheduler
+- Startup logs a security warning if `JWT_SECRET` is the default placeholder value
 - Graceful shutdown via SIGINT/SIGTERM
+- Global exception handler returns generic `500` responses (no internal stack traces leaked to clients)
 
 ### 5.2 Authentication
 - **JWT-based auth** using `python-jose`
 - 24-hour token expiry
-- `POST /api/auth/login` — returns JWT token
+- `POST /api/auth/login` — returns JWT token; **rate-limited to 10 attempts per IP per 5 minutes** (returns `429` on breach)
 - `POST /api/auth/register` — create new user (admin-only after first user)
 - `GET /api/auth/me` — current user info
 - **Admin PIN** — `1914` (Phi Beta Sigma founding year) — used in desktop app only
-- Default admin: username `admin`, password `ArchonHub2024!`
-- Bearer token auth on all `/api/` endpoints
+- Default admin: username `admin`, password `ArchonHub2024!` (change after first login)
+- Bearer token auth on **all** `/api/` endpoints (no unauthenticated routes except login, register, health, and OAuth callbacks)
 - `X-API-Token` header supported as alternative auth (server-generated token)
 
 ### 5.3 Agent Execution API
@@ -137,33 +144,40 @@ markdown>=3.5
 | `/api/health` | GET | Server health + stats |
 
 ### 5.4 Entity APIs (full CRUD)
-| Resource | Base Path |
-|---|---|
-| Todos | `/api/todos` |
-| Notifications | `/api/notifications` |
-| Skills | `/api/skills` |
-| Travel Trips | `/api/trips` |
-| Email Connectors | `/api/connectors` |
-| Projects | `/api/projects` |
-| Clients | `/api/clients` |
-| Conversations | `/api/conversations` |
-| Messages | `/api/conversations/{id}/messages` |
-| Agent Memory | `/api/memory` |
-| Daily Briefs | `/api/briefs` |
-| Scheduled Jobs | `/api/scheduler` |
-| Users | `/api/users` |
-| Config | `/api/config` |
-| Daily Briefing | `/api/briefing` |
+| Resource | Base Path | Notes |
+|---|---|---|
+| Todos | `/api/todos` | |
+| System Notifications | `/api/notifications` | Hub event notifications (read/unread, `read` field) |
+| Monitoring Notifications | `/api/monitoring/notifications` | Proactive monitor alerts (`viewed`/`dismissed` fields) |
+| Skills | `/api/skills` | |
+| Travel Trips | `/api/trips` | |
+| Email Connectors | `/api/connectors` | |
+| Projects | `/api/projects` | |
+| Clients | `/api/clients` | |
+| Conversations | `/api/conversations` | |
+| Messages | `/api/conversations/{id}/messages` | |
+| Agent Memory | `/api/memory` | |
+| Daily Briefs | `/api/briefs` | |
+| Scheduled Jobs | `/api/scheduler` | |
+| Users | `/api/users` | |
+| Config | `/api/config` | |
+| Daily Briefing | `/api/briefing` | |
+| Files | `/api/files`, `/api/files/_search` | Note: search path is `_search` to avoid route collision with `/{file_id}` |
+| Feedback | `/api/messages/{id}/feedback`, `/api/corrections` | |
+| Email Cleanup | `/api/email/cleanup/*` | |
+| Agent Collaboration | `/api/agents/collaborate` | |
+| Global Memory | `/api/memory/global` | |
 
 ### 5.5 WebSocket (ws://localhost:8765/ws)
-- JWT auth on connect
+- JWT auth on connect — client must send `{"type": "auth", "token": "<jwt>"}` as first message
+- **Auth handshake timeout: 15 seconds** — connection closed with code 1008 if auth not received in time
 - Real-time events pushed to all connected clients:
   - `run_started`, `run_completed`, `run_failed`, `run_cancelled`
   - `node_update` — live graph node progress
   - `notif` — push notifications
   - `todo_update` — todo changes
   - `briefing_ready` — morning briefing cached
-- Ping/pong heartbeat: 30s interval, 10s timeout
+- Ping/pong heartbeat: client sends `{"type":"ping"}`, server responds `{"type":"pong"}`
 
 ### 5.6 Thread Pool
 - Default 3 concurrent agent execution threads
@@ -424,11 +438,16 @@ python main_m365.py
 
 ## 14. Security Notes
 
-- JWT secret key: `archonhub-jwt-secret-change-in-production-2024` (**change in production**)
-- Default admin: `admin` / `ArchonHub2024!` (**change after first login**)
-- Admin PIN: `1914` (desktop app only)
-- API token auto-generated on first start, stored in `hub_config`
-- CORS: open (local-first; lock down for production deployments)
+| Item | Requirement |
+|---|---|
+| `JWT_SECRET` | **Must be set** to a random 32-byte hex in `.agents/.env`. Server emits a loud log warning on startup if using the default. Generate: `python -c "import secrets; print(secrets.token_hex(32))"` |
+| Admin password | Default `ArchonHub2024!` — change immediately after first login |
+| Admin PIN | `1914` (desktop app only — Phi Beta Sigma founding year) |
+| API token | Auto-generated on first start, stored in `hub_config`; use via `X-API-Token` header |
+| CORS | Set `CORS_ORIGINS=https://app.archonhub.app,http://localhost:8765` in `.env`. Defaults to `*` when unset (local dev only) |
+| Login rate limit | 10 attempts per IP per 5 minutes; returns `HTTP 429` |
+| Error leakage | Global exception handler returns generic `500` — internal errors logged server-side only |
+| Single worker | Hub runs as a single uvicorn process — do not add `--workers N` (breaks in-process state) |
 
 ---
 
