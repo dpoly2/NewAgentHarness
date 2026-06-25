@@ -795,6 +795,8 @@
             { id: 'memory', icon: '🧠', label: 'Memory' },
             { id: 'notifications', icon: '🔔', label: 'Alerts' },
             { id: 'sandbox', icon: '⚡', label: 'Sandbox' },
+            { id: 'search', icon: '🔍', label: 'Search' },
+            { id: 'feedback', icon: '💬', label: 'Feedback' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
             { id: 'chat', icon: '💬', label: 'Chat' },
@@ -1319,6 +1321,8 @@
                 memory: showMemory,
                 notifications: showNotifications,
                 sandbox: showSandbox,
+                search: showSearch,
+                feedback: showFeedback,
                 travel: showTravel,
                 briefing: showBriefing,
                 agents: showAgents,
@@ -2718,6 +2722,179 @@
                     btn.disabled = false; btn.textContent = '▶ Run';
                 }
             });
+        }
+
+        async function showSearch() {
+            if (!(await requireAuth())) return;
+            // Check if SerpAPI is configured
+            let searchConfigured = false;
+            try {
+                const status = await api('GET', '/api/search/web/status');
+                searchConfigured = status?.configured;
+            } catch (e) { /* ignore */ }
+
+            renderShell('Web Search', 'Real-time Google search via SerpAPI.',
+                `${!searchConfigured ? `<div class="error-banner" style="margin-bottom:16px">⚠️ SerpAPI key not configured. Add <code>SERPAPI_API_KEY</code> to <code>.agents/.env</code> to enable live search.</div>` : ''}
+                <div class="card" style="margin-bottom:18px">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input id="searchQuery" placeholder="Search the web…" style="flex:1;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:14px" autofocus>
+                        <select id="searchLimit" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px">
+                            <option value="3">3 results</option>
+                            <option value="5" selected>5 results</option>
+                            <option value="10">10 results</option>
+                        </select>
+                        <button class="action-btn primary" id="doSearchBtn">🔍 Search</button>
+                    </div>
+                </div>
+                <div id="searchResults" style="display:none">
+                    <div id="searchMeta" class="muted" style="font-size:12px;margin-bottom:12px"></div>
+                    <div id="searchResultsList"></div>
+                </div>`,
+                ''
+            );
+
+            async function runSearch() {
+                const q = $('#searchQuery').value.trim();
+                if (!q) return;
+                const limit = $('#searchLimit').value;
+                const btn = $('#doSearchBtn');
+                btn.disabled = true; btn.textContent = 'Searching…';
+                try {
+                    const data = await api('GET', `/api/search/web?q=${encodeURIComponent(q)}&limit=${limit}`);
+                    const results = data?.results || [];
+                    $('#searchMeta').textContent = `${results.length} results for "${q}"  ·  ${(data?.search_timestamp||'').slice(0,19)} UTC`;
+                    $('#searchResultsList').innerHTML = results.map(r => `
+                        <div class="card" style="margin-bottom:12px;padding:14px">
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+                                <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener" style="font-weight:600;font-size:14px;color:var(--accent);text-decoration:none">${escapeHtml(r.title)}</a>
+                                ${r.published_date ? `<span class="muted" style="font-size:11px;white-space:nowrap">📅 ${escapeHtml(r.published_date)}</span>` : ''}
+                            </div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;word-break:break-all">${escapeHtml(r.url)}</div>
+                            <div style="font-size:13px;line-height:1.5">${escapeHtml(r.snippet||'')}</div>
+                        </div>`).join('') || '<div class="muted">No results returned.</div>';
+                    $('#searchResults').style.display = 'block';
+                } catch (e) {
+                    showToast('Search failed: ' + e.message, 'var(--error)');
+                } finally {
+                    btn.disabled = false; btn.textContent = '🔍 Search';
+                }
+            }
+
+            $('#doSearchBtn').addEventListener('click', runSearch);
+            $('#searchQuery').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
+        }
+
+        async function showFeedback() {
+            if (!(await requireAuth())) return;
+            setLoading('Feedback & Corrections', 'Loading feedback data…');
+            try {
+                const [statsData, prefsData] = await Promise.all([
+                    api('GET', '/api/feedback/stats'),
+                    api('GET', '/api/feedback/preferences').catch(() => ({ preferences: [] }))
+                ]);
+
+                const stats = statsData?.stats || {};
+                const recent = statsData?.recent_feedback || [];
+                const prefs = prefsData?.preferences || [];
+
+                const total = stats.total_feedback || 0;
+                const pos = stats.positive_count || 0;
+                const neg = stats.negative_count || 0;
+                const corrections = stats.correction_count || 0;
+                const pct = total > 0 ? Math.round((pos / total) * 100) : 0;
+
+                const recentRows = recent.map(f => `<tr>
+                    <td style="font-size:20px;text-align:center">${f.rating === 1 ? '👍' : '👎'}</td>
+                    <td class="muted" style="font-size:11px">${escapeHtml(f.category||'')}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml((f.feedback_text||'').slice(0,120))}</td>
+                    <td class="muted">${(f.created_at||'').slice(0,16)}</td>
+                </tr>`).join('') || '<tr><td colspan="4" class="muted" style="text-align:center;padding:16px">No feedback yet</td></tr>';
+
+                const prefRows = prefs.map(p => `<tr>
+                    <td style="font-weight:500">${escapeHtml(p.dimension||'')}</td>
+                    <td>${escapeHtml(p.preference||'')}</td>
+                    <td class="muted">${Math.round((p.confidence||0)*100)}%</td>
+                </tr>`).join('') || '<tr><td colspan="3" class="muted" style="text-align:center;padding:16px">No learned preferences yet</td></tr>';
+
+                renderShell('Feedback & Corrections', 'How agents are learning from your interactions.',
+                    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:18px">
+                        <div class="card" style="text-align:center;padding:16px">
+                            <div style="font-size:28px;font-weight:700;color:var(--accent)">${total}</div>
+                            <div class="muted" style="font-size:12px;margin-top:4px">Total Feedback</div>
+                        </div>
+                        <div class="card" style="text-align:center;padding:16px">
+                            <div style="font-size:28px;font-weight:700;color:var(--success)">${pos}</div>
+                            <div class="muted" style="font-size:12px;margin-top:4px">👍 Positive</div>
+                        </div>
+                        <div class="card" style="text-align:center;padding:16px">
+                            <div style="font-size:28px;font-weight:700;color:var(--error)">${neg}</div>
+                            <div class="muted" style="font-size:12px;margin-top:4px">👎 Negative</div>
+                        </div>
+                        <div class="card" style="text-align:center;padding:16px">
+                            <div style="font-size:28px;font-weight:700;color:var(--warning)">${corrections}</div>
+                            <div class="muted" style="font-size:12px;margin-top:4px">✏️ Corrections</div>
+                        </div>
+                        <div class="card" style="text-align:center;padding:16px">
+                            <div style="font-size:28px;font-weight:700;color:${pct >= 70 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--error)'}">${pct}%</div>
+                            <div class="muted" style="font-size:12px;margin-top:4px">Satisfaction</div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+                        <div class="card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                                <h3>📊 Run Analysis</h3>
+                                <div style="display:flex;gap:6px;align-items:center">
+                                    <select id="analysisDays" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px">
+                                        <option value="7" selected>Last 7 days</option>
+                                        <option value="14">Last 14 days</option>
+                                        <option value="30">Last 30 days</option>
+                                    </select>
+                                    <button class="action-btn" id="analyzeBtn" style="padding:4px 12px;font-size:12px">Analyze</button>
+                                </div>
+                            </div>
+                            <div id="analysisResult" class="muted" style="font-size:12px;line-height:1.6">Click Analyze to generate insights from feedback patterns.</div>
+                        </div>
+                        <div class="card">
+                            <h3 style="margin-bottom:12px">🧠 Learned Preferences</h3>
+                            <div class="table-wrap" style="padding:0;max-height:200px;overflow-y:auto">
+                            <table><thead><tr><th>Dimension</th><th>Preference</th><th>Conf.</th></tr></thead>
+                            <tbody>${prefRows}</tbody></table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 style="margin-bottom:12px">🕐 Recent Feedback</h3>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Rating</th><th>Category</th><th>Note</th><th>When</th></tr></thead>
+                        <tbody>${recentRows}</tbody></table>
+                        </div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showFeedback()">🔄 Refresh</button>`
+                );
+
+                $('#analyzeBtn').addEventListener('click', async () => {
+                    const days = $('#analysisDays').value;
+                    $('#analyzeBtn').disabled = true; $('#analyzeBtn').textContent = 'Analyzing…';
+                    try {
+                        const result = await api('GET', `/api/feedback/analyze?days=${days}`);
+                        const insights = result?.insights || result?.summary || result?.patterns || JSON.stringify(result, null, 2);
+                        const text = typeof insights === 'string' ? insights : JSON.stringify(insights, null, 2);
+                        $('#analysisResult').textContent = text;
+                        $('#analysisResult').style.color = 'var(--text-primary)';
+                    } catch (e) {
+                        $('#analysisResult').textContent = 'Analysis error: ' + e.message;
+                        $('#analysisResult').style.color = 'var(--error)';
+                    } finally {
+                        $('#analyzeBtn').disabled = false; $('#analyzeBtn').textContent = 'Analyze';
+                    }
+                });
+
+            } catch (error) {
+                renderShell('Feedback & Corrections', '',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load feedback')}</div>`);
+            }
         }
 
         async function showEmailCleanup() {

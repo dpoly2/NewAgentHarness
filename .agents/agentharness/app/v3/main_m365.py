@@ -154,6 +154,7 @@ NAV_ITEMS = [
     ("🤖", "Agents",   "show_agents"),
     ("🔬", "Models",   "show_models"),
     ("🔔", "Notifs",  "show_notifications"),
+    ("🔍", "Search",  "show_web_search"),
     ("⚡", "Sandbox", "show_sandbox"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
@@ -4000,6 +4001,69 @@ class ArchonHubApp:
         except Exception as e:
             self._toast(f"Error: {e}", ERROR)
 
+    def show_web_search(self):
+        self._set_active_nav("Search")
+        self._clear_content()
+        self._section_header(self.content, "🔍 Web Search",
+                             "Real-time Google search via SerpAPI. Set SERPAPI_API_KEY in .env.")
+
+        top_row = tk.Frame(self.content, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=20, pady=(0, 10))
+        self._ws_query_var = tk.StringVar()
+        entry = self._entry(top_row, self._ws_query_var)
+        entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        entry.insert(0, "Search the web…")
+        entry.bind("<FocusIn>", lambda e: entry.delete(0, "end") if entry.get() == "Search the web…" else None)
+        entry.bind("<Return>", lambda _: self._run_web_search())
+        self._ws_limit_var = tk.StringVar(value="5")
+        limit_cb = ttk.Combobox(top_row, textvariable=self._ws_limit_var,
+                                values=["3", "5", "10"], width=4, state="readonly")
+        limit_cb.pack(side="left", padx=(0, 8))
+        self._button(top_row, "🔍 Search", self._run_web_search, accent=True).pack(side="left")
+
+        card = self._card(self.content, "Results")
+        card.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        self._ws_result_text = self._text_widget(card, height=30)
+        self._ws_result_text.pack(fill="both", expand=True, padx=14, pady=14)
+        self._ws_result_text.configure(state="disabled")
+        self._ws_result_text.tag_configure("url", foreground=ACCENT)
+        self._ws_result_text.tag_configure("title", foreground=TEXT_PRIMARY, font=("Segoe UI", 10, "bold"))
+        self._ws_result_text.tag_configure("muted", foreground=TEXT_MUTED)
+
+    def _run_web_search(self):
+        q = self._ws_query_var.get().strip()
+        if not q or q == "Search the web…":
+            self._toast("Enter a search query.", WARNING)
+            return
+        limit = int(getattr(self, "_ws_limit_var", tk.StringVar(value="5")).get() or "5")
+        import threading as _t, urllib.parse
+
+        self._toast("Searching…", ACCENT)
+
+        def _run():
+            try:
+                data = self.hub._get(f"/api/search/web?q={urllib.parse.quote(q)}&limit={limit}") or {}
+                if not data.get("success"):
+                    detail = data.get("detail", str(data))
+                    self._ui_queue.put(("set_text", self._ws_result_text,
+                                        f"Search failed: {detail}\n\nMake sure SERPAPI_API_KEY is set in .agents/.env"))
+                    return
+                results = data.get("results", [])
+                lines = [f"Query: \"{q}\"  ({len(results)} results)  —  {data.get('search_timestamp','')[:19]}", "─"*60, ""]
+                for r in results:
+                    lines.append(f"[{r['id']}] {r['title']}")
+                    lines.append(f"    {r['url']}")
+                    lines.append(f"    {r.get('snippet','')}")
+                    if r.get("published_date"):
+                        lines.append(f"    📅 {r['published_date']}")
+                    lines.append("")
+                self._ui_queue.put(("set_text", self._ws_result_text, "\n".join(lines)))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Search error: {e}", ERROR))
+                self._ui_queue.put(("set_text", self._ws_result_text, f"Error: {e}"))
+
+        _t.Thread(target=_run, daemon=True).start()
+
     def show_sandbox(self):
         self._set_active_nav("Sandbox")
         self._clear_content()
@@ -4403,10 +4467,17 @@ class ArchonHubApp:
                 prefs_result = self.hub._get("/api/feedback/preferences") or {}
                 lines = []
                 if stats:
-                    lines.append(f"Total feedback items: {stats.get('total', 0)}")
-                    lines.append(f"Positive: {stats.get('positive', 0)}  |  Negative: {stats.get('negative', 0)}")
-                    lines.append(f"Corrections: {stats.get('corrections', 0)}")
-                    lines.append(f"Avg rating: {float(stats.get('avg_rating', 0)):.2f}")
+                    s = stats.get("stats", stats)
+                    lines.append(f"Total feedback items: {s.get('total_feedback', s.get('total', 0))}")
+                    lines.append(f"Positive: {s.get('positive_count', s.get('positive', 0))}  |  Negative: {s.get('negative_count', s.get('negative', 0))}")
+                    lines.append(f"Corrections: {s.get('correction_count', s.get('corrections', 0))}")
+                    recent = stats.get("recent_feedback", [])
+                    if recent:
+                        lines.append("─" * 40)
+                        lines.append("Recent feedback:")
+                        for item in recent[:5]:
+                            emoji = "👍" if item.get("rating") == 1 else "👎"
+                            lines.append(f"  {emoji} [{item.get('category', '')}] {str(item.get('feedback_text',''))[:60]}")
                 else:
                     lines.append("(no feedback data yet)")
                 self._ui_queue.put(("set_text", self._feedback_stats_text, "\n".join(lines)))

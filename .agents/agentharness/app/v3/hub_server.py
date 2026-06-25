@@ -60,6 +60,7 @@ if FASTAPI_OK:
         todos,
         trips,
         users,
+        web_search_api,
     )
 
     @asynccontextmanager
@@ -216,6 +217,7 @@ if FASTAPI_OK:
             config_api.router,
             providers.router,
             plans.router,
+            web_search_api.router,
         ):
             app.include_router(_router, prefix='/api')
         return app
