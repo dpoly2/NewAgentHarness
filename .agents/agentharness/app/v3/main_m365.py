@@ -152,6 +152,7 @@ NAV_ITEMS = [
     ("📁", "Files",    "show_files"),
     ("⚡", "Connect",  "show_connectors"),
     ("🤖", "Agents",   "show_agents"),
+    ("🔬", "Models",   "show_models"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
 ]
@@ -4233,6 +4234,16 @@ class ArchonHubApp:
                 self._ui_queue.put(("toast", f"Feedback error: {e}", ERROR))
 
         _t.Thread(target=_run, daemon=True).start()
+
+    def show_models(self):
+        self._set_active_nav("Models")
+        self._clear_content()
+        self._section_header(
+            self.content, "🔬 Models Catalog",
+            "Browse and toggle available LLM models by provider.",
+            actions=[("🔄 Refresh", self.show_models)],
+        )
+        self._build_admin_models_tab(self.content)
 
     def show_admin(self):
         if not self.admin_unlocked:

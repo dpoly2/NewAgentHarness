@@ -789,6 +789,7 @@
             { id: 'clients', icon: '👥', label: 'Clients' },
             { id: 'projects', icon: '📁', label: 'Projects' },
             { id: 'agents', icon: '🤖', label: 'Agents' },
+            { id: 'models', icon: '🔬', label: 'Models' },
             { id: 'connectors', icon: '✉', label: 'Connectors' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
@@ -1313,6 +1314,7 @@
                 travel: showTravel,
                 briefing: showBriefing,
                 agents: showAgents,
+                models: showModels,
                 chat: showChat,
                 inez: showInez,
                 settings: showSettings
@@ -2607,6 +2609,133 @@
             } catch (error) {
                 renderShell('Agents', 'Multi-agent collaboration.',
                     `<div class="error-banner">${escapeHtml(error.message || 'Unable to load agents')}</div>`);
+            }
+        }
+
+        async function showModels() {
+            if (!(await requireAuth())) return;
+            setLoading('Models', 'Loading model catalog…');
+            try {
+                const [catalog, providers] = await Promise.all([
+                    api('GET', '/api/models'),
+                    api('GET', '/api/models/providers').catch(() => [])
+                ]);
+                const provMap = {};
+                (providers || []).forEach(p => { provMap[p.provider] = p; });
+
+                // Group by provider
+                const grouped = {};
+                (catalog || []).forEach(m => {
+                    if (!grouped[m.provider]) grouped[m.provider] = [];
+                    grouped[m.provider].push(m);
+                });
+
+                const TIER_COLORS = { premium: 'var(--warning)', standard: 'var(--accent)', economy: 'var(--text-muted)', local: 'var(--success)' };
+                const PROV_ICONS = { openai: '⬡', anthropic: '◈', gemini: '◉', groq: '⚡', perplexity: '◎', github: '⌥', ollama: '◆' };
+                const TASK_TYPES = ['reasoning','code','fast','long_context','vision','search','finance','writing','agents'];
+
+                const providerCards = Object.entries(grouped).map(([prov, models]) => {
+                    const pi = provMap[prov] || {};
+                    const hasKey = pi.key_configured;
+                    const enabledCount = models.filter(m => m.enabled).length;
+                    const icon = PROV_ICONS[prov] || '•';
+                    const keyBadge = hasKey
+                        ? `<span style="color:var(--success);font-size:11px">✓ key set</span>`
+                        : `<span style="color:var(--error);font-size:11px">✗ no key</span>`;
+                    const rows = models.map(m => {
+                        const key = m.key || `${prov}__${m.model_id}`;
+                        const caps = (m.capabilities || []).slice(0, 4).map(c =>
+                            `<span style="background:var(--bg-hover);color:var(--text-muted);font-size:10px;padding:1px 5px;border-radius:3px;margin:0 2px">${c}</span>`
+                        ).join('');
+                        const tierColor = TIER_COLORS[m.tier] || 'var(--text-muted)';
+                        return `<tr>
+                            <td>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                    <input type="checkbox" ${m.enabled ? 'checked' : ''} data-key="${escapeHtml(key)}" data-prov="${escapeHtml(prov)}" data-model="${escapeHtml(m.model_id)}" style="cursor:pointer">
+                                    <span style="font-weight:500">${escapeHtml(m.display || m.model_id)}</span>
+                                </label>
+                            </td>
+                            <td class="muted" style="font-size:11px">${m.context_k ? m.context_k + 'k' : '—'}</td>
+                            <td><span style="color:${tierColor};font-size:11px">${m.tier || ''}</span></td>
+                            <td>${caps}</td>
+                        </tr>`;
+                    }).join('');
+                    return `<div class="card" style="margin-bottom:14px" id="prov-card-${prov}">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                            <span style="font-size:18px">${icon}</span>
+                            <strong style="font-size:15px">${prov.toUpperCase()}</strong>
+                            ${keyBadge}
+                            <span class="muted" style="font-size:11px;margin-left:auto">${enabledCount}/${models.length} enabled</span>
+                        </div>
+                        <div class="table-wrap" style="padding:0">
+                        <table>
+                            <thead><tr><th>Model</th><th>Context</th><th>Tier</th><th>Capabilities</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                const routeOptions = TASK_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+
+                renderShell('Models', 'Browse, enable/disable LLM models by provider.',
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3>🔀 Route Tester</h3>
+                        <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+                            <select id="routeTaskType" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">
+                                <option value="">— pick task type —</option>
+                                ${routeOptions}
+                            </select>
+                            <button class="action-btn" id="routeTestBtn">Find Best Model</button>
+                            <span id="routeResult" class="muted" style="font-size:13px"></span>
+                        </div>
+                    </div>
+                    ${providerCards}`,
+                    `<button class="action-btn primary" id="saveModelsBtn">💾 Save Changes</button>
+                     <button class="action-btn" onclick="showModels()">🔄 Refresh</button>`
+                );
+
+                // Route tester
+                $('#routeTestBtn').addEventListener('click', async () => {
+                    const taskType = $('#routeTaskType').value;
+                    if (!taskType) { showToast('Pick a task type', 'var(--warning)'); return; }
+                    try {
+                        const result = await api('POST', '/api/models/route', { task_type: taskType });
+                        const el = $('#routeResult');
+                        if (result) {
+                            el.style.color = 'var(--success)';
+                            el.textContent = `→ ${result.display || result.model_id} (${result.provider})`;
+                        } else {
+                            el.style.color = 'var(--error)';
+                            el.textContent = 'No enabled model found for this task';
+                        }
+                    } catch (e) {
+                        $('#routeResult').textContent = 'Error: ' + e.message;
+                    }
+                });
+
+                // Save toggles (admin only — best effort)
+                $('#saveModelsBtn').addEventListener('click', async () => {
+                    const checkboxes = document.querySelectorAll('[data-key]');
+                    let saved = 0, failed = 0;
+                    for (const cb of checkboxes) {
+                        const enabled = cb.checked;
+                        const prov = cb.dataset.prov;
+                        const model = cb.dataset.model;
+                        try {
+                            await api('PUT', '/api/models/toggle', { provider: prov, model_id: model, enabled });
+                            saved++;
+                        } catch (e) {
+                            failed++;
+                        }
+                    }
+                    showToast(`Saved ${saved} model states${failed ? `, ${failed} failed (admin only)` : ''}`,
+                        failed ? 'var(--warning)' : 'var(--success)');
+                });
+
+            } catch (error) {
+                renderShell('Models', 'LLM Model Catalog.',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load models')}</div>`);
             }
         }
 
