@@ -791,6 +791,10 @@
             { id: 'agents', icon: '🤖', label: 'Agents' },
             { id: 'models', icon: '🔬', label: 'Models' },
             { id: 'connectors', icon: '✉', label: 'Connectors' },
+            { id: 'files', icon: '📁', label: 'Files' },
+            { id: 'memory', icon: '🧠', label: 'Memory' },
+            { id: 'notifications', icon: '🔔', label: 'Alerts' },
+            { id: 'sandbox', icon: '⚡', label: 'Sandbox' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
             { id: 'chat', icon: '💬', label: 'Chat' },
@@ -1311,6 +1315,10 @@
                 clients: showClients,
                 projects: showProjects,
                 connectors: showConnectors,
+                files: showFiles,
+                memory: showMemory,
+                notifications: showNotifications,
+                sandbox: showSandbox,
                 travel: showTravel,
                 briefing: showBriefing,
                 agents: showAgents,
@@ -2300,6 +2308,416 @@
             } catch (error) {
                 renderShell('Connectors', 'Manage IMAP and SMTP integrations.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load connectors')}</div>`);
             }
+        }
+
+        async function showFiles() {
+            if (!(await requireAuth())) return;
+            setLoading('Files & Documents', 'Loading files…');
+            try {
+                const data = await api('GET', '/api/files');
+                const files = data?.files || [];
+                const STATUS_COLOR = { parsed: 'var(--success)', failed: 'var(--error)', processing: 'var(--warning)', uploaded: 'var(--text-muted)' };
+                const fileRows = files.length
+                    ? files.map(f => {
+                        const kb = Math.round((f.size || 0) / 1024);
+                        const status = f.processing_status || 'uploaded';
+                        return `<tr>
+                            <td>${escapeHtml(f.original_filename || f.filename || '')}</td>
+                            <td class="muted">${escapeHtml(f.file_type || '')}</td>
+                            <td class="muted">${kb} KB</td>
+                            <td><span style="color:${STATUS_COLOR[status]||'var(--text-muted)'}">${status}</span></td>
+                            <td class="muted">${(f.created_at||'').slice(0,16)}</td>
+                            <td>
+                                ${status === 'parsed' ? `<button class="small-btn" data-id="${escapeHtml(f.id)}" data-action="embed">Embed</button>` : ''}
+                                <button class="small-btn danger" data-id="${escapeHtml(f.id)}" data-action="delete">✕</button>
+                            </td>
+                        </tr>`;
+                    }).join('')
+                    : '<tr><td colspan="6" class="muted" style="text-align:center;padding:20px">No files uploaded yet</td></tr>';
+
+                renderShell('Files & Documents', 'Upload files, embed for RAG search, run semantic queries.',
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3>📤 Upload File</h3>
+                        <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap">
+                            <label style="cursor:pointer;background:var(--bg-input);border:2px dashed var(--border);border-radius:8px;padding:12px 24px;color:var(--text-muted);font-size:13px;flex:1;text-align:center" for="fileInput">
+                                📁 Click or drag to select a file (PDF, DOCX, CSV, TXT, XLSX…)
+                                <input type="file" id="fileInput" style="display:none" accept=".pdf,.docx,.txt,.csv,.xlsx,.md,.json,.py">
+                            </label>
+                            <button class="action-btn primary" id="uploadBtn" disabled>⬆ Upload</button>
+                            <span id="uploadStatus" class="muted" style="font-size:12px"></span>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom:18px">
+                        <h3>🔍 Semantic Search</h3>
+                        <div style="display:flex;gap:8px;margin-top:10px">
+                            <input id="ragQuery" placeholder="Search across embedded documents…" style="flex:1;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:7px 12px;font-size:13px">
+                            <button class="action-btn" id="ragSearchBtn">🔍 Search</button>
+                        </div>
+                        <div id="ragResults" style="margin-top:12px;display:none">
+                            <div id="ragResultsList"></div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>📄 Uploaded Files</h3>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Status</th><th>Uploaded</th><th>Actions</th></tr></thead>
+                        <tbody id="filesBody">${fileRows}</tbody></table>
+                        </div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showFiles()">🔄 Refresh</button>`
+                );
+
+                // Upload wiring
+                const fileInput = $('#fileInput');
+                const uploadBtn = $('#uploadBtn');
+                fileInput.addEventListener('change', () => {
+                    uploadBtn.disabled = !fileInput.files.length;
+                    if (fileInput.files[0]) $('#uploadStatus').textContent = fileInput.files[0].name;
+                });
+                uploadBtn.addEventListener('click', async () => {
+                    if (!fileInput.files[0]) return;
+                    uploadBtn.disabled = true;
+                    uploadBtn.textContent = 'Uploading…';
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    try {
+                        const token = sessionStorage.getItem('ah_token');
+                        const resp = await fetch('/api/files/upload/form', {
+                            method: 'POST',
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                            body: formData
+                        });
+                        const result = await resp.json();
+                        if (result?.success) {
+                            showToast('File uploaded!', 'var(--success)');
+                            await showFiles();
+                        } else {
+                            showToast('Upload failed: ' + (result?.detail || 'unknown'), 'var(--error)');
+                        }
+                    } catch (e) {
+                        showToast('Upload error: ' + e.message, 'var(--error)');
+                    } finally {
+                        uploadBtn.disabled = false;
+                        uploadBtn.textContent = '⬆ Upload';
+                    }
+                });
+
+                // Search wiring
+                $('#ragSearchBtn').addEventListener('click', async () => {
+                    const q = encodeURIComponent($('#ragQuery').value.trim());
+                    if (!q) return;
+                    try {
+                        const res = await api('GET', `/api/files/_search?q=${q}&limit=8`);
+                        const results = res?.results || [];
+                        const html = results.length
+                            ? results.map(r => `<div style="background:var(--bg-input);border-radius:6px;padding:10px;margin-bottom:8px">
+                                <div style="font-weight:600;font-size:13px">${escapeHtml(r.filename||'')}<span class="muted" style="margin-left:8px;font-size:11px">score ${(r.score||0).toFixed(3)}</span></div>
+                                <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">${escapeHtml((r.text||'').slice(0,300))}</div>
+                              </div>`).join('')
+                            : '<div class="muted">No results found.</div>';
+                        $('#ragResultsList').innerHTML = html;
+                        $('#ragResults').style.display = 'block';
+                    } catch (e) { showToast('Search error: ' + e.message, 'var(--error)'); }
+                });
+                $('#ragQuery').addEventListener('keydown', e => { if (e.key === 'Enter') $('#ragSearchBtn').click(); });
+
+                // Table actions
+                $$('[data-action]').forEach(btn => btn.addEventListener('click', async () => {
+                    const id = btn.dataset.id;
+                    if (btn.dataset.action === 'embed') {
+                        try {
+                            await api('POST', `/api/files/${encodeURIComponent(id)}/embed`, {});
+                            showToast('Embedding started', 'var(--success)');
+                            await showFiles();
+                        } catch (e) { showToast('Embed failed: ' + e.message, 'var(--error)'); }
+                    } else if (btn.dataset.action === 'delete') {
+                        if (!confirm('Delete this file?')) return;
+                        try {
+                            await api('DELETE', `/api/files/${encodeURIComponent(id)}`);
+                            showToast('Deleted', 'var(--warning)');
+                            await showFiles();
+                        } catch (e) { showToast('Delete failed: ' + e.message, 'var(--error)'); }
+                    }
+                }));
+
+            } catch (error) {
+                renderShell('Files & Documents', '',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load files')}</div>`);
+            }
+        }
+
+        async function showMemory() {
+            if (!(await requireAuth())) return;
+            setLoading('Global Memory', 'Loading memory…');
+            try {
+                const data = await api('GET', '/api/memory/global?limit=100');
+                const facts = data?.facts || (Array.isArray(data) ? data : []);
+                const total = data?.counts ? Object.values(data.counts).reduce((a,b) => a+b, 0) : facts.length;
+
+                const CAT_CHIPS = [...new Set(facts.map(f => f.category).filter(Boolean))];
+                const chipHtml = CAT_CHIPS.map(c => `<button class="small-btn cat-filter" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+
+                const factRows = facts.map(f => `<tr>
+                    <td><span class="muted" style="font-size:11px">${escapeHtml(f.category||'')}</span></td>
+                    <td style="font-weight:500">${escapeHtml(f.key||f.subject||'')}</td>
+                    <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(String(f.value||''))}">${escapeHtml(String(f.value||'').slice(0,120))}</td>
+                    <td class="muted">${Math.round((f.confidence||0)*100)}%</td>
+                    <td class="muted">${(f.updated_at||f.created_at||'').slice(0,10)}</td>
+                    <td><button class="small-btn danger" data-id="${escapeHtml(String(f.id||f.fact_id||''))}" data-action="del-fact">✕</button></td>
+                </tr>`).join('') || '<tr><td colspan="6" class="muted" style="text-align:center;padding:20px">No facts stored yet</td></tr>';
+
+                renderShell('Global Memory', `${total} facts stored across all agents.`,
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3>➕ Add Fact</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 2fr auto;gap:8px;margin-top:10px;align-items:center">
+                            <input id="factCat" placeholder="Category (e.g. user_pref)" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">
+                            <input id="factKey" placeholder="Key / subject" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">
+                            <input id="factVal" placeholder="Value" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">
+                            <button class="action-btn primary" id="addFactBtn">Add</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                            <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                <span class="muted" style="font-size:12px;align-self:center">Filter:</span>
+                                ${chipHtml}
+                            </div>
+                            <div style="display:flex;gap:6px">
+                                <input id="memSearch" placeholder="Search facts…" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;width:180px">
+                                <button class="action-btn" id="memSearchBtn" style="padding:5px 12px;font-size:12px">🔍</button>
+                            </div>
+                        </div>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Category</th><th>Key</th><th>Value</th><th>Conf.</th><th>Updated</th><th></th></tr></thead>
+                        <tbody id="memBody">${factRows}</tbody></table>
+                        </div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showMemory()">🔄 Refresh</button>`
+                );
+
+                // Add fact
+                $('#addFactBtn').addEventListener('click', async () => {
+                    const cat = $('#factCat').value.trim();
+                    const key = $('#factKey').value.trim();
+                    const val = $('#factVal').value.trim();
+                    if (!key || !val) { showToast('Key and value are required', 'var(--warning)'); return; }
+                    try {
+                        await api('POST', '/api/memory/global', { category: cat || 'general', key, value: val, source: 'webapp' });
+                        showToast('Fact added', 'var(--success)');
+                        await showMemory();
+                    } catch (e) { showToast('Error: ' + e.message, 'var(--error)'); }
+                });
+                $('#factVal').addEventListener('keydown', e => { if (e.key === 'Enter') $('#addFactBtn').click(); });
+
+                // Category filter chips
+                $$('.cat-filter').forEach(btn => btn.addEventListener('click', async () => {
+                    const cat = encodeURIComponent(btn.dataset.cat);
+                    try {
+                        const res = await api('GET', `/api/memory/global/search?q=${cat}&limit=100`);
+                        const filtered = res?.results || (Array.isArray(res) ? res : []);
+                        const rows = filtered.map(f => `<tr>
+                            <td class="muted" style="font-size:11px">${escapeHtml(f.category||'')}</td>
+                            <td style="font-weight:500">${escapeHtml(f.key||f.subject||'')}</td>
+                            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(String(f.value||'').slice(0,120))}</td>
+                            <td class="muted">${Math.round((f.confidence||0)*100)}%</td>
+                            <td class="muted">${(f.updated_at||f.created_at||'').slice(0,10)}</td>
+                            <td><button class="small-btn danger" data-id="${escapeHtml(String(f.id||f.fact_id||''))}" data-action="del-fact">✕</button></td>
+                        </tr>`).join('') || '<tr><td colspan="6" class="muted" style="text-align:center">No matches</td></tr>';
+                        $('#memBody').innerHTML = rows;
+                        wireDeleteFacts();
+                    } catch (e) { showToast(e.message, 'var(--error)'); }
+                }));
+
+                // Memory search
+                $('#memSearchBtn').addEventListener('click', async () => {
+                    const q = encodeURIComponent($('#memSearch').value.trim());
+                    if (!q) return;
+                    try {
+                        const res = await api('GET', `/api/memory/global/search?q=${q}&limit=100`);
+                        const results = res?.results || (Array.isArray(res) ? res : []);
+                        const rows = results.map(f => `<tr>
+                            <td class="muted" style="font-size:11px">${escapeHtml(f.category||'')}</td>
+                            <td style="font-weight:500">${escapeHtml(f.key||f.subject||'')}</td>
+                            <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(String(f.value||'').slice(0,120))}</td>
+                            <td class="muted">${Math.round((f.confidence||0)*100)}%</td>
+                            <td class="muted">${(f.updated_at||f.created_at||'').slice(0,10)}</td>
+                            <td><button class="small-btn danger" data-id="${escapeHtml(String(f.id||f.fact_id||''))}" data-action="del-fact">✕</button></td>
+                        </tr>`).join('') || '<tr><td colspan="6" class="muted" style="text-align:center">No matches</td></tr>';
+                        $('#memBody').innerHTML = rows;
+                        wireDeleteFacts();
+                    } catch (e) { showToast(e.message, 'var(--error)'); }
+                });
+                $('#memSearch').addEventListener('keydown', e => { if (e.key === 'Enter') $('#memSearchBtn').click(); });
+
+                wireDeleteFacts();
+                function wireDeleteFacts() {
+                    $$('[data-action="del-fact"]').forEach(btn => btn.addEventListener('click', async () => {
+                        if (!confirm('Delete this fact?')) return;
+                        try {
+                            await api('DELETE', `/api/memory/global/${encodeURIComponent(btn.dataset.id)}`);
+                            btn.closest('tr').remove();
+                            showToast('Fact deleted', 'var(--warning)');
+                        } catch (e) { showToast(e.message, 'var(--error)'); }
+                    }));
+                }
+
+            } catch (error) {
+                renderShell('Global Memory', '',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load memory')}</div>`);
+            }
+        }
+
+        async function showNotifications() {
+            if (!(await requireAuth())) return;
+            setLoading('Notifications', 'Loading notifications…');
+            try {
+                const data = await api('GET', '/api/notifications');
+                const items = Array.isArray(data) ? data : (data?.notifications || []);
+                const unread = items.filter(n => !n.read).length;
+
+                const LEVEL_COLOR = { error: 'var(--error)', warning: 'var(--warning)', info: 'var(--accent)', success: 'var(--success)' };
+                const rows = items.map(n => `<tr style="${!n.read ? 'font-weight:600' : ''}">
+                    <td><span style="color:${LEVEL_COLOR[n.color]||'var(--text-muted)'}">${n.color||'info'}</span></td>
+                    <td class="muted" style="font-size:11px">${escapeHtml(n.category||'')}</td>
+                    <td style="max-width:400px">${escapeHtml(n.text||'')}</td>
+                    <td class="muted">${(n.created_at||'').slice(0,16)}</td>
+                    <td><span style="color:${n.read ? 'var(--text-muted)' : 'var(--accent)'};font-size:11px">${n.read ? 'read' : '● unread'}</span></td>
+                </tr>`).join('') || '<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No notifications</td></tr>';
+
+                renderShell('Notifications', `${items.length} total · ${unread} unread`,
+                    `<div class="card">
+                        <div style="display:flex;gap:10px;margin-bottom:16px">
+                            <button class="action-btn" id="markReadBtn">✓ Mark All Read</button>
+                            <button class="action-btn" id="clearNotifsBtn">🗑 Clear All</button>
+                            <button class="action-btn" onclick="showNotifications()">🔄 Refresh</button>
+                        </div>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Level</th><th>Category</th><th>Message</th><th>Time</th><th>Status</th></tr></thead>
+                        <tbody>${rows}</tbody></table>
+                        </div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showNotifications()">🔄 Refresh</button>`
+                );
+
+                $('#markReadBtn').addEventListener('click', async () => {
+                    try {
+                        await api('POST', '/api/notifications/read', {});
+                        showToast('All marked read', 'var(--success)');
+                        await showNotifications();
+                    } catch (e) { showToast(e.message, 'var(--error)'); }
+                });
+                $('#clearNotifsBtn').addEventListener('click', async () => {
+                    if (!confirm('Clear all notifications?')) return;
+                    try {
+                        await api('DELETE', '/api/notifications');
+                        showToast('Cleared', 'var(--warning)');
+                        await showNotifications();
+                    } catch (e) { showToast(e.message, 'var(--error)'); }
+                });
+
+            } catch (error) {
+                renderShell('Notifications', '',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load notifications')}</div>`);
+            }
+        }
+
+        async function showSandbox() {
+            if (!(await requireAuth())) return;
+            setLoading('Code Sandbox', 'Loading sandbox…');
+            let sandboxMode = 'unknown';
+            try {
+                const status = await api('GET', '/api/sandbox/status').catch(() => ({}));
+                sandboxMode = status?.mode || 'restricted';
+            } catch (e) { /* ignore */ }
+
+            const SAMPLE = `# Write Python code and press Run\nimport json\ndata = {"message": "Hello from ArchonHub sandbox!", "items": [1, 2, 3]}\nprint(json.dumps(data, indent=2))\nprint(f"Sum: {sum(data['items'])}")`;
+
+            renderShell('Code Sandbox', `Python sandbox · mode: ${sandboxMode}`,
+                `<div class="card" style="margin-bottom:18px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <h3>📝 Code</h3>
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <span id="sandboxStatus" class="muted" style="font-size:11px">mode: ${escapeHtml(sandboxMode)}</span>
+                            <button class="action-btn primary" id="runSandboxBtn">▶ Run</button>
+                            <button class="action-btn" id="clearSandboxBtn">✕ Clear</button>
+                        </div>
+                    </div>
+                    <textarea id="sandboxCode" spellcheck="false" style="width:100%;box-sizing:border-box;min-height:220px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:Consolas,monospace;font-size:13px;line-height:1.5;resize:vertical;tab-size:4">${escapeHtml(SAMPLE)}</textarea>
+                </div>
+                <div class="card" id="outputCard" style="display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <h3>📤 Output</h3>
+                        <span id="execMeta" class="muted" style="font-size:11px"></span>
+                    </div>
+                    <div id="stdoutBox" style="display:none">
+                        <div class="muted" style="font-size:11px;margin-bottom:4px">stdout</div>
+                        <pre id="stdout" style="background:var(--bg-input);border-radius:6px;padding:12px;font-size:12px;overflow-x:auto;white-space:pre-wrap;max-height:300px;overflow-y:auto;margin:0"></pre>
+                    </div>
+                    <div id="stderrBox" style="display:none;margin-top:10px">
+                        <div style="color:var(--warning);font-size:11px;margin-bottom:4px">stderr</div>
+                        <pre id="stderr" style="background:var(--bg-input);border-radius:6px;padding:12px;font-size:12px;color:var(--warning);overflow-x:auto;white-space:pre-wrap;max-height:200px;overflow-y:auto;margin:0"></pre>
+                    </div>
+                    <div id="errorBox" style="display:none;margin-top:10px">
+                        <div style="color:var(--error);font-size:11px;margin-bottom:4px">error</div>
+                        <pre id="errorOut" style="background:var(--bg-input);border-radius:6px;padding:12px;font-size:12px;color:var(--error);overflow-x:auto;white-space:pre-wrap;margin:0"></pre>
+                    </div>
+                    <div id="blockedBox" style="display:none;margin-top:10px;padding:10px;background:rgba(239,68,68,0.1);border-radius:6px;color:var(--error);font-size:13px"></div>
+                </div>`,
+                ''
+            );
+
+            const codeEl = $('#sandboxCode');
+            // Tab key support
+            codeEl.addEventListener('keydown', e => {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const s = codeEl.selectionStart, end = codeEl.selectionEnd;
+                    codeEl.value = codeEl.value.slice(0, s) + '    ' + codeEl.value.slice(end);
+                    codeEl.selectionStart = codeEl.selectionEnd = s + 4;
+                }
+                if (e.ctrlKey && e.key === 'Enter') $('#runSandboxBtn').click();
+            });
+            $('#clearSandboxBtn').addEventListener('click', () => { codeEl.value = ''; codeEl.focus(); });
+
+            $('#runSandboxBtn').addEventListener('click', async () => {
+                const code = codeEl.value.trim();
+                if (!code) { showToast('Write some code first', 'var(--warning)'); return; }
+                const btn = $('#runSandboxBtn');
+                btn.disabled = true; btn.textContent = '⏳ Running…';
+                const t0 = Date.now();
+                try {
+                    const result = await api('POST', '/api/sandbox/execute', { code, language: 'python' });
+                    const ms = result?.execution_time_ms || (Date.now() - t0);
+                    const ec = result?.exit_code ?? 0;
+                    $('#execMeta').textContent = `exit ${ec} · ${ms}ms`;
+                    $('#execMeta').style.color = ec === 0 ? 'var(--success)' : 'var(--error)';
+                    $('#outputCard').style.display = 'block';
+
+                    if (result?.blocked_reason) {
+                        $('#blockedBox').textContent = '🚫 Blocked: ' + result.blocked_reason;
+                        $('#blockedBox').style.display = 'block';
+                    } else { $('#blockedBox').style.display = 'none'; }
+
+                    if (result?.stdout) { $('#stdout').textContent = result.stdout; $('#stdoutBox').style.display = 'block'; }
+                    else { $('#stdoutBox').style.display = 'none'; }
+
+                    if (result?.stderr) { $('#stderr').textContent = result.stderr; $('#stderrBox').style.display = 'block'; }
+                    else { $('#stderrBox').style.display = 'none'; }
+
+                    if (result?.error) { $('#errorOut').textContent = result.error; $('#errorBox').style.display = 'block'; }
+                    else { $('#errorBox').style.display = 'none'; }
+
+                    $('#outputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (e) {
+                    $('#outputCard').style.display = 'block';
+                    $('#errorOut').textContent = e.message || 'Execution failed';
+                    $('#errorBox').style.display = 'block';
+                    $('#stdoutBox').style.display = 'none';
+                    $('#stderrBox').style.display = 'none';
+                } finally {
+                    btn.disabled = false; btn.textContent = '▶ Run';
+                }
+            });
         }
 
         async function showEmailCleanup() {

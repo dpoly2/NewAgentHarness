@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import sqlite3
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from core.auth import get_current_user
 from core.config import AGENTS_DIR, DB_PATH, HARNESS
@@ -155,4 +156,56 @@ async def search_documents(query: str, limit: int = 5, file_ids: Optional[str] =
     
     except Exception as e:
         logger.error(f"Document search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/files/upload/form")
+async def upload_file_form(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Multipart form upload for browser/webapp clients."""
+    try:
+        user_id = current_user.get("username", "default_user")
+        from file_processor import FileProcessor
+
+        upload_dir = AGENTS_DIR / "data" / "uploads"
+        processor = FileProcessor(DB_PATH, upload_dir)
+
+        content = await file.read()
+        result = await processor.save_file(
+            file_content=content,
+            filename=file.filename,
+            mime_type=file.content_type or "application/octet-stream",
+            user_id=user_id,
+            uploaded_via="webapp",
+        )
+        try:
+            parse_result = await processor.parse_file(result["file_id"])
+            result["parsing"] = parse_result
+        except Exception as parse_error:
+            result["parsing"] = {"status": "failed", "error": str(parse_error)}
+
+        return {"success": True, "file": result}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Form upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/files/{file_id}")
+async def delete_file(file_id: str, _: dict = Depends(get_current_user)):
+    """Delete an uploaded file record and its chunks."""
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        try:
+            conn.execute("DELETE FROM file_chunks WHERE file_id = ?", (file_id,))
+            conn.execute("DELETE FROM uploaded_files WHERE id = ?", (file_id,))
+            conn.commit()
+        finally:
+            conn.close()
+        return {"success": True}
+    except Exception as e:
+        logger.error(f"Delete file error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

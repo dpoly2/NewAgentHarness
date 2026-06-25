@@ -153,6 +153,8 @@ NAV_ITEMS = [
     ("⚡", "Connect",  "show_connectors"),
     ("🤖", "Agents",   "show_agents"),
     ("🔬", "Models",   "show_models"),
+    ("🔔", "Notifs",  "show_notifications"),
+    ("⚡", "Sandbox", "show_sandbox"),
     ("👑", "Inez",     "show_inez"),
     ("🔑", "Admin",    "show_admin"),
 ]
@@ -3924,9 +3926,9 @@ class ArchonHubApp:
 
         def _run():
             try:
-                results = self.hub.post_json("/api/files/search", {"query": q, "top_k": 8})
+                results = self.hub._get(f"/api/files/_search?q={q}&limit=8") or {}
+                rows = results.get("results", []) if isinstance(results, dict) else []
                 lines = []
-                rows = results if isinstance(results, list) else results.get("results", []) if isinstance(results, dict) else []
                 for r in rows:
                     lines.append(f"[{r.get('filename', '')}] (score {float(r.get('score', 0) or 0):.3f})")
                     lines.append(f"  {str(r.get('text', ''))[:200]}")
@@ -3936,6 +3938,164 @@ class ArchonHubApp:
                 self._ui_queue.put(("toast", f"{len(lines) // 3} result(s) found.", SUCCESS))
             except Exception as e:
                 self._ui_queue.put(("toast", f"Search error: {e}", ERROR))
+
+        _t.Thread(target=_run, daemon=True).start()
+
+    def show_notifications(self):
+        self._set_active_nav("Notifs")
+        self._clear_content()
+        self._section_header(self.content, "🔔 Notifications",
+                             "System alerts and proactive monitoring notifications.")
+
+        top_row = tk.Frame(self.content, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=20, pady=(0, 10))
+        self._button(top_row, "🔄 Refresh", self._refresh_notifications).pack(side="left", padx=(0, 8))
+        self._button(top_row, "✓ Mark All Read", self._mark_notifs_read).pack(side="left", padx=(0, 8))
+        self._button(top_row, "🗑 Clear All", self._clear_notifications, accent=False).pack(side="left")
+
+        card = self._card(self.content, "Notifications")
+        card.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+        cols = ("category", "text", "color", "created")
+        self.notif_tree = ttk.Treeview(card, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("category", "Category", 100), ("text", "Message", 420),
+                             ("color", "Level", 70), ("created", "When", 130)]:
+            self.notif_tree.heading(col, text=txt)
+            self.notif_tree.column(col, width=w, anchor="w")
+        sb = ttk.Scrollbar(card, orient="vertical", command=self.notif_tree.yview)
+        self.notif_tree.configure(yscrollcommand=sb.set)
+        self.notif_tree.pack(side="left", fill="both", expand=True, padx=14, pady=(0, 10))
+        sb.pack(side="right", fill="y", pady=(0, 10))
+        self._refresh_notifications()
+
+    def _refresh_notifications(self):
+        if not hasattr(self, "notif_tree"):
+            return
+        self.notif_tree.delete(*self.notif_tree.get_children())
+        try:
+            data = self.hub._get("/api/notifications") or []
+            items = data if isinstance(data, list) else data.get("notifications", [])
+            for n in items:
+                tag = "unread" if not n.get("read") else ""
+                self.notif_tree.insert("", "end", iid=str(n.get("id", "")),
+                                       values=(n.get("category", ""), n.get("text", ""),
+                                               n.get("color", ""), str(n.get("created_at", ""))[:16]),
+                                       tags=(tag,))
+            self.notif_tree.tag_configure("unread", foreground=ACCENT)
+        except Exception as e:
+            self._toast(f"Notifications load error: {e}", ERROR)
+
+    def _mark_notifs_read(self):
+        try:
+            self.hub.post_json("/api/notifications/read", {})
+            self._refresh_notifications()
+            self._toast("All marked read.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Error: {e}", ERROR)
+
+    def _clear_notifications(self):
+        try:
+            self.hub.delete("/api/notifications")
+            self._refresh_notifications()
+            self._toast("Notifications cleared.", SUCCESS)
+        except Exception as e:
+            self._toast(f"Error: {e}", ERROR)
+
+    def show_sandbox(self):
+        self._set_active_nav("Sandbox")
+        self._clear_content()
+        self._section_header(self.content, "⚡ Code Sandbox",
+                             "Execute Python code securely. stdout, stderr, and generated files returned.")
+
+        # Top: status
+        status_row = tk.Frame(self.content, bg=BG_CANVAS)
+        status_row.pack(fill="x", padx=20, pady=(0, 8))
+        self._sandbox_status_lbl = tk.Label(status_row, text="Checking sandbox…", bg=BG_CANVAS,
+                                             fg=TEXT_MUTED, font=("Segoe UI", 9))
+        self._sandbox_status_lbl.pack(side="left")
+        self._refresh_sandbox_status()
+
+        paned = tk.PanedWindow(self.content, orient="vertical", bg=BG_CANVAS, sashwidth=4)
+        paned.pack(fill="both", expand=True, padx=20, pady=(0, 4))
+
+        # Input pane
+        in_card = self._card(paned, "Code (Python)")
+        paned.add(in_card, minsize=120)
+        self._sandbox_code = self._text_widget(in_card, height=12, font=("Consolas", 10))
+        self._sandbox_code.pack(fill="both", expand=True, padx=14, pady=(0, 4))
+        self._sandbox_code.insert("1.0", "# Write Python code here\nprint('Hello from sandbox!')\n")
+
+        run_row = tk.Frame(in_card, bg=BG_PANEL)
+        run_row.pack(fill="x", padx=14, pady=(0, 8))
+        self._button(run_row, "▶ Run", self._run_sandbox, accent=True).pack(side="left", padx=(0, 8))
+        self._button(run_row, "✗ Clear Code", lambda: (self._sandbox_code.delete("1.0", "end"),
+                                                        self._sandbox_code.insert("1.0", ""))).pack(side="left")
+        self._sandbox_run_lbl = tk.Label(run_row, text="", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9))
+        self._sandbox_run_lbl.pack(side="left", padx=8)
+
+        # Output pane
+        out_card = self._card(paned, "Output")
+        paned.add(out_card, minsize=80)
+        self._sandbox_output = self._text_widget(out_card, height=8, font=("Consolas", 10))
+        self._sandbox_output.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        self._sandbox_output.configure(state="disabled")
+
+    def _refresh_sandbox_status(self):
+        import threading as _t
+        def _run():
+            try:
+                s = self.hub._get("/api/sandbox/status") or {}
+                mode = s.get("mode", "unknown")
+                lang = ", ".join(s.get("supported_languages", ["python"]))
+                self._ui_queue.put(("configure", self._sandbox_status_lbl,
+                                    {"text": f"Mode: {mode} | Languages: {lang}", "fg": SUCCESS}))
+            except Exception:
+                self._ui_queue.put(("configure", self._sandbox_status_lbl,
+                                    {"text": "Sandbox offline or unavailable", "fg": ERROR}))
+        _t.Thread(target=_run, daemon=True).start()
+
+    def _run_sandbox(self):
+        code = self._sandbox_code.get("1.0", "end").strip()
+        if not code:
+            self._toast("Enter some code first.", WARNING)
+            return
+        import threading as _t, time
+        self._sandbox_run_lbl.configure(text="Running…", fg=ACCENT)
+        self._sandbox_output.configure(state="normal")
+        self._sandbox_output.delete("1.0", "end")
+        self._sandbox_output.insert("end", "Running…\n")
+        self._sandbox_output.configure(state="disabled")
+
+        def _run():
+            t0 = time.time()
+            try:
+                result = self.hub.post_json("/api/sandbox/execute", {"code": code, "language": "python"})
+                elapsed = int((time.time() - t0) * 1000)
+                if result:
+                    stdout = result.get("stdout", "")
+                    stderr = result.get("stderr", "")
+                    error = result.get("error", "")
+                    exit_code = result.get("exit_code", 0)
+                    ms = result.get("execution_time_ms", elapsed)
+                    blocked = result.get("blocked_reason", "")
+                    parts = []
+                    if blocked:
+                        parts.append(f"BLOCKED: {blocked}")
+                    if stdout:
+                        parts.append(f"--- stdout ---\n{stdout}")
+                    if stderr:
+                        parts.append(f"--- stderr ---\n{stderr}")
+                    if error:
+                        parts.append(f"--- error ---\n{error}")
+                    text = "\n".join(parts) if parts else "(no output)"
+                    self._ui_queue.put(("set_text", self._sandbox_output, text))
+                    color = SUCCESS if exit_code == 0 and not blocked else ERROR
+                    self._ui_queue.put(("configure", self._sandbox_run_lbl,
+                                        {"text": f"Exit {exit_code} | {ms}ms", "fg": color}))
+                else:
+                    self._ui_queue.put(("set_text", self._sandbox_output, "No response from sandbox."))
+            except Exception as e:
+                self._ui_queue.put(("set_text", self._sandbox_output, f"Error: {e}"))
+                self._ui_queue.put(("configure", self._sandbox_run_lbl, {"text": "Error", "fg": ERROR}))
 
         _t.Thread(target=_run, daemon=True).start()
 
