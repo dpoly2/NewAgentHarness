@@ -457,6 +457,12 @@ def _fallback_init_schema() -> None:
                 FOREIGN KEY (plan_id) REFERENCES implementation_plans(plan_id)
             );
             CREATE INDEX IF NOT EXISTS idx_runs_agent_status_created ON runs (agent_id, status, created_at);
+            CREATE TABLE IF NOT EXISTS ws_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_ws_events_id ON ws_events (id);
             CREATE INDEX IF NOT EXISTS idx_job_queue_status ON job_queue (status);
             CREATE INDEX IF NOT EXISTS idx_todos_status ON todos (status);
             CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications (read);
@@ -508,16 +514,37 @@ def _ensure_plan_schema() -> None:
         conn.close()
 
 
+def _ensure_worker_schema() -> None:
+    """Create ws_events table used for multi-worker broadcast."""
+    conn = _db_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS ws_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payload_json TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_ws_events_id ON ws_events (id);
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _init_schema() -> None:
     if db and hasattr(db, "init_schema"):
         try:
             db.init_schema()  # type: ignore[attr-defined]
             _ensure_plan_schema()
+            _ensure_worker_schema()
             return
         except Exception:
             pass
     _fallback_init_schema()
     _ensure_plan_schema()
+    _ensure_worker_schema()
 
 
 def _config_value(key: str, default: Any = None) -> Any:
@@ -1023,3 +1050,141 @@ def _get_plan_events(plan_id: str, limit: int = 200) -> list[dict]:
         item["payload"] = _json_loads(item.pop("payload_json", "{}"), {})
         result.append(item)
     return result
+
+
+# ---------------------------------------------------------------------------
+# 5-worker shared-state helpers (DB-backed broadcast + job claiming)
+# ---------------------------------------------------------------------------
+
+def _insert_ws_event(payload: dict) -> int:
+    """Insert a WebSocket broadcast event. All workers poll and forward to their clients."""
+    conn = _db_connection()
+    try:
+        cur = conn.execute(
+            "INSERT INTO ws_events (payload_json, created_at) VALUES (?, ?)",
+            (_json_dumps(payload), _now_iso()),
+        )
+        conn.commit()
+        return cur.lastrowid or 0
+    finally:
+        conn.close()
+
+
+def _get_ws_events_since(last_id: int) -> list[tuple[int, dict]]:
+    """Return [(id, payload), ...] for events added after last_id."""
+    conn = _db_connection()
+    try:
+        rows = conn.execute(
+            "SELECT id, payload_json FROM ws_events WHERE id > ? ORDER BY id ASC LIMIT 100",
+            (last_id,),
+        ).fetchall()
+        return [(row[0], _json_loads(row[1], {})) for row in rows]
+    finally:
+        conn.close()
+
+
+def _cleanup_old_ws_events(max_age_seconds: int = 300) -> None:
+    """Delete ws_events older than max_age_seconds to prevent table bloat."""
+    from datetime import timedelta
+    cutoff = (_utcnow() - timedelta(seconds=max_age_seconds)).isoformat()
+    conn = _db_connection()
+    try:
+        conn.execute("DELETE FROM ws_events WHERE created_at < ?", (cutoff,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _claim_queued_job() -> dict | None:
+    """Atomically claim one queued job. Returns the job dict or None if queue is empty.
+
+    Uses two-step optimistic lock: SELECT the oldest queued id, then UPDATE with
+    a WHERE status='queued' guard so two workers cannot claim the same row.
+    """
+    conn = _db_connection()
+    try:
+        row = conn.execute(
+            "SELECT id FROM job_queue WHERE status = 'queued' ORDER BY queued_at ASC LIMIT 1"
+        ).fetchone()
+        if row is None:
+            return None
+        job_id = row[0]
+        now = _now_iso()
+        cur = conn.execute(
+            "UPDATE job_queue SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'",
+            (now, job_id),
+        )
+        conn.commit()
+        if cur.rowcount == 0:
+            return None  # Another worker claimed it first
+        job_row = conn.execute("SELECT * FROM job_queue WHERE id = ?", (job_id,)).fetchone()
+        return _row_to_dict(job_row, json_fields={"job_data"})
+    finally:
+        conn.close()
+
+
+def _check_job_cancel_flag(run_id: str) -> bool:
+    """Return True if the job has been set to 'cancelling' by an external request."""
+    conn = _db_connection()
+    try:
+        row = conn.execute("SELECT status FROM job_queue WHERE id = ?", (run_id,)).fetchone()
+        return row is not None and row[0] == "cancelling"
+    finally:
+        conn.close()
+
+
+def _count_queued_jobs() -> int:
+    """Return the number of jobs currently in 'queued' status."""
+    conn = _db_connection()
+    try:
+        row = conn.execute("SELECT COUNT(*) FROM job_queue WHERE status = 'queued'").fetchone()
+        return row[0] if row else 0
+    finally:
+        conn.close()
+
+
+def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
+    """Try to become the scheduler leader. Returns True if this process holds the lock.
+
+    Stores {pid}:{timestamp} in hub_config. If the existing entry is from a
+    different PID and is still fresh (< ttl seconds old), returns False.
+    """
+    from datetime import timedelta
+    conn = _db_connection()
+    try:
+        row = conn.execute(
+            "SELECT value, updated_at FROM hub_config WHERE key = 'scheduler_leader'"
+        ).fetchone()
+        now = _utcnow()
+        if row is not None:
+            existing_pid_str, updated_at_str = row[0], row[1]
+            try:
+                existing_pid = int(existing_pid_str.split(":")[0])
+                updated_at = datetime.fromisoformat(updated_at_str)
+                age = (now - updated_at).total_seconds()
+                if existing_pid != pid and age < ttl:
+                    return False  # Another process holds the lock
+            except Exception:
+                pass  # Malformed record — proceed to overwrite
+        conn.execute(
+            "INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES ('scheduler_leader', ?, ?)",
+            (f"{pid}:{now.isoformat()}", now.isoformat()),
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def _release_scheduler_lock(pid: int) -> None:
+    """Release the scheduler lock if this process holds it."""
+    conn = _db_connection()
+    try:
+        conn.execute(
+            "DELETE FROM hub_config WHERE key = 'scheduler_leader' AND value LIKE ?",
+            (f"{pid}:%",),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+

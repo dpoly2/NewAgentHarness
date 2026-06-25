@@ -1,7 +1,7 @@
 # ArchonHub Hub Server
 # =====================
 # Runs the FastAPI hub server on port 8765.
-# All data is persisted via a volume mount at /app/memory and /app/data.
+# All data is persisted via volume mounts at /app/memory, /app/data, /app/uploads, /app/chroma_db.
 
 FROM python:3.13-slim
 
@@ -24,8 +24,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application source
 COPY .agents/agentharness/app/v3/ ./
 
-# Create data directories
-RUN mkdir -p /app/memory /app/data/logs /app/data/backup
+# Create data directories and set ownership
+RUN mkdir -p /app/memory /app/data/logs /app/data/backup /app/uploads /app/chroma_db \
+    && useradd -m -u 1000 archonhub \
+    && chown -R archonhub:archonhub /app
+
+USER archonhub
 
 # Expose hub server port
 EXPOSE 8765
@@ -34,5 +38,8 @@ EXPOSE 8765
 ENV HUB_PORT=8765 \
     HUB_HOST=0.0.0.0 \
     PYTHONUNBUFFERED=1
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8765/api/health', timeout=5)"
 
 CMD ["python", "hub_server.py"]

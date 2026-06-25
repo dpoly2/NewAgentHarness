@@ -28,7 +28,7 @@ except ImportError:
 if FASTAPI_OK:
     from core.auth import _unhandled_exception_handler, create_access_token, verify_token
     from core.config import APP_VERSION, PID_FILE, SECRET_KEY, WEB_DIR, _JWT_SECRET_DEFAULT, _cors_origins
-    from core.database import _config_value, _init_schema, _load_pending_jobs
+    from core.database import _config_value, _count_queued_jobs, _init_schema
     from core.hub import build_scheduler, hub
     from routers import (
         agents,
@@ -66,7 +66,6 @@ if FASTAPI_OK:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         _init_schema()
-        hub._queue = asyncio.Queue()
         hub._loop = asyncio.get_running_loop()
         if SECRET_KEY == _JWT_SECRET_DEFAULT:
             import warnings
@@ -75,30 +74,34 @@ if FASTAPI_OK:
         _default_admin_pw = "ArchonHub2024!"
         if os.environ.get('ADMIN_PASSWORD', _default_admin_pw) == _default_admin_pw:
             hub.logger.warning('SECURITY: ADMIN_PASSWORD is set to the default insecure value. Set ADMIN_PASSWORD in .env!')
-        for pending_job in _load_pending_jobs():
-            payload = pending_job.get('job_data') if isinstance(pending_job.get('job_data'), dict) else {}
-            merged = {**payload, **pending_job}
-            merged['run_id'] = pending_job.get('id') or pending_job.get('run_id')
-            if merged.get('run_id'):
-                await hub._queue.put(merged)
-        hub._worker_task = asyncio.create_task(hub._worker_loop())
+        # Start 5 DB-backed worker coroutines (each polls job_queue for unclaimed jobs)
+        for _ in range(5):
+            hub._worker_tasks.append(asyncio.create_task(hub._db_worker_loop()))
+        # Start the WebSocket event broadcast poll (one per process)
+        hub._event_poll_task = asyncio.create_task(hub._event_poll_loop())
+        # Only one worker process should run APScheduler (distributed lock via hub_config)
         hub._scheduler = build_scheduler(hub)
-        try:
-            hub._scheduler.start()
-        except Exception:
-            hub.logger.exception('Unable to start scheduler')
+        if hub._try_scheduler_lock():
+            hub._is_scheduler_leader = True
+            try:
+                hub._scheduler.start()
+            except Exception:
+                hub.logger.exception('Unable to start scheduler')
         PID_FILE.parent.mkdir(parents=True, exist_ok=True)
         PID_FILE.write_text(str(os.getpid()), encoding='utf-8')
         try:
             yield
         finally:
-            if hub._worker_task:
-                hub._worker_task.cancel()
-            if hub._scheduler:
+            for task in hub._worker_tasks:
+                task.cancel()
+            if hub._event_poll_task:
+                hub._event_poll_task.cancel()
+            if hub._is_scheduler_leader and hub._scheduler:
                 try:
                     hub._scheduler.shutdown()
                 except Exception:
                     pass
+                hub._release_scheduler_lock_safe()
             hub._executor.shutdown(wait=False)
             if PID_FILE.exists():
                 PID_FILE.unlink()
@@ -161,7 +164,7 @@ if FASTAPI_OK:
                 await websocket.send_json(
                     {
                         "type": "connected",
-                        "queue_depth": hub._queue.qsize() if hub._queue else 0,
+                        "queue_depth": _count_queued_jobs(),
                         "active_runs": list(hub._active_runs.keys()),
                     }
                 )
@@ -236,7 +239,7 @@ if __name__ == '__main__':
 
     import sys as _sys
 
-    _workers = 1
+    _workers = 5
     _loop = 'asyncio' if _sys.platform == 'win32' else 'auto'
     port = int(os.environ.get('HUB_PORT', 8765))
     host = os.environ.get('HUB_HOST', '0.0.0.0')

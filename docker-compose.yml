@@ -11,10 +11,11 @@ services:
     ports:
       - "8765:8765"
     volumes:
-      # Persist DB, memory, and agent data outside the container
+      # Persist DB, memory, agent data, evidence files, and vector store
       - archonhub_memory:/app/memory
       - archonhub_data:/app/data
-      - archonhub_agents:/app/../../../agents
+      - archonhub_uploads:/app/uploads
+      - archonhub_chroma:/app/chroma_db
     env_file:
       - .agents/.env
     environment:
@@ -31,4 +32,5 @@ services:
 volumes:
   archonhub_memory:
   archonhub_data:
-  archonhub_agents:
+  archonhub_uploads:
+  archonhub_chroma:
