@@ -797,6 +797,7 @@
             { id: 'sandbox', icon: '⚡', label: 'Sandbox' },
             { id: 'search', icon: '🔍', label: 'Search' },
             { id: 'feedback', icon: '💬', label: 'Feedback' },
+            { id: 'templates', icon: '📝', label: 'Templates' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
             { id: 'chat', icon: '💬', label: 'Chat' },
@@ -1323,6 +1324,7 @@
                 sandbox: showSandbox,
                 search: showSearch,
                 feedback: showFeedback,
+                templates: showTemplates,
                 travel: showTravel,
                 briefing: showBriefing,
                 agents: showAgents,
@@ -2722,6 +2724,124 @@
                     btn.disabled = false; btn.textContent = '▶ Run';
                 }
             });
+        }
+
+        async function showTemplates() {
+            if (!(await requireAuth())) return;
+            setLoading('Prompt Templates', 'Loading templates…');
+            try {
+                const templates = await api('GET', '/api/prompt-templates');
+                const list = Array.isArray(templates) ? templates : (templates?.templates || []);
+
+                // Group by category
+                const byCategory = {};
+                list.forEach(t => {
+                    const cat = t.category || 'general';
+                    if (!byCategory[cat]) byCategory[cat] = [];
+                    byCategory[cat].push(t);
+                });
+                const cats = Object.keys(byCategory).sort();
+                const catFilter = ['All', ...cats].map(c =>
+                    `<button class="small-btn cat-filter-tmpl" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`
+                ).join('');
+
+                const templateCards = (tmplList) => tmplList.map(t => `
+                    <div class="card" style="padding:14px;margin-bottom:10px;cursor:pointer" data-tmpl-id="${escapeHtml(t.id)}" data-tmpl-text="${escapeHtml(t.prompt_text||'')}">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                            <div>
+                                <div style="font-weight:600;font-size:14px">${escapeHtml(t.title||'Untitled')}</div>
+                                <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+                                    <span style="background:var(--bg-input);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--text-muted)">${escapeHtml(t.category||'general')}</span>
+                                    <span style="background:var(--bg-input);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--text-muted)">🤖 ${escapeHtml(t.agent_id||'inez')}</span>
+                                    <span style="background:var(--bg-input);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--text-muted)">📊 ${t.usage_count||0} uses</span>
+                                    ${t.is_system ? '<span style="background:rgba(139,92,246,0.15);border-radius:4px;padding:2px 6px;font-size:11px;color:#8b5cf6">system</span>' : ''}
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:6px;flex-shrink:0">
+                                <button class="small-btn use-tmpl-btn" data-id="${escapeHtml(t.id)}" data-text="${escapeHtml(t.prompt_text||'')}">📋 Copy</button>
+                                ${!t.is_system ? `<button class="small-btn danger del-tmpl-btn" data-id="${escapeHtml(t.id)}">✕</button>` : ''}
+                            </div>
+                        </div>
+                        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;line-height:1.5;white-space:pre-wrap;max-height:80px;overflow:hidden;text-overflow:ellipsis">${escapeHtml((t.prompt_text||'').slice(0,200))}${(t.prompt_text||'').length > 200 ? '…' : ''}</div>
+                    </div>`).join('') || '<div class="muted" style="padding:20px;text-align:center">No templates in this category</div>';
+
+                renderShell('Prompt Templates', `${list.length} templates across ${cats.length} categories`,
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3 style="margin-bottom:12px">➕ New Template</h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+                            <input id="tmplTitle" placeholder="Title *" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px">
+                            <input id="tmplCategory" placeholder="Category (e.g. writing)" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px">
+                            <input id="tmplAgent" placeholder="Agent ID (default: inez)" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px">
+                        </div>
+                        <textarea id="tmplText" rows="4" placeholder="Prompt text… Use {variable} for placeholders" style="width:100%;box-sizing:border-box;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+                        <div style="display:flex;gap:8px;margin-top:8px">
+                            <button class="action-btn primary" id="saveTmplBtn">💾 Save Template</button>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+                        <span class="muted" style="font-size:12px">Filter:</span>
+                        ${catFilter}
+                    </div>
+                    <div id="templatesList">${templateCards(list)}</div>`,
+                    `<button class="action-btn" onclick="showTemplates()">🔄 Refresh</button>`
+                );
+
+                // Category filter
+                $$('.cat-filter-tmpl').forEach(btn => btn.addEventListener('click', () => {
+                    const cat = btn.dataset.cat;
+                    const filtered = cat === 'All' ? list : (byCategory[cat] || []);
+                    $('#templatesList').innerHTML = templateCards(filtered);
+                    wireTemplateActions();
+                }));
+
+                // Save new template
+                $('#saveTmplBtn').addEventListener('click', async () => {
+                    const title = $('#tmplTitle').value.trim();
+                    const text = $('#tmplText').value.trim();
+                    if (!title || !text) { showToast('Title and prompt text are required', 'var(--warning)'); return; }
+                    try {
+                        await api('POST', '/api/prompt-templates', {
+                            title,
+                            category: $('#tmplCategory').value.trim() || 'general',
+                            agent_id: $('#tmplAgent').value.trim() || 'inez',
+                            prompt_text: text,
+                        });
+                        showToast('Template saved!', 'var(--success)');
+                        await showTemplates();
+                    } catch (e) { showToast('Save failed: ' + e.message, 'var(--error)'); }
+                });
+
+                wireTemplateActions();
+
+                function wireTemplateActions() {
+                    // Copy button
+                    $$('.use-tmpl-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        try {
+                            await api('POST', `/api/prompt-templates/${encodeURIComponent(btn.dataset.id)}/use`, {});
+                            await navigator.clipboard.writeText(btn.dataset.text);
+                            showToast('Copied to clipboard!', 'var(--success)');
+                        } catch (err) {
+                            // Fallback if clipboard API not available
+                            showToast('Use Ctrl+C to copy', 'var(--warning)');
+                        }
+                    }));
+                    // Delete button
+                    $$('.del-tmpl-btn').forEach(btn => btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
+                        if (!confirm('Delete this template?')) return;
+                        try {
+                            await api('DELETE', `/api/prompt-templates/${encodeURIComponent(btn.dataset.id)}`);
+                            btn.closest('[data-tmpl-id]').remove();
+                            showToast('Template deleted', 'var(--warning)');
+                        } catch (err) { showToast('Delete failed: ' + err.message, 'var(--error)'); }
+                    }));
+                }
+
+            } catch (error) {
+                renderShell('Prompt Templates', '',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load templates')}</div>`);
+            }
         }
 
         async function showSearch() {

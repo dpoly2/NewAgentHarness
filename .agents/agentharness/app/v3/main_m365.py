@@ -4358,10 +4358,10 @@ class ArchonHubApp:
 
         card = self._card(parent, "Prompt Templates")
         card.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-        cols = ("name", "category", "description", "uses")
+        cols = ("title", "category", "agent_id", "uses")
         self.tmpl_tree = ttk.Treeview(card, columns=cols, show="headings", selectmode="browse")
-        for col, txt, w in [("name", "Name", 160), ("category", "Category", 100),
-                            ("description", "Description", 260), ("uses", "Uses", 50)]:
+        for col, txt, w in [("title", "Title", 200), ("category", "Category", 100),
+                            ("agent_id", "Agent", 120), ("uses", "Uses", 50)]:
             self.tmpl_tree.heading(col, text=txt)
             self.tmpl_tree.column(col, width=w, anchor="w")
         sb = ttk.Scrollbar(card, orient="vertical", command=self.tmpl_tree.yview)
@@ -4371,6 +4371,7 @@ class ArchonHubApp:
         btn_row = tk.Frame(card, bg=BG_PANEL)
         btn_row.pack(fill="x", padx=14, pady=(0, 10))
         self._button(btn_row, "🗑 Delete Selected", self._delete_prompt_template).pack(side="left", padx=4)
+        self._button(btn_row, "📋 Copy Text", self._copy_template_text).pack(side="left", padx=4)
         self._refresh_prompt_templates()
 
     def _refresh_prompt_templates(self):
@@ -4382,8 +4383,8 @@ class ArchonHubApp:
             templates = data if isinstance(data, list) else data.get("templates", [])
             for t in templates:
                 self.tmpl_tree.insert("", "end", iid=str(t.get("id", "")),
-                                      values=(t.get("name", ""), t.get("category", ""), str(t.get("description", ""))[:60],
-                                              t.get("use_count", 0)))
+                                      values=(t.get("title", t.get("name", "")), t.get("category", ""),
+                                              t.get("agent_id", ""), t.get("usage_count", t.get("use_count", 0))))
         except Exception as e:
             self._toast(f"Templates load error: {e}", ERROR)
 
@@ -4393,8 +4394,8 @@ class ArchonHubApp:
         win.configure(bg=BG_PANEL)
         win.geometry("520x420")
         fields = {}
-        for label, key, multiline in [("Name", "name", False), ("Category", "category", False),
-                                      ("Description", "description", False), ("Template", "template", True)]:
+        for label, key, multiline in [("Title", "title", False), ("Category", "category", False),
+                                      ("Agent ID", "agent_id", False), ("Prompt Text", "prompt_text", True)]:
             tk.Label(win, text=label, bg=BG_PANEL, fg=TEXT_BODY).pack(anchor="w", padx=20, pady=(10, 2))
             if multiline:
                 t = tk.Text(win, bg=BG_INPUT, fg=TEXT_PRIMARY, insertbackground=TEXT_PRIMARY,
@@ -4408,10 +4409,10 @@ class ArchonHubApp:
 
         def _save():
             payload = {
-                "name": fields["name"].get(),
-                "category": fields["category"].get(),
-                "description": fields["description"].get(),
-                "template": fields["template"].get("1.0", "end").strip(),
+                "title": fields["title"].get(),
+                "category": fields["category"].get() or "general",
+                "agent_id": fields["agent_id"].get() or "inez",
+                "prompt_text": fields["prompt_text"].get("1.0", "end").strip(),
             }
             try:
                 self.hub.post_json("/api/prompt-templates", payload)
@@ -4436,6 +4437,26 @@ class ArchonHubApp:
             self._toast("Template deleted.", SUCCESS)
         except Exception as e:
             self._toast(f"Delete error: {e}", ERROR)
+
+    def _copy_template_text(self):
+        if not hasattr(self, "tmpl_tree"):
+            return
+        sel = self.tmpl_tree.selection()
+        if not sel:
+            self._toast("Select a template first.", WARNING)
+            return
+        template_id = sel[0]
+        try:
+            data = self.hub.post_json(f"/api/prompt-templates/{template_id}/use", {}) or {}
+            text = data.get("prompt_text", "")
+            if text:
+                self.root.clipboard_clear()
+                self.root.clipboard_append(text)
+                self._toast("Template text copied to clipboard!", SUCCESS)
+            else:
+                self._toast("No prompt text found.", WARNING)
+        except Exception as e:
+            self._toast(f"Error: {e}", ERROR)
 
     def _build_agents_feedback_tab(self, parent):
         top_row = tk.Frame(parent, bg=BG_CANVAS)
