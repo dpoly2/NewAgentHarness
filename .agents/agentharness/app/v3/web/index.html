@@ -2418,25 +2418,64 @@
             if (!(await requireAuth())) return;
             setLoading('Briefing', 'Loading daily briefing…');
             try {
-                const response = await api('GET', '/api/briefing');
+                const response = await api('GET', '/api/briefing/morning');
                 state.briefing = response;
-                const content = response?.content || response?.text || response?.briefing || 'No briefing content available.';
-                const updated = response?.updated_at || response?.created_at || response?.last_updated;
+                const content = response?.brief_text || response?.content || response?.text || response?.briefing || 'No briefing content available.';
+                const updated = response?.created_at || response?.updated_at || response?.last_updated;
+                let historyHtml = '';
+                try {
+                    const hist = await api('GET', '/api/briefing/history?limit=10');
+                    const briefs = hist?.briefs || [];
+                    if (briefs.length > 0) {
+                        historyHtml = `<div class="card" style="margin-top:18px">
+                            <h3>Briefing History</h3>
+                            <ul style="list-style:none;padding:0;margin:0">
+                                ${briefs.map(b => `<li style="padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer"
+                                    onclick="this.closest('.briefing-card').querySelector('.briefing-text').textContent=${JSON.stringify(b.brief_text||b.content||'')}"
+                                ><span class="muted">${fmtDateTime(b.created_at)}</span> — ${escapeHtml((b.brief_text||b.content||'').slice(0,80))}…</li>`).join('')}
+                            </ul>
+                        </div>`;
+                    }
+                } catch {}
                 renderShell(
                     'Briefing',
-                    'View the latest generated portfolio briefing.',
+                    'AI-generated daily briefing — todos, missions, deadlines.',
                     `
                         <div class="briefing-card">
-                            <h3>Daily Briefing</h3>
-                            <div class="meta-row muted" style="margin-bottom:14px">Last updated: ${fmtDateTime(updated)}</div>
-                            <div class="briefing-text">${escapeHtml(content)}</div>
+                            <h3>📋 Morning Brief</h3>
+                            <div class="meta-row muted" style="margin-bottom:14px">Generated: ${fmtDateTime(updated)}</div>
+                            <div class="briefing-text" style="white-space:pre-wrap">${escapeHtml(content)}</div>
                         </div>
+                        ${historyHtml}
                     `,
-                    `<button class="action-btn" id="refreshBriefingBtn">Refresh</button>`
+                    `<button class="action-btn primary" id="generateBriefBtn">🔄 Generate New</button>
+                     <button class="action-btn" id="refreshBriefingBtn">Refresh</button>`
                 );
                 $('#refreshBriefingBtn').addEventListener('click', showBriefing);
+                $('#generateBriefBtn').addEventListener('click', async () => {
+                    $('#generateBriefBtn').disabled = true;
+                    $('#generateBriefBtn').textContent = 'Generating…';
+                    try {
+                        await api('POST', '/api/briefing/morning', {});
+                        await showBriefing();
+                    } catch (e) {
+                        showToast(e.message || 'Generation failed', 'var(--error)');
+                        $('#generateBriefBtn').disabled = false;
+                        $('#generateBriefBtn').textContent = '🔄 Generate New';
+                    }
+                });
             } catch (error) {
-                renderShell('Briefing', 'View the latest generated portfolio briefing.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load briefing')}</div>`);
+                renderShell('Briefing', 'AI-generated daily briefing.',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load briefing')}</div>`,
+                    `<button class="action-btn primary" id="generateBriefBtn2">🔄 Generate Brief</button>`
+                );
+                const btn2 = $('#generateBriefBtn2');
+                if (btn2) btn2.addEventListener('click', async () => {
+                    btn2.disabled = true;
+                    btn2.textContent = 'Generating…';
+                    try { await api('POST', '/api/briefing/morning', {}); await showBriefing(); }
+                    catch (e) { showToast(e.message || 'Failed', 'var(--error)'); }
+                });
             }
         }
 
