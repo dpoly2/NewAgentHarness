@@ -117,6 +117,13 @@ POST /api/sandbox/execute
 | --- | --- |
 | `GET /api/sandbox/status` | Capability discovery |
 | `POST /api/sandbox/execute` | Run code |
+
+## Client Surfaces
+
+| Surface | Feature |
+| --- | --- |
+| Desktop (⚡ Sandbox tab) | Code editor textarea, execute button, stdout/stderr display |
+| Webapp (`showSandbox()`) | Code textarea, execute button, output panel, status indicator |
 | iOS `CodeExecutionView` | Interactive client surface |
 
 ## Error Handling

@@ -43,10 +43,24 @@ scheduler 6:50 AM CT
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /api/briefing` | General briefing |
-| `GET /api/briefing/morning` | Morning briefing |
-| `GET /api/briefing/history` | Historical briefings |
+| `GET /api/briefing/morning` | Retrieve cached morning briefing (returns `brief_text` field) |
+| `POST /api/briefing/morning` | Force regenerate morning briefing |
+| `GET /api/briefing/history` | Historical briefings (`{success, briefs: [...], count}`) |
 | `GET /api/inez/status` | Related operational awareness surface |
+
+## Client Surfaces
+
+| Surface | Feature |
+| --- | --- |
+| Desktop (📋 Brief tab) | Generate button, briefing body display, history list |
+| Webapp (`showBriefing()`) | Brief text panel, Generate button, history section |
+| iOS (Dashboard) | Morning brief card on dashboard, Inez brief command |
+
+## Response Notes
+
+- `GET /api/briefing/morning` returns `{ "success": true, "brief_text": "...", "generated_at": "..." }`. Consumers must read `brief_text` (not `content` or `brief`).
+- `GET /api/briefing/history` returns `{ "success": true, "briefs": [...], "count": N }`. Consumers must unwrap `.briefs`.
+- `morning_briefs` table is created lazily on first write.
 
 ## Error Handling
 

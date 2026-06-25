@@ -33,7 +33,20 @@ NewAgentHarness/
 │   │   ├── free_llm_keys.py     # Free LLM key pool management
 │   │   ├── model_catalog.py     # LLM model catalog
 │   │   ├── proactive_monitor.py # Proactive event monitoring
-│   │   ├── main_m365.py         # Microsoft 365 integration
+│   │   ├── main_m365.py         # Tkinter desktop app (2,707 lines; inherits from pages/)
+│   │   ├── pages/               # Desktop page mixins (11 modules, 3,074 lines)
+│   │   │   ├── constants.py     # UI colors, fonts, layout constants
+│   │   │   ├── threading_mixin.py # _bg() background thread helper
+│   │   │   ├── brief_page.py    # Morning Brief tab
+│   │   │   ├── memory_page.py   # Global Memory tab
+│   │   │   ├── files_page.py    # Files & Documents tab
+│   │   │   ├── notifications_page.py # Notifications tab
+│   │   │   ├── search_sandbox_page.py # Web Search + Code Sandbox tabs
+│   │   │   ├── agents_page.py   # Agents + Orchestration tab
+│   │   │   ├── connectors_page.py # Connectors + Email Cleanup tab
+│   │   │   ├── models_page.py   # Models Catalog tab
+│   │   │   ├── admin_page.py    # Admin tab
+│   │   │   └── inez_page.py     # Inez JARVIS HUD tab
 │   │   └── oauth_connector.py   # OAuth2 for external services
 │   └── memory/
 │       ├── runs_v3.db           # SQLite database (gitignored)
@@ -90,7 +103,7 @@ docker-compose up --build
 ```env
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
-SERPAPI_KEY=...          # Web search
+SERPAPI_API_KEY=...      # Web search (GET /api/search/web)
 HUB_PORT=8765
 # Security — set these before exposing the server:
 JWT_SECRET=<random-32-byte-hex>   # python -c "import secrets; print(secrets.token_hex(32))"
@@ -134,11 +147,13 @@ Securely execute Python code server-side and return results to iOS.
 - **API:** `POST /api/sandbox/execute`, `GET /api/sandbox/status`
 
 ### 🔍 Web Search
-SerpAPI-powered real-time web search integrated into agent workflows.
+SerpAPI-powered real-time web search integrated into agent workflows and all three client surfaces.
 
 - Agents auto-search when answering questions about current events, prices, news
-- Configurable via Settings in iOS app
-- API: `POST /api/search`
+- Configurable via `SERPAPI_API_KEY` in `.env`
+- Desktop: 🔍 Search tab with results display
+- Webapp: Search page with SerpAPI status banner
+- API: `GET /api/search/web?q=&limit=` or `POST /api/search/web`; `GET /api/search/web/status` for key presence check
 
 ### 📧 Email Cleanup
 Intelligent email analysis and bulk cleanup with approval workflow.
@@ -155,12 +170,8 @@ Real-time market data, options chain analysis, and paper trading simulation.
 - Paper portfolio management
 - Morning market brief generation
 
-### 📋 Microsoft 365 Integration
-Full M365 integration via `main_m365.py`:
-- Email read/send via Microsoft Graph API
-- Calendar events and scheduling
-- OneDrive file access
-- Teams messaging
+### 📋 Desktop App (Tkinter)
+`main_m365.py` is the desktop entry point — 2,707 lines — that inherits 11 mixin classes from `pages/`. It provides 20 nav tabs including: Home, Runs, Todos, Brief, Reports, Schedule, Clients, Travel, Markets, Org, Memory, Files, Connect, Agents, Models, Inez, Admin, Notifs, Search, and Sandbox.
 
 ### ☀️ Daily Briefing
 Automated morning brief combining:
@@ -210,14 +221,30 @@ GET  /api/sandbox/status     # Sandbox availability
 ```
 GET  /api/todos               # Todos list
 POST /api/todos               # Create todo
-GET  /api/briefing            # Daily briefing
+GET  /api/briefing/morning    # Daily morning briefing (cached)
+POST /api/briefing/morning    # Force regenerate morning briefing
+GET  /api/briefing/history    # Past brief records (returns {success, briefs, count})
 GET  /api/reports             # Agent reports
 GET  /api/documents           # Document library
 POST /api/documents/search    # RAG document search
 GET  /api/models              # LLM model catalog
-POST /api/search              # Web search
-GET  /api/files/_search       # Semantic doc search (note: _search, not /search)
+GET  /api/search/web?q=       # SerpAPI web search
+POST /api/search/web          # SerpAPI web search (JSON body)
+GET  /api/search/web/status   # Web search key presence check
+GET  /api/files               # Uploaded file list
+POST /api/files/upload        # Upload file (bytes, iOS)
+POST /api/files/upload/form   # Upload file (multipart, webapp)
+DELETE /api/files/{id}        # Delete file
+GET  /api/files/_search?q=    # Semantic doc search (not /search)
+GET  /api/agents/conversations           # List all agent conversations
+GET  /api/agents/conversations/{id}      # Conversation messages
 GET  /api/monitoring/notifications  # Proactive monitoring alerts
+GET  /api/feedback/stats      # Feedback aggregate counts
+GET  /api/feedback/analyze    # Higher-order analysis
+GET  /api/feedback/preferences # Learned style preferences
+GET  /api/prompt-templates    # List prompt templates
+POST /api/prompt-templates/{id}/use # Copy + increment usage_count
+GET  /api/email/cleanup/plans/{id}  # Plan detail with categories + items
 ```
 
 ---
@@ -232,7 +259,7 @@ See [`projects/archonhub-ios/README.md`](projects/archonhub-ios/README.md) for t
 
 SQLite at `.agents/agentharness/memory/runs_v3.db` (gitignored).
 
-Key tables: `users`, `agent_runs`, `dispatches`, `todos`, `global_memory`, `documents`, `email_accounts`, `email_cleanup_plans`, `prompt_templates`, `feedback`, `messages`, `paper_trades`
+Key tables: `users`, `agent_runs`, `dispatches`, `todos`, `global_memory`, `documents`, `email_accounts`, `email_cleanup_plans`, `email_cleanup_items`, `agent_conversations`, `agent_messages`, `agent_capabilities`, `morning_briefs`, `prompt_templates`, `feedback`, `corrections`, `user_style_preferences`, `messages`, `paper_trades`
 
 ---
 

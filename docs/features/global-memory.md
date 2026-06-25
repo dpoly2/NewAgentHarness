@@ -64,11 +64,20 @@ Inez response completes
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/memory/global` | List facts |
+| `GET /api/memory/global/search?q=` | Search facts (URL-encoded query) |
 | `POST /api/memory/global` | Create/upsert a fact |
 | `PUT /api/memory/global/{fact_id}` | Update a fact |
 | `DELETE /api/memory/global/{fact_id}` | Delete a fact |
 | `POST /api/memory/global/extract` | Extract facts from a conversation turn |
 | `GET /api/inez/memory` | Surface Inez-relevant memory in the executive UI |
+
+## Client Surfaces
+
+| Surface | Feature |
+| --- | --- |
+| Desktop (🧠 Memory tab) | Category tabs, fact list, search (URL-encoded), create/edit/delete |
+| Webapp (`showMemory()`) | Category filter, fact cards, search input, inline create form |
+| iOS (Memory tab) | Browse, search, filter, create, edit, delete |
 
 ## Error Handling
 

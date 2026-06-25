@@ -44,9 +44,100 @@ ArchonHub APIs mostly follow a pragmatic FastAPI pattern: feature endpoints retu
 - Auth uses Bearer JWT in the `Authorization` header.
 - Timestamps should be interpreted as ISO 8601 UTC values.
 
-## Example
+## Endpoint-Specific Response Shapes
 
+### `GET /api/feedback/stats`
 ```json
+{
+  "success": true,
+  "stats": {
+    "total_feedback": 42,
+    "positive_count": 30,
+    "negative_count": 8,
+    "correction_count": 4
+  },
+  "recent_feedback": []
+}
+```
+
+### `GET /api/briefing/morning`
+```json
+{
+  "success": true,
+  "brief_text": "Good morning...",
+  "generated_at": "2026-06-24T10:00:00Z"
+}
+```
+
+### `GET /api/briefing/history`
+```json
+{
+  "success": true,
+  "briefs": [],
+  "count": 0
+}
+```
+
+### `GET /api/search/web`
+```json
+{
+  "success": true,
+  "results": [
+    {
+      "title": "...",
+      "link": "https://...",
+      "snippet": "...",
+      "position": 1
+    }
+  ],
+  "query": "...",
+  "total": 5
+}
+```
+
+### `GET /api/search/web/status`
+```json
+{
+  "configured": true
+}
+```
+
+### `POST /api/email/cleanup/analyze`
+```json
+{
+  "success": true,
+  "plan_id": "uuid",
+  "summary": "Found 127 emails across 6 categories."
+}
+```
+> **Note:** categories and items are NOT in this response — follow with `GET /api/email/cleanup/plans/{plan_id}`.
+
+### `GET /api/email/cleanup/plans/{plan_id}`
+```json
+{
+  "success": true,
+  "plan": {
+    "id": "uuid",
+    "categories": {
+      "newsletter": ["email_id_1", "email_id_2"],
+      "promotion": ["email_id_3"]
+    },
+    "items": []
+  }
+}
+```
+
+### `POST /api/files/upload/form` (multipart)
+```json
+{
+  "success": true,
+  "file_id": "uuid",
+  "filename": "document.pdf",
+  "size": 102400
+}
+```
+
+
 {
   "success": true,
   "data": {

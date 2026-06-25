@@ -8,10 +8,10 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | --- | --- |
 | / | 1 |
 | /ws | 1 |
-| agents | 8 |
+| agents | 10 |
 | auth | 3 |
 | automations | 9 |
-| briefing | 3 |
+| briefing | 4 |
 | briefs | 3 |
 | clients | 5 |
 | config | 2 |
@@ -22,8 +22,8 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | documents | 5 |
 | email | 6 |
 | events | 1 |
-| feedback | 3 |
-| files | 5 |
+| feedback | 5 |
+| files | 7 |
 | health | 1 |
 | import | 1 |
 | inez | 5 |
@@ -43,7 +43,7 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | runs | 3 |
 | sandbox | 2 |
 | scheduler | 4 |
-| search | 1 |
+| search | 3 |
 | skills | 3 |
 | stats | 1 |
 | todos | 5 |
@@ -105,6 +105,9 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | GET | /api/conversations/{id}/messages | list_messages | Bearer JWT | .agents/agentharness/app/v3/routers/conversations.py |
 | POST | /api/conversations/{id}/messages | create_message | Bearer JWT | .agents/agentharness/app/v3/routers/conversations.py |
 | GET | /api/search | search_conversations | Bearer JWT | .agents/agentharness/app/v3/routers/search.py |
+| GET | /api/search/web | web_search_get | Bearer JWT | .agents/agentharness/app/v3/routers/web_search_api.py |
+| POST | /api/search/web | web_search_post | Bearer JWT | .agents/agentharness/app/v3/routers/web_search_api.py |
+| GET | /api/search/web/status | web_search_status | Bearer JWT | .agents/agentharness/app/v3/routers/web_search_api.py |
 | GET | /api/memory/agents/{agent_id} | get_memory | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
 | PUT | /api/memory/agents/{agent_id} | update_memory | Bearer JWT | .agents/agentharness/app/v3/routers/memory.py |
 | GET | /api/prompt-templates | list_prompt_templates | Bearer JWT | .agents/agentharness/app/v3/routers/prompt_templates.py |
@@ -178,7 +181,9 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | POST | /api/import | run_data_import | Admin JWT | .agents/agentharness/app/v3/routers/providers.py |
 | WEBSOCKET | /ws | websocket_endpoint | WS auth message | .agents/agentharness/app/v3/hub_server.py |
 | POST | /api/files/upload | upload_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| POST | /api/files/upload/form | upload_file_form | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
 | GET | /api/files/{file_id} | get_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
+| DELETE | /api/files/{file_id} | delete_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
 | GET | /api/files | list_files | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
 | POST | /api/files/{file_id}/embed | embed_file | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
 | GET | /api/files/_search | search_documents | Bearer JWT | .agents/agentharness/app/v3/routers/files.py |
@@ -187,13 +192,17 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | GET | /api/feedback/stats | get_feedback_stats | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
 | GET | /api/feedback/analyze | analyze_feedback | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
 | GET | /api/feedback/preferences | get_user_preferences | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| GET | /api/feedback/analyze | analyze_feedback | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
+| GET | /api/feedback/preferences | get_user_preferences | Bearer JWT | .agents/agentharness/app/v3/routers/feedback.py |
 | GET | /api/briefing/morning | get_morning_briefing | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
+| POST | /api/briefing/morning | force_regenerate_briefing | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
 | GET | /api/briefing/history | get_briefing_history | Bearer JWT | .agents/agentharness/app/v3/routers/briefing.py |
 | POST | /api/monitoring/run | run_monitoring | Bearer JWT | .agents/agentharness/app/v3/routers/config_api.py |
 | GET | /api/monitoring/notifications | get_notifications | Bearer JWT | .agents/agentharness/app/v3/routers/notifications.py |
 | POST | /api/monitoring/notifications/{notification_id}/dismiss | dismiss_monitoring_notification | Bearer JWT | .agents/agentharness/app/v3/routers/notifications.py |
 | POST | /api/agents/collaborate | agent_collaboration | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
 | GET | /api/agents/capabilities | get_agent_capabilities | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
+| GET | /api/agents/conversations | list_agent_conversations | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
 | GET | /api/agents/conversations/{conversation_id} | get_conversation_history | Bearer JWT | .agents/agentharness/app/v3/routers/agents.py |
 | POST | /api/email/cleanup/analyze | analyze_email_cleanup | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |
 | GET | /api/email/cleanup/plans | list_cleanup_plans | Bearer JWT | .agents/agentharness/app/v3/routers/email_cleanup.py |

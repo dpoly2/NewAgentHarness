@@ -44,9 +44,34 @@ message rendered
 | --- | --- |
 | `POST /api/messages/{message_id}/feedback` | Store simple feedback |
 | `POST /api/corrections` | Store explicit correction |
-| `GET /api/feedback/stats` | Aggregate counts |
+| `GET /api/feedback/stats` | Aggregate counts (`total_feedback`, `positive_count`, `negative_count`, `correction_count`) |
 | `GET /api/feedback/analyze` | Higher-order analysis |
 | `GET /api/feedback/preferences` | Learned style preferences |
+
+## `GET /api/feedback/stats` Response Shape
+
+```json
+{
+  "success": true,
+  "stats": {
+    "total_feedback": 42,
+    "positive_count": 30,
+    "negative_count": 8,
+    "correction_count": 4
+  },
+  "recent_feedback": [...]
+}
+```
+
+> **Note:** The field names are `positive_count`, `negative_count`, `correction_count` — not `positive`, `negative`, `correction`.
+
+## Client Surfaces
+
+| Surface | Feature |
+| --- | --- |
+| Desktop (Connectors tab) | Stats panel with KPI counts, recent feedback list |
+| Webapp (`showFeedback()`) | 5 KPI cards (total, positive, negative, corrections, net score), analysis panel |
+| iOS | Thumbs up/down per message |
 
 ## Error Handling
 

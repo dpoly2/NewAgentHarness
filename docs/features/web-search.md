@@ -67,12 +67,22 @@ user query / agent need
 - Default country: `us`.
 - Requested result count is capped at 20 per search call.
 
-## API Endpoints Used
+## API Endpoints
 
-| Endpoint | Purpose |
+| Endpoint | Method | Purpose |
+| --- | --- | --- |
+| `/api/search/web` | GET | Direct search: `?q=<query>&limit=<n>` |
+| `/api/search/web` | POST | JSON body: `{ "q": "...", "limit": 10 }` |
+| `/api/search/web/status` | GET | Returns `{ "configured": true/false }` — used by UI for status banner |
+| Inez / research agent flows | — | Indirect use when freshness is required |
+
+## Client Surfaces
+
+| Surface | Feature |
 | --- | --- |
-| `GET /api/search` | Direct search surface |
-| Inez / research agent flows | Indirect use when freshness is required |
+| Desktop (🔍 Search tab) | Query input, result list with title/link/snippet |
+| Webapp (`showSearch()`) | Query form, SerpAPI status banner, result cards |
+| iOS | Search embedded in Inez chat context injection |
 
 ## Error Handling
 
@@ -96,7 +106,7 @@ user query / agent need
 ## Source References
 
 - `.agents/agentharness/app/v3/web_search.py`
-- `.agents/agentharness/app/v3/routers/search.py`
+- `.agents/agentharness/app/v3/routers/web_search_api.py`
 
 ## Implementation Checklist
 

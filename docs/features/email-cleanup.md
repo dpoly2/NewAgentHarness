@@ -49,12 +49,33 @@ connector (IMAP or OAuth2)
 
 | Endpoint | Purpose |
 | --- | --- |
-| `POST /api/email/cleanup/analyze` | Create analysis plan |
+| `POST /api/email/cleanup/analyze` | Create analysis plan — returns `{plan_id, summary}` only |
 | `GET /api/email/cleanup/plans` | List plans |
-| `GET /api/email/cleanup/plans/{plan_id}` | Inspect plan |
-| `PUT /api/email/cleanup/plans/{plan_id}/approve` | Approve items |
+| `GET /api/email/cleanup/plans/{plan_id}` | Inspect plan — **required** after analyze to get `{plan: {categories: {...}, items: [...]}}` |
+| `PUT /api/email/cleanup/plans/{plan_id}/approve` | Approve items (`{item_ids: [...]}`) |
 | `POST /api/email/cleanup/plans/{plan_id}/execute` | Execute plan |
 | `GET /api/email/cleanup/history` | History |
+
+## Two-Step Analyze Flow
+
+> **Important:** `POST /api/email/cleanup/analyze` returns only `{plan_id, summary}`. The category breakdown and item list are **not** included in the analyze response. Clients must immediately follow with `GET /api/email/cleanup/plans/{plan_id}` to get the full plan with categories and items.
+
+```
+POST /api/email/cleanup/analyze → {plan_id, summary}
+  ↓
+GET /api/email/cleanup/plans/{plan_id} → {plan: {categories: {newsletter: [...], ...}, items: [...]}}
+  ↓
+PUT /api/email/cleanup/plans/{plan_id}/approve  {item_ids: [...]}
+  ↓
+POST /api/email/cleanup/plans/{plan_id}/execute
+```
+
+## Client Surfaces
+
+| Surface | Feature |
+| --- | --- |
+| Desktop (Connectors tab → Email Cleanup) | Connector select, Analyze button, category breakdown, item table, approve/execute |
+| Webapp (`showEmailCleanup()`) | Connector selector, category cards with counts, item table, approve/execute flow |
 
 ## Error Handling
 
