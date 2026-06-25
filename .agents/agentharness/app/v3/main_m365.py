@@ -3021,13 +3021,31 @@ class ArchonHubApp:
         def _run():
             try:
                 result = self.hub.post_json("/api/email/cleanup/analyze", {"connector_id": connector_id, "limit": 200})
-                if result:
-                    plan_id = result.get("plan_id") or (result.get("plan") or {}).get("id")
-                    categories = result.get("categories") or result.get("items") or []
+                if result and result.get("success"):
+                    plan_id = result.get("plan_id")
+                    summary = result.get("summary", {})
                     self._cleanup_plan_id = plan_id
-                    self._ui_queue.put(("call_with_arg", self._populate_cleanup_plan, categories))
-                    self._ui_queue.put(("toast", f"Analysis complete — {len(categories)} categories.", SUCCESS))
-                    self._ui_queue.put(("configure", self._cleanup_status_lbl, {"text": f"Plan ready (ID: {plan_id}). Approve then Execute."}))
+                    # Fetch full plan with category breakdown
+                    plan_detail = self.hub._get(f"/api/email/cleanup/plans/{plan_id}") or {}
+                    plan = plan_detail.get("plan", {})
+                    categories = plan.get("categories", {})
+                    # Convert categories dict to list for the treeview
+                    cat_rows = []
+                    for cat_name, items in categories.items():
+                        cat_rows.append({
+                            "category": cat_name,
+                            "count": len(items),
+                            "action": items[0].get("action", "archive") if items else "archive",
+                            "status": "pending",
+                            "_item_ids": [i.get("id") for i in items],
+                        })
+                    self._cleanup_item_ids_by_cat = {r["category"]: r["_item_ids"] for r in cat_rows}
+                    self._ui_queue.put(("call_with_arg", self._populate_cleanup_plan, cat_rows))
+                    total = summary.get("total_suggested", 0)
+                    mb = summary.get("estimated_space_mb", 0)
+                    self._ui_queue.put(("toast", f"Analysis complete — {total} emails, ~{mb} MB.", SUCCESS))
+                    self._ui_queue.put(("configure", self._cleanup_status_lbl,
+                                        {"text": f"Plan ready (ID: {plan_id}). Approve then Execute."}))
                 else:
                     self._ui_queue.put(("toast", "Analysis returned no data.", WARNING))
             except Exception as e:
@@ -3051,9 +3069,22 @@ class ArchonHubApp:
         if not self._cleanup_plan_id:
             self._toast("No plan to approve. Run analysis first.", WARNING)
             return
+        # Collect all item IDs across categories
+        item_ids = []
+        for ids in getattr(self, "_cleanup_item_ids_by_cat", {}).values():
+            item_ids.extend(ids)
+        if not item_ids:
+            # Fallback: fetch plan to get item IDs
+            try:
+                plan = (self.hub._get(f"/api/email/cleanup/plans/{self._cleanup_plan_id}") or {}).get("plan", {})
+                item_ids = [i.get("id") for i in plan.get("items", []) if i.get("id")]
+            except Exception as e:
+                self._toast(f"Could not load items: {e}", ERROR)
+                return
         try:
-            self.hub.post_json(f"/api/email/cleanup/plans/{self._cleanup_plan_id}/approve", {})
-            self._toast("Plan approved.", SUCCESS)
+            self.hub.put_json(f"/api/email/cleanup/plans/{self._cleanup_plan_id}/approve",
+                              {"item_ids": item_ids})
+            self._toast(f"Approved {len(item_ids)} items.", SUCCESS)
         except Exception as e:
             self._toast(f"Approve error: {e}", ERROR)
 

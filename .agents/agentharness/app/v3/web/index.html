@@ -1315,6 +1315,7 @@
                 briefing: showBriefing,
                 agents: showAgents,
                 models: showModels,
+                email_cleanup: showEmailCleanup,
                 chat: showChat,
                 inez: showInez,
                 settings: showSettings
@@ -2263,9 +2264,11 @@
                             </div>
                         </div>
                     `,
-                    `<button class="action-btn" id="connectorsRefreshBtn">Refresh Connectors</button>`
+                    `<button class="action-btn" id="connectorsRefreshBtn">Refresh Connectors</button>
+                     <button class="action-btn" id="emailCleanupBtn">🧹 Email Cleanup</button>`
                 );
                 $('#connectorsRefreshBtn').addEventListener('click', showConnectors);
+                $('#emailCleanupBtn').addEventListener('click', showEmailCleanup);
                 $('#addConnectorForm').addEventListener('submit', async (event) => {
                     event.preventDefault();
                     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
@@ -2296,6 +2299,173 @@
                 }));
             } catch (error) {
                 renderShell('Connectors', 'Manage IMAP and SMTP integrations.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load connectors')}</div>`);
+            }
+        }
+
+        async function showEmailCleanup() {
+            if (!(await requireAuth())) return;
+            setLoading('Email Cleanup', 'Loading email cleanup…');
+            try {
+                const [connectors, plans] = await Promise.all([
+                    api('GET', '/api/connectors').then(r => Array.isArray(r) ? r : (r?.connectors || [])),
+                    api('GET', '/api/email/cleanup/plans').then(r => r?.plans || []).catch(() => [])
+                ]);
+
+                const connOptions = connectors.map(c =>
+                    `<option value="${escapeHtml(c.id)}">${escapeHtml(c.label || c.email_address || c.id)}</option>`
+                ).join('');
+
+                const CAT_ICONS = { newsletter: '📰', promotion: '🛍', social: '📱', old_thread: '📁', spam: '⚠️' };
+                const CAT_COLORS = { newsletter: 'var(--accent)', promotion: 'var(--warning)', social: '#8b5cf6', old_thread: 'var(--text-muted)', spam: 'var(--error)' };
+
+                const planRows = plans.length
+                    ? plans.map(p => `<tr>
+                        <td class="muted">${fmtDateTime(p.created_at)}</td>
+                        <td>${escapeHtml(p.email_address || p.account_id || '')}</td>
+                        <td>${p.suggested_cleanup_count || 0} emails</td>
+                        <td>${p.estimated_space_mb || 0} MB</td>
+                        <td><span class="badge-${p.status === 'executed' ? 'success' : 'info'}">${p.status}</span></td>
+                    </tr>`).join('')
+                    : '<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No cleanup plans yet</td></tr>';
+
+                renderShell('Email Cleanup', 'AI-powered inbox analysis and batch triage.',
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3>🔍 Analyze Inbox</h3>
+                        <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap">
+                            <select id="cleanupConnector" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px;min-width:200px">
+                                <option value="">— select connector —</option>
+                                ${connOptions}
+                            </select>
+                            <select id="cleanupLimit" style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:13px">
+                                <option value="100">100 emails</option>
+                                <option value="200" selected>200 emails</option>
+                                <option value="500">500 emails</option>
+                            </select>
+                            <button class="action-btn primary" id="analyzeBtn">🔍 Analyze</button>
+                            <span id="analyzeStatus" class="muted" style="font-size:12px"></span>
+                        </div>
+                        <div id="cleanupResultPanel" style="display:none;margin-top:16px">
+                            <div id="categoryCards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:16px"></div>
+                            <div style="display:flex;gap:10px;margin-bottom:12px">
+                                <button class="action-btn" id="selectAllBtn">Select All</button>
+                                <button class="action-btn" id="deselectAllBtn">Deselect All</button>
+                                <button class="action-btn primary" id="approveAllBtn">✅ Approve Selected</button>
+                                <button class="action-btn" id="executeBtn" disabled>▶ Execute</button>
+                            </div>
+                            <div id="emailItemsTable" class="table-wrap" style="max-height:320px;overflow-y:auto;padding:0">
+                                <table id="cleanupItemsTable">
+                                    <thead><tr><th style="width:30px"><input type="checkbox" id="selectAllCheck"></th><th>Subject</th><th>From</th><th>Category</th><th>Confidence</th><th>Date</th></tr></thead>
+                                    <tbody id="cleanupItemsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>📋 Cleanup History</h3>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Date</th><th>Account</th><th>Emails</th><th>Space Saved</th><th>Status</th></tr></thead>
+                        <tbody>${planRows}</tbody></table>
+                        </div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showEmailCleanup()">🔄 Refresh</button>
+                     <button class="action-btn" onclick="showConnectors()">← Connectors</button>`
+                );
+
+                let currentPlanId = null;
+                let currentItems = [];
+
+                $('#analyzeBtn').addEventListener('click', async () => {
+                    const connId = $('#cleanupConnector').value;
+                    const limit = parseInt($('#cleanupLimit').value);
+                    if (!connId) { showToast('Select a connector first', 'var(--warning)'); return; }
+                    $('#analyzeBtn').disabled = true;
+                    $('#analyzeBtn').textContent = 'Analyzing…';
+                    $('#analyzeStatus').textContent = 'Fetching emails… this may take 30-60s';
+                    try {
+                        const result = await api('POST', '/api/email/cleanup/analyze', { connector_id: connId, limit });
+                        currentPlanId = result.plan_id;
+                        const summary = result.summary || {};
+                        $('#analyzeStatus').textContent = `Found ${summary.total_suggested || 0} emails to clean (~${summary.estimated_space_mb || 0} MB)`;
+
+                        // Load full plan
+                        const planDetail = await api('GET', `/api/email/cleanup/plans/${currentPlanId}`);
+                        const plan = planDetail?.plan || {};
+                        const categories = plan.categories || {};
+                        currentItems = plan.items || [];
+
+                        // Render category cards
+                        const catCardHtml = Object.entries(categories).map(([cat, items]) => {
+                            const icon = CAT_ICONS[cat] || '📧';
+                            const color = CAT_COLORS[cat] || 'var(--text-muted)';
+                            return `<div style="background:var(--bg-panel);border-radius:8px;padding:12px;text-align:center;border:1px solid var(--border)">
+                                <div style="font-size:24px">${icon}</div>
+                                <div style="font-weight:600;color:${color};margin:4px 0">${cat}</div>
+                                <div style="font-size:20px;font-weight:700">${items.length}</div>
+                                <div class="muted" style="font-size:11px">emails</div>
+                            </div>`;
+                        }).join('');
+                        $('#categoryCards').innerHTML = catCardHtml || '<span class="muted">No items found for cleanup</span>';
+
+                        // Render items table
+                        const tbody = $('#cleanupItemsBody');
+                        tbody.innerHTML = currentItems.map(item => `
+                            <tr>
+                                <td><input type="checkbox" class="item-check" data-id="${escapeHtml(item.id)}" checked></td>
+                                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(item.subject||'')}">${escapeHtml((item.subject||'(no subject)').slice(0,60))}</td>
+                                <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml((item.from_address||'').slice(0,40))}</td>
+                                <td><span style="color:${CAT_COLORS[item.category]||'var(--text-muted)'};font-size:11px">${CAT_ICONS[item.category]||''} ${item.category}</span></td>
+                                <td style="font-size:11px">${Math.round((item.confidence||0)*100)}%</td>
+                                <td class="muted" style="font-size:11px">${(item.email_date||'').slice(0,10)}</td>
+                            </tr>`).join('') || '<tr><td colspan="6" class="muted" style="text-align:center">No items</td></tr>';
+
+                        $('#cleanupResultPanel').style.display = 'block';
+
+                        // Select all checkbox
+                        $('#selectAllCheck').addEventListener('change', e => {
+                            document.querySelectorAll('.item-check').forEach(cb => cb.checked = e.target.checked);
+                        });
+                        $('#selectAllBtn').addEventListener('click', () => document.querySelectorAll('.item-check').forEach(cb => cb.checked = true));
+                        $('#deselectAllBtn').addEventListener('click', () => document.querySelectorAll('.item-check').forEach(cb => cb.checked = false));
+
+                        // Approve selected
+                        $('#approveAllBtn').addEventListener('click', async () => {
+                            const selected = Array.from(document.querySelectorAll('.item-check:checked')).map(cb => cb.dataset.id);
+                            if (!selected.length) { showToast('Select items to approve', 'var(--warning)'); return; }
+                            try {
+                                await api('PUT', `/api/email/cleanup/plans/${currentPlanId}/approve`, { item_ids: selected });
+                                showToast(`Approved ${selected.length} items`, 'var(--success)');
+                                $('#executeBtn').disabled = false;
+                            } catch (e) { showToast('Approve failed: ' + e.message, 'var(--error)'); }
+                        });
+
+                        // Execute
+                        $('#executeBtn').addEventListener('click', async () => {
+                            if (!confirm(`Execute cleanup for ${currentPlanId}? This will archive/delete approved emails.`)) return;
+                            $('#executeBtn').disabled = true;
+                            $('#executeBtn').textContent = 'Executing…';
+                            try {
+                                const res = await api('POST', `/api/email/cleanup/plans/${currentPlanId}/execute`);
+                                showToast(`Cleanup done — ${res?.results?.total || 0} actions`, 'var(--success)');
+                                await showEmailCleanup();
+                            } catch (e) {
+                                showToast('Execute failed: ' + e.message, 'var(--error)');
+                                $('#executeBtn').disabled = false;
+                                $('#executeBtn').textContent = '▶ Execute';
+                            }
+                        });
+
+                    } catch (e) {
+                        $('#analyzeStatus').style.color = 'var(--error)';
+                        $('#analyzeStatus').textContent = 'Error: ' + (e.message || 'Analysis failed');
+                    } finally {
+                        $('#analyzeBtn').disabled = false;
+                        $('#analyzeBtn').textContent = '🔍 Analyze';
+                    }
+                });
+
+            } catch (error) {
+                renderShell('Email Cleanup', 'AI-powered inbox cleanup.',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load email cleanup')}</div>`);
             }
         }
 
