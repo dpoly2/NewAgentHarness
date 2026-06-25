@@ -1,5 +1,5 @@
 # ArchonHub — Product Requirements Document
-**Version:** 1.2.0  
+**Version:** 1.3.0  
 **Last Updated:** June 2026  
 **Owner:** Smith Capital Portfolio
 
@@ -83,6 +83,7 @@ requests>=2.31.0
 python-dotenv>=1.0.0
 python-dateutil>=2.8.0
 markdown>=3.5
+pyyaml>=6.0
 ```
 
 **Runtime:** Python 3.11+ (Python 3.13 compatible)  
@@ -114,12 +115,19 @@ markdown>=3.5
 - Serves WebSocket at `/ws`
 - Serves static web dashboard at `/web` (redirected from `/`)
 - Auto-docs at `/docs` (Swagger UI)
-- **Single-worker** uvicorn process (multi-worker is intentionally disabled — hub uses in-process asyncio.Queue and WebSocket client set; multiple workers would split state)
+- **5-worker mandatory** uvicorn deployment with DB-backed shared state; in-process queue ownership is not part of the architecture
 - CORS origins configurable via `CORS_ORIGINS` env var (defaults to `*` for local dev; set to `https://app.archonhub.app` or your domain in production)
-- Startup creates SQLite schema, seeds default admin user, starts scheduler
+- Startup creates SQLite schema, seeds default admin user, starts 5 DB-backed worker loops plus 1 event-poll loop, and starts APScheduler only on the process that wins the scheduler leader lock
 - Startup logs a security warning if `JWT_SECRET` is the default placeholder value
 - Graceful shutdown via SIGINT/SIGTERM
 - Global exception handler returns generic `500` responses (no internal stack traces leaked to clients)
+
+### 5.1.1 Worker model
+- Each process runs 5 `_db_worker_loop()` coroutines that poll `job_queue` every 500ms.
+- `_claim_queued_job()` atomically claims work with `UPDATE ... WHERE status = 'queued'`, so only one worker can move a row to `running`.
+- WebSocket fan-out is DB-mediated: `broadcast()` writes to `ws_events`, and `_event_poll_loop()` polls that table every 200ms.
+- Cancellation propagates via `job_queue.status = 'cancelling'`; the owning worker detects it within 2 seconds.
+- APScheduler leadership is guarded by the `scheduler_leader` record in `hub_config`.
 
 ### 5.2 Authentication
 - **JWT-based auth** using `python-jose`
@@ -171,7 +179,7 @@ markdown>=3.5
 ### 5.5 WebSocket (ws://localhost:8765/ws)
 - JWT auth on connect — client must send `{"type": "auth", "token": "<jwt>"}` as first message
 - **Auth handshake timeout: 15 seconds** — connection closed with code 1008 if auth not received in time
-- Real-time events pushed to all connected clients:
+- Real-time events are written to shared `ws_events` storage and then pushed to all connected clients across the 5-worker fleet:
   - `run_started`, `run_completed`, `run_failed`, `run_cancelled`
   - `node_update` — live graph node progress
   - `notif` — push notifications
@@ -230,7 +238,8 @@ AgentState = TypedDict({
 |---|---|
 | `runs` | All agent execution history (run_id, agent_id, project, graph, task, score, critique, output, skill_version, status) |
 | `skills` | Agent skill versions with avg_score and critique |
-| `job_queue` | Job queue (queued/running/completed/failed/cancelled) |
+| `job_queue` | Job queue (`queued`/`running`/`cancelling`/`completed`/`failed`/`cancelled`) |
+| `ws_events` | Shared WebSocket broadcast channel for multi-worker delivery (auto-cleaned after 5 minutes) |
 | `todos` | Task management (title, description, priority, status, project, due_date, tags) |
 | `notifications` | Push notification history |
 | `hub_config` | Key-value configuration store |
@@ -447,7 +456,7 @@ python main_m365.py
 | CORS | Set `CORS_ORIGINS=https://app.archonhub.app,http://localhost:8765` in `.env`. Defaults to `*` when unset (local dev only) |
 | Login rate limit | 10 attempts per IP per 5 minutes; returns `HTTP 429` |
 | Error leakage | Global exception handler returns generic `500` — internal errors logged server-side only |
-| Single worker | Hub runs as a single uvicorn process — do not add `--workers N` (breaks in-process state) |
+| 5 workers | Hub runs with 5 workers using a DB-backed queue + broadcast path; do not revert to in-process-only state handling |
 
 ---
 

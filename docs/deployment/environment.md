@@ -6,6 +6,8 @@ _Generated on 2026-06-24 03:23 UTC by scanning the local Python runtime modules 
 
 This reference combines the checked-in `.agents/.env.example` with environment variables discovered in the current Python source tree.
 
+This rollout added no new environment variables; the 5-worker DB-backed queue, `ws_events` broadcast, and scheduler leader lock are fixed runtime behavior in code.
+
 ## Variables from `.agents/.env.example`
 
 | Variable | Example / default |

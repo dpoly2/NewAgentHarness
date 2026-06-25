@@ -91,6 +91,12 @@ python3 hub_server.py
 # → Running at http://localhost:8765
 ```
 
+### Running the System
+
+- The hub now runs as a 5-worker DB-backed runtime.
+- Jobs are queued in `job_queue`, claimed atomically by polling workers, and broadcast to WebSocket clients through the shared `ws_events` table.
+- APScheduler starts only on the process that acquires the scheduler leader lock.
+
 ### Docker
 
 ```bash

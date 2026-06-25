@@ -10,15 +10,15 @@ The repository ships a Dockerfile and `docker-compose.yml` for running the local
 
 | File | Purpose |
 | --- | --- |
-| `Dockerfile` | Builds a slim Python image, installs requirements, copies the app, exposes port 8765. |
-| `docker-compose.yml` | Runs the `hub` service with persisted volumes and a healthcheck. |
+| `Dockerfile` | Builds a slim Python image, installs requirements (including `pyyaml>=6.0`), creates `/app/uploads` and `/app/chroma_db`, runs as non-root user `archonhub` (uid `1000`), exposes port 8765, and defines the container `HEALTHCHECK`. |
+| `docker-compose.yml` | Runs the `hub` service with persisted volumes for memory, runtime data, uploads, and ChromaDB. |
 
 ## Compose summary
 
 - Service name: `hub`.
 - Container name: `archonhub`.
 - Port mapping: `8765:8765`.
-- Volumes: `archonhub_memory`, `archonhub_data`, `archonhub_agents`.
+- Volumes: `archonhub_memory`, `archonhub_data`, `archonhub_uploads`, `archonhub_chroma`.
 - Env file: `.agents/.env`.
 
 ## Build and run
@@ -38,13 +38,18 @@ python -c "import urllib.request; urllib.request.urlopen('http://localhost:8765/
 - Base image: `python:3.13-slim`.
 - Installs system libraries for PyMuPDF, Pillow, and ChromaDB-related native dependencies.
 - Copies `.agents/agentharness/app/v3/requirements.txt` first for better build caching.
+- Runs as non-root user `archonhub` (uid `1000`).
+- Creates `/app/uploads` for evidence file refs and `/app/chroma_db` for the vector store.
+- The container `HEALTHCHECK` now lives in the Dockerfile itself, in addition to any compose-level health settings.
+- `pyyaml>=6.0` is included in requirements for YAML plan authoring.
 - Starts with `CMD ["python", "hub_server.py"]`.
 
 ## Volumes and persistence
 
-- `archonhub_memory` keeps the SQLite database and vector store.
+- `archonhub_memory` keeps the SQLite database and other persisted hub memory.
 - `archonhub_data` keeps logs, backups, and other runtime data.
-- `archonhub_agents` is mounted to preserve or share agent assets across the container boundary.
+- `archonhub_uploads` keeps uploaded evidence files and file references.
+- `archonhub_chroma` keeps the ChromaDB vector store.
 
 ## Limitations
 

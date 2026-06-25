@@ -4,7 +4,7 @@ _Generated from the current ArchonHub source tree on 2026-06-24 03:23 UTC._
 
 ## Overview
 
-The WebSocket surface gives clients near-real-time visibility into queue/runs/notifications. The server requires an initial JSON auth message after connect and enforces a 15-second authentication timeout.
+The WebSocket surface gives clients near-real-time visibility into queue/runs/notifications. The server fans out events via a shared `ws_events` table so all 5 workers deliver the same event stream to their connected clients. The server requires an initial JSON auth message after connect and enforces a 15-second authentication timeout.
 
 ## Authentication and Response Rules
 
@@ -36,7 +36,7 @@ The WebSocket surface gives clients near-real-time visibility into queue/runs/no
 
 #### Response Schema
 
-- After connect, send `{ "type": "auth", "token": "<jwt>" }` within 15 seconds. On success the server returns `{ "type": "connected", "queue_depth": <int>, "active_runs": [...] }` and then emits run / notification events. Connections that do not authenticate in time are closed with code `1008 (Policy Violation)`.
+- After connect, send `{ "type": "auth", "token": "<jwt>" }` within 15 seconds. On success the server returns `{ "type": "connected", "queue_depth": <int>, "active_runs": [...] }`, where `queue_depth` comes from `SELECT COUNT(*) FROM job_queue WHERE status = 'queued'`, and then emits run / notification events. Connections that do not authenticate in time are closed with code `1008 (Policy Violation)`.
 
 #### Example
 

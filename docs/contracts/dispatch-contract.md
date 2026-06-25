@@ -4,7 +4,7 @@ _Generated on 2026-06-24 03:23 UTC._
 
 ## Overview
 
-A dispatch is the concrete task object Inez creates when she routes work to a specialist during a conversation.
+A dispatch is the concrete task object Inez creates when she routes work to a specialist during a conversation. In the current hub runtime, `submit_job()` persists that dispatch in `job_queue` and emits the queued event through `ws_events`; there is no in-process `asyncio.Queue.put()` path.
 
 ## JSON Schema
 
@@ -70,6 +70,8 @@ A dispatch is the concrete task object Inez creates when she routes work to a sp
 - Agent ids should correspond to known portfolio agent ids.
 - Status should follow the run lifecycle closely enough for the UI to render progress.
 - Result can stay null until completion.
+- Workers poll `job_queue` and atomically claim work with `_claim_queued_job()`; the first `UPDATE ... WHERE status = 'queued'` claimant wins.
+- Cancel propagation sets `job_queue.status = 'cancelling'`; the worker running that `run_id` checks the flag within 2 seconds and raises the local cancel flag.
 
 ## Example
 

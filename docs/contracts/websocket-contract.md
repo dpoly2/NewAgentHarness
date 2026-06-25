@@ -67,6 +67,8 @@ The WebSocket contract documents both the initial auth handshake and the event p
 - Current server implementation expects an initial JSON auth message after connect.
 - After connecting, the client must send `{"type":"auth","token":"<jwt>"}` within **15 seconds** or the server closes the connection with WebSocket close code `1008 (Policy Violation)`.
 - Common events include connected, run updates, notifications, and ping/pong heartbeats.
+- Broadcast delivery is DB-mediated: `broadcast()` writes to `ws_events`, and each worker polls that table every 200ms before forwarding events to its connected clients.
+- `connected.queue_depth` is a DB count from `SELECT COUNT(*) FROM job_queue WHERE status = 'queued'`, not an in-process queue size.
 
 ## Example
 

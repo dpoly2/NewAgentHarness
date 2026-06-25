@@ -54,7 +54,7 @@ All 13 feature modules are now fully surfaced across three clients: the desktop 
 | Core config | `app/v3/core/config.py` | Centralizes paths, env vars, JWT defaults, CORS origins, and version metadata. |
 | Core database | `app/v3/core/database.py` | Owns schema initialization plus shared SQLite CRUD and query helpers. |
 | Core auth | `app/v3/core/auth.py` | JWT create/verify helpers, current/admin-user dependencies, login rate limiting, and global exception handler. |
-| Core hub runtime | `app/v3/core/hub.py` | Defines `HubServer`, the `hub` singleton, worker loop, scheduler wiring, and emit helpers. |
+| Core hub runtime | `app/v3/core/hub.py` | Defines `HubServer`, the `hub` singleton, 5 DB-backed worker loops, DB-polled broadcast, scheduler leader lock, and emit helpers. |
 | Core models | `app/v3/core/models.py` | Shared Pydantic request/response models used across routers. |
 | API routers | `app/v3/routers/*.py` | 29 domain routers partitioning the REST surface (auth, runs, agents, files, memory, sandbox, search, feedback, email, etc.). |
 | Desktop app | `app/v3/main_m365.py` | Tkinter app core: 2,707 lines. App class + nav + shared helpers. |
@@ -140,13 +140,20 @@ User action
 POST /api/runs
   → hub.submit_job(config)
   → job_queue row created
-  → background worker dequeues item
+  → 5 workers poll `job_queue`; first to atomically claim wins
   → graph execution via hub_nodes / run_graph
   → runs row updated with output, score, critique, status
   → reflexion + skill updates may occur
-  → broadcast run update over WebSocket
+  → broadcast run update via `ws_events` → worker-local WebSocket clients
   → notifications / todos / reports may be written
 ```
+
+## 5-Worker Runtime Model
+
+- `submit_job()` persists queue state in `job_queue`; five worker coroutines poll for work every 500ms.
+- `_claim_queued_job()` uses `UPDATE ... WHERE status = 'queued'` so only the first claimant can move a row to `running`.
+- `broadcast()` writes events to `ws_events`; each process runs `_event_poll_loop()` every 200ms to forward the shared stream to its connected WebSocket clients.
+- APScheduler starts only on the process that acquires the `scheduler_leader` lock in `hub_config`.
 
 ## Storage Layers
 
@@ -286,7 +293,7 @@ ArchonHub is the local, self-hosted plane of the AgentHarness ecosystem. It pair
 | Core config | `.agents/agentharness/app/v3/core/config.py` | Centralizes paths, env vars, JWT defaults, CORS origins, and version metadata. |
 | Core database | `.agents/agentharness/app/v3/core/database.py` | Owns schema initialization plus shared SQLite CRUD and query helpers. |
 | Core auth | `.agents/agentharness/app/v3/core/auth.py` | JWT create/verify helpers, current/admin-user dependencies, login rate limiting, and global exception handler. |
-| Core hub runtime | `.agents/agentharness/app/v3/core/hub.py` | Defines `HubServer`, the `hub` singleton, worker loop, scheduler wiring, and emit helpers. |
+| Core hub runtime | `.agents/agentharness/app/v3/core/hub.py` | Defines `HubServer`, the `hub` singleton, 5 DB-backed worker loops, DB-polled broadcast, scheduler leader lock, and emit helpers. |
 | Core models | `.agents/agentharness/app/v3/core/models.py` | Holds the shared Pydantic request/response models used across routers. |
 | API routers | `.agents/agentharness/app/v3/routers/*.py` | 28 domain routers partition the REST surface by feature area (`auth_routes.py`, `runs.py`, `agents.py`, etc.). |
 | Global Memory | `.agents/agentharness/app/v3/global_memory.py` | Persistent fact store plus prompt injection helpers. |
@@ -319,11 +326,11 @@ User action
 POST /api/runs
   → hub.submit_job(config)
   → job_queue row created
-  → background worker dequeues item
+  → 5 workers poll `job_queue`; first to atomically claim wins
   → graph execution via hub_nodes / run_graph
   → runs row updated with output, score, critique, status
   → reflexion + skill updates may occur
-  → broadcast run update over WebSocket
+  → broadcast run update via `ws_events` → worker-local WebSocket clients
   → notifications / todos / reports may be written
 ```
 

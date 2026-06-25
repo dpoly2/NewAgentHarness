@@ -19,7 +19,7 @@ AgentHarness is a multi-agent AI operating system built on two parallel planes:
         config.py         # Paths, env vars, constants (DB_PATH, SECRET_KEY, CORS_ORIGINS)
         database.py       # SQLite connection, CRUD helpers, schema init
         auth.py           # JWT, passwords, get_current_user, login rate limiter
-        hub.py            # HubServer class, worker loop, broadcast, make_emit
+        hub.py            # HubServer class, 5 DB-backed workers, ws_events broadcast, make_emit
         models.py         # All 30+ Pydantic request/response models
       routers/            # 28 domain APIRouter files (~200 lines each)
         auth_routes.py    # /api/auth/*
@@ -186,7 +186,7 @@ Always stored in `.agents/.env` — never hardcoded. WordPress agents use app pa
 
 ### ArchonHub Server — Security Posture (v1.2)
 Key rules enforced server-side — do not regress these:
-- **Single worker** — `workers=1` always. Multiple workers cause split-brain with the in-process job queue and WebSocket broadcast set.
+- **5 workers** — DB-backed queue + broadcast; APScheduler leader lock prevents duplicate scheduler execution.
 - **JWT secret** — server logs a startup warning if `JWT_SECRET` is still the default. Change it in `.agents/.env` for any non-personal deployment.
 - **CORS** — production CORS is locked to `https://app.archonhub.app` via `CORS_ORIGINS` in `.env`. Localhost origins are allowed for local dev.
 - **Login rate limiting** — `POST /api/auth/login` returns HTTP 429 after 10 attempts from the same IP within 5 minutes.

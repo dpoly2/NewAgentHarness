@@ -15,7 +15,8 @@ Expanded compact reference for the local `runs_v3.db` schema.
 | --- | --- | --- | --- | --- |
 | runs | 13 | id:INTEGER, run_id:TEXT, agent_id:TEXT, project:TEXT, graph:TEXT, task:TEXT, score:REAL, critique:TEXT … | — | .agents/agentharness/app/v3/hub_db.py |
 | skills | 8 | id:INTEGER, agent_id:TEXT, skill_name:TEXT, version:INTEGER, content:TEXT, avg_score:REAL, last_critique:TEXT, created_at:TEXT | — | .agents/agentharness/app/v3/hub_db.py |
-| job_queue | 12 | id:TEXT, agent_id:TEXT, project:TEXT, graph:TEXT, task:TEXT, priority:TEXT, status:TEXT, max_revisions:INTEGER … | — | .agents/agentharness/app/v3/hub_db.py |
+| job_queue | 12 | id:TEXT, agent_id:TEXT, project:TEXT, graph:TEXT, task:TEXT, priority:TEXT, status:TEXT (`queued`/`running`/`cancelling`/`completed`/`failed`) … | — | .agents/agentharness/app/v3/hub_db.py |
+| ws_events | 3 | id:INTEGER, payload_json:TEXT, created_at:TEXT | — | .agents/agentharness/app/v3/core/database.py |
 | todos | 11 | id:TEXT, title:TEXT, description:TEXT, priority:TEXT, status:TEXT, project:TEXT, due_date:TEXT, tags:TEXT … | — | .agents/agentharness/app/v3/hub_db.py |
 | notifications | 12 | notification_id:TEXT, user_id:TEXT, type:TEXT, priority:TEXT, title:TEXT, details:TEXT, data_json:TEXT, created_at:TIMESTAMP … | — | .agents/agentharness/app/v3/proactive_monitor.py |
 | hub_config | 3 | key:TEXT, value:TEXT, updated_at:TEXT | — | .agents/agentharness/app/v3/hub_db.py |
@@ -81,7 +82,8 @@ Expanded compact reference for the local `runs_v3.db` schema.
 ## Table notes
 
 - `runs` stores score, critique, output, revision count, and status for historical agent runs.
-- `job_queue` is the operational queue backing `POST /api/runs`.
+- `job_queue` is the operational queue backing `POST /api/runs`; `cancelling` is the cross-worker cancel propagation state in addition to the normal queued/running/completed/failed lifecycle.
+- `ws_events` is the shared broadcast channel for multi-worker WebSocket delivery and is auto-cleaned after 5 minutes.
 - `global_memory` is the shared long-term fact store consumed by Inez and specialist agents.
 - `agent_skill_levels`, `reflexion_log`, and `interaction_patterns` are the three main Progressive Intelligence tables.
 - `uploaded_files` and `file_chunks` support the document-RAG ingestion path.
