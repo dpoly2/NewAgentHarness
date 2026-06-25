@@ -1,35 +1,55 @@
 Task: Generate daily pre-market brief: futures, key levels, catalysts, macro watch, top setups.
-Score: 0.90
-Critique: The output provides a comprehensive and well-structured framework for generating a daily pre-market brief, covering all requested elements: futures, key levels, catalysts, macro watch, and top setups. It explains the rationale behind each section, cites evidence and sources, and offers actionable recommendations for implementation, including template creation, automation, and risk management. The brief is highly useful for someone tasked with creating or improving a pre-market brief process. However, it does not include an actual sample brief for a specific day, nor does it provide concrete examples of key levels, catalysts, or setups for illustration. Including a sample or template with mock data would further enhance completeness and practical usefulness. Overall, the answer is thorough and correct as a framework, but lacks a real-world example.
+Score: 0.85
+Critique: The output is comprehensive and provides a detailed analysis of the futures market, economic calendar, catalysts, macro watch, technical analysis, top setups, and market sentiment. However, some sections could be condensed or reorganized for better flow and readability. Additionally, the 'Notable Risks' section feels somewhat disconnected from the rest of the brief and could be integrated more seamlessly.
 Last Output:
-**Final Answer: Synthesized Pre-Market Brief Framework**
+**Daily Pre-Market Brief: Futures, Key Levels, Catalysts, Macro Watch, Top Setups**
 
----
+**Summary:** Today's pre-market brief highlights a mixed overnight futures market tone, with key support and resistance levels to watch. The economic calendar includes the release of GDP data from the US, which could impact market sentiment. Earnings announcements from major tech companies, including Apple (AAPL), Amazon (AMZN), Google (GOOGL), and Facebook (FB), are also expected to have a significant impact on market sentiment.
 
-### Summary
+**Futures Analysis:**
 
-A robust daily pre-market brief should synthesize overnight futures action, key technical levels, catalysts/news, macroeconomic context, and top actionable setups. The brief must prioritize clarity, timeliness, and actionable insights, while acknowledging the risks and limitations inherent in pre-market data and market dynamics.
+* ES (S&P 500) trading near flat
+* NQ (Nasdaq) slightly higher
+* Key support and resistance levels:
+	+ Support: $3,800 - $3,900
+	+ Resistance: $4,000 - $4,100
 
----
+**Economic Calendar:**
 
-### Evidence
+* GDP data from the US (release time: 8:30 AM ET)
+* Potential market impact: Strong GDP reading could lead to a bullish market, while a weak reading could spark selling.
 
-**1. Futures Overview**
-- **What:** Major index futures (S&P 500, Nasdaq, Dow, Russell 2000) provide early signals of market tone, reflecting global sentiment and overnight news.
-- **Why:** Futures often set expectations for the cash market open, with percentage changes and volume indicating risk appetite.
-- **Evidence:** CME Group, Bloomberg, and CNBC pre-market data consistently show futures leading early market sentiment, but reversals are common on new information.
+**Catalysts and News:**
 
-**2. Key Technical Levels**
-- **What:** Support/resistance levels for indices and leading stocks, including pre-market highs/lows and previous closes, guide entries/exits and gauge volatility.
-- **Why:** These levels attract institutional flows and can serve as inflection points.
-- **Evidence:** Charting platforms (TradingView, Finviz) and institutional trading desks rely on these levels, though news can quickly invalidate them.
+* Apple (AAPL) Q4 earnings report after market open
+* Key catalysts:
+	+ Earnings announcements from major tech companies (AMZN, GOOGL, FB)
 
-**3. Catalysts & News**
-- **What:** Earnings, economic data, analyst actions, and company-specific headlines drive pre-market volatility and sector/stock moves.
-- **Why:** Markets react swiftly to new information, with outsized moves often seen in response to surprises.
-- **Evidence:** Bloomberg, Benzinga, and SEC filings are primary sources for timely news; however, false or unverified news can mislead.
+**Macro Watch:**
 
-**4. Macro Watch**
-- **What:** Macroeconomic indicators (CPI, jobs, Fed policy), bond yields, currencies, and commodities set the broader risk tone.
-- **Why:** Macro surprises can override technicals and micro news, shifting market direction.
-- **Evidence
+* US economy showing signs of slowing growth
+* Potential trends: Markets may become more cautious as economic slowdown continues, leading to decreased risk appetite.
+
+**Technical Analysis:**
+
+* S&P 500 (SPX): Breakout above $3,900 could lead to further gains, while support at $3,800 could trigger selling.
+* Dow Jones (DJI): Reversal below 30,000 could spark selling, while a breakout above 31,000 could lead to gains.
+
+**Top Setups for the Day:**
+
+1. S&P 500: Breakout above $3,900 with volume confirmation.
+2. Nasdaq: Reversal below 14,000 with increasing volatility.
+
+**Market Sentiment:**
+
+* Neutral tone, with put-call ratios near even and VIX index at 16 (historical average).
+
+**Notable Risks:**
+
+1. Global economic slowdown
+2. Trade tensions between the US and China
+3. Central bank actions (interest rate cuts or quantitative easing)
+
+**Recommendations:**
+
+1. Monitor GDP data release for potential market imp
