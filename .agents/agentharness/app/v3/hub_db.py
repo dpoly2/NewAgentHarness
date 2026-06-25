@@ -2245,6 +2245,20 @@ def delete_scheduled_job(id: str) -> bool:
     return cur.rowcount > 0
 
 
+def record_job_run(job_id: str, status: str) -> None:
+    """Update last_run_at, last_run_status, and increment run_count for a scheduled job."""
+    now = datetime.utcnow().isoformat()
+    with get_conn() as conn:
+        conn.execute(
+            """
+            UPDATE scheduled_jobs
+            SET last_run_at = ?, last_run_status = ?, run_count = run_count + 1, updated_at = ?
+            WHERE id = ?
+            """,
+            (now, status, now, job_id),
+        )
+
+
 def upsert_agent(
     agent_id: str,
     name: str,

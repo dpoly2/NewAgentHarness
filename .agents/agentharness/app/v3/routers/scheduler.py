@@ -35,8 +35,8 @@ def _serialize_scheduler_job(job: Any) -> dict:
         "name": getattr(job, "name", None),
         "next_fire": getattr(getattr(job, "next_run_time", None), "isoformat", lambda: None)(),
         "trigger": str(getattr(job, "trigger", "")),
-        "last_run": db_job.get("last_run"),
-        "last_status": db_job.get("last_status"),
+        "last_run": db_job.get("last_run_at"),
+        "last_status": db_job.get("last_run_status"),
         "run_count": db_job.get("run_count", 0),
     }
 

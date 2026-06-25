@@ -33,11 +33,12 @@ except Exception:
     pytz = None
 
 try:
-    from hub_db import save_notification, list_scheduled_jobs, update_scheduled_job
+    from hub_db import save_notification, list_scheduled_jobs, update_scheduled_job, record_job_run
 except Exception:
     save_notification = None
     list_scheduled_jobs = None
     update_scheduled_job = None
+    record_job_run = None
 
 try:
     from ah_logging import get_logger
@@ -142,6 +143,28 @@ def _update_job_state(job_id: str, logger, **fields: Any) -> None:
         except Exception:
             logger.exception("Failed updating scheduled job state for %s", job_id)
             return
+
+
+def _make_tracked(func, job_id: str):
+    """Wrap a job coroutine to record last_run_at, last_run_status, run_count in DB."""
+    import functools
+
+    @functools.wraps(func)
+    async def _wrapper(*args, **kwargs):
+        status = "success"
+        try:
+            await func(*args, **kwargs)
+        except Exception:
+            status = "error"
+            raise
+        finally:
+            if callable(record_job_run):
+                try:
+                    record_job_run(job_id, status)
+                except Exception:
+                    pass
+
+    return _wrapper
 
 
 async def _submit_via_hub(hub, config: dict, logger, notification_text: str | None = None) -> bool:
@@ -424,7 +447,7 @@ class HubScheduler:
         for job_id, (func, name, cron_kwargs) in job_specs.items():
             trigger = CronTrigger(timezone=tz, **cron_kwargs)
             self.scheduler.add_job(
-                func,
+                _make_tracked(func, job_id),
                 trigger=trigger,
                 id=job_id,
                 name=name,
@@ -498,7 +521,7 @@ class HubScheduler:
             raise ValueError("job_config must include cron_expr, cron fields, or interval_sec")
 
         self.scheduler.add_job(
-            _run_user_job,
+            _make_tracked(_run_user_job, job_id),
             trigger=trigger,
             id=job_id,
             name=name,

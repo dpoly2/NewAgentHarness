@@ -800,6 +800,7 @@
             currentPage: 'login',
             pageTimer: null,
             wsReconnectTimer: null,
+            wsReconnectDelay: 5000,
             healthPulseTimer: null,
             runsFilters: { agent_id: '', project: '', status: '' },
             todos: [],
@@ -1184,6 +1185,7 @@
             ws = new WebSocket(`ws://${location.host}/ws`);
             ws.onopen = () => {
                 setWSState('online', 'WebSocket connected');
+                state.wsReconnectDelay = 5000;
                 ws.send(JSON.stringify({ type: 'auth', token: getToken() }));
             };
             ws.onmessage = (e) => {
@@ -1196,7 +1198,8 @@
             ws.onclose = () => {
                 setWSState('offline', 'WebSocket disconnected');
                 clearTimeout(state.wsReconnectTimer);
-                state.wsReconnectTimer = setTimeout(connectWS, 5000);
+                state.wsReconnectTimer = setTimeout(connectWS, state.wsReconnectDelay);
+                state.wsReconnectDelay = Math.min(state.wsReconnectDelay * 2, 60000);
             };
             ws.onerror = () => {
                 setWSState('offline', 'WebSocket error');
