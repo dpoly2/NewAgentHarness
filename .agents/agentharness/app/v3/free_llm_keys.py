@@ -164,9 +164,11 @@ def _test_key(key: str, model: str) -> bool:
 
 def find_working_key(candidates: list[dict]) -> dict | None:
     """
-    Try each candidate key in order until one passes validation.
-    Returns the working entry or None.
+    Try up to MAX_CANDIDATES keys in parallel (3 at a time) until one passes.
+    Returns the first working entry or None.
     """
+    import concurrent.futures
+
     # Deduplicate while preserving order
     seen: set[str] = set()
     unique = []
@@ -175,12 +177,31 @@ def find_working_key(candidates: list[dict]) -> dict | None:
             seen.add(c["key"])
             unique.append(c)
 
-    for entry in unique[:MAX_CANDIDATES]:
+    batch = unique[:MAX_CANDIDATES]
+    result_holder: list[dict] = []
+
+    def _try(entry: dict) -> dict | None:
         logger.debug("Testing key ...%s for %s", entry["key"][-6:], entry["model"])
         if _test_key(entry["key"], entry["model"]):
             logger.info("Found working key for %s (%s)", entry["provider"], entry["model"])
             return entry
-    return None
+        return None
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=min(3, len(batch))) as ex:
+        futures = {ex.submit(_try, e): e for e in batch}
+        for fut in concurrent.futures.as_completed(futures):
+            try:
+                res = fut.result()
+                if res:
+                    result_holder.append(res)
+                    # Cancel remaining futures (best-effort)
+                    for f in futures:
+                        f.cancel()
+                    break
+            except Exception:
+                pass
+
+    return result_holder[0] if result_holder else None
 
 
 # ── DB helpers ─────────────────────────────────────────────────────────────────

@@ -54,8 +54,10 @@ def _now() -> str:
 def load_top_facts(n: int = 20, category: Optional[str] = None) -> list[dict]:
     """
     Return top-N facts ordered by importance DESC, usage_count DESC.
+    Capped at 50 to avoid overwhelming agent prompts.
     Optionally filter to a single category.
     """
+    n = min(n, 50)  # cap at 50 to prevent prompt bloat
     try:
         conn = _get_conn()
         cur = conn.cursor()

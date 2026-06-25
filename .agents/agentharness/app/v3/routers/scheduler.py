@@ -14,17 +14,30 @@ router = APIRouter()
 
 def _scheduler_job_count() -> int:
     try:
-        return len(hub._scheduler.get_jobs()) if hub._scheduler else 0
+        if not hub._scheduler:
+            return 0
+        # HubScheduler wraps APScheduler — use inner .scheduler.get_jobs()
+        inner = getattr(hub._scheduler, "scheduler", hub._scheduler)
+        return len(inner.get_jobs())
     except Exception:
         return 0
 
 
 def _serialize_scheduler_job(job: Any) -> dict:
+    from core.database import _get_record
+    db_job = {}
+    try:
+        db_job = _get_record("scheduled_jobs", getattr(job, "id", "")) or {}
+    except Exception:
+        pass
     return {
         "id": getattr(job, "id", None),
         "name": getattr(job, "name", None),
         "next_fire": getattr(getattr(job, "next_run_time", None), "isoformat", lambda: None)(),
         "trigger": str(getattr(job, "trigger", "")),
+        "last_run": db_job.get("last_run"),
+        "last_status": db_job.get("last_status"),
+        "run_count": db_job.get("run_count", 0),
     }
 
 def _scheduler_trigger(job: SchedulerJobCreate):
@@ -71,10 +84,13 @@ async def _fire_scheduled_job(job_id: str, payload: dict) -> str:
 @router.get("/scheduler")
 async def list_scheduler(current_user: dict = Depends(get_current_user)):
     del current_user
+    if hub._scheduler and hasattr(hub._scheduler, "get_job_list"):
+        return hub._scheduler.get_job_list()
     jobs = []
     if hub._scheduler:
         try:
-            jobs.extend(_serialize_scheduler_job(job) for job in hub._scheduler.get_jobs())
+            inner = getattr(hub._scheduler, "scheduler", hub._scheduler)
+            jobs.extend(_serialize_scheduler_job(job) for job in inner.get_jobs())
         except Exception:
             pass
     return jobs

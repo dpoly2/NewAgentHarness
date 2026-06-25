@@ -39,7 +39,8 @@ HUB_BASE = "http://localhost:8765"
 HUB_WS = "ws://localhost:8765/ws"
 TIMEOUT = 5.0
 LLM_TIMEOUT = 180.0      # LLM endpoints (Inez/chat) can take minutes
-RECONNECT_INTERVAL = 5   # seconds
+RECONNECT_INTERVAL = 5   # seconds (initial)
+RECONNECT_MAX = 60       # seconds (cap)
 
 
 class HubClient:
@@ -159,24 +160,30 @@ class HubClient:
                 self._event_queue.put(event)
 
     def _ws_loop(self):
+        backoff = RECONNECT_INTERVAL
         while self._running:
             try:
                 if not self._login():
-                    self._sleep_or_stop(self._reconnect_interval)
+                    self._sleep_or_stop(backoff)
+                    backoff = min(backoff * 2, RECONNECT_MAX)
                     continue
 
                 if websockets is None:
                     while self._running:
                         self._health_check()
-                        self._sleep_or_stop(self._reconnect_interval)
+                        self._sleep_or_stop(backoff)
                     break
 
                 asyncio.run(self._ws_connect_once())
+                # Successful connection — reset backoff
+                backoff = RECONNECT_INTERVAL
             except Exception as exc:
                 logger.debug("ArchonHub websocket loop error: %s", exc)
             self._set_online(False)
             if self._running:
-                self._sleep_or_stop(self._reconnect_interval)
+                logger.debug("ArchonHub reconnecting in %ds", backoff)
+                self._sleep_or_stop(backoff)
+                backoff = min(backoff * 2, RECONNECT_MAX)
 
     def _request(self, method: str, path: str, *, data: dict | None = None, params: dict | None = None, timeout: float = TIMEOUT) -> Any | None:
         if not self.online or not self.token:

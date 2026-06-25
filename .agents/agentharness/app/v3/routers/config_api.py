@@ -34,15 +34,28 @@ async def health():
         _llm_model    = _cfg.get("llm_model")    or _ai.get("model",    "gpt-4o-mini")
     except Exception:
         _llm_provider, _llm_model = "openai", "gpt-4o-mini"
+
+    scheduler_count = _scheduler_job_count()
+    worker_ok = hub._worker_task is not None and not hub._worker_task.done()
+    scheduler_ok = hub._scheduler is not None and scheduler_count > 0
+
+    # Determine overall status
+    if not worker_ok or not scheduler_ok:
+        status = "degraded"
+    else:
+        status = "ok"
+
     return {
-        "status": "ok",
+        "status": status,
         "app": "ArchonHub",
         "version": APP_VERSION,
         "uptime_seconds": int((_utcnow() - hub.start_time).total_seconds()),
         "active_runs": len(hub._active_runs),
         "queue_depth": queue_depth,
         "ws_clients": len(hub._clients),
-        "scheduler_jobs": _scheduler_job_count(),
+        "scheduler_jobs": scheduler_count,
+        "scheduler_ok": scheduler_ok,
+        "worker_ok": worker_ok,
         "thread_pool_size": getattr(hub._executor, "_max_workers", 3),
         "langgraph_ok": LANGGRAPH_OK,
         "pending_todos": _count_rows("todos", "status = ?", ["pending"]),

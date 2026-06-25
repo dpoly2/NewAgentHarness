@@ -3644,23 +3644,47 @@ class ArchonHubApp:
         btn_row.pack(fill="x", padx=14, pady=(0, 10))
         self._button(btn_row, "🔄 Refresh", self._refresh_memory_facts).pack(side="left", padx=4)
         self._button(btn_row, "🗑 Delete Selected", self._delete_memory_fact).pack(side="left", padx=4)
+
+        # Pagination controls
+        self._mem_offset = 0
+        self._mem_total = 0
+        PAGE = 50
+        self._mem_page_lbl = tk.Label(btn_row, text="Loading…", bg=BG_PANEL, fg=TEXT_MUTED, font=("Segoe UI", 9))
+        self._mem_page_lbl.pack(side="left", padx=(12, 4))
+        self._button(btn_row, "◀ Prev", lambda: self._refresh_memory_facts(
+            offset=max(0, getattr(self, "_mem_offset", 0) - PAGE))).pack(side="left", padx=2)
+        self._button(btn_row, "Next ▶", lambda: self._refresh_memory_facts(
+            offset=getattr(self, "_mem_offset", 0) + PAGE)).pack(side="left", padx=2)
+
         self._refresh_memory_facts()
 
-    def _refresh_memory_facts(self, query=""):
+    def _refresh_memory_facts(self, query="", offset=0):
         if not hasattr(self, "mem_tree"):
             return
+        PAGE = 50
         self.mem_tree.delete(*self.mem_tree.get_children())
         try:
             if query:
                 data = self.hub._get(f"/api/memory/global/search?q={query}") or []
+                facts = data if isinstance(data, list) else data.get("results", [])
+                self._mem_total = len(facts)
             else:
-                data = self.hub._get("/api/memory/global") or []
-            facts = data if isinstance(data, list) else data.get("facts", [])
+                data = self.hub._get(f"/api/memory/global?limit={PAGE}&offset={offset}") or []
+                facts = data if isinstance(data, list) else data.get("facts", [])
+                counts = (data.get("counts") or {}) if isinstance(data, dict) else {}
+                self._mem_total = sum(counts.values()) if counts else len(facts)
+                self._mem_offset = offset
             for f in facts:
                 self.mem_tree.insert("", "end", iid=str(f.get("id", "")),
-                                     values=(f.get("category", ""), f.get("subject", ""), str(f.get("value", ""))[:80],
+                                     values=(f.get("category", ""), f.get("key", f.get("subject", "")), str(f.get("value", ""))[:80],
                                              f"{float(f.get('confidence', 0)):.2f}", f.get("usage_count", 0),
                                              str(f.get("updated_at", ""))[:16]))
+            # Update page label
+            if hasattr(self, "_mem_page_lbl"):
+                shown = len(facts)
+                start = offset + 1
+                end = offset + shown
+                self._mem_page_lbl.config(text=f"Showing {start}–{end} of {self._mem_total}")
         except Exception as e:
             self._toast(f"Memory load error: {e}", ERROR)
 
