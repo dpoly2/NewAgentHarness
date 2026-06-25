@@ -89,6 +89,72 @@ async def upsert_agent_endpoint(body: AgentUpsert, current_user: dict = Depends(
     return _list_records("agent_registry", where=["agent_id = ?"], params=[body.agent_id],
                           json_fields=_AGENT_JSON)[0]
 
+@router.get("/agents/capabilities")
+async def get_agent_capabilities(agent_name: Optional[str] = None, _: dict = Depends(get_current_user)):
+    """Get agent capabilities."""
+    try:
+        from agent_orchestrator import AgentOrchestrator
+        orchestrator = AgentOrchestrator(DB_PATH)
+        capabilities = orchestrator.get_agent_capabilities(agent_name)
+        return {"success": True, "agents": capabilities, "count": len(capabilities)}
+    except Exception as e:
+        logger.error(f"Get capabilities error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/conversations")
+async def list_agent_conversations(
+    status: Optional[str] = None,
+    limit: int = 50,
+    _: dict = Depends(get_current_user),
+):
+    """List all agent conversations."""
+    import json as _json
+    import sqlite3 as _sql
+    try:
+        conn = _sql.connect(str(DB_PATH))
+        conn.row_factory = _sql.Row
+        try:
+            q = "SELECT * FROM agent_conversations"
+            params: list = []
+            if status:
+                q += " WHERE status = ?"
+                params.append(status)
+            q += " ORDER BY created_at DESC LIMIT ?"
+            params.append(limit)
+            rows = [dict(r) for r in conn.execute(q, params).fetchall()]
+            for r in rows:
+                if r.get("participant_agents"):
+                    try:
+                        r["participant_agents"] = _json.loads(r["participant_agents"])
+                    except Exception:
+                        pass
+                if r.get("result_json"):
+                    try:
+                        r["result"] = _json.loads(r["result_json"])
+                    except Exception:
+                        pass
+            return {"success": True, "conversations": rows, "count": len(rows)}
+        finally:
+            conn.close()
+    except Exception as e:
+        logger.error(f"List conversations error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/conversations/{conversation_id}")
+async def get_conversation_history(conversation_id: str, _: dict = Depends(get_current_user)):
+    """Get agent conversation history."""
+    try:
+        from agent_orchestrator import AgentOrchestrator
+        orchestrator = AgentOrchestrator(DB_PATH)
+        history = orchestrator.get_conversation_history(conversation_id)
+        return {"success": True, "conversation": history}
+    except Exception as e:
+        logger.error(f"Get conversation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/agents/{agent_id}")
 async def get_agent_endpoint(agent_id: str, current_user: dict = Depends(get_current_user)):
     del current_user
@@ -97,6 +163,7 @@ async def get_agent_endpoint(agent_id: str, current_user: dict = Depends(get_cur
     if not rec:
         raise HTTPException(404, "Agent not found")
     return rec[0]
+
 
 @router.put("/agents/{agent_id}")
 async def update_agent_endpoint(agent_id: str, body: AgentUpdate, current_user: dict = Depends(get_current_user)):
@@ -121,67 +188,24 @@ async def update_agent_endpoint(agent_id: str, body: AgentUpdate, current_user: 
         raise HTTPException(404, "Agent not found")
     return recs[0]
 
+
 @router.post("/agents/collaborate")
 async def agent_collaboration(request: dict, current_user: dict = Depends(get_current_user)):
     """Orchestrate multi-agent collaboration on a task."""
     try:
         from agent_orchestrator import AgentOrchestrator
-        
-        query = request.get('query')
+        query = request.get("query")
         user_id = current_user.get("username", "default_user")
-        agents = request.get('agents')  # Optional: explicit agent list
-        
+        agents_list = request.get("agents")
         if not query:
             raise HTTPException(status_code=400, detail="Query required")
-        
         orchestrator = AgentOrchestrator(DB_PATH)
         result = await orchestrator.orchestrate_collaboration(
-            user_id=user_id,
-            query=query,
-            explicit_agents=agents
+            user_id=user_id, query=query, explicit_agents=agents_list
         )
-        
-        return {
-            "success": True,
-            **result
-        }
+        return {"success": True, **result}
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Agent collaboration error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/agents/capabilities")
-async def get_agent_capabilities(agent_name: Optional[str] = None, _: dict = Depends(get_current_user)):
-    """Get agent capabilities."""
-    try:
-        from agent_orchestrator import AgentOrchestrator
-        
-        orchestrator = AgentOrchestrator(DB_PATH)
-        capabilities = orchestrator.get_agent_capabilities(agent_name)
-        
-        return {
-            "success": True,
-            "agents": capabilities,
-            "count": len(capabilities)
-        }
-    except Exception as e:
-        logger.error(f"Get capabilities error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/agents/conversations/{conversation_id}")
-async def get_conversation_history(conversation_id: str, _: dict = Depends(get_current_user)):
-    """Get agent conversation history."""
-    try:
-        from agent_orchestrator import AgentOrchestrator
-        
-        orchestrator = AgentOrchestrator(DB_PATH)
-        history = orchestrator.get_conversation_history(conversation_id)
-        
-        return {
-            "success": True,
-            "conversation": history
-        }
-    except Exception as e:
-        logger.error(f"Get conversation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

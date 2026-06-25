@@ -3917,13 +3917,16 @@ class ArchonHubApp:
         notebook.pack(fill="both", expand=True, padx=20, pady=(0, 20))
 
         orch_tab = tk.Frame(notebook, bg=BG_CANVAS)
+        conv_tab = tk.Frame(notebook, bg=BG_CANVAS)
         tmpl_tab = tk.Frame(notebook, bg=BG_CANVAS)
         feed_tab = tk.Frame(notebook, bg=BG_CANVAS)
         notebook.add(orch_tab, text="Orchestrate")
+        notebook.add(conv_tab, text="💬 Conversations")
         notebook.add(tmpl_tab, text="Templates")
         notebook.add(feed_tab, text="Feedback")
 
         self._build_agents_orchestrate_tab(orch_tab)
+        self._build_agents_conversations_tab(conv_tab)
         self._build_agents_templates_tab(tmpl_tab)
         self._build_agents_feedback_tab(feed_tab)
 
@@ -3988,6 +3991,108 @@ class ArchonHubApp:
                 self._ui_queue.put(("toast", f"Error: {e}", ERROR))
 
         _t.Thread(target=_run, daemon=True).start()
+
+    def _build_agents_conversations_tab(self, parent):
+        top_row = tk.Frame(parent, bg=BG_CANVAS)
+        top_row.pack(fill="x", padx=10, pady=(10, 4))
+        self._button(top_row, "🔄 Refresh", self._refresh_agent_conversations).pack(side="left", padx=4)
+
+        paned = tk.PanedWindow(parent, orient="horizontal", sashwidth=6, bg=BG_CANVAS, relief="flat")
+        paned.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        # Left: conversation list
+        left = tk.Frame(paned, bg=BG_CANVAS)
+        paned.add(left, minsize=260)
+        tk.Label(left, text="Conversations", bg=BG_CANVAS, fg=TEXT_BODY,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6, pady=(4, 2))
+        cols = ("goal", "agents", "status", "msgs", "created")
+        self._conv_tree = ttk.Treeview(left, columns=cols, show="headings", selectmode="browse")
+        for col, txt, w in [("goal", "Goal", 180), ("agents", "Agents", 100),
+                             ("status", "Status", 70), ("msgs", "#", 30), ("created", "Created", 100)]:
+            self._conv_tree.heading(col, text=txt)
+            self._conv_tree.column(col, width=w, anchor="w")
+        sb_l = ttk.Scrollbar(left, orient="vertical", command=self._conv_tree.yview)
+        self._conv_tree.configure(yscrollcommand=sb_l.set)
+        self._conv_tree.pack(side="left", fill="both", expand=True)
+        sb_l.pack(side="right", fill="y")
+        self._conv_tree.bind("<<TreeviewSelect>>", self._on_conv_select)
+        self._conv_data = {}
+
+        # Right: message viewer
+        right = tk.Frame(paned, bg=BG_CANVAS)
+        paned.add(right, minsize=320)
+        tk.Label(right, text="Messages", bg=BG_CANVAS, fg=TEXT_BODY,
+                 font=("Segoe UI", 9, "bold")).pack(anchor="w", padx=6, pady=(4, 2))
+        self._conv_msg_text = self._text_widget(right, height=30)
+        self._conv_msg_text.pack(fill="both", expand=True, padx=6, pady=(0, 6))
+        self._conv_msg_text.configure(state="disabled")
+
+        self._refresh_agent_conversations()
+
+    def _refresh_agent_conversations(self):
+        if not hasattr(self, "_conv_tree"):
+            return
+        import threading as _t
+
+        def _fetch():
+            try:
+                resp = self.hub._get("/api/agents/conversations?limit=100") or {}
+                convs = resp.get("conversations", resp) if isinstance(resp, dict) else resp
+                if not isinstance(convs, list):
+                    convs = []
+                self._ui_queue.put(("call", lambda: self._populate_conv_tree(convs)))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Conversations error: {e}", ERROR))
+
+        _t.Thread(target=_fetch, daemon=True).start()
+
+    def _populate_conv_tree(self, convs):
+        if not hasattr(self, "_conv_tree"):
+            return
+        self._conv_tree.delete(*self._conv_tree.get_children())
+        self._conv_data = {}
+        for c in convs:
+            cid = c.get("conversation_id", "")
+            agents = c.get("participant_agents", [])
+            if isinstance(agents, list):
+                agents_str = ", ".join(agents[:3])
+            else:
+                agents_str = str(agents)[:30]
+            goal = str(c.get("goal", ""))[:50]
+            status = c.get("status", "")
+            msgs = c.get("message_count", 0)
+            ts = str(c.get("created_at", ""))[:16]
+            self._conv_tree.insert("", "end", iid=cid,
+                                   values=(goal, agents_str, status, msgs, ts))
+            self._conv_data[cid] = c
+
+    def _on_conv_select(self, _event):
+        if not hasattr(self, "_conv_tree") or not hasattr(self, "_conv_msg_text"):
+            return
+        sel = self._conv_tree.selection()
+        if not sel:
+            return
+        cid = sel[0]
+        import threading as _t
+
+        def _fetch():
+            try:
+                resp = self.hub._get(f"/api/agents/conversations/{cid}") or {}
+                conv = resp.get("conversation", {})
+                messages = conv.get("messages", [])
+                lines = [f"Goal: {conv.get('goal', '')}", f"Agents: {', '.join(conv.get('participant_agents', []))}", f"Status: {conv.get('status', '')} | Messages: {conv.get('message_count', 0)}", "─" * 60, ""]
+                for m in messages:
+                    payload = m.get("payload", {})
+                    content = payload.get("response") or payload.get("query") or str(payload)[:200]
+                    lines.append(f"[{m.get('sender_agent','?')} → {m.get('recipient_agent','?')}] ({m.get('status','?')})")
+                    lines.append(f"  {content}")
+                    lines.append("")
+                text = "\n".join(lines) if len(lines) > 5 else "(no messages yet)"
+                self._ui_queue.put(("set_text", self._conv_msg_text, text))
+            except Exception as e:
+                self._ui_queue.put(("toast", f"Load error: {e}", ERROR))
+
+        _t.Thread(target=_fetch, daemon=True).start()
 
     def _build_agents_templates_tab(self, parent):
         top_row = tk.Frame(parent, bg=BG_CANVAS)

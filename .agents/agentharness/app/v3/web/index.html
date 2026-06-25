@@ -788,6 +788,7 @@
             { id: 'schedule', icon: '📅', label: 'Schedule' },
             { id: 'clients', icon: '👥', label: 'Clients' },
             { id: 'projects', icon: '📁', label: 'Projects' },
+            { id: 'agents', icon: '🤖', label: 'Agents' },
             { id: 'connectors', icon: '✉', label: 'Connectors' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
@@ -1311,6 +1312,7 @@
                 connectors: showConnectors,
                 travel: showTravel,
                 briefing: showBriefing,
+                agents: showAgents,
                 chat: showChat,
                 inez: showInez,
                 settings: showSettings
@@ -2476,6 +2478,135 @@
                     try { await api('POST', '/api/briefing/morning', {}); await showBriefing(); }
                     catch (e) { showToast(e.message || 'Failed', 'var(--error)'); }
                 });
+            }
+        }
+
+        async function showAgents() {
+            if (!(await requireAuth())) return;
+            setLoading('Agents', 'Loading agent collaboration…');
+
+            async function loadConversations() {
+                const resp = await api('GET', '/api/agents/conversations?limit=50');
+                return resp?.conversations || [];
+            }
+            async function loadCapabilities() {
+                const resp = await api('GET', '/api/agents/capabilities');
+                return resp?.agents || [];
+            }
+
+            try {
+                const [conversations, capabilities] = await Promise.all([loadConversations(), loadCapabilities()]);
+                state.agentConversations = conversations;
+
+                const capsOptions = capabilities.map(a =>
+                    `<option value="${escapeHtml(a.agent_name)}">${escapeHtml(a.display_name || a.agent_name)}</option>`
+                ).join('');
+
+                const convRows = conversations.length
+                    ? conversations.map(c => {
+                        const agents = Array.isArray(c.participant_agents)
+                            ? c.participant_agents.join(', ')
+                            : c.participant_agents || '';
+                        const statusCls = c.status === 'completed' ? 'badge-success' : c.status === 'failed' ? 'badge-error' : 'badge-info';
+                        return `<tr class="clickable" data-conv-id="${c.conversation_id}">
+                            <td>${escapeHtml((c.goal||'').slice(0,60))}</td>
+                            <td>${escapeHtml(agents)}</td>
+                            <td><span class="${statusCls}">${c.status}</span></td>
+                            <td>${c.message_count || 0}</td>
+                            <td class="muted">${fmtDateTime(c.created_at)}</td>
+                        </tr>`;
+                    }).join('')
+                    : '<tr><td colspan="5" class="muted" style="text-align:center;padding:20px">No conversations yet — start one above</td></tr>';
+
+                renderShell('Agents', 'Multi-agent collaboration and conversation history.',
+                    `<div class="card" style="margin-bottom:18px">
+                        <h3>🤝 Start Collaboration</h3>
+                        <label class="form-label" style="margin-top:8px">Query / Goal</label>
+                        <textarea id="agentQuery" rows="3" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;resize:vertical" placeholder="Ask multiple agents to collaborate on a task…"></textarea>
+                        <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+                            <label class="form-label" style="margin:0;white-space:nowrap">Specific agents (optional):</label>
+                            <select id="agentSelect" multiple style="background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:4px;font-size:12px;height:64px;flex:1">
+                                ${capsOptions}
+                            </select>
+                            <button class="action-btn primary" id="collaborateBtn" style="white-space:nowrap">▶ Collaborate</button>
+                        </div>
+                        <div id="collaborateResult" style="display:none;margin-top:14px;background:var(--bg-input);border-radius:6px;padding:12px;white-space:pre-wrap;font-size:12px;max-height:300px;overflow-y:auto"></div>
+                    </div>
+                    <div class="card">
+                        <h3>💬 Conversation History</h3>
+                        <div class="table-wrap" style="padding:0">
+                        <table><thead><tr><th>Goal</th><th>Agents</th><th>Status</th><th>#</th><th>Created</th></tr></thead>
+                        <tbody id="convTableBody">${convRows}</tbody></table>
+                        </div>
+                    </div>
+                    <div id="convDetailPanel" style="display:none;margin-top:18px" class="card">
+                        <h3 id="convDetailTitle">Conversation Detail</h3>
+                        <div id="convDetailContent" style="white-space:pre-wrap;font-size:12px;background:var(--bg-input);border-radius:6px;padding:12px;max-height:400px;overflow-y:auto"></div>
+                    </div>`,
+                    `<button class="action-btn" onclick="showAgents()">🔄 Refresh</button>`
+                );
+
+                // Wire collaborate button
+                $('#collaborateBtn').addEventListener('click', async () => {
+                    const query = $('#agentQuery').value.trim();
+                    if (!query) { showToast('Enter a query first', 'var(--warning)'); return; }
+                    const sel = $('#agentSelect');
+                    const selectedAgents = sel ? Array.from(sel.selectedOptions).map(o => o.value) : [];
+                    $('#collaborateBtn').disabled = true;
+                    $('#collaborateBtn').textContent = 'Working…';
+                    const resultDiv = $('#collaborateResult');
+                    resultDiv.style.display = 'block';
+                    resultDiv.textContent = 'Sending to agents…';
+                    try {
+                        const payload = { query };
+                        if (selectedAgents.length) payload.agents = selectedAgents;
+                        const result = await api('POST', '/api/agents/collaborate', payload);
+                        const synthesis = result?.synthesis?.synthesized_response || result?.response || result?.result || JSON.stringify(result, null, 2);
+                        const agentsUsed = result?.agents_involved || [];
+                        resultDiv.textContent = (agentsUsed.length ? `Agents: ${agentsUsed.join(', ')}\n${'─'.repeat(50)}\n\n` : '') + synthesis;
+                        await showAgents();
+                    } catch (e) {
+                        resultDiv.textContent = 'Error: ' + (e.message || 'Collaboration failed');
+                        $('#collaborateBtn').disabled = false;
+                        $('#collaborateBtn').textContent = '▶ Collaborate';
+                    }
+                });
+
+                // Wire row clicks for conversation detail
+                document.querySelectorAll('#convTableBody tr[data-conv-id]').forEach(row => {
+                    row.addEventListener('click', async () => {
+                        const cid = row.dataset.convId;
+                        try {
+                            const resp = await api('GET', `/api/agents/conversations/${cid}`);
+                            const conv = resp?.conversation || {};
+                            const messages = conv.messages || [];
+                            const panel = $('#convDetailPanel');
+                            const title = $('#convDetailTitle');
+                            const content = $('#convDetailContent');
+                            title.textContent = `Goal: ${(conv.goal||'').slice(0,80)}`;
+                            const lines = [
+                                `Agents: ${(conv.participant_agents||[]).join(', ')}`,
+                                `Status: ${conv.status}  |  Messages: ${conv.message_count || 0}`,
+                                '─'.repeat(60), ''
+                            ];
+                            for (const m of messages) {
+                                const p = m.payload || {};
+                                const body = p.response || p.query || JSON.stringify(p).slice(0,200);
+                                lines.push(`[${m.sender_agent} → ${m.recipient_agent}] (${m.status})`);
+                                lines.push(`  ${body}`);
+                                lines.push('');
+                            }
+                            content.textContent = lines.join('\n') || '(no messages)';
+                            panel.style.display = 'block';
+                            panel.scrollIntoView({ behavior: 'smooth' });
+                        } catch (e) {
+                            showToast('Load error: ' + e.message, 'var(--error)');
+                        }
+                    });
+                });
+            } catch (error) {
+                renderShell('Agents', 'Multi-agent collaboration.',
+                    `<div class="error-banner">${escapeHtml(error.message || 'Unable to load agents')}</div>`);
             }
         }
 
