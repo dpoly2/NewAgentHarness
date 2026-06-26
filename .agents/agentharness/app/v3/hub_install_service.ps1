@@ -132,12 +132,32 @@ switch ($Action.ToLower()) {
 
         $envVars = Load-EnvVars
 
+        # Determine the service account to use.
+        # Microsoft Store Python DLLs live in the user's AppData and are not
+        # accessible to the SYSTEM account. Run the service as the current
+        # interactive user so Python can always find its runtime libraries.
+        $svcUser     = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $svcPassword = ""  # will prompt below if not supplied
+        Write-Host "  [i]  Service will run as: $svcUser" -ForegroundColor DarkGray
+        Write-Host "       (Required for Microsoft Store / per-user Python installs)" -ForegroundColor DarkGray
+        if (-not $env:ARCHONHUB_SVC_PASSWORD) {
+            $securePw = Read-Host "  Enter Windows password for '$svcUser' (needed by NSSM to log on as service)" -AsSecureString
+            $bstr     = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePw)
+            $svcPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto($bstr)
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+        } else {
+            $svcPassword = $env:ARCHONHUB_SVC_PASSWORD
+        }
+
         # Install and configure via NSSM
         & $NssmPath install $ServiceName $VenvPython $HubScript
         & $NssmPath set $ServiceName AppDirectory $ScriptDir
         & $NssmPath set $ServiceName DisplayName  $DisplayName
         & $NssmPath set $ServiceName Description  $Description
         & $NssmPath set $ServiceName Start        SERVICE_AUTO_START
+
+        # Run as current user (not SYSTEM) so Store Python DLLs are accessible
+        & $NssmPath set $ServiceName ObjectName $svcUser $svcPassword
 
         # Logs
         New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
