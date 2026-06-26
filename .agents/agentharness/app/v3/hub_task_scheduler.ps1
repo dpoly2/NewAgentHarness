@@ -67,34 +67,82 @@ switch ($Action.ToLower()) {
             exit 1
         }
 
-        # Build the action - pass env vars inline via cmd wrapper
-        $envArgs = ""
+        # Build an XML task definition - more reliable than PowerShell CIM cmdlets
+        # across different Windows versions and execution environments.
+        $currentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+        $port = if ($env:HUB_PORT) { $env:HUB_PORT } else { "8765" }
+
+        # Build env-var SET chain for cmd wrapper
+        $envChain = ""
         if (Test-Path $EnvFile) {
             Get-Content $EnvFile | ForEach-Object {
-                if ($_ -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+                $line = $_.Trim()
+                if ($line -and -not $line.StartsWith('#') -and $line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
                     $k = $Matches[1].Trim()
                     $v = $Matches[2].Trim()
-                    $envArgs += "set `"$k=$v`" && "
+                    $envChain += "set `"$k=$v`" &amp;&amp; "
                 }
             }
         }
+        # cmd /c "set KEY=VAL && ... && python hub_server.py"
+        $cmdArgs = "/c `"cd /d `"$ScriptDir`" &amp;&amp; ${envChain}`"$VenvPython`" `"$HubScript`"`""
 
-        $wrapperCmd = "cmd.exe"
-        $wrapperArgs = "/c `"$envArgs`"`"$VenvPython`" `"$HubScript`"`""
+        $taskXml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>$TaskDesc</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <UserId>$currentUser</UserId>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <UserId>$currentUser</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <RestartOnFailure>
+      <Interval>PT5M</Interval>
+      <Count>3</Count>
+    </RestartOnFailure>
+    <Enabled>true</Enabled>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>cmd.exe</Command>
+      <Arguments>$cmdArgs</Arguments>
+      <WorkingDirectory>$ScriptDir</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>
+"@
 
-        # Build scheduled task
-        $trigger  = New-ScheduledTaskTrigger -AtLogOn
-        $principal= New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Highest
-        $action   = New-ScheduledTaskAction -Execute $wrapperCmd -Argument $wrapperArgs -WorkingDirectory $ScriptDir
-        $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Hours 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
+        # Delete old task if present
+        $existing = & schtasks.exe /Query /TN $TaskName 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  [..] Removing old task..." -ForegroundColor Yellow
+            & schtasks.exe /Delete /TN $TaskName /F | Out-Null
+        }
 
-        $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        if ($existing) {
-            Write-Host "  [..] Updating existing task..." -ForegroundColor Yellow
-            Set-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
-        } else {
-            Register-ScheduledTask -TaskName $TaskName -Description $TaskDesc `
-                -Action $action -Trigger $trigger -Principal $principal -Settings $settings | Out-Null
+        # Register via XML
+        $tmpXml = [System.IO.Path]::GetTempFileName() + ".xml"
+        [System.IO.File]::WriteAllText($tmpXml, $taskXml, [System.Text.Encoding]::Unicode)
+        & schtasks.exe /Create /TN $TaskName /XML $tmpXml /F 2>&1 | Out-Null
+        Remove-Item $tmpXml -Force -ErrorAction SilentlyContinue
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "  [ERROR] schtasks /Create failed (exit $LASTEXITCODE)" -ForegroundColor Red
+            exit 1
         }
 
         Write-Host "  [OK]  Task registered: '$TaskName'" -ForegroundColor Green
@@ -102,11 +150,10 @@ switch ($Action.ToLower()) {
 
         # Start it now
         Write-Host "  [..] Starting task now..." -ForegroundColor Yellow
-        Start-ScheduledTask -TaskName $TaskName
-        Start-Sleep -Seconds 5
+        & schtasks.exe /Run /TN $TaskName | Out-Null
+        Start-Sleep -Seconds 6
 
         # Health check
-        $port = if ($env:HUB_PORT) { $env:HUB_PORT } else { "8765" }
         try {
             $h = Invoke-RestMethod "http://localhost:$port/api/health" -TimeoutSec 6 -ErrorAction Stop
             Write-Host "  [OK]  Hub is live on port $port" -ForegroundColor Green
@@ -121,27 +168,26 @@ switch ($Action.ToLower()) {
     }
 
     "remove" {
-        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        if (-not $task) {
+        $existing = & schtasks.exe /Query /TN $TaskName 2>&1
+        if ($LASTEXITCODE -ne 0) {
             Write-Host "  Task '$TaskName' not found." -ForegroundColor Yellow
             exit 0
         }
-        Stop-ScheduledTask  -TaskName $TaskName -ErrorAction SilentlyContinue
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
+        & schtasks.exe /End    /TN $TaskName 2>&1 | Out-Null
+        & schtasks.exe /Delete /TN $TaskName /F  2>&1 | Out-Null
         Write-Host "  [OK]  Task '$TaskName' removed." -ForegroundColor Green
     }
 
     "restart" {
-        # Kill any running hub process
         Get-Process -Name "python" -ErrorAction SilentlyContinue | Where-Object {
-            $_.MainModule.FileName -like "*\.venv\*"
+            try { $_.MainModule.FileName -like "*\.venv\*" } catch { $false }
         } | ForEach-Object {
             Write-Host "  [..] Stopping PID $($_.Id)..." -ForegroundColor Yellow
             Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
         }
         Start-Sleep -Seconds 2
-        Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 5
+        & schtasks.exe /Run /TN $TaskName 2>&1 | Out-Null
+        Start-Sleep -Seconds 6
         $port = if ($env:HUB_PORT) { $env:HUB_PORT } else { "8765" }
         try {
             $h = Invoke-RestMethod "http://localhost:$port/api/health" -TimeoutSec 6 -ErrorAction Stop
@@ -152,13 +198,11 @@ switch ($Action.ToLower()) {
     }
 
     "status" {
-        $task = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        if ($task) {
-            $info  = Get-ScheduledTaskInfo -TaskName $TaskName -ErrorAction SilentlyContinue
-            $color = if ($task.State -eq "Running") { "Green" } else { "Yellow" }
-            Write-Host "  Task   : $($task.TaskName)" -ForegroundColor Cyan
-            Write-Host "  State  : $($task.State)"    -ForegroundColor $color
-            Write-Host "  Last run : $($info.LastRunTime)  result: $($info.LastTaskResult)" -ForegroundColor DarkGray
+        $query = & schtasks.exe /Query /TN $TaskName /FO LIST 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $query | Where-Object { $_ -match "^(TaskName|Status|Last Run|Next Run)" } | ForEach-Object {
+                Write-Host "  $_" -ForegroundColor Cyan
+            }
         } else {
             Write-Host "  Task '$TaskName' is not registered." -ForegroundColor Red
             Write-Host "  Run: .\hub_task_scheduler.ps1 -Action install" -ForegroundColor Yellow
@@ -166,10 +210,9 @@ switch ($Action.ToLower()) {
         $port = if ($env:HUB_PORT) { $env:HUB_PORT } else { "8765" }
         try {
             $h = Invoke-RestMethod "http://localhost:$port/api/health" -TimeoutSec 3 -ErrorAction Stop
-            Write-Host "  Hub    : Online - v$($h.version)  uptime $($h.uptime_seconds)s" -ForegroundColor Green
-            Write-Host "  Runs   : $($h.active_runs) active / $($h.queued_runs) queued" -ForegroundColor DarkGray
+            Write-Host "  Hub  : Online - v$($h.version)  uptime $($h.uptime_seconds)s" -ForegroundColor Green
         } catch {
-            Write-Host "  Hub    : Not responding on port $port" -ForegroundColor Yellow
+            Write-Host "  Hub  : Not responding on port $port" -ForegroundColor Yellow
         }
     }
 
