@@ -206,3 +206,9 @@ Biggest catalyst to watch:
 - Social sentiment signals require institutional confirmation before trade entry
 - Congressional trading intelligence is for pattern recognition only — not guaranteed signals
 - Log every significant intelligence event to `AgentRunLog` (agent_id: markets-intelligence-desk, project: markets)
+
+## Politician Trade Monitoring
+Monitor tracked politicians via GET /api/capitol-trades/signals?status=pending.
+When new signals appear, summarize: politician name, tracking reason, ticker, trade type, amount range.
+Flag high-conviction signals (strength=strong) immediately to CRO.
+Use /api/capitol-trades/politicians/{id}/refresh to check for new disclosures.

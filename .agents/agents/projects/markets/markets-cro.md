@@ -135,3 +135,15 @@ Log every risk assessment to `AgentRunLog` (agent_id: markets-cro, project: mark
 - The CRO must review every order before it is submitted to Alpaca.
 - Approval checks: position size versus buying power, clear risk/reward profile, and a defined stop loss.
 - If projected risk exceeds **2% of portfolio value**, reject the order and log the reason in the CRO ruling.
+
+## Copy Trade Signal Approval
+Review pending signals at GET /api/capitol-trades/signals?status=pending.
+For each signal, evaluate:
+1. Read the copy_reason field — it contains WHY we track this politician + their specific trade details
+2. Check Alpaca account buying power: GET /api/alpaca/account
+3. Verify ticker is valid: GET /api/alpaca/assets/{ticker}
+4. Check market clock: GET /api/alpaca/clock
+5. Calculate position size (cap at 2% of portfolio per trade)
+To approve: POST /api/capitol-trades/signals/{id}/review {"action": "approve", "qty": N, "cro_notes": "reason"}
+To reject: POST /api/capitol-trades/signals/{id}/review {"action": "reject", "cro_notes": "reason"}
+Never approve more than 3 copy trades in a single session without escalating to CIO.

@@ -490,6 +490,64 @@ def _fallback_init_schema() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_alpaca_orders_symbol ON alpaca_orders (symbol);
             CREATE INDEX IF NOT EXISTS idx_alpaca_orders_status ON alpaca_orders (status);
+            CREATE TABLE IF NOT EXISTS tracked_politicians (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                chamber TEXT DEFAULT 'both',
+                party TEXT DEFAULT '',
+                state TEXT DEFAULT '',
+                tracking_reason TEXT NOT NULL DEFAULT '',
+                performance_note TEXT DEFAULT '',
+                track_since TEXT,
+                is_active INTEGER DEFAULT 1,
+                total_signals INTEGER DEFAULT 0,
+                approved_signals INTEGER DEFAULT 0,
+                profitable_signals INTEGER DEFAULT 0,
+                total_return_pct REAL DEFAULT 0.0,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS politician_trades (
+                id TEXT PRIMARY KEY,
+                politician_id TEXT,
+                politician_name TEXT,
+                chamber TEXT,
+                ticker TEXT,
+                asset_name TEXT DEFAULT '',
+                trade_type TEXT,
+                amount_range TEXT DEFAULT '',
+                amount_min REAL DEFAULT 0,
+                amount_max REAL DEFAULT 0,
+                amount_midpoint REAL DEFAULT 0,
+                transaction_date TEXT,
+                disclosure_date TEXT,
+                raw_json TEXT,
+                ingested_at TEXT,
+                FOREIGN KEY (politician_id) REFERENCES tracked_politicians(id)
+            );
+            CREATE TABLE IF NOT EXISTS copy_trade_signals (
+                id TEXT PRIMARY KEY,
+                politician_trade_id TEXT,
+                politician_id TEXT,
+                politician_name TEXT,
+                tracking_reason TEXT DEFAULT '',
+                ticker TEXT,
+                signal_side TEXT,
+                signal_strength TEXT DEFAULT 'moderate',
+                copy_reason TEXT DEFAULT '',
+                estimated_qty REAL DEFAULT 0,
+                status TEXT DEFAULT 'pending',
+                cro_notes TEXT DEFAULT '',
+                alpaca_order_id TEXT DEFAULT '',
+                created_at TEXT,
+                reviewed_at TEXT,
+                executed_at TEXT,
+                FOREIGN KEY (politician_id) REFERENCES tracked_politicians(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_politician_trades_politician_id ON politician_trades (politician_id);
+            CREATE INDEX IF NOT EXISTS idx_politician_trades_ticker ON politician_trades (ticker);
+            CREATE INDEX IF NOT EXISTS idx_copy_trade_signals_status ON copy_trade_signals (status);
+            CREATE INDEX IF NOT EXISTS idx_copy_trade_signals_politician_id ON copy_trade_signals (politician_id);
             """
         )
         conn.commit()
@@ -531,6 +589,80 @@ def _ensure_plan_schema() -> None:
     finally:
         conn.close()
 
+
+
+
+def _ensure_capitol_schema() -> None:
+    conn = _db_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS tracked_politicians (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                chamber TEXT DEFAULT 'both',
+                party TEXT DEFAULT '',
+                state TEXT DEFAULT '',
+                tracking_reason TEXT NOT NULL DEFAULT '',
+                performance_note TEXT DEFAULT '',
+                track_since TEXT,
+                is_active INTEGER DEFAULT 1,
+                total_signals INTEGER DEFAULT 0,
+                approved_signals INTEGER DEFAULT 0,
+                profitable_signals INTEGER DEFAULT 0,
+                total_return_pct REAL DEFAULT 0.0,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS politician_trades (
+                id TEXT PRIMARY KEY,
+                politician_id TEXT,
+                politician_name TEXT,
+                chamber TEXT,
+                ticker TEXT,
+                asset_name TEXT DEFAULT '',
+                trade_type TEXT,
+                amount_range TEXT DEFAULT '',
+                amount_min REAL DEFAULT 0,
+                amount_max REAL DEFAULT 0,
+                amount_midpoint REAL DEFAULT 0,
+                transaction_date TEXT,
+                disclosure_date TEXT,
+                raw_json TEXT,
+                ingested_at TEXT,
+                FOREIGN KEY (politician_id) REFERENCES tracked_politicians(id)
+            );
+            CREATE TABLE IF NOT EXISTS copy_trade_signals (
+                id TEXT PRIMARY KEY,
+                politician_trade_id TEXT,
+                politician_id TEXT,
+                politician_name TEXT,
+                tracking_reason TEXT DEFAULT '',
+                ticker TEXT,
+                signal_side TEXT,
+                signal_strength TEXT DEFAULT 'moderate',
+                copy_reason TEXT DEFAULT '',
+                estimated_qty REAL DEFAULT 0,
+                status TEXT DEFAULT 'pending',
+                cro_notes TEXT DEFAULT '',
+                alpaca_order_id TEXT DEFAULT '',
+                created_at TEXT,
+                reviewed_at TEXT,
+                executed_at TEXT,
+                FOREIGN KEY (politician_id) REFERENCES tracked_politicians(id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_politician_trades_politician_id ON politician_trades (politician_id);
+            CREATE INDEX IF NOT EXISTS idx_politician_trades_ticker ON politician_trades (ticker);
+            CREATE INDEX IF NOT EXISTS idx_copy_trade_signals_status ON copy_trade_signals (status);
+            CREATE INDEX IF NOT EXISTS idx_copy_trade_signals_politician_id ON copy_trade_signals (politician_id);
+            """
+        )
+        conn.commit()
+        _table_columns_cache.pop('tracked_politicians', None)
+        _table_columns_cache.pop('politician_trades', None)
+        _table_columns_cache.pop('copy_trade_signals', None)
+    finally:
+        conn.close()
 
 def _ensure_alpaca_schema() -> None:
     conn = _db_connection()
@@ -627,6 +759,7 @@ def _init_schema() -> None:
             _ensure_plan_schema()
             _ensure_worker_schema()
             _ensure_alpaca_schema()
+            _ensure_capitol_schema()
             return
         except Exception:
             pass
@@ -634,6 +767,7 @@ def _init_schema() -> None:
     _ensure_plan_schema()
     _ensure_worker_schema()
     _ensure_alpaca_schema()
+    _ensure_capitol_schema()
 
 
 def _config_value(key: str, default: Any = None) -> Any:

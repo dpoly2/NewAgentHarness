@@ -801,6 +801,7 @@
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
             { id: 'alpaca', icon: '📈', label: 'Alpaca' },
+            { id: 'copy_trading', icon: '📋', label: 'Copy Trading' },
             { id: 'chat', icon: '💬', label: 'Chat' },
             { id: 'inez', icon: '👑', label: 'Inez' },
             { id: 'settings', icon: '⚙', label: 'Settings' }
@@ -1329,6 +1330,7 @@
                 travel: showTravel,
                 briefing: showBriefing,
                 alpaca: showAlpaca,
+                copy_trading: showCopyTrading,
                 agents: showAgents,
                 models: showModels,
                 email_cleanup: showEmailCleanup,
@@ -3536,6 +3538,330 @@
             } catch (error) {
                 setAlpacaMessage(error.message || 'Unable to load Alpaca data.', 'error');
             }
+        }
+
+
+        function copyWinRate(item) {
+            const approved = Number(item?.approved_signals ?? item?.signal_counts?.approved ?? item?.signals ?? 0);
+            const profitable = Number(item?.profitable_signals ?? item?.signal_counts?.profitable ?? 0);
+            if (!approved) return '—';
+            return `${Math.round((profitable / approved) * 100)}%`;
+        }
+
+        function truncateText(value, maxLength = 140) {
+            const text = String(value || '');
+            return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+        }
+
+        async function loadCopyTradingData() {
+            await Promise.all([
+                loadTrackedPoliticians(),
+                loadPendingSignals(),
+                loadRecentExecutions(),
+                loadLeaderboard(),
+            ]);
+        }
+
+        async function loadTrackedPoliticians() {
+            const body = $('#copyTrackedBody');
+            if (!body) return;
+            try {
+                const rows = asArray(await api('GET', '/api/capitol-trades/politicians'));
+                body.innerHTML = rows.length ? rows.map((item) => `
+                    <tr>
+                        <td><strong>${escapeHtml(item.name || '—')}</strong><div class="muted">${escapeHtml(item.state || '')}</div></td>
+                        <td>${escapeHtml(item.chamber || 'both')}</td>
+                        <td>${escapeHtml(item.party || '—')}</td>
+                        <td style="max-width:320px;white-space:normal">${escapeHtml(item.tracking_reason || '—')}</td>
+                        <td>${escapeHtml(`${item.signal_counts?.approved || 0}/${item.signal_counts?.total || 0}`)}</td>
+                        <td>${escapeHtml(copyWinRate(item))}</td>
+                        <td>${item.is_active ? badge('Active', 'var(--success)') : badge('Inactive', 'var(--text-muted)')}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="secondary-btn copy-refresh-btn" data-id="${escapeHtml(item.id)}">Refresh</button>
+                                <button class="danger-btn copy-remove-btn" data-id="${escapeHtml(item.id)}">Remove</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="8">' + emptyState('No tracked politicians', 'Add a lawmaker and explain why they are worth copying.') + '</td></tr>';
+                $$('.copy-refresh-btn').forEach((button) => button.addEventListener('click', () => refreshPolitician(button.dataset.id || '')));
+                $$('.copy-remove-btn').forEach((button) => button.addEventListener('click', () => removePolitician(button.dataset.id || '')));
+            } catch (error) {
+                body.innerHTML = `<tr><td colspan="8"><div class="error-banner">${escapeHtml(error.message || 'Unable to load tracked politicians')}</div></td></tr>`;
+            }
+        }
+
+        async function addPolitician(e) {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const payload = Object.fromEntries(new FormData(form).entries());
+            payload.name = String(payload.name || '').trim();
+            payload.tracking_reason = String(payload.tracking_reason || '').trim();
+            if (!payload.tracking_reason) {
+                showToast('Tracking reason is required', 'var(--warning)');
+                return;
+            }
+            try {
+                const created = await api('POST', '/api/capitol-trades/politicians', payload);
+                form.reset();
+                showToast(`Tracking ${created?.name || payload.name}`, 'var(--success)');
+                await loadCopyTradingData();
+            } catch (error) {
+                showToast(error.message || 'Unable to add politician', 'var(--error)');
+            }
+        }
+
+        async function refreshPolitician(id) {
+            if (!id) return;
+            try {
+                const result = await api('POST', `/api/capitol-trades/politicians/${encodeURIComponent(id)}/refresh`, {});
+                showToast(`Refresh complete: ${result?.new_trades || 0} trade(s), ${result?.new_signals || 0} signal(s)`, 'var(--success)');
+                await loadCopyTradingData();
+            } catch (error) {
+                showToast(error.message || 'Unable to refresh politician', 'var(--error)');
+            }
+        }
+
+        async function removePolitician(id) {
+            if (!id || !confirm('Stop tracking this politician?')) return;
+            try {
+                await api('DELETE', `/api/capitol-trades/politicians/${encodeURIComponent(id)}`);
+                showToast('Politician removed from active tracking', 'var(--warning)');
+                await loadCopyTradingData();
+            } catch (error) {
+                showToast(error.message || 'Unable to remove politician', 'var(--error)');
+            }
+        }
+
+        async function loadPendingSignals() {
+            const body = $('#copyPendingBody');
+            if (!body) return;
+            try {
+                const rows = asArray(await api('GET', '/api/capitol-trades/signals?status=pending&limit=50'));
+                body.innerHTML = rows.length ? rows.map((signal) => `
+                    <tr>
+                        <td><strong>${escapeHtml(signal.politician_name || '—')}</strong></td>
+                        <td>${escapeHtml(signal.ticker || '—')}</td>
+                        <td>${badge(signal.signal_side || '—', (signal.signal_side || '').toLowerCase() === 'sell' ? 'var(--warning)' : 'var(--accent)')}</td>
+                        <td>${badge(signal.signal_strength || 'moderate', signal.signal_strength === 'strong' ? 'var(--success)' : signal.signal_strength === 'weak' ? 'var(--text-muted)' : 'var(--warning)')}</td>
+                        <td style="max-width:420px;white-space:normal">
+                            <div style="padding:12px;border-radius:12px;border:1px solid rgba(245,158,11,0.28);background:rgba(245,158,11,0.08)">
+                                <div style="font-weight:700;margin-bottom:8px;color:#fde68a">Core copy reason</div>
+                                <details open>
+                                    <summary class="muted">Expand full rationale</summary>
+                                    <div style="margin-top:10px;line-height:1.55">${escapeHtml(signal.copy_reason || '—')}</div>
+                                </details>
+                            </div>
+                        </td>
+                        <td>${money(signal.amount_midpoint || 0)}</td>
+                        <td>${fmtDate(signal.created_at || signal.transaction_date)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="success-btn copy-approve-btn" data-id="${escapeHtml(signal.id)}">✅ Approve</button>
+                                <button class="danger-btn copy-reject-btn" data-id="${escapeHtml(signal.id)}">❌ Reject</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('') : '<tr><td colspan="8">' + emptyState('No pending signals', 'CRO approval queue is clear.') + '</td></tr>';
+                $$('.copy-approve-btn').forEach((button) => button.addEventListener('click', async () => {
+                    const qtyInput = prompt('Approve signal. Enter share quantity or leave blank to auto-calculate:', '');
+                    if (qtyInput === null) return;
+                    const notes = prompt('CRO approval notes:', 'Approved after copy-trading review') || '';
+                    const qty = qtyInput.trim() ? Number(qtyInput) : null;
+                    if (qtyInput.trim() && !(qty > 0)) {
+                        showToast('Quantity must be a positive number', 'var(--warning)');
+                        return;
+                    }
+                    await approveSignal(button.dataset.id || '', qty, notes);
+                }));
+                $$('.copy-reject-btn').forEach((button) => button.addEventListener('click', async () => {
+                    const reason = prompt('Reason for rejection:', '');
+                    if (reason === null) return;
+                    await rejectSignal(button.dataset.id || '', reason);
+                }));
+            } catch (error) {
+                body.innerHTML = `<tr><td colspan="8"><div class="error-banner">${escapeHtml(error.message || 'Unable to load pending signals')}</div></td></tr>`;
+            }
+        }
+
+        async function approveSignal(signalId, qty, croNotes = '') {
+            if (!signalId) return;
+            const payload = { action: 'approve', cro_notes: croNotes || '' };
+            if (qty !== null && qty !== undefined && qty !== '') payload.qty = qty;
+            try {
+                const result = await api('POST', `/api/capitol-trades/signals/${encodeURIComponent(signalId)}/review`, payload);
+                showToast(`Signal executed${result?.order?.id ? ` (${result.order.id})` : ''}`, 'var(--success)');
+                await loadCopyTradingData();
+            } catch (error) {
+                showToast(error.message || 'Unable to approve signal', 'var(--error)');
+            }
+        }
+
+        async function rejectSignal(signalId, reason) {
+            if (!signalId) return;
+            try {
+                await api('POST', `/api/capitol-trades/signals/${encodeURIComponent(signalId)}/review`, { action: 'reject', cro_notes: reason || '' });
+                showToast('Signal rejected', 'var(--warning)');
+                await loadCopyTradingData();
+            } catch (error) {
+                showToast(error.message || 'Unable to reject signal', 'var(--error)');
+            }
+        }
+
+        async function loadRecentExecutions() {
+            const body = $('#copyExecutionsBody');
+            if (!body) return;
+            try {
+                const rows = asArray(await api('GET', '/api/capitol-trades/signals?status=executed&limit=20'));
+                body.innerHTML = rows.length ? rows.map((signal) => `
+                    <tr>
+                        <td>${escapeHtml(signal.ticker || '—')}</td>
+                        <td>${badge(signal.signal_side || '—', (signal.signal_side || '').toLowerCase() === 'sell' ? 'var(--warning)' : 'var(--accent)')}</td>
+                        <td>${escapeHtml(String(signal.estimated_qty || '—'))}</td>
+                        <td>${escapeHtml(signal.politician_name || '—')}</td>
+                        <td class="mono">${escapeHtml(signal.alpaca_order_id || '—')}</td>
+                        <td>${fmtDateTime(signal.executed_at)}</td>
+                        <td>${badge(signal.status || 'executed', statusColor(signal.status || 'executed'))}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="7">' + emptyState('No recent executions', 'Approved copy trades will appear here.') + '</td></tr>';
+            } catch (error) {
+                body.innerHTML = `<tr><td colspan="7"><div class="error-banner">${escapeHtml(error.message || 'Unable to load recent executions')}</div></td></tr>`;
+            }
+        }
+
+        async function loadLeaderboard() {
+            const body = $('#copyLeaderboardBody');
+            if (!body) return;
+            try {
+                const rows = asArray(await api('GET', '/api/capitol-trades/leaderboard'));
+                body.innerHTML = rows.length ? rows.map((item) => `
+                    <tr>
+                        <td><strong>${escapeHtml(item.name || '—')}</strong></td>
+                        <td>${escapeHtml(String(item.approved_signals || item.signals || 0))}</td>
+                        <td>${escapeHtml(copyWinRate(item))}</td>
+                        <td style="max-width:340px;white-space:normal" title="${escapeHtml(item.tracking_reason || '')}">${escapeHtml(truncateText(item.tracking_reason || '—', 120))}</td>
+                    </tr>
+                `).join('') : '<tr><td colspan="4">' + emptyState('No leaderboard data', 'Approve a few signals to start ranking traders.') + '</td></tr>';
+            } catch (error) {
+                body.innerHTML = `<tr><td colspan="4"><div class="error-banner">${escapeHtml(error.message || 'Unable to load leaderboard')}</div></td></tr>`;
+            }
+        }
+
+        async function showCopyTrading() {
+            if (!(await requireAuth())) return;
+            setLoading('Copy Trading', 'Loading politician watchlists, pending signals, and executions…');
+            renderShell(
+                'Copy Trading',
+                'Track congressional disclosures, surface rationale-rich copy signals, and route every execution through CRO approval.',
+                `
+                    <div class="section-stack">
+                        <div class="split-grid">
+                            <div class="table-wrap">
+                                <div class="top-summary" style="justify-content:space-between;margin-bottom:14px">
+                                    <h3 style="margin:0">Tracked Politicians</h3>
+                                    <button class="secondary-btn" id="copyRefreshAllBtn">Refresh All</button>
+                                </div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Chamber</th>
+                                            <th>Party</th>
+                                            <th>Tracking Reason</th>
+                                            <th>Signals</th>
+                                            <th>Win Rate</th>
+                                            <th>Active</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="copyTrackedBody"><tr><td colspan="8">Loading…</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="form-card">
+                                <h3>Add Politician</h3>
+                                <form id="addPoliticianForm" class="form-grid">
+                                    <div class="field span-2"><label>Name</label><input name="name" required placeholder="Nancy Pelosi" /></div>
+                                    <div class="field"><label>Chamber</label><select name="chamber"><option value="both">Both</option><option value="house">House</option><option value="senate">Senate</option></select></div>
+                                    <div class="field"><label>Party</label><input name="party" placeholder="D" /></div>
+                                    <div class="field span-2"><label>Tracking Reason</label><textarea name="tracking_reason" required placeholder="e.g. Consistent tech sector timing, historically outperforms S&P by 18% on NVDA and AMD positions"></textarea></div>
+                                    <div class="field span-2"><label>State</label><input name="state" placeholder="CA" /></div>
+                                    <div class="form-actions span-2"><button class="action-btn" type="submit">Track Politician</button></div>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="table-wrap" style="border-color:rgba(245,158,11,0.38);box-shadow:0 18px 36px rgba(245,158,11,0.08)">
+                            <div class="top-summary" style="justify-content:space-between;margin-bottom:14px">
+                                <h3 style="margin:0;color:#fde68a">Pending Signals — CRO Review Required</h3>
+                                <span class="chip" style="background:rgba(245,158,11,0.12);border-color:rgba(245,158,11,0.28);color:#fde68a">Amber queue</span>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Politician</th>
+                                        <th>Ticker</th>
+                                        <th>Side</th>
+                                        <th>Strength</th>
+                                        <th>Copy Reason</th>
+                                        <th>Est. Amount</th>
+                                        <th>Date</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="copyPendingBody"><tr><td colspan="8">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div class="content-grid cards-2">
+                            <div class="table-wrap">
+                                <h3>Recent Executions</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Ticker</th>
+                                            <th>Side</th>
+                                            <th>Qty</th>
+                                            <th>Politician</th>
+                                            <th>Alpaca Order ID</th>
+                                            <th>Executed At</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="copyExecutionsBody"><tr><td colspan="7">Loading…</td></tr></tbody>
+                                </table>
+                            </div>
+                            <div class="table-wrap">
+                                <h3>Leaderboard</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Politician</th>
+                                            <th>Signals</th>
+                                            <th>Win Rate</th>
+                                            <th>Tracking Reason</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="copyLeaderboardBody"><tr><td colspan="4">Loading…</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                `<button class="action-btn" id="copyTradingRefreshBtn">Refresh Copy Trading</button>`
+            );
+            $('#addPoliticianForm').addEventListener('submit', addPolitician);
+            $('#copyTradingRefreshBtn').addEventListener('click', loadCopyTradingData);
+            $('#copyRefreshAllBtn').addEventListener('click', async () => {
+                try {
+                    const result = await api('POST', '/api/capitol-trades/refresh-all', {});
+                    showToast(`Refreshed ${result?.politicians || 0} politician(s)`, 'var(--success)');
+                    await loadCopyTradingData();
+                } catch (error) {
+                    showToast(error.message || 'Unable to refresh all politicians', 'var(--error)');
+                }
+            });
+            await loadCopyTradingData();
+            setRefresh(() => {
+                if (state.currentPage === 'copy_trading') loadCopyTradingData();
+            }, 30000);
         }
 
         async function showAlpaca() {

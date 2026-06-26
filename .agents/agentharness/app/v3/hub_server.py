@@ -33,6 +33,7 @@ if FASTAPI_OK:
     from routers import (
         agents,
         alpaca,
+        capitol_trades,
         auth_routes,
         automations,
         briefing,
@@ -222,6 +223,7 @@ if FASTAPI_OK:
             providers.router,
             plans.router,
             alpaca.router,
+            capitol_trades.router,
             web_search_api.router,
         ):
             app.include_router(_router, prefix='/api')
