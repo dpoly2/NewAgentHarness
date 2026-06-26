@@ -770,7 +770,7 @@ async def job_sync_free_llm_keys(hub):
     _notify("Free LLM key sync starting...", logger)
     try:
         import asyncio
-        from free_llm_keys import sync_free_keys
+        from free_llm_keys import sync_free_keys, get_retry_count, increment_retry_count, MAX_RETRIES_PER_DAY
         # Run the sync in a thread pool so it doesn't block the event loop
         loop = asyncio.get_event_loop()
         result = await loop.run_in_executor(None, sync_free_keys)
@@ -779,6 +779,44 @@ async def job_sync_free_llm_keys(hub):
             f"Free LLM keys synced: {len(result.get('synced', {}))} providers activated ({synced_list})",
             logger,
         )
+        # If no providers synced successfully, schedule a retry (max MAX_RETRIES_PER_DAY per day)
+        if not result.get("synced") or "error" in result:
+            retry_count = get_retry_count()
+            if retry_count < MAX_RETRIES_PER_DAY:
+                new_count = increment_retry_count()
+                logger.warning(
+                    "Free LLM key sync yielded 0 providers — scheduling retry %d/%d in 2 hours",
+                    new_count, MAX_RETRIES_PER_DAY,
+                )
+                try:
+                    from datetime import datetime, timezone, timedelta
+                    from apscheduler.triggers.date import DateTrigger
+                    retry_run_time = datetime.now(timezone.utc) + timedelta(hours=2)
+                    retry_job_id = f"sync_free_llm_keys_retry_{new_count}"
+                    hub_scheduler = getattr(hub, "scheduler", None)
+                    if hub_scheduler and hasattr(hub_scheduler, "scheduler"):
+                        hub_scheduler.scheduler.add_job(
+                            lambda: asyncio.ensure_future(job_sync_free_llm_keys(hub)),
+                            trigger=DateTrigger(run_date=retry_run_time),
+                            id=retry_job_id,
+                            name=f"Free LLM Keys Retry #{new_count}",
+                            replace_existing=True,
+                            max_instances=1,
+                        )
+                        _notify(
+                            f"Free LLM key retry #{new_count} scheduled for {retry_run_time.strftime('%H:%M')} UTC",
+                            logger,
+                        )
+                except Exception as sched_err:
+                    logger.warning("Could not schedule free LLM key retry: %s", sched_err)
+            else:
+                logger.error(
+                    "Free LLM key sync failed %d times today — no more retries", retry_count
+                )
+                _notify(
+                    f"⚠️ Free LLM key sync failed {retry_count + 1}x today — all providers remain disabled",
+                    logger,
+                )
     except Exception:
         logger.exception("Free LLM key sync failed")
 

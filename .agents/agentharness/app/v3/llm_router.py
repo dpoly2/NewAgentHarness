@@ -374,6 +374,33 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
             except Exception as e:
                 logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
 
+    # 3.5. Free-key providers from hub_db (validated before use)
+    try:
+        from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER, BASE_URL as _FREE_BASE_URL
+        import hub_db as _hdb
+        seen_free_providers = set()
+        for _p in set(MODEL_TO_PROVIDER.values()):
+            if _p in seen_free_providers:
+                continue
+            seen_free_providers.add(_p)
+            if validate_provider_key(_p):
+                _key   = _hdb.get_config(f"llm_key_{_p}") or ""
+                _model = _hdb.get_config(f"llm_model_{_p}_free") or ""
+                if _key and _model:
+                    try:
+                        logger.debug("Agent %s using validated free key for %s (%s)", agent_id, _p, _model)
+                        return build_llm(
+                            provider=_p,
+                            model=_model,
+                            base_url=_FREE_BASE_URL,
+                            api_key=_key,
+                            temperature=temperature,
+                        )
+                    except Exception as _fe:
+                        logger.debug("Free key build_llm failed for %s: %s", _p, _fe)
+    except Exception as _e:
+        logger.debug("Free-key routing failed for %s: %s", agent_id, _e)
+
     # 4. Global config fallback
     try:
         from hub_nodes import _llm

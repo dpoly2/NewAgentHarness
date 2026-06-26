@@ -7,11 +7,16 @@ first working key per provider into the ArchonHub hub_db.
 Base URL: https://aiapiv2.pekpik.com/v1
 All keys are OpenAI-compatible.
 
+Features:
+  - Stale key detection: keys are disabled if synced_date != today
+  - Pre-use validation with 30-min TTL cache (validate_provider_key)
+  - Retry state helpers: get/set retry count for scheduler retry logic
+
 Usage (standalone):
     python free_llm_keys.py
 
 Usage (as module):
-    from free_llm_keys import sync_free_keys
+    from free_llm_keys import sync_free_keys, validate_provider_key, are_keys_stale
     result = sync_free_keys()
 """
 
@@ -19,9 +24,10 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from typing import Any
 
 try:
@@ -45,9 +51,16 @@ logger = get_logger("free_llm_keys")
 
 README_URL = "https://raw.githubusercontent.com/alistaitsacle/free-llm-api-keys/main/README.md"
 BASE_URL = "https://aiapiv2.pekpik.com/v1"
-FETCH_TIMEOUT = 15  # seconds for README fetch
-TEST_TIMEOUT = 6    # seconds per key test call
-MAX_CANDIDATES = 3  # max keys to test per provider before giving up
+FETCH_TIMEOUT = 15   # seconds for README fetch
+TEST_TIMEOUT = 6     # seconds per key test call
+MAX_CANDIDATES = 3   # max keys to test per provider before giving up
+VALIDATION_TTL = 1800  # seconds (30 min) to cache key validation results
+MAX_RETRIES_PER_DAY = 2  # max scheduler retries on sync failure
+
+# ── In-memory validation cache ─────────────────────────────────────────────────
+# { provider: (is_valid: bool, expires_at: datetime) }
+_validation_cache: dict[str, tuple[bool, datetime]] = {}
+_cache_lock = threading.Lock()
 
 # Regex: captures key and model from a markdown table row
 # e.g.  | `sk-abc123...` | claude-opus-4-7 | 🆕 New | $20 | ...
@@ -225,8 +238,12 @@ def _record_sync_time() -> None:
     if not callable(_hub_update_config):
         return
     try:
-        now = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-        _hub_update_config({"free_llm_keys_last_sync": now})
+        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+        today = date.today().isoformat()
+        _hub_update_config({
+            "free_llm_keys_last_sync": now_iso,
+            "free_llm_keys_synced_date": today,
+        })
     except Exception:
         pass
 
@@ -238,6 +255,127 @@ def get_last_sync_time() -> str | None:
         return _hub_get_config("free_llm_keys_last_sync")
     except Exception:
         return None
+
+
+# ── Stale key detection ────────────────────────────────────────────────────────
+
+def are_keys_stale() -> bool:
+    """Return True if the last successful sync was not today."""
+    if not callable(_hub_get_config):
+        return False
+    try:
+        synced_date = _hub_get_config("free_llm_keys_synced_date") or ""
+        return synced_date != date.today().isoformat()
+    except Exception:
+        return True
+
+
+def disable_stale_keys() -> list[str]:
+    """
+    Set llm_enabled_{provider}="0" for all free-key providers whose keys are stale.
+    Returns list of providers disabled.
+    Clears the in-memory validation cache.
+    """
+    if not callable(_hub_update_config) or not callable(_hub_get_config):
+        return []
+    disabled = []
+    try:
+        for provider in set(MODEL_TO_PROVIDER.values()):
+            base_url = _hub_get_config(f"llm_base_url_{provider}") or ""
+            if base_url == BASE_URL:
+                _hub_update_config({f"llm_enabled_{provider}": "0"})
+                disabled.append(provider)
+        with _cache_lock:
+            _validation_cache.clear()
+        if disabled:
+            logger.info("Disabled %d stale free-key providers: %s", len(disabled), disabled)
+    except Exception:
+        logger.exception("Error disabling stale keys")
+    return disabled
+
+
+# ── Pre-use key validation ─────────────────────────────────────────────────────
+
+def validate_provider_key(provider: str) -> bool:
+    """
+    Validate the stored free key for *provider* is still working.
+    Results are cached for VALIDATION_TTL seconds (30 min).
+    Returns False if no key stored, key invalid, or provider disabled.
+    """
+    now = datetime.now(timezone.utc)
+    with _cache_lock:
+        cached = _validation_cache.get(provider)
+        if cached:
+            is_valid, expires_at = cached
+            if now < expires_at:
+                return is_valid
+            del _validation_cache[provider]
+
+    if not callable(_hub_get_config) or not callable(_hub_update_config):
+        return False
+
+    try:
+        enabled = _hub_get_config(f"llm_enabled_{provider}") or "0"
+        if enabled != "1":
+            return False
+
+        key = _hub_get_config(f"llm_key_{provider}") or ""
+        if not key:
+            return False
+
+        base_url = _hub_get_config(f"llm_base_url_{provider}") or ""
+        if base_url != BASE_URL:
+            return False  # not a free-proxy key — don't validate here
+
+        model = _hub_get_config(f"llm_model_{provider}_free") or PROVIDER_TEST_MODEL.get(provider, "")
+        if not model:
+            return False
+
+        is_valid = _test_key(key, model)
+        if not is_valid:
+            logger.warning("Stored free key for %s is no longer valid — disabling", provider)
+            _hub_update_config({f"llm_enabled_{provider}": "0"})
+        else:
+            logger.debug("Free key for %s validated OK", provider)
+
+        expires_at = now + timedelta(seconds=VALIDATION_TTL)
+        with _cache_lock:
+            _validation_cache[provider] = (is_valid, expires_at)
+        return is_valid
+    except Exception:
+        logger.exception("Error validating key for provider %s", provider)
+        return False
+
+
+# ── Retry state helpers ────────────────────────────────────────────────────────
+
+def get_retry_count() -> int:
+    """Return today's retry count (resets to 0 on a new day)."""
+    if not callable(_hub_get_config):
+        return 0
+    try:
+        retry_date = _hub_get_config("free_llm_keys_retry_date") or ""
+        if retry_date != date.today().isoformat():
+            return 0
+        return int(_hub_get_config("free_llm_keys_retry_count") or "0")
+    except Exception:
+        return 0
+
+
+def increment_retry_count() -> int:
+    """Increment today's retry count. Returns the new count."""
+    if not callable(_hub_update_config):
+        return 0
+    try:
+        today = date.today().isoformat()
+        count = get_retry_count() + 1
+        _hub_update_config({
+            "free_llm_keys_retry_date": today,
+            "free_llm_keys_retry_count": str(count),
+        })
+        return count
+    except Exception:
+        return 0
 
 
 # ── Main sync ──────────────────────────────────────────────────────────────────
@@ -262,6 +400,11 @@ def sync_free_keys(providers_to_sync: list[str] | None = None) -> dict[str, Any]
     synced: dict[str, str] = {}
     failed: list[str] = []
     total_keys = 0
+
+    # Disable stale keys up-front so agents don't use yesterday's dead keys
+    # during the sync window.
+    if are_keys_stale():
+        disable_stale_keys()
 
     try:
         readme = fetch_readme()
@@ -293,6 +436,10 @@ def sync_free_keys(providers_to_sync: list[str] | None = None) -> dict[str, Any]
 
     _record_sync_time()
     ts = datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+    # Clear validation cache so the new keys are tested fresh on next use
+    with _cache_lock:
+        _validation_cache.clear()
 
     summary = (
         f"Free LLM key sync complete: {len(synced)} providers activated "

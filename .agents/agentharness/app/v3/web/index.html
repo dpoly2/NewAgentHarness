@@ -4739,6 +4739,14 @@
                                         <div class="form-actions span-2"><button class="action-btn" type="submit">Change Password</button></div>
                                     </form>
                                 </div>
+                                <div class="form-card" id="freeLlmKeysCard">
+                                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                                       <h3 style="margin:0">🔑 Free LLM Keys</h3>
+                                       <button class="secondary-btn" id="syncFreeKeysBtn" style="font-size:0.85em">Sync Now</button>
+                                   </div>
+                                   <div id="freeLlmKeysStatus" style="color:var(--text-muted);font-size:0.9em">Loading…</div>
+                                   <div id="freeLlmKeysTable" style="margin-top:10px"></div>
+                                </div>
                             </div>
                             <div class="table-wrap">
                                 <h3>User Management</h3>
@@ -4815,6 +4823,54 @@
                         showToast(error.message || 'Unable to update user', 'var(--error)');
                     }
                 }));
+
+                // Free LLM Keys card
+                async function loadFreeKeysStatus() {
+                    try {
+                        const st = await api('GET', '/api/providers/free-keys-status');
+                        const staleLabel = st.stale ? ' <span style="color:var(--warning)">⚠ stale</span>' : '';
+                        const retryLabel = st.retry_count_today > 0 ? ` · retries today: ${st.retry_count_today}` : '';
+                        $('#freeLlmKeysStatus').innerHTML =
+                            `Last sync: ${st.last_sync ? new Date(st.last_sync).toLocaleString() : '—'}${staleLabel}${retryLabel}`;
+                        const providers = st.active_free_providers || {};
+                        const keys = Object.entries(providers);
+                        if (keys.length === 0) {
+                            $('#freeLlmKeysTable').innerHTML = `<p style="color:var(--text-muted);font-size:0.85em">No active free-key providers. Click Sync Now to fetch keys.</p>`;
+                        } else {
+                            const statusColor = { active: 'var(--success)', stale: 'var(--warning)', disabled: 'var(--error)' };
+                            $('#freeLlmKeysTable').innerHTML = `
+                                <table style="font-size:0.85em;width:100%">
+                                    <thead><tr><th>Provider</th><th>Model</th><th>Key</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        ${keys.map(([prov, info]) => `
+                                            <tr>
+                                                <td>${escapeHtml(prov)}</td>
+                                                <td style="color:var(--text-muted)">${escapeHtml(info.model || '—')}</td>
+                                                <td style="font-family:monospace;color:var(--text-muted)">…${escapeHtml(info.key_tail || '')}</td>
+                                                <td>${badge(info.status || 'unknown', statusColor[info.status] || 'var(--text-muted)')}</td>
+                                            </tr>`).join('')}
+                                    </tbody>
+                                </table>`;
+                        }
+                    } catch (e) {
+                        $('#freeLlmKeysStatus').textContent = 'Unable to load free key status';
+                    }
+                }
+                loadFreeKeysStatus();
+                $('#syncFreeKeysBtn').addEventListener('click', async () => {
+                    $('#syncFreeKeysBtn').disabled = true;
+                    $('#syncFreeKeysBtn').textContent = 'Syncing…';
+                    try {
+                        const r = await api('POST', '/api/providers/sync-free-keys');
+                        showToast(`Synced: ${Object.keys(r.synced || {}).length} providers activated`, 'var(--success)');
+                    } catch (e) {
+                        showToast(e.message || 'Sync failed', 'var(--error)');
+                    } finally {
+                        $('#syncFreeKeysBtn').disabled = false;
+                        $('#syncFreeKeysBtn').textContent = 'Sync Now';
+                        loadFreeKeysStatus();
+                    }
+                });
             } catch (error) {
                 renderShell('Settings', 'Admin controls for hub configuration and user access.', `<div class="error-banner">${escapeHtml(error.message || 'Unable to load settings')}</div>`);
             }

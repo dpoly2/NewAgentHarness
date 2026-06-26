@@ -45,9 +45,11 @@ async def free_keys_status(current_user: dict = Depends(get_current_user)):
     """Return last sync time and currently activated free-key providers."""
     del current_user
     try:
-        from free_llm_keys import get_last_sync_time, MODEL_TO_PROVIDER
+        from free_llm_keys import get_last_sync_time, are_keys_stale, get_retry_count, MODEL_TO_PROVIDER
         import hub_db as _hdb
         last_sync = get_last_sync_time()
+        stale = are_keys_stale()
+        retry_count = get_retry_count()
         providers_info = {}
         seen = set()
         for provider in set(MODEL_TO_PROVIDER.values()):
@@ -56,12 +58,20 @@ async def free_keys_status(current_user: dict = Depends(get_current_user)):
             seen.add(provider)
             key = _hdb.get_config(f"llm_key_{provider}") or ""
             base_url = _hdb.get_config(f"llm_base_url_{provider}") or ""
+            enabled = _hdb.get_config(f"llm_enabled_{provider}") or "0"
             if base_url == "https://aiapiv2.pekpik.com/v1" and key:
                 model = _hdb.get_config(f"llm_model_{provider}_free") or ""
-                providers_info[provider] = {"model": model, "key_tail": key[-6:] if key else ""}
+                status = "active" if enabled == "1" else ("stale" if stale else "disabled")
+                providers_info[provider] = {
+                    "model": model,
+                    "key_tail": key[-6:] if key else "",
+                    "status": status,
+                }
         return {
             "success": True,
             "last_sync": last_sync,
+            "stale": stale,
+            "retry_count_today": retry_count,
             "active_free_providers": providers_info,
         }
     except Exception as e:
