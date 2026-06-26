@@ -1,4 +1,4 @@
-# AgentHarness - Startup Script
+﻿# AgentHarness - Startup Script
 # Run from repo root: .\start.ps1
 
 $ROOT = $PSScriptRoot

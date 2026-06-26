@@ -1,5 +1,5 @@
-# ============================================================
-#  ArchonHub — Uninstaller
+﻿# ============================================================
+#  ArchonHub  -  Uninstaller
 #  Stops and removes the Windows service and desktop shortcuts.
 #  Optionally removes the Python virtual environment.
 #
@@ -27,7 +27,7 @@ $Desktop    = [Environment]::GetFolderPath("Desktop")
 
 Write-Host ""
 Write-Host "  ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Yellow
-Write-Host "  ║          ArchonHub — Uninstaller                      ║" -ForegroundColor Yellow
+Write-Host "  ║          ArchonHub  -  Uninstaller                      ║" -ForegroundColor Yellow
 Write-Host "  ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Yellow
 Write-Host ""
 
@@ -35,7 +35,7 @@ Write-Host ""
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
            ).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
-    Write-Host "  [WARN] Not running as Administrator — Windows service removal may fail." -ForegroundColor Yellow
+    Write-Host "  [WARN] Not running as Administrator  -  Windows service removal may fail." -ForegroundColor Yellow
 }
 
 if (-not $Force) {

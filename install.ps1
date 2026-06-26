@@ -1,5 +1,5 @@
-# ============================================================
-#  ArchonHub — Production Installer
+﻿# ============================================================
+#  ArchonHub  -  Production Installer
 #  Sets up Python venv, installs all dependencies, registers
 #  the Hub as a Windows Service, and creates desktop shortcuts.
 #
@@ -49,7 +49,7 @@ function Write-Info   { param($t)    Write-Host "        $t"  -ForegroundColor D
 Clear-Host
 Write-Host ""
 Write-Host "  ╔═══════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "  ║          ArchonHub — Production Installer             ║" -ForegroundColor Cyan
+Write-Host "  ║          ArchonHub  -  Production Installer             ║" -ForegroundColor Cyan
 Write-Host "  ║          AI Agent Orchestration Platform              ║" -ForegroundColor Cyan
 Write-Host "  ╚═══════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
@@ -68,7 +68,7 @@ if (-not $isAdmin -and -not $NoService) {
 }
 
 # ════════════════════════════════════════════════════════════
-# STEP 1 — Python version check
+# STEP 1  -  Python version check
 # ════════════════════════════════════════════════════════════
 if (-not $ServiceOnly) {
     Write-Step "1/6" "Checking Python installation..."
@@ -100,7 +100,7 @@ Make sure 'Add Python to PATH' is checked during installation.
     }
 
     # ════════════════════════════════════════════════════════════
-    # STEP 2 — Virtual environment
+    # STEP 2  -  Virtual environment
     # ════════════════════════════════════════════════════════════
     Write-Step "2/6" "Setting up Python virtual environment..."
 
@@ -120,7 +120,7 @@ Make sure 'Add Python to PATH' is checked during installation.
     }
 
     # ════════════════════════════════════════════════════════════
-    # STEP 3 — Install Python dependencies
+    # STEP 3  -  Install Python dependencies
     # ════════════════════════════════════════════════════════════
     Write-Step "3/6" "Installing Python dependencies..."
 
@@ -139,7 +139,7 @@ Make sure 'Add Python to PATH' is checked during installation.
     Write-Ok "All Python dependencies installed"
 
     # ════════════════════════════════════════════════════════════
-    # STEP 4 — Environment configuration
+    # STEP 4  -  Environment configuration
     # ════════════════════════════════════════════════════════════
     Write-Step "4/6" "Environment configuration..."
 
@@ -153,7 +153,7 @@ Make sure 'Add Python to PATH' is checked during installation.
             Write-Info "Generate one: python -c `"import secrets; print(secrets.token_hex(32))`""
         }
         if ($envContent -match "^OPENAI_API_KEY=sk-\.\.\." -or $envContent -match "^OPENAI_API_KEY=$") {
-            Write-Warn "OPENAI_API_KEY is not set — agent execution will fail without it."
+            Write-Warn "OPENAI_API_KEY is not set  -  agent execution will fail without it."
             Write-Info "Edit .agents\.env and add your OpenAI API key."
         }
     } elseif (Test-Path $EnvExample) {
@@ -176,13 +176,13 @@ HUB_PORT=8765
 }
 
 # ════════════════════════════════════════════════════════════
-# STEP 5 — Windows Service
+# STEP 5  -  Windows Service
 # ════════════════════════════════════════════════════════════
 if (-not $NoService) {
     Write-Step "5/6" "Installing ArchonHub as a Windows Service..."
 
     if (-not (Test-Path $ServicePs1)) {
-        Write-Warn "hub_install_service.ps1 not found — skipping service install."
+        Write-Warn "hub_install_service.ps1 not found  -  skipping service install."
     } else {
         $svc = Get-Service -Name "ArchonHub" -ErrorAction SilentlyContinue
         if ($svc -and -not $Force) {
@@ -203,7 +203,7 @@ if (-not $NoService) {
 }
 
 # ════════════════════════════════════════════════════════════
-# STEP 6 — Desktop Shortcuts
+# STEP 6  -  Desktop Shortcuts
 # ════════════════════════════════════════════════════════════
 if (-not $NoShortcuts) {
     Write-Step "6/6" "Creating desktop shortcuts..."
@@ -255,7 +255,7 @@ if (-not $NoShortcuts) {
 }
 
 # ════════════════════════════════════════════════════════════
-# DONE — Summary
+# DONE  -  Summary
 # ════════════════════════════════════════════════════════════
 Write-Host ""
 Write-Host "  ═══════════════════════════════════════════════════════" -ForegroundColor Cyan
@@ -279,7 +279,7 @@ if (-not $NoService) {
     Start-Sleep -Seconds 2
     try {
         $h = Invoke-RestMethod "http://localhost:8765/api/health" -TimeoutSec 5 -ErrorAction Stop
-        Write-Host "  Hub status: ONLINE — v$($h.version)" -ForegroundColor Green
+        Write-Host "  Hub status: ONLINE  -  v$($h.version)" -ForegroundColor Green
     } catch {
         Write-Host "  Hub status: starting (check http://localhost:8765/web in a moment)" -ForegroundColor Yellow
     }

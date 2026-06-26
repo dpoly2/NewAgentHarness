@@ -1,4 +1,4 @@
-# ArchonHub — Start Desktop App
+﻿# ArchonHub  -  Start Desktop App
 # Resolves repo root, activates .venv, loads .agents/.env, launches main_m365.py
 
 $ErrorActionPreference = "Stop"
