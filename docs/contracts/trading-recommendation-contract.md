@@ -49,7 +49,19 @@ Defines what constitutes a **formal trade recommendation** inside Tactical Alpha
   "reasoning": "string",
   "dissenting_views": "string",
   "cro_sign_off": true,
-  "created_at": "ISO timestamp"
+  "created_at": "ISO timestamp",
+  "alpaca_execution": {
+    "order_id": "uuid — Alpaca order ID after submission",
+    "submitted_at": "ISO timestamp",
+    "submitted_by": "agent_id or username",
+    "symbol": "string",
+    "qty": 0.0,
+    "side": "buy|sell",
+    "order_type": "market|limit|stop|stop_limit",
+    "limit_price": null,
+    "stop_price": null,
+    "status": "submitted|accepted|filled|cancelled"
+  }
 }
 ```
 
@@ -64,3 +76,5 @@ Defines what constitutes a **formal trade recommendation** inside Tactical Alpha
 - The Tactical Alpha Director may escalate a candidate recommendation, but cannot bypass CRO sign-off.
 - The CIO may adjust allocation or posture after the recommendation is formed, but cannot remove the minimum confirmation requirement.
 - Recommendation objects should link back to their underlying signal IDs for auditability.
+- When a recommendation proceeds to execution, populate `alpaca_execution` with the Alpaca order ID and submission details. This creates an end-to-end audit chain: signal → recommendation → Alpaca order.
+- The `alpaca_execution.order_id` must match the `id` field from `POST /api/alpaca/orders` response and the corresponding row in the local `alpaca_orders` table.

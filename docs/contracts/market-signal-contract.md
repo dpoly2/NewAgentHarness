@@ -31,7 +31,8 @@ Defines the standard structured object for any market signal emitted inside Tact
   "dissenting_views": "string — what would invalidate this signal",
   "requires_cro_approval": false,
   "created_at": "ISO timestamp",
-  "expires_at": "ISO timestamp"
+  "expires_at": "ISO timestamp",
+  "alpaca_order_id": "uuid — set only if this signal resulted in an Alpaca submission"
 }
 ```
 
@@ -57,6 +58,7 @@ Defines the standard structured object for any market signal emitted inside Tact
 | `requires_cro_approval` | Yes | Whether the signal is trying to move toward execution consideration. |
 | `created_at` | Yes | ISO-8601 timestamp when signal was emitted. |
 | `expires_at` | Yes | ISO-8601 timestamp after which the signal must be refreshed. |
+| `alpaca_order_id` | No | Set only after a signal is approved and submitted to Alpaca. Links signal to the `alpaca_orders` audit table. |
 
 ## Validation Rules
 

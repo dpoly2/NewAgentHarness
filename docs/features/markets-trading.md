@@ -78,3 +78,26 @@ This loop keeps open positions, stops, and breaking catalysts synchronized throu
 - Signals remain research artifacts until they satisfy the trading recommendation contract.
 - CRO approval is mandatory before execution consideration.
 - Alpaca remains the execution endpoint after review; Capitol Trades remains contextual, lagged intelligence input.
+
+## Alpaca Execution Integration
+
+Alpaca paper trading is live and configured:
+
+| | |
+|-|-|
+| Account | PA3O44BTG1MG (ACTIVE) |
+| Mode | Paper (`paper-api.alpaca.markets/v2`) |
+| Dependency | `alpaca-py>=0.43.0` |
+
+**Execution API:** `POST /api/alpaca/orders` — accepts `symbol`, `qty`, `side`, `order_type`, `time_in_force`, optional `limit_price`/`stop_price`, and `agent_reason` for the audit trail.
+
+**Surfaces:**
+- **Webapp:** Fully functional `showAlpaca()` page — account KPIs, market clock, positions, orders, cancel, quick-trade form, sync to local positions, 30s auto-refresh.
+- **Desktop:** Alpaca sub-tab in the Markets panel (planned for next sprint).
+- **API only:** All 15 `/api/alpaca/*` endpoints available from any client.
+
+**Safety gates:**
+1. `GET /api/alpaca/status` must return `configured: true` before any write operation.
+2. `GET /api/alpaca/clock` — check market is open before submitting market orders.
+3. `ALPACA_PAPER=true` is the default; live execution requires explicit env override + CRO sign-off.
+4. All orders are logged to the local `alpaca_orders` audit table with `agent_reason`, `submitted_by`, and raw Alpaca response JSON.

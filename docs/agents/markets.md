@@ -44,9 +44,21 @@ This registry documents the 31 operating agents in the Tactical Alpha Market Int
 | `markets-performance-analytics` | Performance Analytics | Performance Analytics | `performance_report` |
 | `markets-automation-center` | Automation Center | Automation Center | `automation_runbook` |
 
-## Department Map
+## Alpaca Execution Tools
 
-| Department | Agent IDs |
+Agents in Trading Strategy and Portfolio Management departments have access to the Alpaca execution API:
+
+| Endpoint | Use case |
+|----------|---------|
+| `GET /api/alpaca/status` | Check if brokerage is configured and ready |
+| `GET /api/alpaca/clock` | Verify market is open before placing market orders |
+| `GET /api/alpaca/account` | Fetch buying power, equity, and cash |
+| `GET /api/alpaca/positions` | Review current holdings |
+| `POST /api/alpaca/orders` | Submit a paper or live order with `agent_reason` audit field |
+| `GET /api/alpaca/quotes/{symbol}` | Latest bid/ask before sizing |
+| `POST /api/alpaca/sync-positions` | Mirror brokerage positions into local `market_positions` |
+
+All execution decisions must satisfy the **Trading Recommendation Contract** before `POST /api/alpaca/orders` is called. The `agent_reason` field is mandatory for audit trail compliance.
 | --- | --- |
 | Market Intelligence | `markets-macro-analyst`, `markets-intelligence-desk`, `markets-equity-analyst`, `markets-news-intelligence`, `markets-sentiment-intelligence` |
 | Smart Money Intelligence | `markets-whale-tracker`, `markets-insider-tracker` |

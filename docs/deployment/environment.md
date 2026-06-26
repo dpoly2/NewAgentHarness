@@ -23,6 +23,11 @@ This rollout added no new environment variables; the 5-worker DB-backed queue, `
 | OUTLOOK_CLIENT_ID |  |
 | OUTLOOK_CLIENT_SECRET |  |
 | OUTLOOK_TENANT_ID |  |
+| ALPACA_API_KEY |  |
+| ALPACA_API_SECRET |  |
+| ALPACA_BASE_URL | https://paper-api.alpaca.markets/v2 |
+| ALPACA_PAPER | true |
+| SERPAPI_API_KEY |  |
 | LOG_LEVEL | INFO |
 
 ## Variables discovered in code
@@ -30,6 +35,10 @@ This rollout added no new environment variables; the 5-worker DB-backed queue, `
 | Variable | Referenced at |
 | --- | --- |
 | ADMIN_PASSWORD | .agents/agentharness/app/v3/core/config.py |
+| ALPACA_API_KEY | .agents/agentharness/app/v3/core/alpaca_client.py |
+| ALPACA_API_SECRET | .agents/agentharness/app/v3/core/alpaca_client.py |
+| ALPACA_BASE_URL | .agents/agentharness/app/v3/core/alpaca_client.py |
+| ALPACA_PAPER | .agents/agentharness/app/v3/core/alpaca_client.py |
 | ARCHONHUB_PASSWORD | .agents/agentharness/app/v3/hub_client.py |
 | ARCHONHUB_REDIRECT_BASE | .agents/agentharness/app/v3/oauth_connector.py |
 | ARCHONHUB_USER | .agents/agentharness/app/v3/hub_client.py |
@@ -57,6 +66,9 @@ This rollout added no new environment variables; the 5-worker DB-backed queue, `
 - `ARCHONHUB_REDIRECT_BASE`: OAuth callback base URL.
 - `SERPAPI_API_KEY`: Fresh web search.
 - `OLLAMA_HOST`: Local Ollama discovery endpoint.
+- `ALPACA_API_KEY` / `ALPACA_API_SECRET`: Alpaca brokerage credentials. Required for `GET/POST /api/alpaca/*`. The live paper account uses `paper-api.alpaca.markets/v2`.
+- `ALPACA_BASE_URL`: Override Alpaca endpoint (default `https://paper-api.alpaca.markets/v2`). Change to `https://api.alpaca.markets/v2` for live trading after CRO approval.
+- `ALPACA_PAPER`: `true` = paper mode (safe); `false` = live execution. **Never set to `false` without CRO sign-off.**
 
 ## Security notes
 

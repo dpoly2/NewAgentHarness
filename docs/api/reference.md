@@ -9,6 +9,7 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | / | 1 |
 | /ws | 1 |
 | agents | 10 |
+| alpaca | 15 |
 | auth | 3 |
 | automations | 9 |
 | briefing | 4 |
@@ -224,6 +225,21 @@ Compact index of all current routes. Route logic lives in `routers/`; shared int
 | GET | /api/intelligence/skills | intelligence_skills | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
 | GET | /api/intelligence/patterns | intelligence_patterns | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
 | GET | /api/intelligence/agent/{agent_id} | intelligence_agent | Bearer JWT | .agents/agentharness/app/v3/routers/intelligence.py |
+| GET | /api/alpaca/status | alpaca_status | Public | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/account | alpaca_account | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/positions | alpaca_positions | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/positions/{symbol} | alpaca_position | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/orders | alpaca_orders | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| POST | /api/alpaca/orders | alpaca_place_order | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| DELETE | /api/alpaca/orders/{order_id} | alpaca_cancel_order | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| DELETE | /api/alpaca/orders | alpaca_cancel_all_orders | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/portfolio/history | alpaca_portfolio_history | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/assets/{symbol} | alpaca_asset | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/quotes/{symbol} | alpaca_quote | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/bars/{symbol} | alpaca_bars | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/clock | alpaca_clock | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| GET | /api/alpaca/calendar | alpaca_calendar | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
+| POST | /api/alpaca/sync-positions | alpaca_sync_positions | Bearer JWT | .agents/agentharness/app/v3/routers/alpaca.py |
 ## Source References
 
 - `.agents/agentharness/app/v3/hub_server.py`
