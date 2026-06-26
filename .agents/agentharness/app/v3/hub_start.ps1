@@ -1,4 +1,4 @@
-# ArchonHub — Start Hub Server (headless)
+﻿# ArchonHub  -  Start Hub Server (headless)
 # Resolves repo root, activates .venv, loads .agents/.env, launches hub_server.py
 
 $ErrorActionPreference = "Stop"

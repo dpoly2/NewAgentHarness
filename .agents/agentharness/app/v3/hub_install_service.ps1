@@ -1,16 +1,16 @@
-# ============================================================
-#  ArchonHub Hub — Windows Service Manager
+﻿# ============================================================
+#  ArchonHub Hub  -  Windows Service Manager
 #  Registers hub_server.py as a Windows Service using NSSM
-#  (Non-Sucking Service Manager — free, no pywin32 needed)
+#  (Non-Sucking Service Manager  -  free, no pywin32 needed)
 #
 #  Run as Administrator:
 #    powershell.exe -ExecutionPolicy Bypass -File hub_install_service.ps1
 #
 #  Actions:
-#    -Action install   (default) — install and start service
-#    -Action remove    — stop and remove service
-#    -Action restart   — restart service
-#    -Action status    — show current service status
+#    -Action install   (default)  -  install and start service
+#    -Action remove     -  stop and remove service
+#    -Action restart    -  restart service
+#    -Action status     -  show current service status
 # ============================================================
 
 param(
@@ -21,7 +21,7 @@ $ErrorActionPreference = "Continue"
 
 $ServiceName = "ArchonHub"
 $DisplayName = "ArchonHub Hub Server"
-$Description = "Always-on AI agent orchestration server for ArchonHub — Smith Capital Portfolio"
+$Description = "Always-on AI agent orchestration server for ArchonHub  -  Smith Capital Portfolio"
 
 $ScriptDir  = $PSScriptRoot
 $RepoRoot   = (Resolve-Path (Join-Path $ScriptDir "../../../../")).Path.TrimEnd('\')
@@ -35,7 +35,7 @@ $EnvFile    = Join-Path $RepoRoot ".agents\.env"
 function Write-Banner {
     Write-Host ""
     Write-Host "  ╔══════════════════════════════════════════════════╗" -ForegroundColor Cyan
-    Write-Host "  ║   ArchonHub Hub — Windows Service Manager        ║" -ForegroundColor Cyan
+    Write-Host "  ║   ArchonHub Hub  -  Windows Service Manager        ║" -ForegroundColor Cyan
     Write-Host "  ╚══════════════════════════════════════════════════╝" -ForegroundColor Cyan
     Write-Host "  Action : $Action" -ForegroundColor DarkGray
     Write-Host "  Service: $ServiceName" -ForegroundColor DarkGray
@@ -94,7 +94,7 @@ function Load-EnvVars {
         }
         Write-Host "  [OK]  Loaded .env from $EnvFile" -ForegroundColor Green
     } else {
-        Write-Host "  [WARN] No .env found at $EnvFile — service will use system environment." -ForegroundColor Yellow
+        Write-Host "  [WARN] No .env found at $EnvFile  -  service will use system environment." -ForegroundColor Yellow
         Write-Host "         Copy .agents\.env.example to .agents\.env and set your API keys." -ForegroundColor DarkGray
     }
     return $vars
@@ -211,7 +211,7 @@ switch ($Action.ToLower()) {
             Write-Host "  Startup : $($svc.StartType)"   -ForegroundColor DarkGray
             try {
                 $h = Invoke-RestMethod "http://localhost:8765/api/health" -TimeoutSec 3 -ErrorAction Stop
-                Write-Host "  Hub     : Online — v$($h.version)  uptime $($h.uptime_seconds)s" -ForegroundColor Green
+                Write-Host "  Hub     : Online  -  v$($h.version)  uptime $($h.uptime_seconds)s" -ForegroundColor Green
                 Write-Host "  Runs    : $($h.active_runs) active / $($h.queued_runs) queued" -ForegroundColor DarkGray
             } catch {
                 Write-Host "  Hub     : Not responding on port 8765" -ForegroundColor Yellow

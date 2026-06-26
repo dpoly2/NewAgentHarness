@@ -1,4 +1,4 @@
-# ArchonHub — Full Stack Launch (Hub + Desktop)
+﻿# ArchonHub  -  Full Stack Launch (Hub + Desktop)
 # Starts hub_server.py only if not already running, then launches main_m365.py
 
 $ErrorActionPreference = "Continue"
@@ -28,11 +28,11 @@ $HubPort   = if ($env:HUB_PORT) { $env:HUB_PORT } else { "8765" }
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║     ArchonHub v1.0.0 — Full Stack        ║" -ForegroundColor Cyan
+Write-Host "║     ArchonHub v1.0.0  -  Full Stack        ║" -ForegroundColor Cyan
 Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# ── Hub Server — only start if not already running ────────────────────────
+# ── Hub Server  -  only start if not already running ────────────────────────
 $hubUp = $false
 try {
     Invoke-RestMethod "http://localhost:$HubPort/api/health" -TimeoutSec 2 -ErrorAction Stop | Out-Null
@@ -40,7 +40,7 @@ try {
 } catch {}
 
 if ($hubUp) {
-    Write-Host "[1/2] Hub Server already running on port $HubPort — skipping." -ForegroundColor Green
+    Write-Host "[1/2] Hub Server already running on port $HubPort  -  skipping." -ForegroundColor Green
 } else {
     Write-Host "[1/2] Starting Hub Server on port $HubPort (new window)..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", `
@@ -58,7 +58,7 @@ if ($hubUp) {
     if ($ready) {
         Write-Host "       Hub is live on port $HubPort" -ForegroundColor Green
     } else {
-        Write-Host "       Hub not responding yet — check the hub window for errors." -ForegroundColor Yellow
+        Write-Host "       Hub not responding yet  -  check the hub window for errors." -ForegroundColor Yellow
     }
 }
 
