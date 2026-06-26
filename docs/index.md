@@ -23,6 +23,7 @@ _Generated on 2026-06-24 03:23 UTC from the current local ArchonHub codebase._
 ### Architecture
 - [Architecture overview](architecture/overview.md)
 - [Database schema](architecture/database-schema.md)
+- [Model stacking roadmap](architecture/model-stacking.md)
 
 ### API
 - [Authentication](api/authentication.md)
