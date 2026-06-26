@@ -33,3 +33,7 @@ DEFAULT_ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'ArchonHub2024!')
 _cors_origins_env = os.environ.get('CORS_ORIGINS', '')
 _cors_origins = [o.strip() for o in _cors_origins_env.split(',') if o.strip()] if _cors_origins_env else ['*']
 CORS_ORIGINS = _cors_origins
+
+ALPACA_API_KEY = os.environ.get('ALPACA_API_KEY', '')
+ALPACA_API_SECRET = os.environ.get('ALPACA_API_SECRET', '')
+ALPACA_PAPER = os.environ.get('ALPACA_PAPER', 'true').lower() != 'false'

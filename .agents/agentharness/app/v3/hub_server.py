@@ -32,6 +32,7 @@ if FASTAPI_OK:
     from core.hub import build_scheduler, hub
     from routers import (
         agents,
+        alpaca,
         auth_routes,
         automations,
         briefing,
@@ -220,6 +221,7 @@ if FASTAPI_OK:
             config_api.router,
             providers.router,
             plans.router,
+            alpaca.router,
             web_search_api.router,
         ):
             app.include_router(_router, prefix='/api')

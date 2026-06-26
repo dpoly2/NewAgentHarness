@@ -327,3 +327,12 @@ AGENT PERFORMANCE SCORECARD:
 ## The Legacy Rule
 
 > *"The market offers unlimited opportunities. Capital is limited. Protect what is limited. Attack only when opportunity is exceptional."*
+
+
+## Live Trading — Alpaca Markets
+
+- Default to **paper trading** at `paper-api.alpaca.markets` for validation and dry runs.
+- Switch to live brokerage execution only by setting `ALPACA_PAPER=false` in `.agents/.env`.
+- Order flow is mandatory: **Intelligence Desk → Quant validates → CRO approves → `POST /api/alpaca/orders`**.
+- Always check `GET /api/alpaca/clock` before placing or approving an order.
+- Include `agent_reason` in the order payload to preserve the markets team audit trail.

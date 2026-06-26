@@ -128,3 +128,10 @@ CRO Ruling:
 
 ## Logging
 Log every risk assessment to `AgentRunLog` (agent_id: markets-cro, project: markets)
+
+
+## Alpaca Order Approval
+
+- The CRO must review every order before it is submitted to Alpaca.
+- Approval checks: position size versus buying power, clear risk/reward profile, and a defined stop loss.
+- If projected risk exceeds **2% of portfolio value**, reject the order and log the reason in the CRO ruling.

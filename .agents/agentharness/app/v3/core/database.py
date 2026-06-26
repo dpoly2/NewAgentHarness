@@ -472,6 +472,24 @@ def _fallback_init_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_agent_memory_agent_id ON agent_memory (agent_id);
             CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects (slug);
             CREATE INDEX IF NOT EXISTS idx_clients_slug ON clients (slug);
+            CREATE TABLE IF NOT EXISTS alpaca_orders (
+                id TEXT PRIMARY KEY,
+                symbol TEXT,
+                side TEXT,
+                order_type TEXT,
+                qty REAL,
+                limit_price REAL,
+                stop_price REAL,
+                time_in_force TEXT,
+                status TEXT,
+                agent_reason TEXT DEFAULT '',
+                submitted_by TEXT DEFAULT '',
+                alpaca_response TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_alpaca_orders_symbol ON alpaca_orders (symbol);
+            CREATE INDEX IF NOT EXISTS idx_alpaca_orders_status ON alpaca_orders (status);
             """
         )
         conn.commit()
@@ -514,6 +532,75 @@ def _ensure_plan_schema() -> None:
         conn.close()
 
 
+def _ensure_alpaca_schema() -> None:
+    conn = _db_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS alpaca_orders (
+                id TEXT PRIMARY KEY,
+                symbol TEXT,
+                side TEXT,
+                order_type TEXT,
+                qty REAL,
+                limit_price REAL,
+                stop_price REAL,
+                time_in_force TEXT,
+                status TEXT,
+                agent_reason TEXT DEFAULT '',
+                submitted_by TEXT DEFAULT '',
+                alpaca_response TEXT,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_alpaca_orders_symbol ON alpaca_orders (symbol);
+            CREATE INDEX IF NOT EXISTS idx_alpaca_orders_status ON alpaca_orders (status);
+            CREATE TABLE IF NOT EXISTS market_positions (
+                id TEXT PRIMARY KEY,
+                ticker TEXT NOT NULL,
+                name TEXT DEFAULT '',
+                position_type TEXT DEFAULT 'equity',
+                action TEXT DEFAULT 'long',
+                shares REAL DEFAULT 0,
+                entry_price REAL DEFAULT 0,
+                current_price REAL DEFAULT 0,
+                target_price REAL DEFAULT 0,
+                stop_price REAL DEFAULT 0,
+                pnl REAL DEFAULT 0,
+                pnl_pct REAL DEFAULT 0,
+                notes TEXT DEFAULT '',
+                status TEXT DEFAULT 'open',
+                project_slug TEXT DEFAULT 'markets',
+                qty REAL DEFAULT 0,
+                market_value REAL DEFAULT 0,
+                cost_basis REAL DEFAULT 0,
+                side TEXT DEFAULT '',
+                unrealized_pnl REAL DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_market_positions_ticker ON market_positions (ticker);
+            CREATE INDEX IF NOT EXISTS idx_market_positions_status ON market_positions (status);
+            """
+        )
+        market_columns = {row[1] for row in conn.execute("PRAGMA table_info(market_positions)").fetchall()}
+        desired_columns = {
+            "qty": "REAL DEFAULT 0",
+            "market_value": "REAL DEFAULT 0",
+            "cost_basis": "REAL DEFAULT 0",
+            "side": "TEXT DEFAULT ''",
+            "unrealized_pnl": "REAL DEFAULT 0",
+        }
+        for column, ddl in desired_columns.items():
+            if column not in market_columns:
+                conn.execute(f"ALTER TABLE market_positions ADD COLUMN {column} {ddl}")
+        conn.commit()
+        _table_columns_cache.pop("alpaca_orders", None)
+        _table_columns_cache.pop("market_positions", None)
+    finally:
+        conn.close()
+
+
 def _ensure_worker_schema() -> None:
     """Create ws_events table used for multi-worker broadcast."""
     conn = _db_connection()
@@ -539,12 +626,14 @@ def _init_schema() -> None:
             db.init_schema()  # type: ignore[attr-defined]
             _ensure_plan_schema()
             _ensure_worker_schema()
+            _ensure_alpaca_schema()
             return
         except Exception:
             pass
     _fallback_init_schema()
     _ensure_plan_schema()
     _ensure_worker_schema()
+    _ensure_alpaca_schema()
 
 
 def _config_value(key: str, default: Any = None) -> Any:

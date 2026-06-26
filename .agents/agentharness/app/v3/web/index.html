@@ -800,6 +800,7 @@
             { id: 'templates', icon: '📝', label: 'Templates' },
             { id: 'travel', icon: '✈', label: 'Travel' },
             { id: 'briefing', icon: '📰', label: 'Briefing' },
+            { id: 'alpaca', icon: '📈', label: 'Alpaca' },
             { id: 'chat', icon: '💬', label: 'Chat' },
             { id: 'inez', icon: '👑', label: 'Inez' },
             { id: 'settings', icon: '⚙', label: 'Settings' }
@@ -1327,6 +1328,7 @@
                 templates: showTemplates,
                 travel: showTravel,
                 briefing: showBriefing,
+                alpaca: showAlpaca,
                 agents: showAgents,
                 models: showModels,
                 email_cleanup: showEmailCleanup,
@@ -3366,6 +3368,304 @@
                     catch (e) { showToast(e.message || 'Failed', 'var(--error)'); }
                 });
             }
+        }
+
+
+        async function alpacaFetch(path, options = {}) {
+            const headers = { 'Authorization': `Bearer ${getToken()}` };
+            if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+            const response = await fetch(path, { method: options.method || 'GET', headers, body: options.body || null });
+            if (response.status === 401) { logout(); return null; }
+            const text = await response.text();
+            const data = text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : null;
+            if (!response.ok) throw new Error((data && data.detail) || response.statusText || 'Request failed');
+            return data;
+        }
+
+        function signedMoney(value) {
+            const num = Number(value || 0);
+            const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(Math.abs(num));
+            return num < 0 ? `-${formatted}` : formatted;
+        }
+
+        function setAlpacaMessage(message, kind = 'info') {
+            const box = $('#alpacaStatusMessage');
+            if (!box) return;
+            if (!message) {
+                box.innerHTML = '';
+                return;
+            }
+            const klass = kind === 'error' ? 'error-banner' : kind === 'success' ? 'success-banner' : 'info-banner';
+            box.innerHTML = `<div class="${klass}">${escapeHtml(message)}</div>`;
+        }
+
+        async function loadAlpacaAccount() {
+            const status = await alpacaFetch('/api/alpaca/status');
+            const configured = !!status?.configured;
+            const installed = !!status?.alpaca_ok;
+            const paper = !!status?.paper;
+            $('#alpacaModeBadge').innerHTML = badge(installed ? (paper ? 'PAPER' : 'LIVE') : 'UNAVAILABLE', installed ? (paper ? 'var(--warning)' : 'var(--error)') : 'var(--text-muted)');
+            if (!installed) {
+                setAlpacaMessage('alpaca-py is not installed on the hub server.', 'info');
+                ['alpacaBuyingPower', 'alpacaPortfolioValue', 'alpacaDayPnl', 'alpacaCashBalance'].forEach((id) => { const el = $('#' + id); if (el) el.textContent = '—'; });
+                return status;
+            }
+            if (!configured) {
+                setAlpacaMessage('Alpaca is not configured. Add ALPACA_API_KEY and ALPACA_API_SECRET to .agents/.env.', 'info');
+                ['alpacaBuyingPower', 'alpacaPortfolioValue', 'alpacaDayPnl', 'alpacaCashBalance'].forEach((id) => { const el = $('#' + id); if (el) el.textContent = '—'; });
+                return status;
+            }
+            const account = await alpacaFetch('/api/alpaca/account');
+            const equity = Number(account?.equity || account?.portfolio_value || 0);
+            const lastEquity = Number(account?.last_equity || equity);
+            const dayPnl = equity - lastEquity;
+            $('#alpacaBuyingPower').textContent = signedMoney(account?.buying_power || 0);
+            $('#alpacaPortfolioValue').textContent = signedMoney(equity);
+            $('#alpacaDayPnl').textContent = signedMoney(dayPnl);
+            $('#alpacaDayPnl').style.color = dayPnl >= 0 ? 'var(--success)' : 'var(--error)';
+            $('#alpacaCashBalance').textContent = signedMoney(account?.cash || 0);
+            setAlpacaMessage(`${paper ? 'Paper' : 'Live'} brokerage ready. Account status: ${account?.status || 'active'}.`, 'success');
+            return status;
+        }
+
+        async function loadAlpacaPositions() {
+            const positions = await alpacaFetch('/api/alpaca/positions');
+            const rows = Array.isArray(positions) ? positions : [];
+            const body = $('#alpacaPositionsBody');
+            if (!body) return;
+            body.innerHTML = rows.length ? rows.map((position) => {
+                const pnl = Number(position?.unrealized_pl || 0);
+                return `
+                    <tr>
+                        <td><strong>${escapeHtml(position?.symbol || '—')}</strong></td>
+                        <td>${escapeHtml(String(position?.qty || '0'))}</td>
+                        <td>${badge(position?.side || '—', (String(position?.side || '').toLowerCase() === 'short') ? 'var(--warning)' : 'var(--accent)')}</td>
+                        <td>${signedMoney(position?.current_price || 0)}</td>
+                        <td>${signedMoney(position?.market_value || 0)}</td>
+                        <td style="color:${pnl >= 0 ? 'var(--success)' : 'var(--error)'}">${signedMoney(pnl)}</td>
+                    </tr>
+                `;
+            }).join('') : `<tr><td colspan="6">${emptyState('No open positions', 'Open Alpaca positions will appear here.')}</td></tr>`;
+        }
+
+        async function loadAlpacaOrders(status = 'open') {
+            const orders = await alpacaFetch(`/api/alpaca/orders?status=${encodeURIComponent(status)}&limit=50`);
+            const rows = Array.isArray(orders) ? orders : [];
+            const body = $('#alpacaOrdersBody');
+            if (!body) return;
+            body.innerHTML = rows.length ? rows.map((order) => `
+                <tr>
+                    <td class="mono" title="${escapeHtml(order?.id || '—')}">${escapeHtml(shortId(order?.id || '—', 14))}</td>
+                    <td>${escapeHtml(order?.symbol || '—')}</td>
+                    <td>${badge(order?.side || '—', String(order?.side || '').toLowerCase() === 'sell' ? 'var(--warning)' : 'var(--accent)')}</td>
+                    <td>${escapeHtml(order?.order_type || order?.type || '—')}</td>
+                    <td>${escapeHtml(String(order?.qty || order?.filled_qty || '0'))}</td>
+                    <td>${badge(order?.status || 'unknown', statusColor(order?.status || 'unknown'))}</td>
+                    <td>${fmtDateTime(order?.created_at)}</td>
+                    <td>${String(order?.status || '').toLowerCase() === 'open' || String(order?.status || '').toLowerCase() === 'accepted' || String(order?.status || '').toLowerCase() === 'new'
+                        ? `<button class="danger-btn alpaca-cancel-order-btn" data-order-id="${escapeHtml(order?.id || '')}">Cancel</button>`
+                        : '<span class="muted">—</span>'}</td>
+                </tr>
+            `).join('') : `<tr><td colspan="8">${emptyState('No orders', 'Submitted Alpaca orders will appear here.')}</td></tr>`;
+            $$('.alpaca-cancel-order-btn').forEach((button) => {
+                button.addEventListener('click', () => cancelAlpacaOrder(button.dataset.orderId || ''));
+            });
+        }
+
+        async function loadAlpacaClock() {
+            const clock = await alpacaFetch('/api/alpaca/clock');
+            $('#alpacaClockStatus').innerHTML = badge(clock?.is_open ? 'OPEN' : 'CLOSED', clock?.is_open ? 'var(--success)' : 'var(--warning)');
+            $('#alpacaNextOpen').textContent = fmtDateTime(clock?.next_open);
+            $('#alpacaNextClose').textContent = fmtDateTime(clock?.next_close);
+            $('#alpacaCurrentTime').textContent = fmtDateTime(clock?.timestamp);
+        }
+
+        async function placeAlpacaOrder(e) {
+            e.preventDefault();
+            const payload = {
+                symbol: ($('#alpacaOrderSymbol')?.value || '').trim().toUpperCase(),
+                qty: Number($('#alpacaOrderQty')?.value || 0),
+                side: $('#alpacaOrderSide')?.value || 'buy',
+                order_type: $('#alpacaOrderType')?.value || 'market',
+                time_in_force: $('#alpacaOrderTif')?.value || 'day',
+                limit_price: $('#alpacaOrderLimit')?.value ? Number($('#alpacaOrderLimit').value) : null,
+                stop_price: $('#alpacaOrderStop')?.value ? Number($('#alpacaOrderStop').value) : null,
+                agent_reason: ($('#alpacaOrderReason')?.value || '').trim(),
+            };
+            try {
+                await alpacaFetch('/api/alpaca/orders', { method: 'POST', body: JSON.stringify(payload) });
+                setAlpacaMessage(`Order submitted for ${payload.symbol}.`, 'success');
+                $('#alpacaOrderForm')?.reset();
+                await Promise.all([loadAlpacaAccount(), loadAlpacaPositions(), loadAlpacaOrders()]);
+            } catch (error) {
+                setAlpacaMessage(error.message || 'Unable to submit order.', 'error');
+            }
+        }
+
+        async function cancelAlpacaOrder(orderId) {
+            if (!orderId) return;
+            if (!confirm(`Cancel Alpaca order ${orderId}?`)) return;
+            try {
+                await alpacaFetch(`/api/alpaca/orders/${encodeURIComponent(orderId)}`, { method: 'DELETE' });
+                setAlpacaMessage(`Cancel requested for order ${orderId}.`, 'success');
+                await loadAlpacaOrders();
+            } catch (error) {
+                setAlpacaMessage(error.message || 'Unable to cancel order.', 'error');
+            }
+        }
+
+        async function syncAlpacaPositions() {
+            try {
+                const result = await alpacaFetch('/api/alpaca/sync-positions', { method: 'POST', body: JSON.stringify({ overwrite: true }) });
+                setAlpacaMessage(`Synced ${result?.synced || 0} position(s) into local market_positions.`, 'success');
+                await loadAlpacaPositions();
+            } catch (error) {
+                setAlpacaMessage(error.message || 'Unable to sync positions.', 'error');
+            }
+        }
+
+        async function initAlpacaTab() {
+            try {
+                const status = await loadAlpacaAccount();
+                if (!status?.configured || !status?.alpaca_ok) return;
+                await Promise.all([
+                    loadAlpacaClock(),
+                    loadAlpacaPositions(),
+                    loadAlpacaOrders(),
+                ]);
+            } catch (error) {
+                setAlpacaMessage(error.message || 'Unable to load Alpaca data.', 'error');
+            }
+        }
+
+        async function showAlpaca() {
+            if (!(await requireAuth())) return;
+            setLoading('Alpaca Trading', 'Loading account, clock, positions, and orders…');
+            renderShell(
+                'Alpaca Trading',
+                'Live and paper brokerage controls for Legacy Alpha Capital AI.',
+                `
+                    <div id="alpaca-tab" class="section-stack">
+                        <div id="alpacaStatusMessage"></div>
+                        <div class="content-grid cards-2">
+                            <div class="card">
+                                <div class="top-summary" style="justify-content:space-between;margin-bottom:14px">
+                                    <h3 style="margin:0">Account Summary</h3>
+                                    <span id="alpacaModeBadge"></span>
+                                </div>
+                                <div class="stats-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+                                    ${statCard('Buying Power', '—', 'Available capital')}
+                                    ${statCard('Portfolio Value', '—', 'Current equity')}
+                                    ${statCard('P&L Today', '—', 'Equity change vs prior close')}
+                                    ${statCard('Cash', '—', 'Cash balance')}
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="top-summary" style="justify-content:space-between;margin-bottom:14px">
+                                    <h3 style="margin:0">Market Clock</h3>
+                                    <span id="alpacaClockStatus">${badge('CHECKING', 'var(--accent)')}</span>
+                                </div>
+                                <div class="summary-item"><strong>Next Open</strong><span id="alpacaNextOpen">—</span></div>
+                                <div class="summary-item" style="margin-top:10px"><strong>Next Close</strong><span id="alpacaNextClose">—</span></div>
+                                <div class="summary-item" style="margin-top:10px"><strong>Broker Time</strong><span id="alpacaCurrentTime">—</span></div>
+                            </div>
+                        </div>
+                        <div class="table-wrap">
+                            <div class="top-summary" style="justify-content:space-between;margin-bottom:14px">
+                                <h3 style="margin:0">Open Positions</h3>
+                                <button class="secondary-btn" id="alpacaSyncBtn">Sync Positions</button>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Symbol</th>
+                                        <th>Qty</th>
+                                        <th>Side</th>
+                                        <th>Current Price</th>
+                                        <th>Market Value</th>
+                                        <th>Unrealized P&amp;L</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alpacaPositionsBody"><tr><td colspan="6">Loading…</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div class="split-grid">
+                            <div class="form-card">
+                                <h3>Place Order</h3>
+                                <form id="alpacaOrderForm" class="form-grid">
+                                    <div class="field">
+                                        <label for="alpacaOrderSymbol">Symbol</label>
+                                        <input id="alpacaOrderSymbol" required placeholder="AAPL" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderQty">Qty</label>
+                                        <input id="alpacaOrderQty" type="number" step="0.0001" min="0.0001" required />
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderSide">Side</label>
+                                        <select id="alpacaOrderSide"><option value="buy">Buy</option><option value="sell">Sell</option></select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderType">Type</label>
+                                        <select id="alpacaOrderType"><option value="market">Market</option><option value="limit">Limit</option><option value="stop">Stop</option><option value="stop_limit">Stop Limit</option></select>
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderLimit">Limit Price</label>
+                                        <input id="alpacaOrderLimit" type="number" step="0.01" min="0" placeholder="Optional" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderStop">Stop Price</label>
+                                        <input id="alpacaOrderStop" type="number" step="0.01" min="0" placeholder="Optional" />
+                                    </div>
+                                    <div class="field">
+                                        <label for="alpacaOrderTif">Time In Force</label>
+                                        <select id="alpacaOrderTif"><option value="day">Day</option><option value="gtc">GTC</option><option value="ioc">IOC</option><option value="fok">FOK</option></select>
+                                    </div>
+                                    <div class="field span-2">
+                                        <label for="alpacaOrderReason">Agent Reason</label>
+                                        <textarea id="alpacaOrderReason" placeholder="Why the markets team is submitting this order"></textarea>
+                                    </div>
+                                    <div class="form-actions span-2">
+                                        <button class="action-btn" type="submit">Submit Order</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="table-wrap">
+                                <h3>Open Orders</h3>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Order ID</th>
+                                            <th>Symbol</th>
+                                            <th>Side</th>
+                                            <th>Type</th>
+                                            <th>Qty</th>
+                                            <th>Status</th>
+                                            <th>Created At</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="alpacaOrdersBody"><tr><td colspan="8">Loading…</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                `<button class="action-btn" id="alpacaRefreshBtn">Refresh</button>`
+            );
+            // Replace stat card placeholder values with stable ids.
+            const statValues = $$('.stat-value', $('#alpaca-tab')).slice(0, 4);
+            if (statValues[0]) statValues[0].id = 'alpacaBuyingPower';
+            if (statValues[1]) statValues[1].id = 'alpacaPortfolioValue';
+            if (statValues[2]) statValues[2].id = 'alpacaDayPnl';
+            if (statValues[3]) statValues[3].id = 'alpacaCashBalance';
+            $('#alpacaOrderForm').addEventListener('submit', placeAlpacaOrder);
+            $('#alpacaRefreshBtn').addEventListener('click', initAlpacaTab);
+            $('#alpacaSyncBtn').addEventListener('click', syncAlpacaPositions);
+            await initAlpacaTab();
+            setRefresh(() => {
+                if (state.currentPage === 'alpaca') initAlpacaTab();
+            }, 30000);
         }
 
         async function showAgents() {
