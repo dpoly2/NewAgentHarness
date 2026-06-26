@@ -1,6 +1,6 @@
 # ArchonHub — Product Requirements Document
-**Version:** 1.3.0  
-**Last Updated:** June 2026  
+**Version:** 1.4.0
+**Last Updated:** June 2026
 **Owner:** Smith Capital Portfolio
 
 ---
@@ -270,6 +270,20 @@ AgentState = TypedDict({
 | `weekly_fare_alert` | Monday 1:30 PM CT | Travel fare deals from AUS |
 | `sigma_signal_check` | Daily 2:00 PM CT | Sigma Signal submission inbox check |
 | `nightly_db_cleanup` | Daily 2:00 AM CT | Remove runs older than 90 days |
+
+### 8.1 Tactical Alpha Market Intelligence Division V2
+- Markets now runs as a **31-agent division across 9 departments** with canonical skill files under `.agents/agents/projects/markets/`.
+- The V2 scheduler layer includes the morning intelligence pipeline, intraday hourly monitoring, end-of-day review loop, weekly Monday rollups, first-Monday monthly optimization jobs, and Capitol Trades disclosure automation.
+- `markets-tactical-alpha` is the synthesis lead, `markets-cio` and `markets-cro` are the portfolio approval layer, and `inez-chief-of-staff` remains the executive delivery path.
+- Capitol Trades feeds lagged public-disclosure intelligence into the smart-money layer; Alpaca remains the post-approval execution endpoint.
+
+### 8.2 V2 market cadence summary
+- **Morning pipeline (Mon-Fri 5:30-8:15 AM CT):** overnight macro, news, sentiment, whale activity, insider scan, regime assessment, options flow, watchlist generation, probability scan, executive briefing.
+- **Hourly monitoring (Mon-Fri 10:00 AM-3:30 PM CT):** position review, trailing-stop updates, intraday news refresh.
+- **End of day (Mon-Fri 4:00-4:45 PM CT):** performance metrics, CRO risk review, journal, next-day plan.
+- **Weekly (Monday):** portfolio review, strategy optimization, marketing content, performance recap.
+- **Monthly (1st Monday):** backtest refresh, strategy tuning, rebalance, curriculum refresh.
+- **Capitol Trades (Mon-Fri 9:00-9:30 AM CT):** disclosure refresh plus Congress Edge digest.
 
 User-defined scheduled jobs also supported via `/api/scheduler` CRUD.
 

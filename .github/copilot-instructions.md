@@ -196,3 +196,10 @@ Key rules enforced server-side — do not regress these:
 
 ### MCP Servers
 Configured in `.agents/mcps/config.json`. Currently empty; add MCP server entries there to enable tool extensions.
+
+
+### Market Team and Scheduler
+- The markets project now uses the **Tactical Alpha Market Intelligence Division V2**: 31 agents across 9 departments, with skill files under `.agents/agents/projects/markets/`.
+- `hub_scheduler.py` carries the full market cadence: morning pipeline (5:30-8:15 AM CT), hourly monitoring (10:00 AM-3:30 PM CT), end-of-day review (4:00-4:45 PM CT), weekly Monday rollups, and first-Monday monthly optimization jobs.
+- Capitol Trades is part of the smart-money automation layer: a 9:00 AM disclosure refresh and 9:30 AM Congress Edge digest route lagged public signals to the markets team and CRO.
+- Alpaca is the downstream execution endpoint after Tactical Alpha synthesis, probability validation, and CRO approval; treat it as execution infrastructure, not thesis generation.

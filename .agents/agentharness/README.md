@@ -261,6 +261,28 @@ See [`projects/archonhub-ios/README.md`](projects/archonhub-ios/README.md) for t
 
 ---
 
+## Market Operations
+
+- Tactical Alpha V2 is a **31-agent market division across 9 departments** coordinated through ArchonHub.
+- Canonical org plan: [`.agents/agents/projects/markets/TACTICAL-ALPHA-DIVISION-V2.md`](../agents/projects/markets/TACTICAL-ALPHA-DIVISION-V2.md)
+- Automation summary in `hub_scheduler.py`:
+  - Mon-Fri 5:30-8:15 AM CT morning intelligence pipeline
+  - Mon-Fri 10:00 AM-3:30 PM CT hourly monitoring loop
+  - Mon-Fri 4:00-4:45 PM CT end-of-day review loop
+  - Monday weekly portfolio/strategy/content cadence
+  - First-Monday monthly backtest/tuning/rebalance/curriculum cadence
+  - Mon-Fri Capitol Trades disclosure refresh + Congress Edge digest
+- Alpaca remains the execution endpoint after CRO review.
+
+### Adding politicians to track
+
+1. Open the Copy Trading surface in the web UI, or call `POST /api/capitol-trades/politicians`.
+2. Provide the politician `name`, `chamber`, and required `tracking_reason` (optionally `party` and `state`).
+3. Save the record to trigger an immediate disclosure refresh.
+4. Review pending signals at `GET /api/capitol-trades/signals?status=pending` before any CRO approval or Alpaca execution.
+
+---
+
 ## Database
 
 SQLite at `.agents/agentharness/memory/runs_v3.db` (gitignored).
