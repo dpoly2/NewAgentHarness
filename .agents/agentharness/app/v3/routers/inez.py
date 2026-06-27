@@ -83,7 +83,10 @@ async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
         response_data["has_citations"] = True
         response_data["citations"] = result.get("citations", [])
         response_data["search_query"] = result.get("search_query")
-    if result.get("followup_suggestions"):
+    # Generate follow-up suggestions only after the first exchange to avoid
+    # a redundant LLM call on brand-new conversations (first user message has
+    # no prior context to generate meaningful follow-ups from).
+    if len(history) > 1 and result.get("followup_suggestions"):
         response_data["followup_suggestions"] = result.get("followup_suggestions", [])
     return response_data
 

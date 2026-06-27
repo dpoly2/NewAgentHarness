@@ -31,6 +31,18 @@ Agent Output Contract (all agents must follow this format):
 }
 
 Any field may be omitted — the runner handles missing keys gracefully.
+
+Execution model:
+  run_dispatches() runs all dispatches at each depth level in parallel using
+  ThreadPoolExecutor(max_workers=4). Follow-up agents (depth=1) run after
+  the first wave completes. This cuts multi-agent wall time from sum(latencies)
+  to max(latencies) for the first dispatch wave.
+
+Memory management:
+  Each run_agent() call saves at most 30 run_* history entries per agent.
+  Older entries are pruned after each write. exchange_* entries (written by
+  inez_agent) are capped at 50 per agent. This prevents unbounded growth
+  of the agent_memory table.
 """
 
 from __future__ import annotations
@@ -452,6 +464,22 @@ def run_agent(
             )
         except Exception:
             pass
+        # Trim run history to 30 most recent entries per agent
+        try:
+            if hasattr(db, "get_conn"):
+                with db.get_conn() as _mc:
+                    _mc.execute(
+                        """DELETE FROM agent_memory
+                           WHERE agent_id = ? AND key LIKE 'run_%'
+                           AND key NOT IN (
+                               SELECT key FROM agent_memory
+                               WHERE agent_id = ? AND key LIKE 'run_%'
+                               ORDER BY updated_at DESC LIMIT 30
+                           )""",
+                        (agent_id, agent_id),
+                    )
+        except Exception:
+            pass
 
     # 10. Progressive Intelligence post-run hook (reflexion + skill tracking)
     pi_meta = {}
@@ -492,28 +520,68 @@ def run_dispatches(
     max_follow_up_depth: int = 1,
 ) -> list[dict]:
     """
-    Execute a list of Inez dispatch objects. Supports one level of follow-up agents.
+    Execute a list of Inez dispatch objects in parallel (up to 4 concurrent).
+    Supports one level of follow-up agents (run sequentially after first wave).
     Each dispatch: {"agent_id": str, "task": str, "project": str, "context": str}
     Returns list of results from run_agent().
     """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    def _ithink(msg: str) -> None:
+        if emit:
+            try:
+                emit("inez_thinking", message=msg)
+            except Exception:
+                pass
+
     results = []
     queue = list(dispatches)
-
     depth = 0
+
     while queue and depth <= max_follow_up_depth:
-        next_queue = []
+        next_queue: list[dict] = []
+
+        # Announce all agents being dispatched at this depth
         for d in queue:
-            agent_id = d.get("agent_id", "")
-            task     = d.get("task", "")
-            project  = d.get("project", "")
-            context  = d.get("context", "")
-            if not agent_id or not task:
-                continue
-            result = run_agent(agent_id, task, project, context, emit=emit)
-            results.append(result)
-            # Queue any follow-up agents from this result
-            for follow in result.get("follow_up_agents", []):
-                next_queue.append(follow)
+            label = d.get("agent_id", "").replace("-", " ").title()
+            short_task = (d.get("task", ""))[:72] + ("…" if len(d.get("task", "")) > 72 else "")
+            _ithink(f"→ {label}: {short_task}")
+
+        # Run all dispatches at this depth in parallel (max 4 concurrent)
+        max_workers = min(4, len(queue))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_dispatch = {
+                executor.submit(
+                    run_agent,
+                    d.get("agent_id", ""),
+                    d.get("task", ""),
+                    d.get("project", ""),
+                    d.get("context", ""),
+                    None,   # run_id
+                    emit,
+                ): d
+                for d in queue
+                if d.get("agent_id") and d.get("task")
+            }
+
+            for future in as_completed(future_to_dispatch):
+                d = future_to_dispatch[future]
+                label = d.get("agent_id", "").replace("-", " ").title()
+                try:
+                    result = future.result()
+                    results.append(result)
+                    if result.get("error"):
+                        _ithink(f"⚠ {label} encountered an issue")
+                    else:
+                        _ithink(f"✓ {label} completed")
+                    # Queue any follow-up agents from this result
+                    for follow in result.get("follow_up_agents", []):
+                        next_queue.append(follow)
+                        _ithink(f"↪ Follow-up: {follow.get('agent_id', '?').replace('-', ' ').title()}")
+                except Exception as exc:
+                    logger.error("Dispatch future error for %s: %s", d.get("agent_id"), exc)
+                    _ithink(f"⚠ {label} failed: {str(exc)[:60]}")
+
         queue = next_queue
         depth += 1
 

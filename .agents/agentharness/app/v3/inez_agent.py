@@ -8,6 +8,14 @@ and conversation history carry forward under the new identity.
 She analyzes requests, determines which agents to deploy,
 dispatches tasks, creates todos, generates morning briefs,
 and synthesizes results.
+
+Memory management:
+  Exchange history is capped at 50 entries per agent (exchange_* keys). Older
+  entries are pruned after each save to prevent unbounded agent_memory growth.
+
+System prompt caching:
+  _PROMPT_CACHE_TTL = 10.0 seconds. Prompts are cached per conversation_id[:16].
+  Context changes (new todos, projects) are reflected within 10 seconds.
 """
 
 from __future__ import annotations
@@ -16,6 +24,7 @@ import json
 import os
 import re
 import threading
+import time as _time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -106,6 +115,9 @@ INEZ_FALLBACK = (
     "Please go to Admin → AI Provider, set your provider and API key, then save."
 )
 
+_PROMPT_CACHE: dict[str, tuple[str, float]] = {}
+_PROMPT_CACHE_TTL = 10.0
+
 
 def _llm(temperature: float = 0.3):
     """Use the shared multi-provider LLM factory from hub_nodes when available."""
@@ -128,44 +140,6 @@ def _load_skill() -> str:
         return SKILL_PATH.read_text(encoding="utf-8")
     except Exception:
         return "You are Inez, Chief of Staff for the Smith Capital Portfolio."
-
-
-def _load_client_roster() -> str:
-    """Load S2T Designs client roster and scan client folders for PROJECT.md status."""
-    lines = []
-    try:
-        roster_text = S2T_ROSTER_PATH.read_text(encoding="utf-8")
-        table_match = re.search(r"## Active Clients[\s\S]*?\n((?:\|[^\n]+\n)+)", roster_text)
-        if table_match:
-            lines.append("S2T DESIGNS ACTIVE CLIENTS:")
-            rows = table_match.group(1).strip().split("\n")[2:]  # skip header + separator
-            for row in rows:
-                cells = [c.strip() for c in row.split("|") if c.strip()]
-                if len(cells) >= 3:
-                    lines.append(f"  • {cells[0]} — {cells[-1]}")
-    except Exception:
-        pass
-
-    try:
-        if S2T_CLIENTS_DIR.exists():
-            for client_dir in sorted(S2T_CLIENTS_DIR.iterdir()):
-                if not client_dir.is_dir():
-                    continue
-                proj_file = client_dir / "PROJECT.md"
-                if not proj_file.exists():
-                    continue
-                text = proj_file.read_text(encoding="utf-8")
-                name_match = re.search(r"^# (.+)", text, re.MULTILINE)
-                status_match = re.search(r"(?:Current Status|Status)[:\s]+(.+)", text, re.IGNORECASE)
-                blockers = re.findall(r"- \[ \] (.+)", text)[:2]
-                name = name_match.group(1) if name_match else client_dir.name.upper()
-                status = f" — {status_match.group(1).strip()}" if status_match else ""
-                blocker_str = f"\n      Blockers: {'; '.join(blockers)}" if blockers else ""
-                lines.append(f"  [{client_dir.name.upper()}] {name}{status}{blocker_str}")
-    except Exception:
-        pass
-
-    return "\n".join(lines) if lines else ""
 
 
 def _load_portfolio_context() -> str:
@@ -257,7 +231,16 @@ def _load_todos_context() -> str:
     if not DB_OK:
         return "No todos available."
     try:
-        todos = db.list_todos(status="pending") + db.list_todos(status="in_progress")
+        from core.database import _db_connection as _dbc
+        _conn = _dbc()
+        try:
+            _rows = _conn.execute(
+                "SELECT id,title,priority,status,project,due_date,assigned_agent FROM todos "
+                "WHERE status IN ('pending','in_progress') ORDER BY priority ASC LIMIT 30"
+            ).fetchall()
+            todos = [dict(r) for r in _rows]
+        finally:
+            _conn.close()
         if not todos:
             return "No active todos."
         lines = ["Active Todos:"]
@@ -850,9 +833,23 @@ def _build_proactive_awareness() -> str:
     if not DB_OK:
         return ""
     lines = []
+    _pending_todos = []
     try:
-        urgent = [t for t in db.list_todos(status="pending")
-                  if t.get("priority") in ("urgent", "high")][:8]
+        from core.database import _db_connection as _dbc
+        _conn = _dbc()
+        try:
+            _rows = _conn.execute(
+                "SELECT id,title,priority,status,project,due_date FROM todos "
+                "WHERE status='pending' ORDER BY priority ASC LIMIT 50"
+            ).fetchall()
+            _pending_todos = [dict(r) for r in _rows]
+        finally:
+            _conn.close()
+    except Exception:
+        pass
+
+    try:
+        urgent = [t for t in _pending_todos if t.get("priority") in ("urgent", "high")][:8]
         if urgent:
             lines.append("PRIORITY ITEMS NEEDING ATTENTION:")
             for t in urgent:
@@ -865,7 +862,7 @@ def _build_proactive_awareness() -> str:
     try:
         from datetime import timedelta
         week_out = (datetime.now() + timedelta(days=7)).strftime("%Y-%m-%d")
-        due_soon = [t for t in db.list_todos(status="pending")
+        due_soon = [t for t in _pending_todos
                     if t.get("due_date") and t["due_date"] <= week_out][:5]
         if due_soon:
             lines.append("\nDUE THIS WEEK:")
@@ -906,8 +903,14 @@ def _load_global_memory_block() -> str:
         return ""
 
 
-def _build_system_prompt(history: list[dict]) -> str:
+def _build_system_prompt(history: list[dict], cache_key: str = "default") -> str:
     """Build Inez's full system prompt with live context injected from DB."""
+    _now = _time.monotonic()
+    if cache_key in _PROMPT_CACHE:
+        cached_prompt, cached_at = _PROMPT_CACHE[cache_key]
+        if _now - cached_at < _PROMPT_CACHE_TTL:
+            return cached_prompt
+
     skill = _load_skill()
     todos = _load_todos_context()
     memory = _load_memory_context()
@@ -958,7 +961,7 @@ def _build_system_prompt(history: list[dict]) -> str:
         .replace("{memory_context}", full_memory)
         .replace("{conversation_history}", conv)
     )
-    return (
+    result = (
         DAVID_PROFILE + "\n\n" + base
         + global_mem_section
         + email_section
@@ -966,6 +969,8 @@ def _build_system_prompt(history: list[dict]) -> str:
         + travel_tools_note
         + email_tools_note
     )
+    _PROMPT_CACHE[cache_key] = (result, _time.monotonic())
+    return result
 
 
 def _normalize_agent_id(agent_id: str) -> str:
@@ -1335,7 +1340,8 @@ def think(
         except Exception as _ws:
             logger.warning("Web search error: %s", _ws)
 
-    system_prompt = _build_system_prompt(history)
+    conv_id = history[0].get("conversation_id", "default") if history else "default"
+    system_prompt = _build_system_prompt(history, cache_key=conv_id[:16])
 
     # ── Step 2: Inez analysis — determines what to say and who to dispatch ────
     # Build a concise agent roster for dispatch guidance
@@ -1497,6 +1503,22 @@ def think(
                         "db_writes":  sum(r.get("db_writes_applied", 0) for r in result.get("agent_results", [])),
                     }),
                 )
+            except Exception:
+                pass
+            # Trim exchange history to 50 most recent entries to prevent unbounded growth
+            try:
+                if hasattr(db, "get_conn"):
+                    with db.get_conn() as _mc:
+                        _mc.execute(
+                            """DELETE FROM agent_memory
+                               WHERE agent_id = ? AND key LIKE 'exchange_%'
+                               AND key NOT IN (
+                                   SELECT key FROM agent_memory
+                                   WHERE agent_id = ? AND key LIKE 'exchange_%'
+                                   ORDER BY updated_at DESC LIMIT 50
+                               )""",
+                            (INEZ_AGENT_ID, INEZ_AGENT_ID),
+                        )
             except Exception:
                 pass
 

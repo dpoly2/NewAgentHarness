@@ -1,4 +1,11 @@
-"""ArchonHub hub server entry point."""
+"""ArchonHub hub server entry point.
+
+WebSocket auth:
+  Clients authenticate with either a JWT bearer token or an api_token.
+  api_token is validated with hmac.compare_digest against the stored config value.
+  On match, the connection is admitted directly (no JWT round-trip).
+  JWT tokens are validated with verify_token() for the normal login flow.
+"""
 from __future__ import annotations
 
 import asyncio
@@ -26,7 +33,7 @@ except ImportError:
     uvicorn = None  # type: ignore
 
 if FASTAPI_OK:
-    from core.auth import _unhandled_exception_handler, create_access_token, verify_token
+    from core.auth import _unhandled_exception_handler, verify_token
     from core.config import APP_VERSION, PID_FILE, SECRET_KEY, WEB_DIR, _JWT_SECRET_DEFAULT, _cors_origins
     from core.database import _config_value, _count_queued_jobs, _init_schema
     from core.hub import build_scheduler, hub
@@ -157,14 +164,18 @@ if FASTAPI_OK:
                     pass
                 return
             token = None
+            authenticated = False
             if isinstance(first_message, dict) and first_message.get("type") == "auth":
-                token = first_message.get("token")
                 api_token = first_message.get("api_token")
                 if api_token:
                     configured = _config_value("api_token")
                     if configured and hmac.compare_digest(str(api_token), str(configured)):
-                        token = create_access_token({"sub": "api-token", "username": "api-token", "user_id": 0, "role": "admin"})
-            if not token or not verify_token(token):
+                        authenticated = True  # api_token matched — no JWT round-trip needed
+                if not authenticated:
+                    token = first_message.get("token")
+                    if token and verify_token(token):
+                        authenticated = True
+            if not authenticated:
                 try:
                     await websocket.close(code=1008)
                 except Exception:

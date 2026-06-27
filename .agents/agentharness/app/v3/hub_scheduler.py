@@ -1,10 +1,21 @@
 """
 hub_scheduler.py — ArchonHub APScheduler engine
 Timezone: America/Chicago
+
+Job registration:
+  All built-in jobs are defined in _JOB_SPECS (a module-level dict defined after the
+  job functions). BUILT_IN_JOB_IDS is derived from _JOB_SPECS — they cannot diverge.
+  To add a new built-in job:
+    1. Define the async job function (job_<name>(hub) pattern)
+    2. Add an entry to _JOB_SPECS
+  That's it — BUILT_IN_JOB_IDS updates automatically.
+
+User-defined jobs (created via POST /api/scheduler) are loaded from the DB on startup
+and registered via HubScheduler.add_user_job().
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 try:
@@ -70,54 +81,7 @@ SCHEDULE_FIELD_NAMES = {
     "minute",
     "second",
 }
-BUILT_IN_JOBS = (
-    ("daily_briefing",                     "Daily Briefing",                     {"hour": 6,  "minute": 50},                                   "Compute morning briefing"),
-    ("daily_reflexion",                    "Daily Reflexion",                    {"hour": 7,  "minute": 0},                                    "Daily reflexion report"),
-    ("grant_research_sweep",               "Grant Research Sweep",               {"day_of_week": "mon", "hour": 8,  "minute": 0},              "Grant research across 4 orgs"),
-    ("hutto_planning_monitor",             "Hutto Planning Monitor",             {"day_of_week": "mon", "hour": 8,  "minute": 30},             "Hutto city planning monitor"),
-    ("weekly_fare_alert",                  "Weekly Fare Alert",                  {"day_of_week": "mon", "hour": 13, "minute": 30},             "Travel fare alerts from AUS"),
-    ("sigma_signal_check",                 "Sigma Signal Check",                 {"hour": 14, "minute": 0},                                    "Sigma Signal inbox check"),
-    ("markets_daily_premarket_brief",      "Markets Pre-Market Brief",           {"day_of_week": "mon-fri", "hour": 8, "minute": 30},          "Markets daily pre-market intelligence"),
-    ("markets_weekly_picks_digest",        "Markets Weekly Picks Digest",        {"day_of_week": "mon", "hour": 7,  "minute": 0},              "Markets weekly actionable picks"),
-    ("markets_monthly_portfolio_review",   "Markets Monthly P&L Review",         {"day": "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}, "Markets monthly portfolio review"),
-    # V2 Morning Pipeline (Mon-Fri)
-    ("markets_v2_overnight_macro",         "V2 Overnight Macro Review",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 30},         "Overnight macro intelligence sweep"),
-    ("markets_v2_news_intelligence",       "V2 News Intelligence Scan",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 45},         "Pre-market news and catalyst scan"),
-    ("markets_v2_sentiment_scan",          "V2 Sentiment Scan",                  {"day_of_week": "mon-fri", "hour": 6,  "minute": 0},          "Pre-market sentiment assessment"),
-    ("markets_v2_whale_activity",          "V2 Whale Activity Scan",             {"day_of_week": "mon-fri", "hour": 6,  "minute": 15},         "Institutional activity pre-market scan"),
-    ("markets_v2_insider_scan",            "V2 Insider Transaction Scan",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 30},         "SEC Form 4 insider transaction review"),
-    ("markets_v2_regime_assessment",       "V2 Market Regime Assessment",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 45},         "Daily market regime classification"),
-    ("markets_v2_options_flow",            "V2 Options Flow Analysis",           {"day_of_week": "mon-fri", "hour": 7,  "minute": 0},          "Pre-market options flow and wheel candidates"),
-    ("markets_v2_watchlist_generation",    "V2 Watchlist Generation",            {"day_of_week": "mon-fri", "hour": 7,  "minute": 30},         "Daily watchlist synthesis from all agents"),
-    ("markets_v2_probability_scan",        "V2 Probability Assessment",          {"day_of_week": "mon-fri", "hour": 8,  "minute": 0},          "Pre-market probability scoring per setup"),
-    ("markets_v2_executive_briefing",      "V2 Executive Briefing",              {"day_of_week": "mon-fri", "hour": 8,  "minute": 15},         "Morning executive briefing via Inez"),
-    # V2 Hourly (Mon-Fri market hours)
-    ("markets_v2_hourly_position_review",  "V2 Hourly Position Review",          {"day_of_week": "mon-fri", "hour": "10-15", "minute": 0},    "Hourly position P&L and stop review"),
-    ("markets_v2_hourly_trailing_stops",   "V2 Hourly Trailing Stop Update",     {"day_of_week": "mon-fri", "hour": "10-15", "minute": 15},   "Hourly trailing stop adjustments"),
-    ("markets_v2_hourly_news_refresh",     "V2 Hourly News Refresh",             {"day_of_week": "mon-fri", "hour": "10-15", "minute": 30},   "Hourly intraday news and catalyst refresh"),
-    # V2 End of Day (Mon-Fri)
-    ("markets_v2_eod_performance",         "V2 EOD Performance Metrics",         {"day_of_week": "mon-fri", "hour": 16, "minute": 0},          "End-of-day performance metrics"),
-    ("markets_v2_eod_risk_assessment",     "V2 EOD Risk Assessment",             {"day_of_week": "mon-fri", "hour": 16, "minute": 15},         "End-of-day CRO risk review"),
-    ("markets_v2_eod_journal",             "V2 EOD Trading Journal",             {"day_of_week": "mon-fri", "hour": 16, "minute": 30},         "End-of-day trading journal"),
-    ("markets_v2_eod_next_day_plan",       "V2 EOD Next-Day Plan",               {"day_of_week": "mon-fri", "hour": 16, "minute": 45},         "End-of-day next-day planning"),
-    # V2 Weekly (Monday)
-    ("markets_v2_weekly_portfolio_review",      "V2 Weekly Portfolio Review",      {"day_of_week": "mon", "hour": 9,  "minute": 30},             "Weekly portfolio allocation review"),
-    ("markets_v2_weekly_strategy_optimization", "V2 Weekly Strategy Optimization", {"day_of_week": "mon", "hour": 10, "minute": 0},              "Weekly strategy backtesting update"),
-    ("markets_v2_weekly_marketing_content",     "V2 Weekly Marketing Content",     {"day_of_week": "mon", "hour": 10, "minute": 30},             "Weekly educational content creation"),
-    ("markets_v2_weekly_performance_report",    "V2 Weekly Performance Report",    {"day_of_week": "mon", "hour": 11, "minute": 0},              "Weekly performance recap and community report"),
-    # V2 Monthly (1st Monday)
-    ("markets_v2_monthly_backtest_update",      "V2 Monthly Backtest Update",      {"day": "1-7", "day_of_week": "mon", "hour": 7,  "minute": 30}, "Monthly comprehensive backtest update"),
-    ("markets_v2_monthly_strategy_tuning",      "V2 Monthly Strategy Tuning",      {"day": "1-7", "day_of_week": "mon", "hour": 8,  "minute": 0},  "Monthly strategy parameter optimization"),
-    ("markets_v2_monthly_rebalance",            "V2 Monthly Portfolio Rebalance",  {"day": "1-7", "day_of_week": "mon", "hour": 10, "minute": 0},  "Monthly portfolio rebalancing"),
-    ("markets_v2_monthly_curriculum_refresh",   "V2 Monthly Curriculum Refresh",   {"day": "1-7", "day_of_week": "mon", "hour": 11, "minute": 0},  "Monthly educational curriculum update"),
-    # Capitol Trades
-    ("capitol_trades_daily_refresh",       "Capitol Trades Daily Refresh",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 0},          "Refresh politician trade disclosures"),
-    ("capitol_trades_signal_digest",       "Capitol Trades Signal Digest",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 30},         "Congress Edge signal digest for CRO"),
-    ("nightly_db_cleanup",                 "Nightly DB Cleanup",                 {"hour": 2,  "minute": 0},                                    "Remove runs older than 90 days"),
-    ("nightly_db_backup",                  "Nightly DB Backup",                  {"hour": 3,  "minute": 0},                                    "Export critical tables to JSON backup"),
-    ("sync_free_llm_keys",                 "Sync Free LLM Keys",                 {"hour": 7,  "minute": 15},                                   "Fetch and activate free daily LLM API keys"),
-)
-BUILT_IN_JOB_IDS = {job_id for job_id, _, _, _ in BUILT_IN_JOBS}
+# _JOB_SPECS and BUILT_IN_JOB_IDS are defined after the job functions (below _run_user_job)
 
 
 def _get_timezone() -> Any:
@@ -345,7 +309,7 @@ async def job_nightly_db_cleanup(hub):
     try:
         from hub_db import get_db
 
-        cutoff = (datetime.utcnow() - timedelta(days=90)).isoformat()
+        cutoff = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=90)).isoformat()
         conn = get_db()
         try:
             cur = conn.execute("DELETE FROM runs WHERE created_at < ?", (cutoff,))
@@ -739,9 +703,12 @@ async def job_capitol_trades_daily_refresh(hub):
     logger = get_logger("scheduler")
     _notify("Capitol Trades: refreshing politician disclosures...", logger)
     try:
+        import os as _os
         import httpx
+        _hub_host = _os.environ.get("HUB_HOST", "localhost")
+        _hub_port = _os.environ.get("HUB_PORT", "8765")
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post("http://localhost:8765/api/capitol-trades/refresh-all")
+            resp = await client.post(f"http://{_hub_host}:{_hub_port}/api/capitol-trades/refresh-all")
             if resp.status_code == 200:
                 data = resp.json()
                 new_trades = data.get("total_new_trades", 0)
@@ -772,7 +739,7 @@ async def job_sync_free_llm_keys(hub):
         import asyncio
         from free_llm_keys import sync_free_keys, get_retry_count, increment_retry_count, MAX_RETRIES_PER_DAY
         # Run the sync in a thread pool so it doesn't block the event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, sync_free_keys)
         synced_list = ", ".join(result.get("synced", {}).keys()) or "none"
         _notify(
@@ -834,6 +801,60 @@ async def _run_user_job(hub, job_config: dict):
     )
 
 
+# Single source of truth for all built-in jobs.
+# Format: job_id -> (func, display_name, cron_kwargs)
+_JOB_SPECS: dict[str, tuple] = {
+    "daily_briefing":                            (job_daily_briefing_compute,               "Daily Briefing",                     {"hour": 6,  "minute": 50}),
+    "daily_reflexion":                           (job_daily_reflexion_report,               "Daily Reflexion",                    {"hour": 7,  "minute": 0}),
+    "grant_research_sweep":                      (job_grant_research_sweep,                 "Grant Research Sweep",               {"day_of_week": "mon", "hour": 8,  "minute": 0}),
+    "hutto_planning_monitor":                    (job_hutto_planning_monitor,               "Hutto Planning Monitor",             {"day_of_week": "mon", "hour": 8,  "minute": 30}),
+    "weekly_fare_alert":                         (job_weekly_fare_alert,                    "Weekly Fare Alert",                  {"day_of_week": "mon", "hour": 13, "minute": 30}),
+    "sigma_signal_check":                        (job_sigma_signal_check,                   "Sigma Signal Check",                 {"hour": 14, "minute": 0}),
+    "markets_daily_premarket_brief":             (job_markets_daily_premarket_brief,        "Markets Pre-Market Brief",           {"day_of_week": "mon-fri", "hour": 8, "minute": 30}),
+    "markets_weekly_picks_digest":               (job_markets_weekly_picks_digest,          "Markets Weekly Picks Digest",        {"day_of_week": "mon", "hour": 7,  "minute": 0}),
+    "markets_monthly_portfolio_review":          (job_markets_monthly_portfolio_review,     "Markets Monthly P&L Review",         {"day": "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}),
+    # V2 Morning Pipeline (Mon-Fri)
+    "markets_v2_overnight_macro":                (job_markets_v2_overnight_macro,           "V2 Overnight Macro Review",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 30}),
+    "markets_v2_news_intelligence":              (job_markets_v2_news_intelligence,         "V2 News Intelligence Scan",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 45}),
+    "markets_v2_sentiment_scan":                 (job_markets_v2_sentiment_scan,            "V2 Sentiment Scan",                  {"day_of_week": "mon-fri", "hour": 6,  "minute": 0}),
+    "markets_v2_whale_activity":                 (job_markets_v2_whale_activity,            "V2 Whale Activity Scan",             {"day_of_week": "mon-fri", "hour": 6,  "minute": 15}),
+    "markets_v2_insider_scan":                   (job_markets_v2_insider_scan,              "V2 Insider Transaction Scan",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 30}),
+    "markets_v2_regime_assessment":              (job_markets_v2_regime_assessment,         "V2 Market Regime Assessment",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 45}),
+    "markets_v2_options_flow":                   (job_markets_v2_options_flow,              "V2 Options Flow Analysis",           {"day_of_week": "mon-fri", "hour": 7,  "minute": 0}),
+    "markets_v2_watchlist_generation":           (job_markets_v2_watchlist_generation,      "V2 Watchlist Generation",            {"day_of_week": "mon-fri", "hour": 7,  "minute": 30}),
+    "markets_v2_probability_scan":               (job_markets_v2_probability_scan,          "V2 Probability Assessment",          {"day_of_week": "mon-fri", "hour": 8,  "minute": 0}),
+    "markets_v2_executive_briefing":             (job_markets_v2_executive_briefing,        "V2 Executive Briefing",              {"day_of_week": "mon-fri", "hour": 8,  "minute": 15}),
+    # V2 Hourly (Mon-Fri market hours)
+    "markets_v2_hourly_position_review":         (job_markets_v2_hourly_position_review,    "V2 Hourly Position Review",          {"day_of_week": "mon-fri", "hour": "10-15", "minute": 0}),
+    "markets_v2_hourly_trailing_stops":          (job_markets_v2_hourly_trailing_stops,     "V2 Hourly Trailing Stop Update",     {"day_of_week": "mon-fri", "hour": "10-15", "minute": 15}),
+    "markets_v2_hourly_news_refresh":            (job_markets_v2_hourly_news_refresh,       "V2 Hourly News Refresh",             {"day_of_week": "mon-fri", "hour": "10-15", "minute": 30}),
+    # V2 End of Day (Mon-Fri)
+    "markets_v2_eod_performance":                (job_markets_v2_eod_performance,           "V2 EOD Performance Metrics",         {"day_of_week": "mon-fri", "hour": 16, "minute": 0}),
+    "markets_v2_eod_risk_assessment":            (job_markets_v2_eod_risk_assessment,       "V2 EOD Risk Assessment",             {"day_of_week": "mon-fri", "hour": 16, "minute": 15}),
+    "markets_v2_eod_journal":                    (job_markets_v2_eod_journal,               "V2 EOD Trading Journal",             {"day_of_week": "mon-fri", "hour": 16, "minute": 30}),
+    "markets_v2_eod_next_day_plan":              (job_markets_v2_eod_next_day_plan,         "V2 EOD Next-Day Plan",               {"day_of_week": "mon-fri", "hour": 16, "minute": 45}),
+    # V2 Weekly (Monday)
+    "markets_v2_weekly_portfolio_review":        (job_markets_v2_weekly_portfolio_review,        "V2 Weekly Portfolio Review",      {"day_of_week": "mon", "hour": 9,  "minute": 30}),
+    "markets_v2_weekly_strategy_optimization":   (job_markets_v2_weekly_strategy_optimization,   "V2 Weekly Strategy Optimization", {"day_of_week": "mon", "hour": 10, "minute": 0}),
+    "markets_v2_weekly_marketing_content":       (job_markets_v2_weekly_marketing_content,       "V2 Weekly Marketing Content",     {"day_of_week": "mon", "hour": 10, "minute": 30}),
+    "markets_v2_weekly_performance_report":      (job_markets_v2_weekly_performance_report,      "V2 Weekly Performance Report",    {"day_of_week": "mon", "hour": 11, "minute": 0}),
+    # V2 Monthly (1st Monday)
+    "markets_v2_monthly_backtest_update":        (job_markets_v2_monthly_backtest_update,        "V2 Monthly Backtest Update",      {"day": "1-7", "day_of_week": "mon", "hour": 7,  "minute": 30}),
+    "markets_v2_monthly_strategy_tuning":        (job_markets_v2_monthly_strategy_tuning,        "V2 Monthly Strategy Tuning",      {"day": "1-7", "day_of_week": "mon", "hour": 8,  "minute": 0}),
+    "markets_v2_monthly_rebalance":              (job_markets_v2_monthly_rebalance,              "V2 Monthly Portfolio Rebalance",  {"day": "1-7", "day_of_week": "mon", "hour": 10, "minute": 0}),
+    "markets_v2_monthly_curriculum_refresh":     (job_markets_v2_monthly_curriculum_refresh,     "V2 Monthly Curriculum Refresh",   {"day": "1-7", "day_of_week": "mon", "hour": 11, "minute": 0}),
+    # Capitol Trades
+    "capitol_trades_daily_refresh":              (job_capitol_trades_daily_refresh,         "Capitol Trades Daily Refresh",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 0}),
+    "capitol_trades_signal_digest":              (job_capitol_trades_signal_digest,         "Capitol Trades Signal Digest",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 30}),
+    "nightly_db_cleanup":                        (job_nightly_db_cleanup,                   "Nightly DB Cleanup",                 {"hour": 2,  "minute": 0}),
+    "nightly_db_backup":                         (job_nightly_db_backup,                    "Nightly DB Backup",                  {"hour": 3,  "minute": 0}),
+    "sync_free_llm_keys":                        (job_sync_free_llm_keys,                   "Sync Free LLM Keys",                 {"hour": 7,  "minute": 15}),
+}
+
+# Single source of truth for built-in job IDs (derived from _JOB_SPECS)
+BUILT_IN_JOB_IDS: frozenset[str] = frozenset(_JOB_SPECS.keys())
+
+
 class HubScheduler:
     def __init__(self, hub=None):
         self.hub = hub  # reference to HubServer (for submit_job)
@@ -843,54 +864,13 @@ class HubScheduler:
         self.logger = get_logger("scheduler")
 
     def build(self):
-        """Register all built-in jobs"""
+        """Register all built-in jobs from _JOB_SPECS."""
         if CronTrigger is None:
             raise RuntimeError("APScheduler CronTrigger is not available")
 
         tz = _get_timezone()
-        job_specs = {
-            "daily_briefing":                       (job_daily_briefing_compute,               "Daily Briefing",                     {"hour": 6,  "minute": 50}),
-            "daily_reflexion":                      (job_daily_reflexion_report,               "Daily Reflexion",                    {"hour": 7,  "minute": 0}),
-            "grant_research_sweep":                 (job_grant_research_sweep,                 "Grant Research Sweep",               {"day_of_week": "mon", "hour": 8,  "minute": 0}),
-            "hutto_planning_monitor":               (job_hutto_planning_monitor,               "Hutto Planning Monitor",             {"day_of_week": "mon", "hour": 8,  "minute": 30}),
-            "weekly_fare_alert":                    (job_weekly_fare_alert,                    "Weekly Fare Alert",                  {"day_of_week": "mon", "hour": 13, "minute": 30}),
-            "sigma_signal_check":                   (job_sigma_signal_check,                   "Sigma Signal Check",                 {"hour": 14, "minute": 0}),
-            "markets_daily_premarket_brief":        (job_markets_daily_premarket_brief,        "Markets Pre-Market Brief",           {"day_of_week": "mon-fri", "hour": 8, "minute": 30}),
-            "markets_weekly_picks_digest":          (job_markets_weekly_picks_digest,          "Markets Weekly Picks Digest",        {"day_of_week": "mon", "hour": 7,  "minute": 0}),
-            "markets_monthly_portfolio_review":     (job_markets_monthly_portfolio_review,     "Markets Monthly P&L Review",         {"day": "1-7", "day_of_week": "mon", "hour": 9, "minute": 0}),
-            "markets_v2_overnight_macro":           (job_markets_v2_overnight_macro,           "V2 Overnight Macro Review",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 30}),
-            "markets_v2_news_intelligence":         (job_markets_v2_news_intelligence,         "V2 News Intelligence Scan",          {"day_of_week": "mon-fri", "hour": 5,  "minute": 45}),
-            "markets_v2_sentiment_scan":            (job_markets_v2_sentiment_scan,            "V2 Sentiment Scan",                  {"day_of_week": "mon-fri", "hour": 6,  "minute": 0}),
-            "markets_v2_whale_activity":            (job_markets_v2_whale_activity,            "V2 Whale Activity Scan",             {"day_of_week": "mon-fri", "hour": 6,  "minute": 15}),
-            "markets_v2_insider_scan":              (job_markets_v2_insider_scan,              "V2 Insider Transaction Scan",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 30}),
-            "markets_v2_regime_assessment":         (job_markets_v2_regime_assessment,         "V2 Market Regime Assessment",        {"day_of_week": "mon-fri", "hour": 6,  "minute": 45}),
-            "markets_v2_options_flow":              (job_markets_v2_options_flow,              "V2 Options Flow Analysis",           {"day_of_week": "mon-fri", "hour": 7,  "minute": 0}),
-            "markets_v2_watchlist_generation":      (job_markets_v2_watchlist_generation,      "V2 Watchlist Generation",            {"day_of_week": "mon-fri", "hour": 7,  "minute": 30}),
-            "markets_v2_probability_scan":          (job_markets_v2_probability_scan,          "V2 Probability Assessment",          {"day_of_week": "mon-fri", "hour": 8,  "minute": 0}),
-            "markets_v2_executive_briefing":        (job_markets_v2_executive_briefing,        "V2 Executive Briefing",              {"day_of_week": "mon-fri", "hour": 8,  "minute": 15}),
-            "markets_v2_hourly_position_review":    (job_markets_v2_hourly_position_review,    "V2 Hourly Position Review",          {"day_of_week": "mon-fri", "hour": "10-15", "minute": 0}),
-            "markets_v2_hourly_trailing_stops":     (job_markets_v2_hourly_trailing_stops,     "V2 Hourly Trailing Stop Update",     {"day_of_week": "mon-fri", "hour": "10-15", "minute": 15}),
-            "markets_v2_hourly_news_refresh":       (job_markets_v2_hourly_news_refresh,       "V2 Hourly News Refresh",             {"day_of_week": "mon-fri", "hour": "10-15", "minute": 30}),
-            "markets_v2_eod_performance":           (job_markets_v2_eod_performance,           "V2 EOD Performance Metrics",         {"day_of_week": "mon-fri", "hour": 16, "minute": 0}),
-            "markets_v2_eod_risk_assessment":       (job_markets_v2_eod_risk_assessment,       "V2 EOD Risk Assessment",             {"day_of_week": "mon-fri", "hour": 16, "minute": 15}),
-            "markets_v2_eod_journal":               (job_markets_v2_eod_journal,               "V2 EOD Trading Journal",             {"day_of_week": "mon-fri", "hour": 16, "minute": 30}),
-            "markets_v2_eod_next_day_plan":         (job_markets_v2_eod_next_day_plan,         "V2 EOD Next-Day Plan",               {"day_of_week": "mon-fri", "hour": 16, "minute": 45}),
-            "markets_v2_weekly_portfolio_review":   (job_markets_v2_weekly_portfolio_review,   "V2 Weekly Portfolio Review",         {"day_of_week": "mon", "hour": 9,  "minute": 30}),
-            "markets_v2_weekly_strategy_optimization": (job_markets_v2_weekly_strategy_optimization, "V2 Weekly Strategy Optimization", {"day_of_week": "mon", "hour": 10, "minute": 0}),
-            "markets_v2_weekly_marketing_content":  (job_markets_v2_weekly_marketing_content,  "V2 Weekly Marketing Content",        {"day_of_week": "mon", "hour": 10, "minute": 30}),
-            "markets_v2_weekly_performance_report": (job_markets_v2_weekly_performance_report, "V2 Weekly Performance Report",       {"day_of_week": "mon", "hour": 11, "minute": 0}),
-            "markets_v2_monthly_backtest_update":   (job_markets_v2_monthly_backtest_update,   "V2 Monthly Backtest Update",         {"day": "1-7", "day_of_week": "mon", "hour": 7,  "minute": 30}),
-            "markets_v2_monthly_strategy_tuning":   (job_markets_v2_monthly_strategy_tuning,   "V2 Monthly Strategy Tuning",         {"day": "1-7", "day_of_week": "mon", "hour": 8,  "minute": 0}),
-            "markets_v2_monthly_rebalance":         (job_markets_v2_monthly_rebalance,         "V2 Monthly Portfolio Rebalance",     {"day": "1-7", "day_of_week": "mon", "hour": 10, "minute": 0}),
-            "markets_v2_monthly_curriculum_refresh": (job_markets_v2_monthly_curriculum_refresh, "V2 Monthly Curriculum Refresh",     {"day": "1-7", "day_of_week": "mon", "hour": 11, "minute": 0}),
-            "capitol_trades_daily_refresh":         (job_capitol_trades_daily_refresh,         "Capitol Trades Daily Refresh",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 0}),
-            "capitol_trades_signal_digest":         (job_capitol_trades_signal_digest,         "Capitol Trades Signal Digest",       {"day_of_week": "mon-fri", "hour": 9,  "minute": 30}),
-            "nightly_db_cleanup":                   (job_nightly_db_cleanup,                   "Nightly DB Cleanup",                 {"hour": 2,  "minute": 0}),
-            "nightly_db_backup":                    (job_nightly_db_backup,                    "Nightly DB Backup",                  {"hour": 3,  "minute": 0}),
-            "sync_free_llm_keys":                   (job_sync_free_llm_keys,                   "Sync Free LLM Keys",                 {"hour": 7,  "minute": 15}),
-        }
 
-        for job_id, (func, name, cron_kwargs) in job_specs.items():
+        for job_id, (func, name, cron_kwargs) in _JOB_SPECS.items():
             trigger = CronTrigger(timezone=tz, **cron_kwargs)
             self.scheduler.add_job(
                 _make_tracked(func, job_id),
@@ -944,7 +924,7 @@ class HubScheduler:
             raise RuntimeError("APScheduler triggers are not available")
 
         config = dict(job_config)
-        job_id = str(config.get("id") or f"user_job_{int(datetime.utcnow().timestamp())}")
+        job_id = str(config.get("id") or f"user_job_{int(datetime.now(timezone.utc).timestamp())}")
         config["id"] = job_id
         name = config.get("name") or job_id.replace("_", " ").title()
         tz = _get_timezone()

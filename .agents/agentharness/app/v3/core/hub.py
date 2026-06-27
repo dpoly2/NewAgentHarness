@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import threading
@@ -161,7 +162,6 @@ class HubServer:
 
                 job_data: dict = job.get("job_data") or {}
                 if isinstance(job_data, str):
-                    import json
                     try:
                         job_data = json.loads(job_data)
                     except Exception:

@@ -1,3 +1,19 @@
+"""
+core/database.py — ArchonHub SQLite persistence layer.
+
+Connection strategy:
+  - Most CRUD helpers (create/list/update/delete) open a short-lived connection
+    per call and close it in a finally block — simple and safe for low-frequency paths.
+  - The 4 high-frequency poll functions (_insert_ws_event, _claim_queued_job,
+    _check_job_cancel_flag, _count_queued_jobs) use a persistent thread-local
+    connection via _thread_conn() to avoid open/close overhead on every poll cycle.
+    Do NOT call conn.close() on connections returned by _thread_conn().
+
+Schema versioning:
+  - _SCHEMA_VERSION is bumped whenever a new table or column is added.
+  - _init_schema() skips the full migration pass when the stored version matches,
+    avoiding redundant CREATE TABLE IF NOT EXISTS checks on every startup.
+"""
 from __future__ import annotations
 
 import base64
@@ -7,6 +23,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -103,6 +120,26 @@ def _db_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA synchronous=NORMAL")   # safe with WAL; faster than FULL
     conn.execute("PRAGMA cache_size=-32000")    # 32 MB page cache
     conn.execute("PRAGMA temp_store=MEMORY")    # temp tables in RAM
+    return conn
+
+
+_tls = threading.local()
+
+
+def _thread_conn() -> sqlite3.Connection:
+    """Return a persistent thread-local SQLite connection (WAL, row factory set).
+    Do NOT call conn.close() on the returned connection — it is reused."""
+    conn = getattr(_tls, 'conn', None)
+    if conn is None:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA cache_size=-32000")
+        conn.execute("PRAGMA temp_store=MEMORY")
+        _tls.conn = conn
     return conn
 
 
@@ -752,7 +789,19 @@ def _ensure_worker_schema() -> None:
         conn.close()
 
 
+_SCHEMA_VERSION = 11  # bump when adding new tables or columns
+
+
 def _init_schema() -> None:
+    # Fast path: skip migrations if DB is already at current schema version.
+    # This avoids running 5+ CREATE TABLE IF NOT EXISTS checks on every startup.
+    try:
+        existing_version = int(_config_value("schema_version", 0) or 0)
+        if existing_version >= _SCHEMA_VERSION:
+            return
+    except Exception:
+        pass  # DB may not exist yet — proceed with full init
+
     if db and hasattr(db, "init_schema"):
         try:
             db.init_schema()  # type: ignore[attr-defined]
@@ -760,6 +809,9 @@ def _init_schema() -> None:
             _ensure_worker_schema()
             _ensure_alpaca_schema()
             _ensure_capitol_schema()
+            _ensure_agent_runner_schema()
+            _table_columns_cache.clear()  # flush stale column metadata after migrations
+            _set_config_value("schema_version", _SCHEMA_VERSION)
             return
         except Exception:
             pass
@@ -768,6 +820,9 @@ def _init_schema() -> None:
     _ensure_worker_schema()
     _ensure_alpaca_schema()
     _ensure_capitol_schema()
+    _ensure_agent_runner_schema()
+    _table_columns_cache.clear()  # flush stale column metadata after migrations
+    _set_config_value("schema_version", _SCHEMA_VERSION)
 
 
 def _config_value(key: str, default: Any = None) -> Any:
@@ -961,15 +1016,6 @@ def _list_job_records(status_filter: Optional[str] = None) -> list[dict]:
         where.append("status = ?")
         params.append(status_filter)
     return _list_records("job_queue", where=where, params=params, order_by="queued_at ASC", json_fields={"job_data"})
-
-
-def _load_pending_jobs() -> list[dict]:
-    if db and hasattr(db, "load_pending_jobs"):
-        try:
-            return db.load_pending_jobs()  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    return _list_job_records("queued")
 
 
 def _save_run_record(result: dict) -> None:
@@ -1280,42 +1326,14 @@ def _get_plan_events(plan_id: str, limit: int = 200) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def _insert_ws_event(payload: dict) -> int:
-    """Insert a WebSocket broadcast event. All workers poll and forward to their clients."""
-    conn = _db_connection()
-    try:
-        cur = conn.execute(
-            "INSERT INTO ws_events (payload_json, created_at) VALUES (?, ?)",
-            (_json_dumps(payload), _now_iso()),
-        )
-        conn.commit()
-        return cur.lastrowid or 0
-    finally:
-        conn.close()
-
-
-def _get_ws_events_since(last_id: int) -> list[tuple[int, dict]]:
-    """Return [(id, payload), ...] for events added after last_id."""
-    conn = _db_connection()
-    try:
-        rows = conn.execute(
-            "SELECT id, payload_json FROM ws_events WHERE id > ? ORDER BY id ASC LIMIT 100",
-            (last_id,),
-        ).fetchall()
-        return [(row[0], _json_loads(row[1], {})) for row in rows]
-    finally:
-        conn.close()
-
-
-def _cleanup_old_ws_events(max_age_seconds: int = 300) -> None:
-    """Delete ws_events older than max_age_seconds to prevent table bloat."""
-    from datetime import timedelta
-    cutoff = (_utcnow() - timedelta(seconds=max_age_seconds)).isoformat()
-    conn = _db_connection()
-    try:
-        conn.execute("DELETE FROM ws_events WHERE created_at < ?", (cutoff,))
-        conn.commit()
-    finally:
-        conn.close()
+    """Insert a WebSocket broadcast event. Uses a persistent thread-local connection."""
+    conn = _thread_conn()
+    cur = conn.execute(
+        "INSERT INTO ws_events (payload_json, created_at) VALUES (?, ?)",
+        (_json_dumps(payload), _now_iso()),
+    )
+    conn.commit()
+    return cur.lastrowid or 0
 
 
 def _claim_queued_job() -> dict | None:
@@ -1324,46 +1342,37 @@ def _claim_queued_job() -> dict | None:
     Uses two-step optimistic lock: SELECT the oldest queued id, then UPDATE with
     a WHERE status='queued' guard so two workers cannot claim the same row.
     """
-    conn = _db_connection()
-    try:
-        row = conn.execute(
-            "SELECT id FROM job_queue WHERE status = 'queued' ORDER BY queued_at ASC LIMIT 1"
-        ).fetchone()
-        if row is None:
-            return None
-        job_id = row[0]
-        now = _now_iso()
-        cur = conn.execute(
-            "UPDATE job_queue SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'",
-            (now, job_id),
-        )
-        conn.commit()
-        if cur.rowcount == 0:
-            return None  # Another worker claimed it first
-        job_row = conn.execute("SELECT * FROM job_queue WHERE id = ?", (job_id,)).fetchone()
-        return _row_to_dict(job_row, json_fields={"job_data"})
-    finally:
-        conn.close()
+    conn = _thread_conn()
+    row = conn.execute(
+        "SELECT id FROM job_queue WHERE status = 'queued' ORDER BY queued_at ASC LIMIT 1"
+    ).fetchone()
+    if row is None:
+        return None
+    job_id = row[0]
+    now = _now_iso()
+    cur = conn.execute(
+        "UPDATE job_queue SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'",
+        (now, job_id),
+    )
+    conn.commit()
+    if cur.rowcount == 0:
+        return None  # Another worker claimed it first
+    job_row = conn.execute("SELECT * FROM job_queue WHERE id = ?", (job_id,)).fetchone()
+    return _row_to_dict(job_row, json_fields={"job_data"})
 
 
 def _check_job_cancel_flag(run_id: str) -> bool:
     """Return True if the job has been set to 'cancelling' by an external request."""
-    conn = _db_connection()
-    try:
-        row = conn.execute("SELECT status FROM job_queue WHERE id = ?", (run_id,)).fetchone()
-        return row is not None and row[0] == "cancelling"
-    finally:
-        conn.close()
+    conn = _thread_conn()
+    row = conn.execute("SELECT status FROM job_queue WHERE id = ?", (run_id,)).fetchone()
+    return row is not None and row[0] == "cancelling"
 
 
 def _count_queued_jobs() -> int:
     """Return the number of jobs currently in 'queued' status."""
-    conn = _db_connection()
-    try:
-        row = conn.execute("SELECT COUNT(*) FROM job_queue WHERE status = 'queued'").fetchone()
-        return row[0] if row else 0
-    finally:
-        conn.close()
+    conn = _thread_conn()
+    row = conn.execute("SELECT COUNT(*) FROM job_queue WHERE status = 'queued'").fetchone()
+    return row[0] if row else 0
 
 
 def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
