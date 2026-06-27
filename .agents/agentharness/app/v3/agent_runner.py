@@ -4,7 +4,7 @@ agent_runner.py — ArchonHub Agent Execution Engine
 Executes a single agent dispatch end-to-end:
   1. Load agent skill (DB first, then skill file)
   2. Inject memory + context + tool data
-  3. Call LLM
+  3. Call LLM via llm_router.get_llm_for_agent() (free-key → Ollama → global fallback)
   4. Parse structured JSON output
   5. Write DB updates (any table)
   6. Save run record + memory
@@ -37,6 +37,12 @@ Execution model:
   ThreadPoolExecutor(max_workers=4). Follow-up agents (depth=1) run after
   the first wave completes. This cuts multi-agent wall time from sum(latencies)
   to max(latencies) for the first dispatch wave.
+
+LLM routing:
+  run_agent() calls llm_router.get_llm_for_agent() when available, which applies
+  a 4-tier priority: per-agent override → model_catalog → free-key providers
+  (validated via free_llm_keys) → Ollama → global config. Falls back to
+  hub_nodes._llm() if llm_router is not importable.
 
 Memory management:
   Each run_agent() call saves at most 30 run_* history entries per agent.
@@ -76,6 +82,12 @@ try:
     NODES_OK = True
 except ImportError:
     NODES_OK = False
+
+try:
+    from llm_router import get_llm_for_agent as _get_llm_for_agent
+    ROUTER_OK = True
+except ImportError:
+    ROUTER_OK = False
 
 try:
     from langchain_core.messages import SystemMessage, HumanMessage
@@ -402,7 +414,10 @@ def run_agent(
     # 4. Call LLM
     _emit("agent_thinking", message=f"{agent_id} working on task...")
     try:
-        model = _llm(temperature=0.3)
+        model = (
+            _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
+            if ROUTER_OK else _llm(temperature=0.3)
+        )
         response = model.invoke([
             SystemMessage(content=system),
             HumanMessage(content=task),

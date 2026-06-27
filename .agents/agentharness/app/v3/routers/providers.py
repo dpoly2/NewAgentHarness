@@ -34,7 +34,7 @@ async def sync_free_llm_keys_endpoint(
         import asyncio
         from free_llm_keys import sync_free_keys
         providers = (body or {}).get("providers")  # optional list to limit scope
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         result = await loop.run_in_executor(None, lambda: sync_free_keys(providers))
         return {"success": True, **result}
     except Exception as e:

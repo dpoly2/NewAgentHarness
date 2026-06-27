@@ -126,6 +126,24 @@ def _llm(temperature: float = 0.2):
     except Exception:
         pass
 
+    # Free-key fallback: when no api_key is globally configured, try validated free providers.
+    # Keys are synced daily by job_sync_free_llm_keys and stored as llm_key_{provider}.
+    if not cfg.get("apiKey"):
+        try:
+            from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER, BASE_URL as _FREE_BASE_URL
+            for _p in dict.fromkeys(MODEL_TO_PROVIDER.values()):  # dedup, preserve insertion order
+                if validate_provider_key(_p) and hasattr(db, "get_config"):
+                    _key   = db.get_config(f"llm_key_{_p}") or ""
+                    _model = db.get_config(f"llm_model_{_p}_free") or ""
+                    if _key and _model:
+                        cfg["apiKey"]   = _key
+                        cfg["model"]    = _model
+                        cfg["baseUrl"]  = _FREE_BASE_URL
+                        cfg["provider"] = _p
+                        break
+        except Exception:
+            pass
+
     provider = cfg.get("provider", "openai")
     model    = cfg.get("model", "gpt-4o-mini")
     api_key  = cfg.get("apiKey", "") or os.environ.get("OPENAI_API_KEY", "")

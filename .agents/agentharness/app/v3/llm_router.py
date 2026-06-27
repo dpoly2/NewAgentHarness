@@ -5,8 +5,16 @@ Provides intelligent model routing:
   • Auto-discovers available Ollama models from localhost:11434
   • Maps skill types to best available model (Ollama-first, cloud fallback)
   • Supports per-agent model overrides stored in agent_registry.config
+  • Integrates with free_llm_keys: validated free providers tried before Ollama
   • Caches Ollama model list for 5 minutes to avoid repeated API calls
   • Builds LangChain LLM instances with correct provider/base_url settings
+
+Priority (get_llm_for_agent):
+  1. Per-agent override (preferred_provider/model in agent_registry.config)
+  2. model_catalog smart routing (capability tag matching)
+  3. Free-key providers from hub_db (validated via free_llm_keys, 30-min cache)
+  4. Ollama auto-assignment (skill keyword → model matching)
+  5. Global config from hub_db / ai_config.json / env vars
 
 Usage:
     from llm_router import get_llm_for_agent, discover_ollama_models, SKILL_MODEL_MAP
@@ -327,8 +335,9 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
     Priority:
       1. Agent's stored model override (preferred_provider / preferred_model)
       2. model_catalog smart routing (Perplexity-style, uses capability tags)
-      3. Ollama auto-assignment based on skill keywords (if Ollama is running)
-      4. Global config from hub_db / ai_config.json / env vars (existing _llm())
+      3. Free-key providers from hub_db (validated via free_llm_keys, insertion-order)
+      4. Ollama auto-assignment based on skill keywords (if Ollama is running)
+      5. Global config from hub_db / ai_config.json / env vars (existing _llm())
 
     Falls back to global _llm() on any error.
     """
@@ -361,28 +370,11 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
     except Exception as e:
         logger.debug("model_catalog routing failed for %s: %s", agent_id, e)
 
-    # 3. Ollama auto-assignment
-    if allow_ollama and ollama_is_running():
-        kws = extract_skill_keywords(agent_id, skill_text)
-        result = get_best_model_for_skill(kws)
-        if result:
-            model_name, provider = result
-            try:
-                logger.debug("Agent %s auto-assigned Ollama model: %s", agent_id, model_name)
-                return build_llm(provider="ollama", model=model_name,
-                                 temperature=temperature)
-            except Exception as e:
-                logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
-
-    # 3.5. Free-key providers from hub_db (validated before use)
+    # 3. Free-key providers from hub_db (validated before use)
     try:
         from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER, BASE_URL as _FREE_BASE_URL
         import hub_db as _hdb
-        seen_free_providers = set()
-        for _p in set(MODEL_TO_PROVIDER.values()):
-            if _p in seen_free_providers:
-                continue
-            seen_free_providers.add(_p)
+        for _p in dict.fromkeys(MODEL_TO_PROVIDER.values()):  # dedup, preserve insertion order
             if validate_provider_key(_p):
                 _key   = _hdb.get_config(f"llm_key_{_p}") or ""
                 _model = _hdb.get_config(f"llm_model_{_p}_free") or ""
@@ -401,7 +393,20 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
     except Exception as _e:
         logger.debug("Free-key routing failed for %s: %s", agent_id, _e)
 
-    # 4. Global config fallback
+    # 4. Ollama auto-assignment
+    if allow_ollama and ollama_is_running():
+        kws = extract_skill_keywords(agent_id, skill_text)
+        result = get_best_model_for_skill(kws)
+        if result:
+            model_name, provider = result
+            try:
+                logger.debug("Agent %s auto-assigned Ollama model: %s", agent_id, model_name)
+                return build_llm(provider="ollama", model=model_name,
+                                 temperature=temperature)
+            except Exception as e:
+                logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
+
+    # 5. Global config fallback
     try:
         from hub_nodes import _llm
         return _llm(temperature=temperature)
@@ -442,9 +447,23 @@ def get_routing_summary(agent_ids: list[str] | None = None) -> list[dict]:
                 provider = "?"
                 model    = "?"
         else:
-            source   = "global"
+            # Check for active free providers before falling back to global
+            source = "global"
             provider = "openai"
             model    = "gpt-4o-mini"
+            try:
+                from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER
+                import hub_db as _hdb
+                for _fp in dict.fromkeys(MODEL_TO_PROVIDER.values()):
+                    if validate_provider_key(_fp):
+                        _fm = _hdb.get_config(f"llm_model_{_fp}_free") or ""
+                        if _fm:
+                            source   = "free_key"
+                            provider = _fp
+                            model    = _fm
+                            break
+            except Exception:
+                pass
 
         summary.append({
             "agent_id":    aid,

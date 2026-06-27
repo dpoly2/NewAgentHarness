@@ -763,7 +763,8 @@ async def job_sync_free_llm_keys(hub):
                     hub_scheduler = getattr(hub, "scheduler", None)
                     if hub_scheduler and hasattr(hub_scheduler, "scheduler"):
                         hub_scheduler.scheduler.add_job(
-                            lambda: asyncio.ensure_future(job_sync_free_llm_keys(hub)),
+                            job_sync_free_llm_keys,
+                            args=[hub],
                             trigger=DateTrigger(run_date=retry_run_time),
                             id=retry_job_id,
                             name=f"Free LLM Keys Retry #{new_count}",
