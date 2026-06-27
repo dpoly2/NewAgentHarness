@@ -73,22 +73,55 @@ if (-not $isAdmin -and -not $NoService) {
 if (-not $ServiceOnly) {
     Write-Step "1/6" "Checking Python installation..."
 
+    # Prefer a python.exe from a Windows Store package directory (system-accessible,
+    # works under LocalSystem) over the per-user AppX execution aliases in WindowsApps.
+    # The aliases redirect through the user session and cannot be launched by services.
     $pythonExe = $null
-    foreach ($candidate in @("python", "python3", "py")) {
-        try {
-            $ver = & $candidate --version 2>&1
-            if ($ver -match "Python (\d+)\.(\d+)") {
-                $major = [int]$Matches[1]; $minor = [int]$Matches[2]
-                if ($major -ge 3 -and $minor -ge 11) {
-                    $pythonExe = (Get-Command $candidate -ErrorAction SilentlyContinue).Source
-                    if (-not $pythonExe) { $pythonExe = $candidate }
-                    Write-Ok "Python $major.$minor found: $pythonExe"
-                    break
-                } else {
-                    Write-Warn "Python $major.$minor is too old (need 3.11+)"
+
+    # 1. Look for real python.exe inside installed Store package directories first
+    $storePkgs = Get-ChildItem "C:\Program Files\WindowsApps" -Directory -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -like "PythonSoftwareFoundation.Python.3*_x64*" } |
+                 Sort-Object Name -Descending
+    foreach ($pkg in $storePkgs) {
+        $candidate = Join-Path $pkg.FullName "python.exe"
+        if (Test-Path $candidate) {
+            try {
+                $ver = & $candidate --version 2>&1
+                if ($ver -match "Python (\d+)\.(\d+)") {
+                    $major = [int]$Matches[1]; $minor = [int]$Matches[2]
+                    if ($major -ge 3 -and $minor -ge 11) {
+                        $pythonExe = $candidate
+                        Write-Ok "Python $major.$minor found (Store package, service-compatible): $pythonExe"
+                        break
+                    }
                 }
-            }
-        } catch {}
+            } catch {}
+        }
+    }
+
+    # 2. Fall back to PATH candidates (may be Store aliases — will warn)
+    if (-not $pythonExe) {
+        foreach ($candidate in @("python", "python3", "py")) {
+            try {
+                $ver = & $candidate --version 2>&1
+                if ($ver -match "Python (\d+)\.(\d+)") {
+                    $major = [int]$Matches[1]; $minor = [int]$Matches[2]
+                    if ($major -ge 3 -and $minor -ge 11) {
+                        $resolved = (Get-Command $candidate -ErrorAction SilentlyContinue).Source
+                        if ($resolved -like "*WindowsApps*" -and $resolved -like "*agent*AppData*") {
+                            Write-Warn "Python found via Store AppX alias: $resolved"
+                            Write-Info "This will NOT work when the service runs as LocalSystem."
+                            Write-Info "Install Python from https://www.python.org/downloads/ for reliable service operation."
+                        }
+                        $pythonExe = if ($resolved) { $resolved } else { $candidate }
+                        Write-Ok "Python $major.$minor found: $pythonExe"
+                        break
+                    } else {
+                        Write-Warn "Python $major.$minor is too old (need 3.11+)"
+                    }
+                }
+            } catch {}
+        }
     }
 
     if (-not $pythonExe) {

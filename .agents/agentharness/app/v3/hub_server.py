@@ -69,13 +69,22 @@ if FASTAPI_OK:
     async def lifespan(app: FastAPI):
         _init_schema()
         hub._loop = asyncio.get_running_loop()
-        if SECRET_KEY == _JWT_SECRET_DEFAULT:
-            import warnings
-            warnings.warn('ArchonHub is using the default JWT_SECRET. Set JWT_SECRET in .env!', stacklevel=1)
-            hub.logger.warning('SECURITY: JWT_SECRET is set to the default insecure value. Set JWT_SECRET in .env!')
+        _unsafe_ok = os.environ.get('ARCHONHUB_UNSAFE_DEFAULTS', '').lower() in ('1', 'true', 'yes')
         _default_admin_pw = "ArchonHub2024!"
-        if os.environ.get('ADMIN_PASSWORD', _default_admin_pw) == _default_admin_pw:
-            hub.logger.warning('SECURITY: ADMIN_PASSWORD is set to the default insecure value. Set ADMIN_PASSWORD in .env!')
+        _secret_insecure = SECRET_KEY == _JWT_SECRET_DEFAULT
+        _admin_insecure = os.environ.get('ADMIN_PASSWORD', _default_admin_pw) == _default_admin_pw
+        if _secret_insecure or _admin_insecure:
+            _msg_parts = []
+            if _secret_insecure:
+                _msg_parts.append('JWT_SECRET is set to the default insecure value — set JWT_SECRET in .env')
+            if _admin_insecure:
+                _msg_parts.append('ADMIN_PASSWORD is set to the default insecure value — set ADMIN_PASSWORD in .env')
+            _msg = 'SECURITY: ' + '; '.join(_msg_parts) + '.'
+            if _unsafe_ok:
+                hub.logger.warning(_msg + ' Continuing because ARCHONHUB_UNSAFE_DEFAULTS=1.')
+            else:
+                hub.logger.error(_msg + ' Set ARCHONHUB_UNSAFE_DEFAULTS=1 to override (dev only).')
+                raise SystemExit(1)
         # Start 5 DB-backed worker coroutines (each polls job_queue for unclaimed jobs)
         for _ in range(5):
             hub._worker_tasks.append(asyncio.create_task(hub._db_worker_loop()))

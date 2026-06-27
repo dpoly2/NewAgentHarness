@@ -1,0 +1,35 @@
+Task: Hourly trailing stop update: Review all open positions with trailing stops. Recommend trail adjustments based on current price action, ATR changes, and volatility. Flag positions where trail should be tightened or moved to breakeven. Protect any positions up more than 2R.
+Score: 0.80
+Critique: The output provides a clear and structured plan for implementing an hourly trailing stop update strategy. However, it could benefit from more specific examples and data to support the recommendations. Additionally, some of the steps may be too general or vague, such as 'Continuously Monitor Market Conditions' or 'Refine and Adjust Strategy'.
+Last Output:
+**Final Answer:**
+
+Based on the research plan outlined above, the following recommendations have been identified:
+
+**Recommendations:**
+
+1. **Regularly Review and Adjust Trailing Stops**: Regularly review all open positions with trailing stops to ensure that they are positioned correctly based on current price action, ATR changes, and volatility.
+
+2. **Flag Positions for Adjustment**: Flag positions where trail should be tightened or moved to breakeven levels to identify opportunities for optimal risk management.
+
+3. **Monitor Volatility Metrics**: Continuously monitor market volatility using indicators such as Bollinger Bands, Ichimoku Cloud, or other metrics to make informed decisions about trailing stop adjustments.
+
+4. **Adjust Stops Based on ATR Changes**: Adjust trailing stops based on changes in ATR to maintain an optimal risk-reward ratio.
+
+5. **Protect Positions Up More Than 2R**: Protect positions that are up more than 2R from further losses to minimize potential risks.
+
+**Next Steps:**
+
+1. **Implement a Trading Plan**: Develop and implement a comprehensive trading plan that incorporates the recommendations outlined above.
+
+2. **Utilize Technical Analysis Tools**: Utilize technical analysis tools such as ATR, Bollinger Bands, Ichimoku Cloud, or other metrics to assess volatility and make informed decisions about trailing stop adjustments.
+
+3. **Continuously Monitor Market Conditions**: Continuously monitor market conditions and adjust the trading plan accordingly to ensure optimal risk management.
+
+4. **Backtest Strategies**: Backtest strategies using historical data to validate their effectiveness and identify areas for improvement.
+
+5. **Refine and Adjust Strategy**: Refine and adjust the strategy based on backtesting results and continuous monitoring of market conditions.
+
+**Summary:**
+
+The research plan outlined above has identified key findings, assumptions, sources to verify, and notable risks that are essential for implementing an effective hourly t

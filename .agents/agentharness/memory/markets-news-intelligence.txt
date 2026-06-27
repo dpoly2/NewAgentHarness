@@ -1,0 +1,32 @@
+Task: Hourly news refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items (FDA decisions, earnings surprises, major news). Update catalyst scores for affected tickers.
+Score: 0.80
+Critique: The output provides a clear and structured plan for an hourly news refresh, including a summary, evidence, recommendations, next steps, and potential benefits. However, it lacks specific details on the implementation process, technical requirements, and potential risks associated with the plan.
+Last Output:
+**Final Answer:**
+
+The hourly news refresh research plan aims to provide real-time insights into market-moving events, regulatory changes, and earnings surprises. By scanning reliable news sources, flagging urgent items, updating catalyst scores, and verifying information, this plan can help traders make informed decisions.
+
+**Summary:**
+The plan will scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers every hour. It will flag URGENT items (FDA decisions, earnings surprises, major news) and update catalyst scores based on reliable sources such as SEC filings and financial news websites.
+
+**Evidence:**
+The plan is based on the following evidence:
+
+* Reliable news sources: Financial news websites (Bloomberg, CNBC, Reuters), regulatory bodies (SEC, FDA), industry-specific publications (The Wall Street Journal, Forbes, Barron's)
+* News aggregators or RSS feed readers: Google News, Apple News, Feedly
+* Verification methods: Multiple verification methods to confirm the accuracy of flagged items and updated catalyst scores
+
+**Recommendations:**
+
+1. Implement a filtering system to reduce information overload and prioritize urgent items.
+2. Regularly review and update the list of news sources to ensure reliability.
+3. Use multiple verification methods to confirm the accuracy of flagged items and updated catalyst scores.
+4. Test and validate the integration with the trading platform or spreadsheet before implementing it in production.
+5. Continuously monitor market conditions and adjust the research plan as needed to stay ahead of market volatility.
+
+**Next Steps:**
+
+1. Develop a filtering system to prioritize urgent items and reduce information overload.
+2. Establish a regular review schedule for news sources to ensure reliability.
+3. Implement multiple verification methods to confirm the accuracy of flagged items and updated catalyst scores.
+4. Test and validate the integration with the trading platform or spreadsheet be

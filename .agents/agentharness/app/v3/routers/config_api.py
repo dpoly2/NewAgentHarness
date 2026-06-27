@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from core.auth import get_admin_user, get_current_user
 from core.config import APP_VERSION, DB_PATH
-from core.database import _agent_stats, _all_config, _briefing_cache, _count_rows, _update_config_values, _utcnow
+from core.database import _agent_stats, _all_config, _briefing_cache, _count_rows, _count_queued_jobs, _update_config_values, _utcnow
 from core.hub import LANGGRAPH_OK, hub
 from core.models import ConfigUpdate
 from routers.scheduler import _scheduler_job_count
@@ -24,7 +24,7 @@ router = APIRouter()
 
 @router.get("/health")
 async def health():
-    queue_depth = hub._queue.qsize() if hub._queue else 0
+    queue_depth = _count_queued_jobs()
     # Resolve current LLM provider + model from config
     try:
         from hub_nodes import _load_ai_config  # type: ignore
@@ -36,8 +36,8 @@ async def health():
         _llm_provider, _llm_model = "openai", "gpt-4o-mini"
 
     scheduler_count = _scheduler_job_count()
-    worker_ok = hub._worker_task is not None and not hub._worker_task.done()
-    scheduler_ok = hub._scheduler is not None and scheduler_count > 0
+    worker_ok = bool(hub._worker_tasks) and any(not t.done() for t in hub._worker_tasks)
+    scheduler_ok = hub._scheduler is not None
 
     # Determine overall status
     if not worker_ok or not scheduler_ok:
@@ -70,9 +70,19 @@ async def get_config(admin_user: dict = Depends(get_admin_user)):
     return _all_config()
 
 
+_CONFIG_PROTECTED_KEYS = frozenset({
+    "jwt_secret",
+    "api_token",
+    "scheduler_leader",
+    "scheduler_leader_expires",
+})
+
 @router.put("/config")
 async def update_config(body: ConfigUpdate, admin_user: dict = Depends(get_admin_user)):
     del admin_user
+    blocked = [k for k in body.data if k in _CONFIG_PROTECTED_KEYS]
+    if blocked:
+        raise HTTPException(status_code=400, detail=f"Cannot update protected config keys: {blocked}")
     updated = _update_config_values(body.data)
     if "thread_pool_size" in body.data:
         old_executor = hub._executor
@@ -104,5 +114,5 @@ async def run_monitoring(current_user: dict = Depends(get_current_user)):
         
         return result
     except Exception as e:
-        logger.error(f"Monitoring error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Monitoring error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Monitoring cycle failed. Check server logs.")

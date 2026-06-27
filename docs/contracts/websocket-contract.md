@@ -66,7 +66,7 @@ The WebSocket contract documents both the initial auth handshake and the event p
 - Target URL in local mode is `ws://localhost:8765/ws`.
 - Current server implementation expects an initial JSON auth message after connect.
 - After connecting, the client must send `{"type":"auth","token":"<jwt>"}` within **15 seconds** or the server closes the connection with WebSocket close code `1008 (Policy Violation)`.
-- Common events include connected, run updates, notifications, and ping/pong heartbeats.
+- Common event types: `connected` (sent immediately after successful auth), `run_queued`, `run_started`, `run_completed`, `run_cancelled`, `run_failed` (run lifecycle), `notif` (push notification), `plan.created` / `plan.approved` / `plan.abandoned` (plan lifecycle), `pong` (heartbeat reply). Legacy names `agent_start`, `agent_thinking`, `agent_complete`, `inez_thinking`, `inez_response`, `run_update` are **not emitted** by the current server.
 - Broadcast delivery is DB-mediated: `broadcast()` writes to `ws_events`, and each worker polls that table every 200ms before forwarding events to its connected clients.
 - `connected.queue_depth` is a DB count from `SELECT COUNT(*) FROM job_queue WHERE status = 'queued'`, not an in-process queue size.
 
@@ -79,13 +79,17 @@ The WebSocket contract documents both the initial auth handshake and the event p
     "token": "<jwt>"
   },
   "event_types": [
-    "agent_start",
-    "agent_thinking",
-    "agent_complete",
-    "inez_thinking",
-    "inez_response",
-    "run_update",
-    "notification"
+    "connected",
+    "run_queued",
+    "run_started",
+    "run_completed",
+    "run_cancelled",
+    "run_failed",
+    "notif",
+    "plan.created",
+    "plan.approved",
+    "plan.abandoned",
+    "pong"
   ]
 }
 ```

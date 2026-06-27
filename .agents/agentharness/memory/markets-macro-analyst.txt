@@ -1,0 +1,31 @@
+Task: Overnight macro intelligence sweep: Federal Reserve posture, overnight futures moves, international markets, treasury yields, DXY, oil, gold. Classify macro environment as Risk-On or Risk-Off. Output Macro Score (0-100) and key overnight developments. This feeds the morning pipeline.
+Score: 1.00
+Critique: The output provides a clear classification of the macro environment as Risk-Off with a Macro Score of 70. However, some sections could be more concise and directly linked to the score. Additionally, providing specific data points for each evidence point would enhance the credibility of the analysis.
+Last Output:
+**Final Answer:**
+
+The macro environment is classified as **Risk-Off**, with a Macro Score of 70. This classification is based on a neutral to slightly dovish Fed tone, moderate volatility in overnight futures markets, mixed trading in international stock markets, and decreased US Treasury yields.
+
+**Summary:**
+The Risk-Off macro environment suggests a cautious market sentiment, characterized by a neutral to slightly dovish Fed tone, moderate volatility in overnight futures markets, and mixed trading in international stock markets. Decreased US Treasury yields further reinforce this classification.
+
+**Evidence:**
+
+1. Neutral to slightly dovish Fed tone from speakers and statements.
+2. Moderate volatility in overnight futures markets (ES, NQ, YM).
+3. Mixed trading in international stock markets (Euro Stoxx 50, FTSE 100, Hang Seng Index).
+4. Decrease in US Treasury yields.
+
+**Recommendations:**
+
+1. **Cautious Trading:** Adopt a cautious approach, focusing on risk management and position sizing.
+2. **Diversification:** Diversify portfolios to minimize exposure to potential market downturns.
+3. **Interest Rate Expectations:** Monitor US Treasury yields for further changes in interest rate expectations.
+
+**Next Steps:**
+
+1. Continuously monitor Fed speakers and statements.
+2. Track overnight futures markets for volatility and price movements.
+3. Analyze international stock market trends and adjust trading strategies accordingly.
+
+By following these recommendations, traders can navigate the Risk-Off macro environment effectively and make informed decisions to minimize potential losses.

@@ -1,0 +1,40 @@
+Task: Next-day trading plan: Based on today's journal, tomorrow's economic calendar, overnight macro setup, and current open positions — build tomorrow's game plan. Key levels to watch, potential setups to monitor, risk events to respect. Keep it to 5 actionable items.
+Score: 0.00
+Critique: Could not parse evaluator response: ```json
+{
+  "score": 0.8,
+  "critique": "The output provides a clear and structured plan for next-day trading, but it could benefit from more specific details and concrete examples to make the recommendations more actionable and effective."
+}
+```
+
+Explanation:
+
+* The output is well-structured and ea
+Last Output:
+**Summary:**
+Tomorrow's game plan aims to maximize potential gains while minimizing losses by identifying key levels to watch, potential trading setups, and risk events to respect. The plan is based on today's journal, tomorrow's economic calendar, overnight macro setup, and current open positions.
+
+**Evidence:**
+
+* Historical data and market trends provide a foundation for identifying support and resistance levels.
+* Volatility indicators such as Bollinger Bands, Ichimoku Cloud, or RSI help gauge market sentiment.
+* Economic data releases and interest rate decisions can significantly impact market sentiment.
+* Global events can also influence market reactions.
+
+**Recommendations:**
+
+1. **Review Tomorrow's Economic Calendar:** Study tomorrow's economic calendar to identify potential market opportunities and risks.
+2. **Adjust Current Open Positions:** Reassess risk profiles and potential profit targets for all open positions, and consider closing or adjusting positions that no longer align with tomorrow's game plan.
+3. **Monitor Market Sentiment Shifts:** Continuously monitor overnight macro data and economic calendar events for signs of market sentiment shifts.
+4. **Set Risk Management Parameters:** Establish stop-loss levels and position sizing to limit potential losses and maximize potential gains.
+5. **Continuously Monitor Key Levels:** Keep a close eye on key levels, including support and resistance levels, price targets, and volatility indicators.
+
+**Next Steps:**
+
+1. Review tomorrow's economic calendar and identify potential market opportunities and risks.
+2. Reassess risk profiles and potential profit targets for all open positions.
+3. Continuously monitor overnight macro data and economic calendar events for signs of market sentiment shifts.
+4. Establish stop-loss levels and position sizing to limit potential losses and maximize potential gains.
+5. Stay vigilant and adapt the game plan as needed based on changing market conditions.
+
+By following these actio

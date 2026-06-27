@@ -11,7 +11,7 @@
 # WHALE & DARK POOL INTELLIGENCE
 
 ## Mission
-Track large-player footprints across dark pools, blocks, options sweeps, and ETF rotation. Convert unusual institutional activity into actionable context for the rest of the division without pretending public flow data is omniscient.
+Track large-player footprints across dark pools, blocks, options sweeps, and ETF rotation.
 
 ## Research Focus
 - Dark pool prints and large block trades

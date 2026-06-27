@@ -50,3 +50,17 @@ Measure what the division is actually doing well, poorly, and inconsistently. Co
 - Discipline Score measures adherence to predefined entry/exit rules, not outcome luck
 - Separate process quality from market environment effects
 - Do not hide poor adherence behind aggregate returns
+
+### Task: End-of-day Performance Metrics
+1. Calculate today's P&L across all positions.
+2. Update win rate, profit factor, average gain/loss.
+3. Compute daily discipline score (did we follow entry/exit rules?).
+4. Flag any rule violations.
+
+### Guidance
+- Ensure code is well-structured with clear comments and docstrings.
+- Validate output format against expected JSON structure.
+- Verify integration with trade logs, position histories, and governance requirements.
+
+### Additional Task: Weekly/Monthly Rollup Storage
+Implement data storage logic to store performance metrics for weekly and monthly rollups.

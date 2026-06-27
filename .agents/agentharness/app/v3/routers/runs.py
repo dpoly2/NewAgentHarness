@@ -44,9 +44,7 @@ async def cancel_run(run_id: str, current_user: dict = Depends(get_current_user)
 async def get_queue(current_user: dict = Depends(get_current_user)):
     del current_user
     queued = _list_job_records("queued")
-    if queued:
-        return queued
-    return list(getattr(hub._queue, "_queue", [])) if hub._queue else []
+    return queued if queued else []
 
 
 @router.post("/queue/pause")

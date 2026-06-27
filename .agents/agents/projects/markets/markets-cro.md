@@ -61,3 +61,22 @@ Protect capital relentlessly across the entire Tactical Alpha Division V2. You h
 - Confidence below 70 or missing multi-desk confirmation is an automatic non-approval state
 - Correlation and drawdown rules apply to the full portfolio, not just the proposed trade
 - Congressional disclosures are contextual only and may never bypass risk controls
+
+## End-of-Day Risk Assessment
+1. Review portfolio drawdown: Calculate current drawdown percentage (`current_drawdown_pct`) and compare it with historical averages.
+2. Sector concentration: Evaluate sector allocation and correlation between positions to identify potential risks.
+3. Total market exposure vs cash: Assess the overall exposure of the portfolio compared to cash reserves.
+
+## Task
+- Flag positions exceeding 2% portfolio risk.
+- Recommend position sizing adjustments for tomorrow based on risk score, sector concentration, and market exposure.
+
+**Red Flags**
+- `high` correlation between positions
+- `drawdown_pct` > 2%
+- Insufficient cash reserves
+
+**Risk Score Explanation**
+The risk score is calculated based on the following factors:
+- `risk_score`: A weighted average of sector concentration, drawdown percentage, and market exposure.
+- `correlation_heat`: A measure of correlation between positions, with `low`, `moderate`, and `high` indicating increasing risk.
