@@ -1193,7 +1193,8 @@
             if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
             clearTimeout(state.wsReconnectTimer);
             setWSState('connecting', 'WebSocket connecting');
-            ws = new WebSocket(`ws://${location.host}/ws`);
+            const _wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${_wsProto}//${location.host}/ws`);
             ws.onopen = () => {
                 setWSState('online', 'WebSocket connected');
                 state.wsReconnectDelay = 5000;
