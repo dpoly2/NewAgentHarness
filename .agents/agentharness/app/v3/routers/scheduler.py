@@ -44,6 +44,19 @@ def _serialize_scheduler_job(job: Any) -> dict:
     }
 
 
+def _scheduler_job_count() -> int:
+    """Return total number of scheduled jobs (built-in + user). Used by /health."""
+    if not hub._scheduler:
+        return 0
+    try:
+        if hasattr(hub._scheduler, "get_job_list"):
+            return len(hub._scheduler.get_job_list())
+        inner = getattr(hub._scheduler, "scheduler", hub._scheduler)
+        return len(inner.get_jobs())
+    except Exception:
+        return 0
+
+
 @router.get("/scheduler")
 async def list_scheduler(current_user: dict = Depends(get_current_user)):
     del current_user

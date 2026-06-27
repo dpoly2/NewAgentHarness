@@ -948,6 +948,18 @@ def _update_user_last_login(user_id: int) -> None:
         conn.close()
 
 
+def _update_user_password(user_id: int, new_password: str) -> None:
+    conn = _db_connection()
+    try:
+        conn.execute(
+            "UPDATE users SET hashed_password = ? WHERE id = ?",
+            (_hash_password(new_password), user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _authenticate_user(username: str, password: str) -> dict | None:
     user = _user_by_username(username)
     if not user or not bool(user.get("is_active")):
@@ -1334,6 +1346,37 @@ def _insert_ws_event(payload: dict) -> int:
     )
     conn.commit()
     return cur.lastrowid or 0
+
+
+def _get_ws_events_since(last_id: int) -> list[tuple[int, dict]]:
+    """Return (id, payload) tuples for ws_events with id > last_id, ordered ascending.
+    Uses a persistent thread-local connection — do NOT call conn.close().
+    """
+    conn = _thread_conn()
+    rows = conn.execute(
+        "SELECT id, payload_json FROM ws_events WHERE id > ? ORDER BY id ASC",
+        (last_id,),
+    ).fetchall()
+    result = []
+    for row in rows:
+        try:
+            payload = _json_loads(row[1]) if isinstance(row[1], str) else row[1]
+        except Exception:
+            payload = {}
+        result.append((row[0], payload))
+    return result
+
+
+def _cleanup_old_ws_events(max_age_minutes: int = 10) -> None:
+    """Delete ws_events older than max_age_minutes. Called periodically (~every 5 min)."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        cutoff = (datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)).isoformat()
+        conn = _thread_conn()
+        conn.execute("DELETE FROM ws_events WHERE created_at < ?", (cutoff,))
+        conn.commit()
+    except Exception:
+        pass
 
 
 def _claim_queued_job() -> dict | None:
