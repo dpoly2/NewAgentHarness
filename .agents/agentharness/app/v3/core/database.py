@@ -789,6 +789,88 @@ def _ensure_worker_schema() -> None:
         conn.close()
 
 
+def _ensure_agent_runner_schema() -> None:
+    """Create the tables agent_runner.py persists ``db_writes`` into.
+
+    These (knowledge_base, documents, automations, events_log) are owned by
+    hub_db's canonical schema; this guards the fallback init path (when hub_db
+    is unavailable) so agent db_writes never hit a missing table. Idempotent —
+    ``IF NOT EXISTS`` leaves hub_db's canonical tables untouched when present.
+    """
+    conn = _db_connection()
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS knowledge_base (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source TEXT DEFAULT '',
+                source_type TEXT DEFAULT 'manual',
+                category TEXT DEFAULT 'general',
+                tags TEXT DEFAULT '[]',
+                project_slug TEXT DEFAULT '',
+                agent_id TEXT DEFAULT '',
+                is_active INTEGER DEFAULT 1,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS documents (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                doc_type TEXT DEFAULT 'general',
+                content TEXT DEFAULT '',
+                format TEXT DEFAULT 'markdown',
+                project_slug TEXT DEFAULT '',
+                client_id TEXT DEFAULT '',
+                entity_type TEXT DEFAULT '',
+                entity_id TEXT DEFAULT '',
+                version INTEGER DEFAULT 1,
+                status TEXT DEFAULT 'draft',
+                tags TEXT DEFAULT '[]',
+                created_by TEXT DEFAULT '',
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS automations (
+                id TEXT PRIMARY KEY,
+                slug TEXT UNIQUE,
+                name TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                project_slug TEXT DEFAULT '',
+                agent_id TEXT DEFAULT '',
+                trigger_type TEXT DEFAULT 'manual',
+                trigger_config TEXT DEFAULT '{}',
+                steps TEXT DEFAULT '[]',
+                status TEXT DEFAULT 'active',
+                last_run_at TEXT,
+                last_run_status TEXT DEFAULT '',
+                run_count INTEGER DEFAULT 0,
+                created_at TEXT,
+                updated_at TEXT
+            );
+            CREATE TABLE IF NOT EXISTS events_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT NOT NULL,
+                entity_type TEXT DEFAULT '',
+                entity_id TEXT DEFAULT '',
+                actor TEXT DEFAULT 'system',
+                summary TEXT DEFAULT '',
+                detail TEXT DEFAULT '{}',
+                level TEXT DEFAULT 'info',
+                created_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_knowledge_base_project_slug ON knowledge_base (project_slug);
+            CREATE INDEX IF NOT EXISTS idx_documents_project_slug ON documents (project_slug);
+            CREATE INDEX IF NOT EXISTS idx_automations_slug ON automations (slug);
+            CREATE INDEX IF NOT EXISTS idx_events_log_event_type ON events_log (event_type);
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 _SCHEMA_VERSION = 11  # bump when adding new tables or columns
 
 

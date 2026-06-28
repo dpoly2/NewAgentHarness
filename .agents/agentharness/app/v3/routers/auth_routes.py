@@ -5,8 +5,10 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 
+from pydantic import BaseModel
+
 from core.auth import _check_login_rate_limit, create_access_token, get_current_user, security
-from core.database import _authenticate_user, _count_rows, _create_user, _user_by_username
+from core.database import _authenticate_user, _count_rows, _create_user, _update_user_password, _user_by_username, _verify_password, _user_by_id
 from core.models import LoginRequest, RegisterRequest
 
 router = APIRouter()
@@ -56,3 +58,25 @@ async def register(
 @router.get("/auth/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.post("/auth/change-password")
+async def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    # get_current_user returns _user_public(), whose primary key is "id"
+    # (the JWT payload uses "user_id", but that payload is not what is injected here).
+    raw_id = current_user.get("id", current_user.get("user_id"))
+    if raw_id is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    user_id = int(raw_id)
+    full_user = _user_by_id(user_id)
+    if not full_user or not _verify_password(body.current_password, full_user.get("hashed_password", "")):
+        raise HTTPException(status_code=401, detail="Current password is incorrect")
+    _update_user_password(user_id, body.new_password)
+    return {"ok": True}
