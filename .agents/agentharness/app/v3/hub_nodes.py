@@ -126,9 +126,13 @@ def _llm(temperature: float = 0.2):
     except Exception:
         pass
 
-    # Free-key fallback: when no api_key is globally configured, try validated free providers.
-    # Keys are synced daily by job_sync_free_llm_keys and stored as llm_key_{provider}.
-    if not cfg.get("apiKey"):
+    # Free-key fallback: only when the configured provider actually needs an API key
+    # and none is set. Keyless local providers (ollama) and any provider with an
+    # explicit base_url are left untouched — otherwise we'd hijack a working local
+    # Ollama and route it to the external free-key endpoint, which hangs (524) when
+    # that endpoint is slow/down. Keys are synced daily by job_sync_free_llm_keys.
+    _KEYLESS_LOCAL = {"ollama"}
+    if not cfg.get("apiKey") and (cfg.get("provider") or "").lower() not in _KEYLESS_LOCAL and not cfg.get("baseUrl"):
         try:
             from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER, BASE_URL as _FREE_BASE_URL
             for _p in dict.fromkeys(MODEL_TO_PROVIDER.values()):  # dedup, preserve insertion order
@@ -172,6 +176,11 @@ def _llm(temperature: float = 0.2):
         "model":       model,
         "temperature": temperature,
         "api_key":     resolved_key or "sk-placeholder",
+        # Bound the call so a slow/unreachable endpoint fails fast instead of
+        # hanging past the reverse-proxy limit (~100s) and surfacing as a 524.
+        # No retries: timeout*(retries+1) must stay under the proxy limit.
+        "timeout":     45,
+        "max_retries": 0,
     }
     if resolved_url:
         kwargs["base_url"] = resolved_url

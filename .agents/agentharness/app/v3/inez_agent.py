@@ -134,6 +134,21 @@ def _llm(temperature: float = 0.3):
     )
 
 
+def _is_slow_local_provider() -> bool:
+    """True when the active LLM provider is a slow local backend (Ollama).
+
+    Used to skip optional secondary LLM calls (e.g. follow-up suggestions) that,
+    stacked after the main analysis call on CPU-only hardware, can push a chat
+    request past the reverse-proxy limit (~100s) and surface to the user as a 524.
+    """
+    try:
+        if DB_OK and hasattr(db, "get_config"):
+            return (db.get_config("llm_provider") or "").lower() == "ollama"
+    except Exception:
+        pass
+    return False
+
+
 def _load_skill() -> str:
     """Load Inez's skill/system prompt from disk."""
     try:
@@ -1523,7 +1538,10 @@ def think(
                 pass
 
         # ── Generate follow-up question suggestions ──────────────────────────
-        if LLM_OK and result.get("inez_message"):
+        # Skipped on slow local providers (Ollama on CPU): this is a second LLM
+        # call, and stacking it after the main analysis call can push the request
+        # past the reverse-proxy limit (~100s) and surface as a 524.
+        if LLM_OK and result.get("inez_message") and not _is_slow_local_provider():
             try:
                 if emit:
                     emit("inez_thinking", message="Generating follow-up suggestions...")
