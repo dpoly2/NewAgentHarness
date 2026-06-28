@@ -347,6 +347,58 @@ def validate_provider_key(provider: str) -> bool:
         return False
 
 
+# ── Round-robin load balancing across enabled free providers ────────────────────
+# Spreads LLM calls across the enabled+validated free keys so no single key gets
+# hammered (each free key has its own rate limit). State is module-level so all
+# callers (hub_nodes._llm, llm_router) share one rotation.
+_rr_lock = threading.Lock()
+_rr_index = 0
+
+
+def get_usable_free_providers() -> list[str]:
+    """Return enabled free providers that have a key + model and pass validation.
+
+    Insertion-order of MODEL_TO_PROVIDER is preserved (dedup). Validation uses the
+    30-min cache, so this is cheap to call on the hot path.
+    """
+    out: list[str] = []
+    if not callable(_hub_get_config):
+        return out
+    for p in dict.fromkeys(MODEL_TO_PROVIDER.values()):
+        try:
+            if (_hub_get_config(f"llm_enabled_{p}") or "0") != "1":
+                continue
+            if not (_hub_get_config(f"llm_key_{p}") or ""):
+                continue
+            if not (_hub_get_config(f"llm_model_{p}_free") or ""):
+                continue
+            if validate_provider_key(p):
+                out.append(p)
+        except Exception:
+            continue
+    return out
+
+
+def next_free_provider() -> tuple[str, str, str] | None:
+    """Round-robin pick of a usable free provider.
+
+    Returns (provider, api_key, model) for the next provider in rotation, or None
+    when no free provider is currently usable. Use BASE_URL as the base_url.
+    """
+    providers = get_usable_free_providers()
+    if not providers:
+        return None
+    global _rr_index
+    with _rr_lock:
+        provider = providers[_rr_index % len(providers)]
+        _rr_index += 1
+    key = _hub_get_config(f"llm_key_{provider}") or ""
+    model = _hub_get_config(f"llm_model_{provider}_free") or ""
+    if not key or not model:
+        return None
+    return (provider, key, model)
+
+
 # ── Retry state helpers ────────────────────────────────────────────────────────
 
 def get_retry_count() -> int:

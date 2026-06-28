@@ -370,26 +370,23 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
     except Exception as e:
         logger.debug("model_catalog routing failed for %s: %s", agent_id, e)
 
-    # 3. Free-key providers from hub_db (validated before use)
+    # 3. Free-key providers from hub_db (validated, round-robin load balanced)
     try:
-        from free_llm_keys import validate_provider_key, MODEL_TO_PROVIDER, BASE_URL as _FREE_BASE_URL
-        import hub_db as _hdb
-        for _p in dict.fromkeys(MODEL_TO_PROVIDER.values()):  # dedup, preserve insertion order
-            if validate_provider_key(_p):
-                _key   = _hdb.get_config(f"llm_key_{_p}") or ""
-                _model = _hdb.get_config(f"llm_model_{_p}_free") or ""
-                if _key and _model:
-                    try:
-                        logger.debug("Agent %s using validated free key for %s (%s)", agent_id, _p, _model)
-                        return build_llm(
-                            provider=_p,
-                            model=_model,
-                            base_url=_FREE_BASE_URL,
-                            api_key=_key,
-                            temperature=temperature,
-                        )
-                    except Exception as _fe:
-                        logger.debug("Free key build_llm failed for %s: %s", _p, _fe)
+        from free_llm_keys import next_free_provider, BASE_URL as _FREE_BASE_URL
+        _pick = next_free_provider()
+        if _pick:
+            _p, _key, _model = _pick
+            try:
+                logger.debug("Agent %s using round-robin free key for %s (%s)", agent_id, _p, _model)
+                return build_llm(
+                    provider=_p,
+                    model=_model,
+                    base_url=_FREE_BASE_URL,
+                    api_key=_key,
+                    temperature=temperature,
+                )
+            except Exception as _fe:
+                logger.debug("Free key build_llm failed for %s: %s", _p, _fe)
     except Exception as _e:
         logger.debug("Free-key routing failed for %s: %s", agent_id, _e)
 

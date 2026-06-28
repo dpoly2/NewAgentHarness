@@ -119,11 +119,15 @@ _PROMPT_CACHE: dict[str, tuple[str, float]] = {}
 _PROMPT_CACHE_TTL = 10.0
 
 
-def _llm(temperature: float = 0.3):
-    """Use the shared multi-provider LLM factory from hub_nodes when available."""
+def _llm(temperature: float = 0.3, weight: str = "light"):
+    """Use the shared multi-provider LLM factory from hub_nodes when available.
+
+    weight is forwarded to the factory: "heavy" prefers a fast free provider
+    (round-robin balanced) over slow local Ollama for costly reasoning calls.
+    """
     try:
         from hub_nodes import _llm as _hub_llm
-        return _hub_llm(temperature=temperature)
+        return _hub_llm(temperature=temperature, weight=weight)
     except Exception:
         pass
     # Bare fallback — direct OpenAI
@@ -135,15 +139,27 @@ def _llm(temperature: float = 0.3):
 
 
 def _is_slow_local_provider() -> bool:
-    """True when the active LLM provider is a slow local backend (Ollama).
+    """True when chat will run on a slow local backend (Ollama) with no fast path.
 
     Used to skip optional secondary LLM calls (e.g. follow-up suggestions) that,
     stacked after the main analysis call on CPU-only hardware, can push a chat
-    request past the reverse-proxy limit (~100s) and surface to the user as a 524.
+    request past the reverse-proxy limit (~100s) and surface as a 524.
+
+    Returns False when usable free providers exist — heavy calls then route to a
+    fast remote key, so the secondary call is affordable again.
     """
     try:
         if DB_OK and hasattr(db, "get_config"):
-            return (db.get_config("llm_provider") or "").lower() == "ollama"
+            if (db.get_config("llm_provider") or "").lower() != "ollama":
+                return False
+            # Ollama configured, but a usable free provider makes heavy calls fast.
+            try:
+                from free_llm_keys import get_usable_free_providers
+                if get_usable_free_providers():
+                    return False
+            except Exception:
+                pass
+            return True
     except Exception:
         pass
     return False
@@ -1158,7 +1174,9 @@ def _generate_followups(user_question: str, inez_response: str) -> list[str]:
         return []
     
     try:
-        model = _llm(temperature=0.7)  # Higher temp for creativity
+        # Only reached when a fast backend is active (see _is_slow_local_provider
+        # gate in think). weight="heavy" routes it to the same fast free key.
+        model = _llm(temperature=0.7, weight="heavy")  # Higher temp for creativity
         
         prompt = f"""You are Inez, Chief of Staff for David Smith's portfolio of ventures.
 
@@ -1412,7 +1430,7 @@ def think(
         augmented_message = user_message + "\n\n" + "\n\n".join(extra_blocks)
 
     try:
-        model = _llm(temperature=0.3)
+        model = _llm(temperature=0.3, weight="heavy")  # main reasoning → fast free key if available
         messages = [
             SystemMessage(content=system_prompt + dispatch_instructions),
             HumanMessage(content=augmented_message),

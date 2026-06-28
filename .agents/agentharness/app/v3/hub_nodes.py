@@ -108,7 +108,16 @@ def _load_ai_config() -> dict:
     return defaults
 
 
-def _llm(temperature: float = 0.2):
+def _llm(temperature: float = 0.2, weight: str = "light"):
+    """Build the shared multi-provider LLM.
+
+    weight controls free-key load balancing:
+      - "heavy": prefer a fast free provider (round-robin across enabled keys)
+        over the configured backend — used for the costly main reasoning call so
+        it doesn't run on slow local Ollama when a fast remote key is available.
+      - "light" (default): keep the configured backend (e.g. local Ollama) to
+        conserve limited free-key rate budget; free keys are only a fallback.
+    """
     cfg = _load_ai_config()
     # DB overrides take highest priority
     try:
@@ -125,6 +134,22 @@ def _llm(temperature: float = 0.2):
                     cfg["baseUrl"] = db_cfg["llm_base_url"]
     except Exception:
         pass
+
+    # Heavy calls: prefer a fast free provider, round-robin balanced across the
+    # enabled free keys. Overrides the configured backend (incl. local Ollama)
+    # only when a free provider is actually usable; otherwise falls through.
+    if weight == "heavy":
+        try:
+            from free_llm_keys import next_free_provider, BASE_URL as _FREE_BASE_URL
+            _pick = next_free_provider()
+            if _pick:
+                _p, _key, _model = _pick
+                cfg["provider"] = _p
+                cfg["apiKey"]   = _key
+                cfg["model"]    = _model
+                cfg["baseUrl"]  = _FREE_BASE_URL
+        except Exception:
+            pass
 
     # Free-key fallback: only when the configured provider actually needs an API key
     # and none is set. Keyless local providers (ollama) and any provider with an
