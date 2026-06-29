@@ -1435,6 +1435,10 @@ def think(
             SystemMessage(content=system_prompt + dispatch_instructions),
             HumanMessage(content=augmented_message),
         ]
+        # The reasoning call can take tens of seconds on a local CPU model; surface
+        # a status step so the UI shows progress instead of a silent wait.
+        if emit:
+            emit("inez_thinking", message="Consulting the AI engine…")
         response = model.invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
 

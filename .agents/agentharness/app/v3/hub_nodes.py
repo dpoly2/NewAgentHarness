@@ -203,8 +203,10 @@ def _llm(temperature: float = 0.2, weight: str = "light"):
         "api_key":     resolved_key or "sk-placeholder",
         # Bound the call so a slow/unreachable endpoint fails fast instead of
         # hanging past the reverse-proxy limit (~100s) and surfacing as a 524.
-        # No retries: timeout*(retries+1) must stay under the proxy limit.
-        "timeout":     45,
+        # 80s gives the slow local 1B model room to finish its (large-prompt,
+        # CPU-bound) generation — request overhead is ~1s — while staying under
+        # the proxy limit. No retries: timeout*(retries+1) must stay under it.
+        "timeout":     80,
         "max_retries": 0,
     }
     if resolved_url:
