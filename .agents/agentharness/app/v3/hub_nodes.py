@@ -139,6 +139,7 @@ def _llm(temperature: float = 0.2, weight: str = "light"):
     # enabled free keys. Overrides the configured backend (incl. local Ollama)
     # only when a free provider is actually usable; otherwise falls through.
     if weight == "heavy":
+        _picked_free = False
         try:
             from free_llm_keys import next_free_provider, BASE_URL as _FREE_BASE_URL
             _pick = next_free_provider()
@@ -148,8 +149,14 @@ def _llm(temperature: float = 0.2, weight: str = "light"):
                 cfg["apiKey"]   = _key
                 cfg["model"]    = _model
                 cfg["baseUrl"]  = _FREE_BASE_URL
+                _picked_free = True
         except Exception:
             pass
+        # No fast remote key available: run the costly main generation on a faster
+        # *local* model instead of the slow large one, so it finishes inside the
+        # request timeout. Override via LLM_FAST_LOCAL_MODEL.
+        if not _picked_free and (cfg.get("provider") or "").lower() == "ollama":
+            cfg["model"] = os.environ.get("LLM_FAST_LOCAL_MODEL", "llama3.2:1b")
 
     # Free-key fallback: only when the configured provider actually needs an API key
     # and none is set. Keyless local providers (ollama) and any provider with an
@@ -208,6 +215,11 @@ def _llm(temperature: float = 0.2, weight: str = "light"):
         # the proxy limit. No retries: timeout*(retries+1) must stay under it.
         "timeout":     80,
         "max_retries": 0,
+        # Cap output length so a runaway generation can't blow the timeout budget.
+        # At ~17 tok/s on the local CPU model, 512 tokens ≈ 30s of generation,
+        # leaving headroom for prompt processing under the 80s limit. Override via
+        # LLM_MAX_TOKENS.
+        "max_tokens":  int(os.environ.get("LLM_MAX_TOKENS", "512")),
     }
     if resolved_url:
         kwargs["base_url"] = resolved_url
@@ -271,14 +283,23 @@ def _strip_json_fence(text: str) -> str:
     return cleaned.strip()
 
 
-def _invoke(messages: list[Any], temperature: float, fallback_text: str) -> tuple[str, list[Any]]:
+def _invoke(
+    messages: list[Any],
+    temperature: float,
+    fallback_text: str,
+    weight: str = "light",
+) -> tuple[str, list[Any]]:
     if not LANGGRAPH_OK:
         return fallback_text, []
     try:
-        response = _llm(temperature=temperature).invoke(messages)
+        response = _llm(temperature=temperature, weight=weight).invoke(messages)
         return _message_text(response), [response]
     except Exception as exc:
-        return f"{fallback_text}\n\nLLM error: {exc}", []
+        # langgraph IS installed here — this is a runtime LLM failure (most often
+        # the local model exceeding the request timeout). Label it accurately so
+        # memory/logs don't misreport it as a missing dependency. The caller's
+        # fallback_text is preserved as the salvaged content.
+        return f"{fallback_text}\n\n[LLM call failed — {type(exc).__name__}: {exc}]", []
 
 
 def _skill_system_prompt(state: dict) -> str:
@@ -346,7 +367,7 @@ def node_act(state: dict, emit: callable = None) -> dict:
         SystemMessage(content=_skill_system_prompt(state)),
         HumanMessage(content=state["task"]),
     ] if LANGGRAPH_OK else []
-    output, response_messages = _invoke(messages, 0.2, "LangGraph not installed - mock output")
+    output, response_messages = _invoke(messages, 0.2, "[no model output]", weight="heavy")
     _emit(
         emit,
         "node_update",
@@ -370,7 +391,7 @@ def node_evaluate(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"TASK:\n{state['task']}\n\nOUTPUT:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    raw, _ = _invoke(messages, 0.0, '{"score": 0.0, "critique": "LangGraph not installed - mock output"}')
+    raw, _ = _invoke(messages, 0.0, '{"score": 0.0, "critique": "[no model output]"}')
     try:
         payload = json.loads(_strip_json_fence(raw))
         score = max(0.0, min(1.0, float(payload.get("score", 0.0))))
@@ -415,7 +436,7 @@ def node_revise(state: dict, emit: callable = None) -> dict:
             )
         ),
     ] if LANGGRAPH_OK else []
-    revised_output, _ = _invoke(revise_messages, 0.3, state.get("output", "LangGraph not installed - mock output"))
+    revised_output, _ = _invoke(revise_messages, 0.3, state.get("output", "[no model output]"), weight="heavy")
 
     updated_skill = state.get("skill_content", "")
     updated_version = state.get("skill_version", 1)
@@ -452,10 +473,17 @@ def node_revise(state: dict, emit: callable = None) -> dict:
                     )
             except Exception:
                 pass
-            try:
-                write_agent_skill_file(state["agent_id"], updated_skill)
-            except Exception:
-                pass
+            # Do NOT overwrite the human-authored agent .md skill files by default.
+            # Persisting the LLM's "improved" skill back to source every run
+            # repeatedly gutted the agent definitions (replacing rich prompts with
+            # terse meta-commentary, and writing fallback text on timeouts). The
+            # improved skill is still versioned in the DB via save_skill above.
+            # Opt back in explicitly with ARCHONHUB_WRITE_SKILL_FILES=1.
+            if os.environ.get("ARCHONHUB_WRITE_SKILL_FILES") == "1":
+                try:
+                    write_agent_skill_file(state["agent_id"], updated_skill)
+                except Exception:
+                    pass
 
     revision_count = state.get("revision_count", 0) + 1
     _emit(
@@ -531,7 +559,7 @@ def node_plan(state: dict, emit: callable = None) -> dict:
         SystemMessage(content="Create a concise research plan with 3-7 numbered steps."),
         HumanMessage(content=f"Task:\n{state['task']}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.2, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.2, "[no model output]")
     _emit(emit, "node_update", node="plan", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -548,7 +576,7 @@ def node_search(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nResearch Plan:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.1, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.1, "[no model output]")
     _emit(emit, "node_update", node="search", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -565,7 +593,7 @@ def node_synthesize(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nFindings:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.1, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.1, "[no model output]")
     _emit(emit, "node_update", node="synthesize", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -582,7 +610,7 @@ def node_wp_plan(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.1, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.1, "[no model output]")
     _emit(emit, "node_update", node="wp_plan", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -599,7 +627,7 @@ def node_wp_implement(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nImplementation Plan:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.1, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.1, "[no model output]")
     _emit(emit, "node_update", node="wp_implement", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -616,7 +644,7 @@ def node_wp_verify(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nImplementation:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.0, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.0, "[no model output]")
     _emit(emit, "node_update", node="wp_verify", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -633,7 +661,7 @@ def node_legal_analyze(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.1, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.1, "[no model output]")
     _emit(emit, "node_update", node="legal_analyze", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -650,7 +678,7 @@ def node_legal_draft(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nAnalysis:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.2, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.2, "[no model output]")
     _emit(emit, "node_update", node="legal_draft", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -667,7 +695,7 @@ def node_legal_review(state: dict, emit: callable = None) -> dict:
         ),
         HumanMessage(content=f"Task:\n{state['task']}\n\nDraft:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
-    output, _ = _invoke(messages, 0.0, "LangGraph not installed - mock output")
+    output, _ = _invoke(messages, 0.0, "[no model output]")
     _emit(emit, "node_update", node="legal_review", status="complete", run_id=state.get("run_id"))
     return {"output": output}
 
@@ -814,8 +842,8 @@ def run_graph(config: dict, emit: callable = None) -> dict:
     if not LANGGRAPH_OK:
         mock_state = {
             **initial_state,
-            "output": "LangGraph not installed - mock output",
-            "critique": "LangGraph not installed - mock output",
+            "output": "[no model output]",
+            "critique": "[no model output]",
             "score": 0.0,
         }
         _emit(
