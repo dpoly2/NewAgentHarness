@@ -14,6 +14,9 @@ __pycache__/
 .agents/data/logs/
 .agents/agentharness/memory/.jwt_secret
 
+# Vendored binaries (service manager, etc.)
+.agents/tools/
+
 # Backups with potential secrets
 .agents/data/backup/archonhub_backup.json
 .agents/data/backup/*.bak
