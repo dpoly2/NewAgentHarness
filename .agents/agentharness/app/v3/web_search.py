@@ -155,48 +155,59 @@ class SearchAnalyzer:
     
     # Patterns that indicate web search would be helpful
     SEARCH_PATTERNS = [
-        r'\b(?:latest|recent|current|today|this week|breaking|news about)\b',
+        r'\b(?:latest|recent|today|this week|breaking|news about)\b',
         r'\b(?:what is|what are|what\'s)\b.{0,50}\b(?:happening|going on|trending)\b',
-        r'\b(?:price|stock|market|trading) (?:of|for)\b',
+        r'\b(?:price|stock price|market cap|trading) (?:of|for)\b',
         r'\b(?:weather|temperature) in\b',
         r'\b(?:how much|cost) (?:is|does)\b',
-        r'\b(?:find|search for|look up|get info about)\b',
+        r'\b(?:search for|look up|get info about)\b',
         r'\b(?:when is|when will|when did)\b.{0,50}\b(?:next|upcoming)\b',
-        r'\b(?:status|state|condition) of\b',
-        r'\b(?:compare|versus|vs\.?) ',
     ]
-    
-    # Topics that usually need fresh data
+
+    # Topics that require fresh external data — kept narrow to avoid
+    # false-positives on agent-routing requests that mention these domains
     FRESH_DATA_TOPICS = [
-        "market", "stock", "price", "trading", "earnings",
-        "news", "weather", "sports", "election",
-        "covid", "virus", "outbreak",
-        "breaking", "latest", "current", "recent"
+        "weather", "sports score", "election result",
+        "breaking news", "latest news", "news about",
+        "stock price of", "price of", "market cap of",
     ]
-    
+
+    # If any of these patterns match, web search is suppressed — the request
+    # is for internal agent dispatch, not external information lookup.
+    _DISPATCH_EXCLUSIONS = [
+        r'\b(?:assign|dispatch|have|ask|tell|get|send|route|delegate)\b.{0,60}'
+        r'\b(?:agent|strategist|analyst|manager|advisor|cfo|cro|coo|cio|dev|writer|researcher|lead)\b',
+        r'\b(?:agent|strategist|analyst|manager|advisor|lead)\b.{0,60}'
+        r'\b(?:to|should|needs? to|can you|please)\b',
+        r'\b(?:assign|give|delegate)\b.{0,40}\b(?:task|job|this|work)\b',
+        r'\btask\b.{0,40}\bto\b.{0,60}\b(?:agent|strategist|analyst|manager|advisor)\b',
+        r'\b(?:run|trigger|kick off|start|launch|execute)\b.{0,40}\b(?:agent|analysis|review|report)\b',
+    ]
+
     @classmethod
     def should_search(cls, query: str) -> bool:
         """
         Determine if a query would benefit from web search.
-        
-        Args:
-            query: User's query string
-            
-        Returns:
-            True if web search should be performed
+        Returns False when the message looks like an internal agent-dispatch request
+        so the routing decision is left entirely to Inez's LLM step.
         """
         query_lower = query.lower()
-        
+
+        # Never web-search if this is clearly an agent-dispatch instruction
+        for pat in cls._DISPATCH_EXCLUSIONS:
+            if re.search(pat, query_lower, re.IGNORECASE):
+                return False
+
         # Check patterns
         for pattern in cls.SEARCH_PATTERNS:
             if re.search(pattern, query_lower, re.IGNORECASE):
                 return True
-        
+
         # Check topics
         for topic in cls.FRESH_DATA_TOPICS:
             if topic in query_lower:
                 return True
-        
+
         return False
 
 
