@@ -413,19 +413,30 @@ def run_agent(
 
     # 4. Call LLM
     _emit("agent_thinking", message=f"{agent_id} working on task...")
+    messages = [SystemMessage(content=system), HumanMessage(content=task)]
+    raw = None
     try:
         model = (
             _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
             if ROUTER_OK else _llm(temperature=0.3)
         )
-        response = model.invoke([
-            SystemMessage(content=system),
-            HumanMessage(content=task),
-        ])
+        response = model.invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
-        logger.error("agent_runner LLM error agent=%s: %s", agent_id, exc)
-        return _error_result(agent_id, str(exc))
+        # The primary route (llm_router free-key providers) can fail with an
+        # expired/invalid key (401) or a timeout. Fall back once to the local
+        # keyless Ollama backend so the agent still produces output instead of
+        # erroring the entire dispatch.
+        logger.warning(
+            "agent_runner primary LLM failed agent=%s: %s — falling back to local Ollama",
+            agent_id, exc,
+        )
+        try:
+            response = _llm(temperature=0.3).invoke(messages)
+            raw = response.content if hasattr(response, "content") else str(response)
+        except Exception as exc2:
+            logger.error("agent_runner LLM error agent=%s: primary=%s fallback=%s", agent_id, exc, exc2)
+            return _error_result(agent_id, f"{exc} | fallback failed: {exc2}")
 
     # 5. Parse structured output
     parsed = _parse_agent_output(raw)
