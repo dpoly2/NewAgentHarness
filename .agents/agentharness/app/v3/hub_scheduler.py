@@ -802,9 +802,109 @@ async def _run_user_job(hub, job_config: dict):
     )
 
 
+# ---------------------------------------------------------------------------
+# DevOps log monitor — read NEW error lines from .agents/data/logs/ since the
+# last sweep (per-file byte-offset watermark in hub_config) and build a digest.
+# ---------------------------------------------------------------------------
+
+_LOG_ERROR_RE = None
+
+
+def _collect_new_log_errors(max_chars: int = 6000) -> tuple[str, int]:
+    """Return (digest, count) of new error lines across the runtime logs.
+
+    Uses a per-file byte offset stored in hub_config (key ``logwm_<name>``) so
+    each line is only ever reported once. Handles truncation/rotation by
+    resetting the offset when the file shrinks. Returns ("", 0) when quiet so
+    the caller can skip dispatching the team (cheap when there are no errors).
+    """
+    import os
+    import re
+    from pathlib import Path
+
+    global _LOG_ERROR_RE
+    if _LOG_ERROR_RE is None:
+        _LOG_ERROR_RE = re.compile(
+            r"(Traceback \(most recent call last\)|\bERROR\b|\bCRITICAL\b|"
+            r"\bException\b|Request timed out|\[LLM call failed|OperationalError|"
+            r"database is locked|\b50[234]\b|\b524\b|no such (?:table|column))",
+            re.IGNORECASE,
+        )
+
+    try:
+        from hub_db import get_config, set_config
+    except Exception:
+        get_config = set_config = None  # type: ignore
+
+    log_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "logs"
+    if not log_dir.exists():
+        return "", 0
+
+    blocks: list[str] = []
+    total = 0
+    for log_path in sorted(log_dir.glob("*.log")):
+        name = log_path.stem
+        try:
+            size = log_path.stat().st_size
+        except Exception:
+            continue
+        wm_key = f"logwm_{name}"
+        offset = 0
+        if callable(get_config):
+            try:
+                offset = int(get_config(wm_key) or 0)
+            except Exception:
+                offset = 0
+        if offset > size:          # rotated/truncated
+            offset = 0
+        if offset >= size:         # nothing new
+            continue
+        try:
+            with log_path.open("r", encoding="utf-8", errors="ignore") as fh:
+                fh.seek(offset)
+                new_text = fh.read()
+        except Exception:
+            continue
+        if callable(set_config):
+            try:
+                set_config(wm_key, size)
+            except Exception:
+                pass
+        hits = [ln.strip() for ln in new_text.splitlines() if ln.strip() and _LOG_ERROR_RE.search(ln)]
+        if hits:
+            total += len(hits)
+            blocks.append(f"### {log_path.name} ({len(hits)} new error line(s))\n" + "\n".join(hits[:40]))
+
+    if not blocks:
+        return "", 0
+    digest = "## New log errors since last sweep\n\n" + "\n\n".join(blocks)
+    return digest[:max_chars], total
+
+
+async def job_log_monitor(hub):
+    """Every cycle: scan logs for new errors; if any, dispatch the devops team
+    (devops-log-monitor → root-cause → fix-engineer) which opens tickets and
+    proposes fixes. Skips entirely when the logs are quiet."""
+    logger = get_logger("scheduler")
+    try:
+        digest, count = _collect_new_log_errors()
+    except Exception:
+        logger.exception("log_monitor: failed collecting log errors")
+        return
+    if not digest:
+        return  # quiet — no LLM dispatch
+    logger.info("log_monitor: %d new error line(s) detected — dispatching devops team", count)
+    try:
+        from report_monitor import run_report_job
+        await run_report_job("log_monitor", extra_context=digest)
+    except Exception:
+        logger.exception("log_monitor: devops team dispatch failed")
+
+
 # Single source of truth for all built-in jobs.
 # Format: job_id -> (func, display_name, cron_kwargs)
 _JOB_SPECS: dict[str, tuple] = {
+    "log_monitor":                               (job_log_monitor,                          "DevOps Log Monitor",                 {"minute": "*/15"}),
     "daily_briefing":                            (job_daily_briefing_compute,               "Daily Briefing",                     {"hour": 6,  "minute": 50}),
     "daily_reflexion":                           (job_daily_reflexion_report,               "Daily Reflexion",                    {"hour": 7,  "minute": 0}),
     "grant_research_sweep":                      (job_grant_research_sweep,                 "Grant Research Sweep",               {"day_of_week": "mon", "hour": 8,  "minute": 0}),

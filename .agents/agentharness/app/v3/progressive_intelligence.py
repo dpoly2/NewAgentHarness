@@ -25,6 +25,7 @@ Public API
 from __future__ import annotations
 
 import json
+import os
 import re
 import sqlite3
 from datetime import datetime, timezone, timedelta
@@ -191,8 +192,13 @@ def reflexion_score_run(
 
     skill_rewritten = False
 
-    # Rewrite skill file if below threshold
-    if score < REFLEXION_THRESHOLD:
+    # Rewrite skill file if below threshold.
+    # GUARD: by default we never overwrite the human-authored agent .md skill
+    # files — doing so on every sub-threshold run is what gutted the agent
+    # definitions (terse LLM "improvements" replacing rich prompts). The
+    # reflexion score/critique is still logged to reflexion_log below. Opt back
+    # in with ARCHONHUB_WRITE_SKILL_FILES=1.
+    if score < REFLEXION_THRESHOLD and os.environ.get("ARCHONHUB_WRITE_SKILL_FILES") == "1":
         try:
             from hub_nodes import read_agent_skill_file
             current_skill, skill_path = read_agent_skill_file(agent_id)
