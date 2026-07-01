@@ -125,6 +125,27 @@ def _llm(temperature: float = 0.3, weight: str = "light"):
     weight is forwarded to the factory: "heavy" prefers a fast free provider
     (round-robin balanced) over slow local Ollama for costly reasoning calls.
     """
+    # Prefer a capable cloud model for Inez when an OpenAI key is configured.
+    # Inez is the interactive assistant; with the free-proxy keys dead the only
+    # other option is the slow local Ollama model, which makes chats hang on
+    # "Consulting…". A working OpenAI key keeps Inez fast and reliable — scoped
+    # to Inez only (background agents keep their existing routing). Model via
+    # INEZ_MODEL; disable by clearing llm_key_openai.
+    try:
+        key = ""
+        if DB_OK and hasattr(db, "get_config"):
+            key = db.get_config("llm_key_openai") or ""
+        key = key or os.environ.get("OPENAI_API_KEY", "")
+        if key and str(key).startswith("sk-"):
+            from llm_router import build_llm
+            return build_llm(
+                provider="openai",
+                model=os.environ.get("INEZ_MODEL", "gpt-4o-mini"),
+                api_key=key,
+                temperature=temperature,
+            )
+    except Exception:
+        pass
     try:
         from hub_nodes import _llm as _hub_llm
         return _hub_llm(temperature=temperature, weight=weight)
