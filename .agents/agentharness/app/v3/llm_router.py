@@ -224,7 +224,8 @@ def get_agent_model_override(agent_id: str) -> dict | None:
         model = config.get("preferred_model", "")
         if prov and model:
             return {"provider": prov, "model": model,
-                    "base_url": config.get("preferred_base_url", "")}
+                    "base_url": config.get("preferred_base_url", ""),
+                    "api_key": config.get("preferred_api_key", "")}
     except Exception as e:
         logger.debug("get_agent_model_override failed: %s", e)
     return None
@@ -356,6 +357,7 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
                 provider=override["provider"],
                 model=override["model"],
                 base_url=override.get("base_url", ""),
+                api_key=override.get("api_key", ""),
                 temperature=temperature,
             )
         except Exception as e:
