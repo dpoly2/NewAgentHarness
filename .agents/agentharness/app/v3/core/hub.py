@@ -19,12 +19,21 @@ from core.database import (
     _insert_ws_event,
     _now_iso,
     _queue_job_record,
+    _reap_stale_jobs,
     _release_scheduler_lock,
     _save_run_record,
     _try_acquire_scheduler_lock,
     _update_job_record,
     _utcnow,
 )
+
+# Reaper threshold (minutes a job may stay 'running' before being marked failed).
+JOB_REAP_MINUTES = int(os.environ.get("JOB_REAP_MINUTES", "15") or "15")
+# How often the reaper loop runs (seconds).
+JOB_REAP_INTERVAL_SEC = int(os.environ.get("JOB_REAP_INTERVAL_SEC", "180") or "180")
+# Scheduler-leader lease TTL (seconds) and renewal interval (seconds).
+SCHEDULER_LEASE_TTL_SEC = int(os.environ.get("SCHEDULER_LEASE_TTL_SEC", "30") or "30")
+SCHEDULER_LEASE_RENEW_SEC = int(os.environ.get("SCHEDULER_LEASE_RENEW_SEC", "10") or "10")
 
 try:
     from hub_nodes import run_graph, LANGGRAPH_OK
@@ -81,6 +90,8 @@ class HubServer:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._worker_tasks: list[asyncio.Task] = []
         self._event_poll_task: asyncio.Task | None = None
+        self._reaper_task: asyncio.Task | None = None
+        self._scheduler_lease_task: asyncio.Task | None = None
         self.logger = get_logger("server")
 
     async def submit_job(self, config: dict) -> str:
@@ -269,14 +280,99 @@ class HubServer:
         _update_job_record(run_id, "cancelling")
         return True
 
+    # ── Job reaper (Feature 3, failure #4) ───────────────────────────────────
+
+    def reap_stale_jobs(self) -> int:
+        """Mark jobs stuck in 'running' past JOB_REAP_MINUTES as failed. Returns count.
+
+        Safe to call from any/all workers concurrently — the underlying SQL is a
+        single idempotent UPDATE guarded by the stale condition.
+        """
+        try:
+            return _reap_stale_jobs(JOB_REAP_MINUTES)
+        except Exception:
+            self.logger.exception("Job reaper failed")
+            return 0
+
+    async def _reaper_loop(self) -> None:
+        """Run the stale-job reaper once on startup, then every JOB_REAP_INTERVAL_SEC.
+
+        Every worker runs this loop; the reaping SQL is idempotent so duplicate runs
+        across the 5 workers are harmless (the second and later UPDATEs match no rows).
+        """
+        while True:
+            try:
+                self.reap_stale_jobs()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                self.logger.exception("Unexpected error in reaper loop")
+            try:
+                await asyncio.sleep(max(30, JOB_REAP_INTERVAL_SEC))
+            except asyncio.CancelledError:
+                break
+
+    # ── Scheduler leader election (Feature 3, failure #5) ────────────────────
+
     def _try_scheduler_lock(self) -> bool:
-        return _try_acquire_scheduler_lock(os.getpid())
+        return _try_acquire_scheduler_lock(os.getpid(), ttl=SCHEDULER_LEASE_TTL_SEC)
 
     def _release_scheduler_lock_safe(self) -> None:
         try:
             _release_scheduler_lock(os.getpid())
         except Exception:
             pass
+
+    def is_scheduler_leader(self) -> bool:
+        """Whether THIS worker currently owns the scheduler lease.
+
+        Consulted by the tracked-job wrapper (hub_scheduler._make_tracked) at fire
+        time so that only the leader executes scheduled jobs, even during a brief
+        lease handover.
+        """
+        return bool(self._is_scheduler_leader)
+
+    async def _scheduler_lease_loop(self) -> None:
+        """Continuously acquire/renew the scheduler-leader lease.
+
+        Exactly one worker at a time holds the lease and runs _JOB_SPECS jobs. The
+        leader renews every SCHEDULER_LEASE_RENEW_SEC (< TTL) to keep it. If the
+        leader process dies, the lease expires and another worker acquires it here,
+        starting its (already-built) APScheduler — automatic failover without a
+        restart. Non-leaders keep their scheduler stopped AND the tracked wrapper
+        no-ops, so scheduled jobs never fire more than once across the 5 workers.
+        """
+        while True:
+            try:
+                is_leader = self._try_scheduler_lock()
+                if is_leader and not self._is_scheduler_leader:
+                    # Became leader (startup or failover) — start our scheduler.
+                    self._is_scheduler_leader = True
+                    if self._scheduler is not None:
+                        try:
+                            running = getattr(getattr(self._scheduler, "scheduler", None), "running", False)
+                            if not running:
+                                self._scheduler.start()
+                                self.logger.info("Acquired scheduler leadership (pid=%s) — scheduler started", os.getpid())
+                        except Exception:
+                            self.logger.exception("Failed to start scheduler after acquiring leadership")
+                elif not is_leader and self._is_scheduler_leader:
+                    # Lost leadership (should be rare) — stand down.
+                    self._is_scheduler_leader = False
+                    self.logger.warning("Lost scheduler leadership (pid=%s) — standing down", os.getpid())
+                    try:
+                        if self._scheduler is not None:
+                            self._scheduler.shutdown()
+                    except Exception:
+                        pass
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                self.logger.exception("Unexpected error in scheduler lease loop")
+            try:
+                await asyncio.sleep(max(2, SCHEDULER_LEASE_RENEW_SEC))
+            except asyncio.CancelledError:
+                break
 
 
 hub = HubServer()

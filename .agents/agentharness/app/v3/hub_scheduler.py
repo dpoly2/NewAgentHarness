@@ -142,12 +142,42 @@ def _update_job_state(job_id: str, logger, **fields: Any) -> None:
             return
 
 
+def _is_scheduler_leader() -> bool:
+    """Best-effort check of whether this worker owns the scheduler lease.
+
+    Lazily imports the hub singleton to avoid a circular import (core.hub imports
+    this module). Defaults to True if the hub can't be resolved so we never silently
+    stop firing jobs in a degraded/standalone setup.
+    """
+    try:
+        from core.hub import hub as _hub
+    except Exception:
+        return True
+    checker = getattr(_hub, "is_scheduler_leader", None)
+    if callable(checker):
+        try:
+            return bool(checker())
+        except Exception:
+            return True
+    return bool(getattr(_hub, "_is_scheduler_leader", True))
+
+
 def _make_tracked(func, job_id: str):
-    """Wrap a job coroutine to record last_run_at, last_run_status, run_count in DB."""
+    """Wrap a job coroutine to record last_run_at, last_run_status, run_count in DB.
+
+    Also enforces single-owner scheduling: if this worker is not the current
+    scheduler leader, the job is skipped (no-op). This is a belt-and-suspenders
+    guard on top of only starting APScheduler in the leader — it prevents a
+    duplicate fire during a brief lease handover window.
+    """
     import functools
 
     @functools.wraps(func)
     async def _wrapper(*args, **kwargs):
+        if not _is_scheduler_leader():
+            logger = get_logger("scheduler")
+            logger.debug("Skipping scheduled job %s — not scheduler leader", job_id)
+            return
         status = "success"
         try:
             await func(*args, **kwargs)
