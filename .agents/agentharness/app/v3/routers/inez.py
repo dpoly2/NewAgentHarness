@@ -20,6 +20,11 @@ try:
 except ImportError:
     db = None  # type: ignore
 
+try:
+    import run_events
+except ImportError:
+    run_events = None  # type: ignore
+
 router = APIRouter()
 
 
@@ -45,12 +50,20 @@ async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
     history = [{"role": r.get("role", "user"), "content": r.get("content", "")} for r in (history_rows or [])]
 
     loop = asyncio.get_running_loop()
+    run_id = uuid.uuid4().hex
 
     def _inez_emit(event_type: str, **kwargs: Any) -> None:
-        event: dict = {"type": event_type}
+        event: dict = {"type": event_type, "run_id": run_id, "conversation_id": conv_id}
         if "message" in kwargs:
             event["text"] = kwargs.pop("message")
         event.update(kwargs)
+        # Durable event log — the WS is a live tail of this. A dropped socket or a
+        # proxy-timed-out HTTP request is recoverable via the replay endpoint.
+        if run_events is not None:
+            try:
+                run_events.append_event(run_id, event_type, event, conversation_id=conv_id)
+            except Exception:
+                pass
         asyncio.run_coroutine_threadsafe(hub.broadcast(event), loop)
 
     result = await loop.run_in_executor(hub._executor, lambda: think(body.message, history, emit=_inez_emit))
@@ -75,10 +88,10 @@ async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
         graph = dispatch.get("graph", "reflexion")
         task = dispatch.get("task", "")
         if agent_id and task:
-            run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
-            queued_runs.append({"run_id": run_id, "agent_id": agent_id, "project": project})
+            job_run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
+            queued_runs.append({"run_id": job_run_id, "agent_id": agent_id, "project": project})
 
-    response_data: dict = {"conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
+    response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
     if result.get("has_citations"):
         response_data["has_citations"] = True
         response_data["citations"] = result.get("citations", [])
@@ -88,7 +101,41 @@ async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
     # no prior context to generate meaningful follow-ups from).
     if len(history) > 1 and result.get("followup_suggestions"):
         response_data["followup_suggestions"] = result.get("followup_suggestions", [])
+
+    # Deliver the final answer over WebSocket. The frontend intentionally leaves
+    # the chat in the "thinking" state after the HTTP call and renders the reply
+    # from this `inez_response` event — which the backend previously never sent,
+    # so the UI hung on the last progress step ("Synthesizing…"). Also persisted
+    # to the durable event log so a dropped socket can replay it.
+    _inez_emit("inez_response", message_id=message_data["id"],
+               **{k: v for k, v in response_data.items()
+                  if k not in ("run_id", "conversation_id")})
     return response_data
+
+
+@router.get("/inez/runs/{run_id}/events")
+async def inez_run_events(run_id: str, after: int = 0, _: dict = Depends(get_current_user)):
+    """Replay a run's durable event log (progress + final message) after a cursor.
+
+    Lets a refreshed tab or a client whose HTTP response was lost recover the
+    outcome of an Inez turn instead of hanging on the last progress step.
+    """
+    if run_events is None:
+        return {"run_id": run_id, "events": [], "cursor": after}
+    events = run_events.get_events(run_id=run_id, after_id=after)
+    cursor = events[-1]["id"] if events else after
+    return {"run_id": run_id, "events": events, "cursor": cursor}
+
+
+@router.get("/inez/conversations/{conversation_id}/events")
+async def inez_conversation_events(conversation_id: str, after: int = 0, _: dict = Depends(get_current_user)):
+    """Replay by conversation — used on reconnect when the client knows the
+    conversation but lost the in-flight run_id."""
+    if run_events is None:
+        return {"conversation_id": conversation_id, "events": [], "cursor": after}
+    events = run_events.get_events(conversation_id=conversation_id, after_id=after)
+    cursor = events[-1]["id"] if events else after
+    return {"conversation_id": conversation_id, "events": events, "cursor": cursor}
 
 
 @router.get("/inez/brief")
