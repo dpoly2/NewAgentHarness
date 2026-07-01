@@ -410,7 +410,13 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
             except Exception as e:
                 logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
 
-    # 5. Global config fallback
+    # 5. Global fallback — unified gateway (Feature 2), local-first "background"
+    # tier (shared circuit breaker). Falls through to the legacy hub_nodes factory.
+    try:
+        import gateway
+        return gateway.build_model("background", temperature=temperature)
+    except Exception:
+        pass
     try:
         from hub_nodes import _llm
         return _llm(temperature=temperature)

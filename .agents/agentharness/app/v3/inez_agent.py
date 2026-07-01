@@ -125,6 +125,15 @@ def _llm(temperature: float = 0.3, weight: str = "light"):
     weight is forwarded to the factory: "heavy" prefers a fast free provider
     (round-robin balanced) over slow local Ollama for costly reasoning calls.
     """
+    # Unified gateway (Feature 2): the "reason" tier fronts openai:gpt-4o-mini
+    # with local fallback + a shared circuit breaker, so a transient cloud issue
+    # degrades to local instead of erroring the chat. Falls through to the
+    # OpenAI-preferred logic below if the gateway has no usable provider.
+    try:
+        import gateway
+        return gateway.build_model("reason", temperature=temperature)
+    except Exception:
+        pass
     # Prefer a capable cloud model for Inez when an OpenAI key is configured.
     # Inez is the interactive assistant; with the free-proxy keys dead the only
     # other option is the slow local Ollama model, which makes chats hang on
