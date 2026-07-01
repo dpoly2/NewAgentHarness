@@ -431,6 +431,13 @@ def run_agent(
             "agent_runner primary LLM failed agent=%s: %s — falling back to local Ollama",
             agent_id, exc,
         )
+        # Self-heal: if this was a free-key auth failure (401), disable that
+        # provider so it stops getting picked on subsequent calls.
+        try:
+            import free_llm_keys as _fk
+            _fk.note_free_call_failure(exc)
+        except Exception:
+            pass
         try:
             response = _llm(temperature=0.3).invoke(messages)
             raw = response.content if hasattr(response, "content") else str(response)

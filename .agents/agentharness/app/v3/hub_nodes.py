@@ -299,6 +299,12 @@ def _invoke(
         # the local model exceeding the request timeout). Label it accurately so
         # memory/logs don't misreport it as a missing dependency. The caller's
         # fallback_text is preserved as the salvaged content.
+        # Self-heal: disable a free provider that just failed auth (401).
+        try:
+            import free_llm_keys as _fk
+            _fk.note_free_call_failure(exc)
+        except Exception:
+            pass
         return f"{fallback_text}\n\n[LLM call failed — {type(exc).__name__}: {exc}]", []
 
 
