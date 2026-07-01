@@ -161,6 +161,23 @@ def _uid() -> str:
     return str(uuid.uuid4())
 
 
+def _json_llm(model):
+    """Enable JSON output mode for OpenAI-compatible models (incl. Ollama).
+
+    The runner contract requires a single JSON object; small local models often
+    ignore that instruction and return prose. Binding response_format=json_object
+    forces valid JSON at the API layer. Non-OpenAI models (Anthropic/Gemini) or
+    already-bound runnables are returned unchanged.
+    """
+    try:
+        from langchain_openai import ChatOpenAI  # type: ignore
+        if isinstance(model, ChatOpenAI):
+            return model.bind(response_format={"type": "json_object"})
+    except Exception:
+        pass
+    return model
+
+
 def _apply_db_write(write: dict) -> bool:
     """Apply a single db_write directive from agent output."""
     if not DB_OK:
@@ -420,7 +437,7 @@ def run_agent(
             _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
             if ROUTER_OK else _llm(temperature=0.3)
         )
-        response = model.invoke(messages)
+        response = _json_llm(model).invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
         # The primary route (llm_router free-key providers) can fail with an
@@ -439,7 +456,7 @@ def run_agent(
         except Exception:
             pass
         try:
-            response = _llm(temperature=0.3).invoke(messages)
+            response = _json_llm(_llm(temperature=0.3)).invoke(messages)
             raw = response.content if hasattr(response, "content") else str(response)
         except Exception as exc2:
             logger.error("agent_runner LLM error agent=%s: primary=%s fallback=%s", agent_id, exc, exc2)

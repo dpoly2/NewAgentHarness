@@ -319,6 +319,11 @@ def build_llm(provider: str, model: str, base_url: str = "",
         "model":       model,
         "temperature": temperature,
         "api_key":     resolved_key or "sk-placeholder",
+        # Bound the call so a slow local model (e.g. a 7B on CPU) can't hang the
+        # dispatch, and cap output so structured JSON generation stays timely.
+        "timeout":     int(os.environ.get("AGENT_LLM_TIMEOUT", "120")),
+        "max_retries": 0,
+        "max_tokens":  int(os.environ.get("AGENT_LLM_MAX_TOKENS", "1536")),
     }
     if resolved_url:
         kwargs["base_url"] = resolved_url
