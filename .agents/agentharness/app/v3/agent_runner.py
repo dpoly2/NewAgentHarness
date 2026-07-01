@@ -356,6 +356,7 @@ def run_agent(
     extra_context: str = "",
     run_id: str | None = None,
     emit: Callable | None = None,
+    llm: object | None = None,
 ) -> dict:
     """
     Execute one agent:
@@ -433,10 +434,16 @@ def run_agent(
     messages = [SystemMessage(content=system), HumanMessage(content=task)]
     raw = None
     try:
-        model = (
-            _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
-            if ROUTER_OK else _llm(temperature=0.3)
-        )
+        # A caller (e.g. Inez) can pass a ready LLM so its dispatched agents use
+        # the same fast model instead of routing through the (possibly dead)
+        # free-key → slow-Ollama path.
+        if llm is not None:
+            model = llm
+        else:
+            model = (
+                _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
+                if ROUTER_OK else _llm(temperature=0.3)
+            )
         response = _json_llm(model).invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
@@ -568,6 +575,7 @@ def run_dispatches(
     dispatches: list[dict],
     emit: Callable | None = None,
     max_follow_up_depth: int = 1,
+    llm: object | None = None,
 ) -> list[dict]:
     """
     Execute a list of Inez dispatch objects in parallel (up to 4 concurrent).
@@ -609,6 +617,7 @@ def run_dispatches(
                     d.get("context", ""),
                     None,   # run_id
                     emit,
+                    llm,
                 ): d
                 for d in queue
                 if d.get("agent_id") and d.get("task")

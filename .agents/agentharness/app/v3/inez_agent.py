@@ -1500,7 +1500,10 @@ def think(
                 for d in dispatches:
                     if travel_tool_data and "travel" in d.get("agent_id", "").lower():
                         d["context"] = (d.get("context", "") + "\n\n" + travel_tool_data).strip()
-                agent_results = run_dispatches(dispatches, emit=emit)
+                # Pass Inez's fast model down so dispatched agents don't grind on
+                # the dead-free-key → slow-Ollama path (keeps dispatch scoped to
+                # Inez's interactive model without changing background routing).
+                agent_results = run_dispatches(dispatches, emit=emit, llm=model)
                 result["agent_results"] = agent_results
 
                 # ── Step 4: Synthesis — Inez reads all agent outputs ──────────
