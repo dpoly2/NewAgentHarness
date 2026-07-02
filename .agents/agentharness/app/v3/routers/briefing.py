@@ -91,7 +91,14 @@ async def _generate_or_fetch_brief(current_user: dict, force: bool = False):
         _ensure_morning_briefs_table()
 
         if not force:
-            # Return cached brief for today if one exists
+            # Return cached brief for today if one exists.
+            # Portable "created today (UTC)" filter: an ISO-TEXT half-open range
+            # instead of SQLite-only date(created_at) = date('now') (contract
+            # C3/C6). created_at is ISO-TEXT so lexicographic range == temporal.
+            from datetime import datetime, timezone, timedelta
+            _today = datetime.now(timezone.utc).date()
+            _day_start = _today.isoformat()
+            _next_day = (_today + timedelta(days=1)).isoformat()
             conn = sqlite3.connect(str(DB_PATH))
             try:
                 cursor = conn.cursor()
@@ -99,11 +106,11 @@ async def _generate_or_fetch_brief(current_user: dict, force: bool = False):
                     """
                     SELECT brief_id, brief_text, stats_json, created_at
                     FROM morning_briefs
-                    WHERE user_id = ? AND date(created_at) = date('now')
+                    WHERE user_id = ? AND created_at >= ? AND created_at < ?
                     ORDER BY created_at DESC
                     LIMIT 1
                     """,
-                    (user_id,),
+                    (user_id, _day_start, _next_day),
                 )
                 row = cursor.fetchone()
                 if row:

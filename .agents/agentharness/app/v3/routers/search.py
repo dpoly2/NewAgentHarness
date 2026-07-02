@@ -26,11 +26,12 @@ async def search_conversations(
     
     conn = _db_connection()
     try:
-        # Check if FTS5 index exists
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='messages_fts'"
-        )
-        if not cursor.fetchone():
+        # Check if the FTS index table exists via the backend seam (portable —
+        # sqlite_master does not exist on Postgres; contract C3). Postgres FTS is
+        # deferred (POSTGRES_MIGRATION §9/T13), so on PG this returns empty and we
+        # report the index as unavailable rather than crashing.
+        from core import db_backend
+        if not db_backend.table_columns("messages_fts"):
             raise HTTPException(500, "Search index not available. Run add_fts_search.py to enable search.")
         
         # Search messages using FTS5

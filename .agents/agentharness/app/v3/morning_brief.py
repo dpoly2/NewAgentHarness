@@ -148,14 +148,18 @@ class MorningBriefAgent:
         try:
             cursor = conn.cursor()
             
-            # Check global memory for deadline mentions
+            # Check global memory for deadline mentions. Replace SQLite-only
+            # date('now') with a bound ISO date param so the SQL is portable to
+            # Postgres (contract C3); '||' concatenation works on both backends.
+            from datetime import datetime, timezone
+            _today = datetime.now(timezone.utc).date().isoformat()
             cursor.execute("""
                 SELECT key, value
                 FROM global_memory
                 WHERE category = 'deadlines'
-                  AND value LIKE '%today%' OR value LIKE '%' || date('now') || '%'
+                  AND value LIKE '%today%' OR value LIKE '%' || ? || '%'
                 LIMIT 5
-            """)
+            """, (_today,))
             
             deadlines = []
             for row in cursor.fetchall():

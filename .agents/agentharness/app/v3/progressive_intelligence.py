@@ -225,9 +225,18 @@ def reflexion_score_run(
         now = datetime.now(timezone.utc).isoformat()
         with _conn() as c:
             c.execute("""
-                INSERT OR REPLACE INTO reflexion_log
+                INSERT INTO reflexion_log
                   (id, agent_id, run_id, task, output, score, critique, skill_rewritten, created_at)
                 VALUES (?,?,?,?,?,?,?,?,?)
+                ON CONFLICT (id) DO UPDATE SET
+                  agent_id = EXCLUDED.agent_id,
+                  run_id = EXCLUDED.run_id,
+                  task = EXCLUDED.task,
+                  output = EXCLUDED.output,
+                  score = EXCLUDED.score,
+                  critique = EXCLUDED.critique,
+                  skill_rewritten = EXCLUDED.skill_rewritten,
+                  created_at = EXCLUDED.created_at
             """, (log_id, agent_id, run_id, task[:500], output[:1000],
                   score, critique, int(skill_rewritten), now))
     except Exception:
@@ -303,9 +312,15 @@ def record_interaction(
             level = _compute_skill_level(total, success_rate)
 
             c.execute("""
-                INSERT OR REPLACE INTO agent_skill_levels
+                INSERT INTO agent_skill_levels
                   (agent_id, total_runs, successful_runs, avg_quality, skill_level, updated_at)
                 VALUES (?,?,?,?,?,?)
+                ON CONFLICT (agent_id) DO UPDATE SET
+                  total_runs = EXCLUDED.total_runs,
+                  successful_runs = EXCLUDED.successful_runs,
+                  avg_quality = EXCLUDED.avg_quality,
+                  skill_level = EXCLUDED.skill_level,
+                  updated_at = EXCLUDED.updated_at
             """, (agent_id, total, success_n, avg_q, level, now))
 
         return level

@@ -17,6 +17,8 @@ alpaca-py>=0.43.0
 # Data / Validation
 pydantic>=2.0.0
 sqlite-utils>=3.35.0
+psycopg[binary]>=3.1  # Postgres driver (DB_BACKEND=postgres); see docs/POSTGRES_MIGRATION.md
+psycopg_pool>=3.1  # Postgres connection pool for the multi-worker adapter
 bcrypt>=4.0.0
 python-jose[cryptography]>=3.3.0
 pyyaml>=6.0

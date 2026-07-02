@@ -14,8 +14,15 @@ import logging
 import os
 import sqlite3
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+
+
+def _now_iso_rag() -> str:
+    """ISO-UTC timestamp. Replaces the SQLite-only now() SQL function in the
+    file_chunks insert so the SQL is portable to Postgres (contract C3/C6)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
 
 try:
     import chromadb
@@ -200,13 +207,20 @@ class DocumentEmbedder:
             for i, chunk in enumerate(chunks):
                 chunk_id = chunk_ids[i]
                 cursor.execute("""
-                    INSERT OR REPLACE INTO file_chunks (
+                    INSERT INTO file_chunks (
                         chunk_id, file_id, chunk_index, chunk_text, chunk_tokens,
                         embedding_model, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT (chunk_id) DO UPDATE SET
+                        file_id = EXCLUDED.file_id,
+                        chunk_index = EXCLUDED.chunk_index,
+                        chunk_text = EXCLUDED.chunk_text,
+                        chunk_tokens = EXCLUDED.chunk_tokens,
+                        embedding_model = EXCLUDED.embedding_model,
+                        created_at = EXCLUDED.created_at
                 """, (
                     chunk_id, file_id, i, chunk, len(chunk.split()),
-                    EMBEDDING_MODEL
+                    EMBEDDING_MODEL, _now_iso_rag()
                 ))
             
             conn.commit()

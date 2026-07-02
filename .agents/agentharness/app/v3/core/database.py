@@ -56,6 +56,26 @@ def _now_iso() -> str:
     return _utcnow().isoformat()
 
 
+_WORKER_ID: Optional[str] = None
+
+
+def _worker_id() -> str:
+    """Stable per-process worker id (hostname:pid).
+
+    Used to stamp job_queue.worker_id on claim (T6) and as the worker_nodes
+    primary key (T8). Stable for the life of the process; cached after first call.
+    """
+    global _WORKER_ID
+    if _WORKER_ID is None:
+        import socket
+        try:
+            host = socket.gethostname()
+        except Exception:
+            host = "unknown"
+        _WORKER_ID = f"{host}:{os.getpid()}"
+    return _WORKER_ID
+
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
 
@@ -94,53 +114,26 @@ _table_columns_cache: dict[str, set[str]] = {}
 def _table_columns(table: str) -> set[str]:
     if table in _table_columns_cache:
         return _table_columns_cache[table]
-    conn = _db_connection()
-    try:
-        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
-        result = {row[1] for row in rows}
+    from core import db_backend
+    result = db_backend.table_columns(table)
+    if result:
         _table_columns_cache[table] = result
-        return result
-    except Exception:
-        return set()
-    finally:
-        conn.close()
+    return result
 
 
-def _db_connection() -> sqlite3.Connection:
-    if db and hasattr(db, "get_db"):
-        try:
-            return db.get_db()  # type: ignore[attr-defined]
-        except Exception:
-            pass
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA synchronous=NORMAL")   # safe with WAL; faster than FULL
-    conn.execute("PRAGMA cache_size=-32000")    # 32 MB page cache
-    conn.execute("PRAGMA temp_store=MEMORY")    # temp tables in RAM
-    return conn
+def _db_connection():
+    """Short-lived connection for per-call CRUD. Backend-selected via
+    core.db_backend (sqlite default / postgres). Caller closes in a finally.
+    See docs/POSTGRES_MIGRATION.md and docs/DB_ACCESS_CONTRACT.md (C1, C4)."""
+    from core import db_backend
+    return db_backend.get_connection()
 
 
-_tls = threading.local()
-
-
-def _thread_conn() -> sqlite3.Connection:
-    """Return a persistent thread-local SQLite connection (WAL, row factory set).
-    Do NOT call conn.close() on the returned connection — it is reused."""
-    conn = getattr(_tls, 'conn', None)
-    if conn is None:
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
-        conn.execute("PRAGMA foreign_keys=ON")
-        conn.execute("PRAGMA synchronous=NORMAL")
-        conn.execute("PRAGMA cache_size=-32000")
-        conn.execute("PRAGMA temp_store=MEMORY")
-        _tls.conn = conn
-    return conn
+def _thread_conn():
+    """Persistent per-thread connection for the 4 hot pollers — do NOT close it
+    (contract C4). Backend-selected via core.db_backend."""
+    from core import db_backend
+    return db_backend.get_thread_connection()
 
 
 def _row_to_dict(row: Any, json_fields: Optional[set[str]] = None) -> dict | None:
@@ -291,10 +284,60 @@ def _verify_password(plain_password: str, hashed_password: str) -> bool:
     return hmac.compare_digest(plain_password, hashed_password)
 
 
+def _ddl(script: str) -> str:
+    """Per-backend DDL: rewrites SQLite type tokens to Postgres when
+    DB_BACKEND=postgres, no-op on SQLite. See db_backend.translate_ddl and
+    POSTGRES_MIGRATION §5. Keeps the schema *shape* single-sourced here."""
+    from core import db_backend
+    return db_backend.translate_ddl(script)
+
+
+def _exec_script(conn: Any, script: str) -> None:
+    """Run a multi-statement DDL script, translating SQLite type tokens to the
+    active backend first (contract C3/C10; POSTGRES_MIGRATION §5). The facade's
+    executescript already splits on ';' for both backends."""
+    conn.executescript(_ddl(script))
+
+
+def _ensure_columns(table: str, columns: dict[str, str]) -> None:
+    """Idempotently add missing columns to an existing table (warm migration).
+
+    ``columns`` maps column-name -> the type/DEFAULT clause (SQLite spelling; run
+    through translate_ddl for the active backend).
+
+    Backend branch: on Postgres, ``ALTER TABLE ... ADD COLUMN IF NOT EXISTS`` is
+    native and each statement commits independently (autocommit=False, so a raised
+    error would poison the surrounding transaction — we commit per column). SQLite
+    has no ``ADD COLUMN IF NOT EXISTS``, so we introspect existing columns via
+    ``table_columns`` and skip the ones already present.
+    verified: sqlite; pg path unexecuted (no infra)
+    """
+    from core import db_backend
+    existing = db_backend.table_columns(table) if not db_backend._IS_PG else set()
+    conn = _db_connection()
+    try:
+        for name, decl in columns.items():
+            if not db_backend._IS_PG and name in existing:
+                continue
+            if db_backend._IS_PG:
+                stmt = f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {name} {decl}"
+            else:
+                stmt = f"ALTER TABLE {table} ADD COLUMN {name} {decl}"
+            try:
+                conn.execute(_ddl(stmt))
+                conn.commit()
+            except Exception:
+                conn.rollback()  # clear aborted-tx state, continue with next column
+    finally:
+        conn.close()
+    _table_columns_cache.pop(table, None)
+
+
 def _fallback_init_schema() -> None:
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS runs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -333,7 +376,20 @@ def _fallback_init_schema() -> None:
                 queued_at TEXT,
                 started_at TEXT,
                 completed_at TEXT,
-                job_data TEXT
+                job_data TEXT,
+                worker_id TEXT DEFAULT '',
+                claimed_at TEXT DEFAULT '',
+                heartbeat_at TEXT DEFAULT ''
+            );
+            CREATE TABLE IF NOT EXISTS worker_nodes (
+                id TEXT PRIMARY KEY,
+                hostname TEXT NOT NULL,
+                role TEXT NOT NULL,
+                capacity INTEGER DEFAULT 1,
+                ollama_url TEXT DEFAULT '',
+                status TEXT DEFAULT 'active',
+                last_heartbeat TEXT,
+                started_at TEXT
             );
             CREATE TABLE IF NOT EXISTS todos (
                 id TEXT PRIMARY KEY,
@@ -595,7 +651,8 @@ def _fallback_init_schema() -> None:
 def _ensure_plan_schema() -> None:
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS implementation_plans (
                 plan_id TEXT PRIMARY KEY,
@@ -632,7 +689,8 @@ def _ensure_plan_schema() -> None:
 def _ensure_capitol_schema() -> None:
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS tracked_politicians (
                 id TEXT PRIMARY KEY,
@@ -704,7 +762,8 @@ def _ensure_capitol_schema() -> None:
 def _ensure_alpaca_schema() -> None:
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS alpaca_orders (
                 id TEXT PRIMARY KEY,
@@ -752,7 +811,13 @@ def _ensure_alpaca_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_market_positions_status ON market_positions (status);
             """
         )
-        market_columns = {row[1] for row in conn.execute("PRAGMA table_info(market_positions)").fetchall()}
+        # Introspect via the backend seam (contract C3) instead of PRAGMA.
+        # executescript() commits before returning (both backends), so a fresh
+        # connection in table_columns() sees the just-created table; on PG the
+        # base CREATE already carries all desired columns, so the loop no-ops.
+        # verified: sqlite; pg path unexecuted (no infra)
+        from core import db_backend
+        market_columns = db_backend.table_columns("market_positions")
         desired_columns = {
             "qty": "REAL DEFAULT 0",
             "market_value": "REAL DEFAULT 0",
@@ -762,7 +827,9 @@ def _ensure_alpaca_schema() -> None:
         }
         for column, ddl in desired_columns.items():
             if column not in market_columns:
-                conn.execute(f"ALTER TABLE market_positions ADD COLUMN {column} {ddl}")
+                conn.execute(
+                    _ddl(f"ALTER TABLE market_positions ADD COLUMN {column} {ddl}")
+                )
         conn.commit()
         _table_columns_cache.pop("alpaca_orders", None)
         _table_columns_cache.pop("market_positions", None)
@@ -771,10 +838,17 @@ def _ensure_alpaca_schema() -> None:
 
 
 def _ensure_worker_schema() -> None:
-    """Create ws_events table used for multi-worker broadcast."""
+    """Create ws_events (multi-worker broadcast) + worker_nodes (node registry,
+    SCALABILITY §2) and the job_queue heartbeat/claim columns (T6/T8).
+
+    Idempotent: CREATE ... IF NOT EXISTS for tables; the job_queue columns are
+    added via _ensure_columns (ALTER ... ADD COLUMN guarded by table_columns), so
+    warm DBs created before these columns get them, and re-runs are no-ops.
+    """
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS ws_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -782,9 +856,32 @@ def _ensure_worker_schema() -> None:
                 created_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_ws_events_id ON ws_events (id);
+            CREATE TABLE IF NOT EXISTS worker_nodes (
+                id TEXT PRIMARY KEY,
+                hostname TEXT NOT NULL,
+                role TEXT NOT NULL,
+                capacity INTEGER DEFAULT 1,
+                ollama_url TEXT DEFAULT '',
+                status TEXT DEFAULT 'active',
+                last_heartbeat TEXT,
+                started_at TEXT
+            );
+            CREATE INDEX IF NOT EXISTS idx_worker_nodes_status ON worker_nodes (status);
+            CREATE INDEX IF NOT EXISTS idx_job_queue_worker_id ON job_queue (worker_id);
             """
         )
         conn.commit()
+        # Warm-migrate: add the T6/T8 job_queue columns if an existing DB predates
+        # them. ADD COLUMN IF NOT EXISTS is Postgres-only; SQLite raises "duplicate
+        # column" which we guard against by checking table_columns first.
+        _ensure_columns(
+            "job_queue",
+            {
+                "worker_id": "TEXT DEFAULT ''",
+                "claimed_at": "TEXT DEFAULT ''",
+                "heartbeat_at": "TEXT DEFAULT ''",
+            },
+        )
     finally:
         conn.close()
 
@@ -799,7 +896,8 @@ def _ensure_agent_runner_schema() -> None:
     """
     conn = _db_connection()
     try:
-        conn.executescript(
+        _exec_script(
+            conn,
             """
             CREATE TABLE IF NOT EXISTS knowledge_base (
                 id TEXT PRIMARY KEY,
@@ -871,7 +969,8 @@ def _ensure_agent_runner_schema() -> None:
         conn.close()
 
 
-_SCHEMA_VERSION = 11  # bump when adding new tables or columns
+_SCHEMA_VERSION = 12  # bump when adding new tables or columns
+# v12 (T6/T8): job_queue.worker_id/claimed_at/heartbeat_at + worker_nodes registry
 
 
 def _init_schema() -> None:
@@ -1072,10 +1171,19 @@ def _queue_job_record(config: dict) -> None:
             pass
     payload = _filter_record("job_queue", record, {"job_data"})
     columns = list(payload.keys())
+    # INSERT ... ON CONFLICT (id) DO UPDATE — portable upsert (contract C3),
+    # equivalent to the old INSERT OR REPLACE keyed on the job_queue.id PK.
+    update_cols = [c for c in columns if c != "id"]
+    set_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)
+    on_conflict = (
+        f" ON CONFLICT (id) DO UPDATE SET {set_clause}" if set_clause
+        else " ON CONFLICT (id) DO NOTHING"
+    )
     conn = _db_connection()
     try:
         conn.execute(
-            f"INSERT OR REPLACE INTO job_queue ({', '.join(columns)}) VALUES ({', '.join('?' for _ in columns)})",
+            f"INSERT INTO job_queue ({', '.join(columns)}) "
+            f"VALUES ({', '.join('?' for _ in columns)}){on_conflict}",
             [payload[column] for column in columns],
         )
         conn.commit()
@@ -1298,7 +1406,7 @@ def _save_skill(agent_id: str, content: str, version: Optional[int] = None) -> d
 # ── Plan helpers ───────────────────────────────────────────────────────────────
 
 def _save_plan(plan: dict) -> dict:
-    """Insert or replace a full plan dict."""
+    """Upsert a full plan dict (insert, or update on plan_id conflict)."""
     conn = _db_connection()
     now = _now_iso()
     plan_id = plan.get("plan_id") or uuid.uuid4().hex
@@ -1314,9 +1422,20 @@ def _save_plan(plan: dict) -> dict:
         with conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO implementation_plans
+                INSERT INTO implementation_plans
                 (plan_id, title, project, status, authored_by, graph_json, preflight_json, version, run_id, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (plan_id) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    project = EXCLUDED.project,
+                    status = EXCLUDED.status,
+                    authored_by = EXCLUDED.authored_by,
+                    graph_json = EXCLUDED.graph_json,
+                    preflight_json = EXCLUDED.preflight_json,
+                    version = EXCLUDED.version,
+                    run_id = EXCLUDED.run_id,
+                    created_at = EXCLUDED.created_at,
+                    updated_at = EXCLUDED.updated_at
                 """,
                 (
                     plan_id,
@@ -1420,14 +1539,31 @@ def _get_plan_events(plan_id: str, limit: int = 200) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 def _insert_ws_event(payload: dict) -> int:
-    """Insert a WebSocket broadcast event. Uses a persistent thread-local connection."""
+    """Insert a WebSocket broadcast event into the durable replay log (ws_events).
+
+    On postgres, also emit ``NOTIFY ws_events, '<id>'`` so listener connections
+    (core/hub._ws_listen_loop) wake immediately and fan out to their WS clients
+    without polling (T7 / POSTGRES_MIGRATION §7.2). We notify only the row id (not
+    the payload) to stay well under NOTIFY's 8000-byte limit; the listener SELECTs
+    the row back from ws_events. ws_events remains the durable replay log either
+    way — Inez run-event replay depends on it.
+    verified: sqlite; pg path (NOTIFY) unexecuted (no infra)
+    """
     conn = _thread_conn()
-    cur = conn.execute(
-        "INSERT INTO ws_events (payload_json, created_at) VALUES (?, ?)",
+    # RETURNING id is portable (SQLite >=3.35, Postgres) and replaces
+    # cursor.lastrowid, which psycopg does not provide (contract C3).
+    row = conn.execute(
+        "INSERT INTO ws_events (payload_json, created_at) VALUES (?, ?) RETURNING id",
         (_json_dumps(payload), _now_iso()),
-    )
+    ).fetchone()
+    event_id = (row[0] if row else 0) or 0
+    from core import db_backend
+    if db_backend._IS_PG and event_id:
+        # NOTIFY payload must be a literal (no bind params in NOTIFY); event_id is
+        # our own integer PK, so interpolating it is injection-safe (contract C2).
+        conn.execute(f"NOTIFY ws_events, '{int(event_id)}'")
     conn.commit()
-    return cur.lastrowid or 0
+    return event_id
 
 
 def _get_ws_events_since(last_id: int) -> list[tuple[int, dict]]:
@@ -1449,6 +1585,23 @@ def _get_ws_events_since(last_id: int) -> list[tuple[int, dict]]:
     return result
 
 
+def _get_ws_event_by_id(event_id: int) -> tuple[int, dict] | None:
+    """Fetch one ws_events row by id — used by the LISTEN/NOTIFY listener (T7),
+    which receives just the id in the NOTIFY payload and reads the row back.
+    Uses the thread-local connection (do NOT close)."""
+    conn = _thread_conn()
+    row = conn.execute(
+        "SELECT id, payload_json FROM ws_events WHERE id = ?", (event_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    try:
+        payload = _json_loads(row[1]) if isinstance(row[1], str) else row[1]
+    except Exception:
+        payload = {}
+    return (row[0], payload)
+
+
 def _cleanup_old_ws_events(max_age_minutes: int = 10) -> None:
     """Delete ws_events older than max_age_minutes. Called periodically (~every 5 min)."""
     try:
@@ -1461,23 +1614,60 @@ def _cleanup_old_ws_events(max_age_minutes: int = 10) -> None:
         pass
 
 
-def _claim_queued_job() -> dict | None:
+def _claim_queued_job(worker_id: str | None = None) -> dict | None:
     """Atomically claim one queued job. Returns the job dict or None if queue is empty.
 
-    Uses two-step optimistic lock: SELECT the oldest queued id, then UPDATE with
-    a WHERE status='queued' guard so two workers cannot claim the same row.
+    Stamps worker_id/claimed_at/heartbeat_at so the heartbeat reaper (T8) can tell
+    which live worker owns each running job.
+
+    Backend branch (contract C5 — shared-row RMW must be atomic / row-locked):
+
+    * postgres: a single ``UPDATE ... WHERE id = (SELECT ... FOR UPDATE SKIP
+      LOCKED)`` statement (POSTGRES_MIGRATION §7.1). SKIP LOCKED lets N workers on
+      N machines each grab a *different* oldest-queued row with zero collisions and
+      zero wasted claim attempts. This is the payoff of the migration.
+      verified: sqlite; pg path unexecuted (no infra)
+    * sqlite: the original two-step optimistic claim (SQLite has no FOR UPDATE SKIP
+      LOCKED). SELECT the oldest queued id, then UPDATE guarded by
+      ``status='queued'`` so a losing racer matches zero rows and retries. Kept
+      verbatim so the SQLite path does not regress.
     """
+    from core import db_backend
+    wid = worker_id or _worker_id()
+    now = _now_iso()
     conn = _thread_conn()
+
+    if db_backend._IS_PG:
+        # Single atomic claim; RETURNING * gives us the claimed row directly.
+        job_row = conn.execute(
+            """
+            UPDATE job_queue
+               SET status = 'running', started_at = ?, worker_id = ?,
+                   claimed_at = ?, heartbeat_at = ?
+             WHERE id = (
+                 SELECT id FROM job_queue WHERE status = 'queued'
+                 ORDER BY queued_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED
+             )
+            RETURNING *
+            """,
+            (now, wid, now, now),
+        ).fetchone()
+        conn.commit()
+        if job_row is None:
+            return None  # queue empty or every queued row already locked by peers
+        return _row_to_dict(job_row, json_fields={"job_data"})
+
+    # sqlite: two-step optimistic claim (unchanged race semantics).
     row = conn.execute(
         "SELECT id FROM job_queue WHERE status = 'queued' ORDER BY queued_at ASC LIMIT 1"
     ).fetchone()
     if row is None:
         return None
     job_id = row[0]
-    now = _now_iso()
     cur = conn.execute(
-        "UPDATE job_queue SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'",
-        (now, job_id),
+        "UPDATE job_queue SET status = 'running', started_at = ?, worker_id = ?, "
+        "claimed_at = ?, heartbeat_at = ? WHERE id = ? AND status = 'queued'",
+        (now, wid, now, now, job_id),
     )
     conn.commit()
     if cur.rowcount == 0:
@@ -1500,26 +1690,38 @@ def _count_queued_jobs() -> int:
     return row[0] if row else 0
 
 
-def _reap_stale_jobs(threshold_minutes: int = 15) -> int:
-    """Mark job_queue rows stuck in 'running' past `threshold_minutes` as 'failed'.
+def _reap_stale_jobs(threshold_minutes: int = 15, heartbeat_timeout_sec: int = 45) -> int:
+    """Reap job_queue rows whose worker died. Returns total rows actioned.
 
-    When a worker crashes mid-run, its job_queue row is left status='running' forever
-    (no heartbeat exists). This is the reaper: it flips any 'running' row whose
-    started_at is older than the threshold to status='failed' with completed_at=now.
+    Two distinct paths — the safety reasoning for each differs and is preserved:
 
-    Behavior is *fail*, not *requeue*: a job that outlived the threshold almost
-    certainly had a worker crash mid-execution, and its graph run may have already
-    produced side effects (report sweeps, sub-agent submissions). Requeueing could
-    duplicate those effects, so we mark it failed — matching how _db_worker_loop
-    records a crashed run. Operators can manually resubmit if desired.
+    1. *started_at threshold -> FAIL (not requeue).* The original behavior: any
+       'running' row whose started_at is older than `threshold_minutes` is flipped
+       to status='failed' with completed_at=now. A job that outlived the threshold
+       almost certainly had a worker crash mid-execution, and its graph run may have
+       already produced side effects (report sweeps, sub-agent submissions).
+       Requeueing could duplicate those effects, so we mark it failed — matching how
+       _db_worker_loop records a crashed run. Operators can manually resubmit.
+       This is the fallback for a worker that vanished but whose job HAD been
+       running long enough to have side effects.
 
-    Concurrency: this is a single atomic UPDATE guarded by the stale-condition WHERE.
-    Under N workers, whichever process runs it first flips the rows; every other
-    process's identical UPDATE simply matches zero rows. There is no read-then-write
-    race. Returns the number of rows reaped.
+    2. *stale heartbeat -> REQUEUE (T8, the new, safer path).* When a worker's
+       owning node has a stale `last_heartbeat` (in worker_nodes) AND the job's own
+       `heartbeat_at` is stale, we KNOW the worker died before it could progress the
+       job far — this is the "worker died shortly after claiming" case. Here it is
+       safe to requeue (status='queued', clear worker ownership) so another live
+       worker picks it up, rather than failing it. We also mark such nodes
+       status='down'. The started_at FAIL path above still catches long-running
+       jobs, so a job that ran a while before its node's heartbeat lapsed is failed,
+       not requeued — preserving the duplicate-side-effect protection.
 
-    started_at is stored as a naive-UTC ISO string (see _now_iso), so the cutoff is
-    computed the same way to keep the lexicographic/temporal comparison valid.
+    Concurrency (contract C5/C8): every statement here is a single atomic UPDATE
+    guarded by its stale-condition WHERE. Under N workers, whichever process runs it
+    first flips the rows; every other process's identical UPDATE matches zero rows.
+    No read-then-write race.
+
+    Timestamps are naive-UTC ISO strings (see _now_iso), so cutoffs are computed the
+    same way to keep the lexicographic/temporal comparison valid (contract C6).
     """
     try:
         threshold_minutes = int(threshold_minutes)
@@ -1527,14 +1729,22 @@ def _reap_stale_jobs(threshold_minutes: int = 15) -> int:
         threshold_minutes = 15
     if threshold_minutes < 0:
         threshold_minutes = 15
+    try:
+        heartbeat_timeout_sec = int(heartbeat_timeout_sec)
+    except (TypeError, ValueError):
+        heartbeat_timeout_sec = 45
+    if heartbeat_timeout_sec < 0:
+        heartbeat_timeout_sec = 45
 
     from datetime import timedelta
 
     now = _utcnow()
     cutoff_iso = (now - timedelta(minutes=threshold_minutes)).isoformat()
+    hb_cutoff_iso = (now - timedelta(seconds=heartbeat_timeout_sec)).isoformat()
     now_iso = now.isoformat()
     conn = _db_connection()
     try:
+        # Path 1: long-running -> FAIL (unchanged; duplicate-side-effect safety).
         cur = conn.execute(
             """
             UPDATE job_queue
@@ -1545,11 +1755,126 @@ def _reap_stale_jobs(threshold_minutes: int = 15) -> int:
             """,
             (now_iso, cutoff_iso),
         )
+        failed = cur.rowcount or 0
+
+        # Path 2 (T8): mark nodes with a stale heartbeat 'down', then REQUEUE their
+        # in-flight jobs. A job whose own heartbeat_at is fresh is left alone even if
+        # we misjudge the node. NULL/empty heartbeats are treated as stale so a job
+        # claimed by a node that never heartbeated is still recovered.
+        conn.execute(
+            """
+            UPDATE worker_nodes
+               SET status = 'down'
+             WHERE status <> 'down'
+               AND (last_heartbeat IS NULL OR last_heartbeat < ?)
+            """,
+            (hb_cutoff_iso,),
+        )
+        cur2 = conn.execute(
+            """
+            UPDATE job_queue
+               SET status = 'queued', worker_id = '', started_at = NULL,
+                   claimed_at = '', heartbeat_at = ''
+             WHERE status = 'running'
+               AND worker_id IS NOT NULL AND worker_id <> ''
+               AND (heartbeat_at IS NULL OR heartbeat_at = '' OR heartbeat_at < ?)
+               AND worker_id IN (
+                   SELECT id FROM worker_nodes
+                    WHERE status = 'down'
+                       OR last_heartbeat IS NULL
+                       OR last_heartbeat < ?
+               )
+            """,
+            (hb_cutoff_iso, hb_cutoff_iso),
+        )
         conn.commit()
-        reaped = cur.rowcount or 0
-        if reaped:
-            logger.warning("Reaped %s stale job(s) stuck in 'running' > %s min", reaped, threshold_minutes)
-        return reaped
+        requeued = cur2.rowcount or 0
+        if failed:
+            logger.warning("Reaped %s stale job(s) stuck in 'running' > %s min (failed)", failed, threshold_minutes)
+        if requeued:
+            logger.warning("Requeued %s job(s) from dead worker(s) (stale heartbeat > %ss)", requeued, heartbeat_timeout_sec)
+        return failed + requeued
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Worker node registry + heartbeat (T8 / SCALABILITY §2)
+# ---------------------------------------------------------------------------
+
+def _upsert_worker_node(role: str = "worker", capacity: int = 1, ollama_url: str = "") -> str:
+    """Register (or refresh) this process's worker_nodes row on boot.
+
+    ON CONFLICT (id) DO UPDATE is the portable upsert both backends run (contract
+    C3). Returns the worker id. status is (re)set to 'active' so a restarted node
+    that a previous reap marked 'down' comes back online.
+    """
+    wid = _worker_id()
+    import socket
+    try:
+        host = socket.gethostname()
+    except Exception:
+        host = "unknown"
+    now = _now_iso()
+    conn = _db_connection()
+    try:
+        conn.execute(
+            """
+            INSERT INTO worker_nodes
+                (id, hostname, role, capacity, ollama_url, status, last_heartbeat, started_at)
+            VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+            ON CONFLICT (id) DO UPDATE SET
+                hostname = EXCLUDED.hostname,
+                role = EXCLUDED.role,
+                capacity = EXCLUDED.capacity,
+                ollama_url = EXCLUDED.ollama_url,
+                status = 'active',
+                last_heartbeat = EXCLUDED.last_heartbeat,
+                started_at = EXCLUDED.started_at
+            """,
+            (wid, host, role, int(capacity), ollama_url, now, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return wid
+
+
+def _worker_heartbeat() -> None:
+    """Refresh this node's last_heartbeat and the heartbeat_at of any job it owns.
+
+    Runs on EVERY node (not just the scheduler leader — see hub wiring). Both
+    statements are single atomic UPDATEs keyed on this worker's id, so concurrent
+    heartbeats from other nodes never interfere (contract C5/C8).
+    """
+    wid = _worker_id()
+    now = _now_iso()
+    conn = _db_connection()
+    try:
+        conn.execute(
+            "UPDATE worker_nodes SET last_heartbeat = ?, status = 'active' WHERE id = ?",
+            (now, wid),
+        )
+        conn.execute(
+            "UPDATE job_queue SET heartbeat_at = ? WHERE worker_id = ? AND status = 'running'",
+            (now, wid),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _mark_worker_draining(worker_id: str | None = None) -> None:
+    """Set a node's status to 'draining' (stops new claims from it, per SCALABILITY
+    §3). Used on graceful shutdown."""
+    wid = worker_id or _worker_id()
+    conn = _db_connection()
+    try:
+        conn.execute(
+            "UPDATE worker_nodes SET status = 'draining' WHERE id = ?",
+            (wid,),
+        )
+        conn.commit()
     finally:
         conn.close()
 
@@ -1567,7 +1892,7 @@ def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
     Idempotent + failover-safe: every worker calls this on an interval. The current
     leader keeps renewing (extending expiry); non-leaders only win once the lease
     expires. Because the read+write happen inside one connection and the write is an
-    unconditional INSERT OR REPLACE keyed on the singleton row, the worst-case race
+    unconditional upsert keyed on the singleton row, the worst-case race
     (two workers acquiring simultaneously after expiry) resolves on the next renewal
     tick when only one PID's expiry stays in the future — and the tracked-job wrapper
     additionally re-checks leadership at fire time, so a brief overlap cannot double-run
@@ -1608,8 +1933,14 @@ def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
             except Exception:
                 pass  # Malformed lease — overwrite it
         expiry_iso = (now + timedelta(seconds=ttl)).isoformat()
+        # Idiom-only change (contract C3): INSERT OR REPLACE -> ON CONFLICT on the
+        # hub_config.key PK. Behavior is identical — an unconditional overwrite of
+        # the singleton 'scheduler_leader' row. The lease *logic* is unchanged
+        # (T6 owns any lease rework; not touched here).
         conn.execute(
-            "INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES ('scheduler_leader', ?, ?)",
+            "INSERT INTO hub_config (key, value, updated_at) "
+            "VALUES ('scheduler_leader', ?, ?) "
+            "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at",
             (json.dumps(f"{pid}:{expiry_iso}"), now.isoformat()),
         )
         conn.commit()

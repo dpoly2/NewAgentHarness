@@ -16,6 +16,16 @@ PID_FILE = AGENTS_DIR / "data" / "hub.pid"
 DB_PATH = HARNESS / "memory" / "runs_v3.db"
 SKILLS_ROOT = AGENTS_DIR / "agents" / "projects"
 
+# ── Database backend selection (T1 — see docs/POSTGRES_MIGRATION.md) ──────────
+# DB_BACKEND: "sqlite" (default) or "postgres". Both paths stay runnable until
+# production cutover so rollback is a config flip, not a revert (contract C9).
+DB_BACKEND = os.environ.get("DB_BACKEND", "sqlite").strip().lower()
+# DATABASE_URL: required when DB_BACKEND=postgres, e.g.
+#   postgresql://archonhub:pw@<haproxy-leader-vip>:5432/archonhub
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+DB_POOL_MIN = int(os.environ.get("DB_POOL_MIN", "2"))
+DB_POOL_MAX = int(os.environ.get("DB_POOL_MAX", "10"))
+
 for _path in (HERE, HARNESS, AGENTS_DIR, APP_ROOT):
     if str(_path) not in sys.path:
         sys.path.append(str(_path))

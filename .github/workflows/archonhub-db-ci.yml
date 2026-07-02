@@ -1,0 +1,95 @@
+name: ArchonHub DB — Dual-Backend Tests
+
+# T5 (docs/AGENT_WORKPLAN.md): run the DB test suite on BOTH storage backends so a
+# change that breaks either sqlite or postgres fails CI (contract C9 — both
+# backends stay green until production cutover). The postgres leg is what finally
+# EXECUTES the PG path (translate_ddl output, ON CONFLICT, RETURNING id,
+# FOR UPDATE SKIP LOCKED, the _PgRow factory, the migration script's live load)
+# rather than static-reviewing it.
+
+on:
+  push:
+    paths:
+      - '.agents/agentharness/app/v3/**'
+      - '.github/workflows/archonhub-db-ci.yml'
+  pull_request:
+    paths:
+      - '.agents/agentharness/app/v3/**'
+      - '.github/workflows/archonhub-db-ci.yml'
+
+defaults:
+  run:
+    working-directory: .agents/agentharness/app/v3
+
+jobs:
+  db-tests:
+    name: DB tests (${{ matrix.backend }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false          # one backend failing must not hide the other
+      matrix:
+        backend: [sqlite, postgres]
+
+    # Postgres service container — only meaningful for the postgres leg. On the
+    # sqlite leg it simply starts and goes unused (DB_BACKEND=sqlite ignores it).
+    # A fresh container per run guarantees a CLEAN database, which the suite
+    # requires: several tests (e.g. TestClients) create rows with default/empty
+    # unique keys that would collide on a reused DB.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: archonhub
+          POSTGRES_PASSWORD: archonhub
+          POSTGRES_DB: archonhub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U archonhub"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_BACKEND: ${{ matrix.backend }}
+      # Only used by the postgres leg; harmless on the sqlite leg.
+      DATABASE_URL: postgresql://archonhub:archonhub@localhost:5432/archonhub
+      PYTHONDONTWRITEBYTECODE: '1'
+      # The DB tests import app/v3 modules directly.
+      PYTHONPATH: ${{ github.workspace }}/.agents/agentharness/app/v3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Initialize the schema through the APP's own _init_schema() — never
+      # re-declare DDL here (contract C3/C10: schema shape is single-sourced in
+      # hub_db.init_schema + core.database._ensure_*). No-op DDL work on sqlite;
+      # on postgres this builds all tables on the empty service container.
+      - name: Initialize schema (postgres only)
+        if: matrix.backend == 'postgres'
+        run: python -c "import core.database as d; d._init_schema(); print('PG schema initialized')"
+
+      # Scope: the DB-relevant suites only. Deliberately EXCLUDED (pre-existing,
+      # migration-unrelated failures — do not let them gate this CI):
+      #   * test_hub_server.py::TestAuth — needs a live server + the default admin
+      #     password; fails independently of the DB backend.
+      #   * test_ui_surfaces.py — imports tkinter, absent on headless CI runners.
+      # The one backend-specific assertion inside the DB suite
+      # (test_hub_db.py::TestSchema::test_db_file_created) is skipped on postgres
+      # via @pytest.mark.skipif (there is no local .db file on PG).
+      - name: Run DB test suite
+        run: |
+          python -m pytest -q -p no:cacheprovider \
+            tests/test_hub_db.py \
+            tests/test_pg_migration.py \
+            tests/test_job_claim_concurrency.py \
+            tests/test_migrate_ordering.py

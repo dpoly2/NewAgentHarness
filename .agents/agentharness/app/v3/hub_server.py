@@ -93,11 +93,25 @@ if FASTAPI_OK:
             else:
                 hub.logger.error(_msg + ' Set ARCHONHUB_UNSAFE_DEFAULTS=1 to override (dev only).')
                 raise SystemExit(1)
+        # Register this process in the worker_nodes registry (T8 / SCALABILITY §2)
+        # BEFORE starting worker/heartbeat loops so the reaper never sees a job
+        # owned by an unregistered node. Runs on every node, not just the leader.
+        hub.register_node()
         # Start 5 DB-backed worker coroutines (each polls job_queue for unclaimed jobs)
         for _ in range(5):
             hub._worker_tasks.append(asyncio.create_task(hub._db_worker_loop()))
-        # Start the WebSocket event broadcast poll (one per process)
-        hub._event_poll_task = asyncio.create_task(hub._event_poll_loop())
+        # Worker heartbeat: refresh this node's last_heartbeat + owned jobs so the
+        # reaper can tell a live worker from a dead one (T8). Every node runs it.
+        hub._heartbeat_task = asyncio.create_task(hub._heartbeat_loop())
+        # WebSocket broadcast fan-out (one per process). On Postgres, use the
+        # LISTEN/NOTIFY listener (T7 / POSTGRES_MIGRATION §7.2) — instant, no poll.
+        # On SQLite (no LISTEN/NOTIFY) fall back to polling ws_events. The poll loop
+        # also stays available as the documented Postgres degraded-mode fallback.
+        from core.config import DB_BACKEND as _DB_BACKEND
+        if _DB_BACKEND == "postgres":
+            hub._ws_listen_task = asyncio.create_task(hub._ws_listen_loop())
+        else:
+            hub._event_poll_task = asyncio.create_task(hub._event_poll_loop())
         # Job reaper: sweep 'running' jobs orphaned by crashed workers (failure #4).
         # Runs once immediately on startup then periodically; idempotent across workers.
         hub._reaper_task = asyncio.create_task(hub._reaper_loop())
@@ -112,10 +126,16 @@ if FASTAPI_OK:
         try:
             yield
         finally:
+            # Mark this node draining so it stops attracting claims while shutting down.
+            hub.deregister_node()
             for task in hub._worker_tasks:
                 task.cancel()
             if hub._event_poll_task:
                 hub._event_poll_task.cancel()
+            if hub._ws_listen_task:
+                hub._ws_listen_task.cancel()
+            if hub._heartbeat_task:
+                hub._heartbeat_task.cancel()
             if hub._reaper_task:
                 hub._reaper_task.cancel()
             if hub._scheduler_lease_task:

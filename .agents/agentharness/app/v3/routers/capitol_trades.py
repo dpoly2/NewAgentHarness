@@ -291,11 +291,12 @@ def _ingest_trade(conn, politician: dict[str, Any], trade: dict[str, Any]) -> tu
         )
         conn.execute(
             '''
-            INSERT OR IGNORE INTO copy_trade_signals (
+            INSERT INTO copy_trade_signals (
                 id, politician_trade_id, politician_id, politician_name, tracking_reason,
                 ticker, signal_side, signal_strength, copy_reason, estimated_qty, status,
                 cro_notes, alpaca_order_id, created_at, reviewed_at, executed_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', '', '', ?, '', '')
+            ON CONFLICT (id) DO NOTHING
             ''',
             (
                 signal_id,

@@ -37,21 +37,25 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), timeout=15)
-    conn.row_factory = sqlite3.Row
-    return conn
+def _conn():
+    """Backend-selected connection (contract C1). Routes through core.db_backend
+    so run_events works on both SQLite and Postgres; callers close in a finally."""
+    from core import db_backend
+    return db_backend.get_connection()
 
 
-def _ensure_schema(conn: sqlite3.Connection) -> None:
+def _ensure_schema(conn) -> None:
     global _initialised
     if _initialised:
         return
     with _init_lock:
         if _initialised:
             return
+        from core import db_backend
+        # Per-backend DDL: AUTOINCREMENT -> Postgres IDENTITY (contract C3/C10).
         conn.execute(
-            """
+            db_backend.translate_ddl(
+                """
             CREATE TABLE IF NOT EXISTS run_events (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 run_id          TEXT NOT NULL,
@@ -61,6 +65,7 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
                 created_at      TEXT NOT NULL
             )
             """
+            )
         )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_run_events_run ON run_events(run_id, id)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_run_events_conv ON run_events(conversation_id, id)")
@@ -80,14 +85,16 @@ def append_event(run_id: str, event_type: str, data: dict[str, Any] | None = Non
         conn = _conn()
         try:
             _ensure_schema(conn)
-            cur = conn.execute(
+            # RETURNING id is portable (SQLite >=3.35, Postgres); replaces
+            # cursor.lastrowid, which psycopg does not provide (contract C3).
+            row = conn.execute(
                 "INSERT INTO run_events (run_id, conversation_id, type, data, created_at) "
-                "VALUES (?, ?, ?, ?, ?)",
+                "VALUES (?, ?, ?, ?, ?) RETURNING id",
                 (run_id, conversation_id or "", event_type,
                  json.dumps(data or {}, ensure_ascii=False), _now()),
-            )
+            ).fetchone()
             conn.commit()
-            return int(cur.lastrowid or 0)
+            return int((row[0] if row else 0) or 0)
         finally:
             conn.close()
     except Exception as exc:

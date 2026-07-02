@@ -116,7 +116,13 @@ def _verify_pw(plain: str, hashed: str) -> bool:
     return _passlib_bcrypt.verify(plain, hashed)
 
 
-def get_conn() -> sqlite3.Connection:
+def get_conn():
+    # Backend-selected: postgres delegates to core.db_backend; sqlite unchanged.
+    # See docs/POSTGRES_MIGRATION.md, docs/DB_ACCESS_CONTRACT.md (C1).
+    from core.config import DB_BACKEND
+    if DB_BACKEND == "postgres":
+        from core import db_backend
+        return db_backend.get_connection()
     conn = sqlite3.connect(str(DB_PATH), timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -170,7 +176,22 @@ def init_schema() -> None:
             queued_at TEXT,
             started_at TEXT,
             completed_at TEXT,
-            job_data TEXT DEFAULT '{}'
+            job_data TEXT DEFAULT '{}',
+            worker_id TEXT DEFAULT '',
+            claimed_at TEXT DEFAULT '',
+            heartbeat_at TEXT DEFAULT ''
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS worker_nodes (
+            id TEXT PRIMARY KEY,
+            hostname TEXT NOT NULL,
+            role TEXT NOT NULL,
+            capacity INTEGER DEFAULT 1,
+            ollama_url TEXT DEFAULT '',
+            status TEXT DEFAULT 'active',
+            last_heartbeat TEXT,
+            started_at TEXT
         )
         """,
         """
@@ -642,9 +663,14 @@ def init_schema() -> None:
         "queue_paused": False,
     }
 
+    # Per-backend DDL: rewrite SQLite type tokens (AUTOINCREMENT, REAL) to their
+    # Postgres equivalents; no-op on SQLite. See db_backend.translate_ddl and
+    # POSTGRES_MIGRATION §5. The schema *shape* stays single-sourced above.
+    from core import db_backend
+
     with get_conn() as conn:
         for statement in statements:
-            conn.execute(statement)
+            conn.execute(db_backend.translate_ddl(statement))
 
         user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
         if user_count == 0:
@@ -703,13 +729,30 @@ def init_schema() -> None:
         "ALTER TABLE email_connectors ADD COLUMN oauth_client_id TEXT DEFAULT ''",
         "ALTER TABLE email_connectors ADD COLUMN oauth_client_secret TEXT DEFAULT ''",
         "ALTER TABLE email_connectors ADD COLUMN token_expires_at TEXT DEFAULT ''",
+        # Worker registry + heartbeat reaper (T6/T8, POSTGRES_MIGRATION §7.1/§7.4)
+        "ALTER TABLE job_queue ADD COLUMN worker_id TEXT DEFAULT ''",
+        "ALTER TABLE job_queue ADD COLUMN claimed_at TEXT DEFAULT ''",
+        "ALTER TABLE job_queue ADD COLUMN heartbeat_at TEXT DEFAULT ''",
     ]
+    # These warm-migrate pre-existing tables by adding columns. On SQLite the
+    # "already exists" case raises and is swallowed. On Postgres a raised error
+    # aborts the whole transaction (autocommit=False), which would break every
+    # later migration in this block — so use ADD COLUMN IF NOT EXISTS there
+    # (Postgres supports it; SQLite does not) and commit each individually so a
+    # single failure cannot poison the rest.
+    # verified: sqlite; pg path unexecuted (no infra)
+    from core.config import DB_BACKEND as _BACKEND
+    _pg = _BACKEND == "postgres"
     with get_conn() as conn:
         for _mig in _migrations:
+            stmt = _mig
+            if _pg and stmt.upper().startswith("ALTER TABLE") and " ADD COLUMN " in stmt.upper():
+                stmt = stmt.replace(" ADD COLUMN ", " ADD COLUMN IF NOT EXISTS ", 1)
             try:
-                conn.execute(_mig)
+                conn.execute(db_backend.translate_ddl(stmt))
+                conn.commit()
             except Exception:
-                pass  # column already exists
+                conn.rollback()  # clear any aborted-transaction state, then continue
 
 
 def save_run(
@@ -2092,14 +2135,17 @@ def delete_brief(id: str) -> bool:
 def create_user(username: str, email: str | None, password: str, role: str = "user") -> dict[str, Any]:
     now = _now_iso()
     with get_conn() as conn:
-        cur = conn.execute(
+        # RETURNING id is portable (SQLite >=3.35, Postgres) and replaces
+        # cursor.lastrowid, which psycopg does not provide (contract C3).
+        row = conn.execute(
             """
             INSERT INTO users (username, email, hashed_password, role, is_active, created_at, last_login)
             VALUES (?, ?, ?, ?, 1, ?, NULL)
+            RETURNING id
             """,
             (username, email, _hash_pw(password), role, now),
-        )
-        user_id = cur.lastrowid
+        ).fetchone()
+        user_id = row[0] if row else None
     return get_user(id=user_id) or {}
 
 

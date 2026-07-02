@@ -13,10 +13,17 @@ HERE = Path(__file__).parent
 APP  = HERE.parent
 sys.path.insert(0, str(APP))
 
-# Redirect DB to a temp file so tests never touch production data
+# Backend under test (dual-backend CI, contract C9). On sqlite (default) we
+# redirect the DB to a temp file so tests never touch production data; on postgres
+# the schema is initialized against the CI-provided DATABASE_URL and there is no
+# local file. See docs/DB_ACCESS_CONTRACT.md and .github/workflows/archonhub-db-ci.yml.
+_DB_BACKEND = os.environ.get("DB_BACKEND", "sqlite").strip().lower()
+_IS_PG = _DB_BACKEND == "postgres"
+
 import hub_db
 _TMP_DB = Path(tempfile.mkdtemp()) / "test_runs_v3.db"
-hub_db.DB_PATH = _TMP_DB
+if not _IS_PG:
+    hub_db.DB_PATH = _TMP_DB
 hub_db.init_schema()
 
 import pytest
@@ -35,14 +42,23 @@ def uid() -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 
 class TestSchema:
+    @pytest.mark.skipif(_IS_PG, reason="no local DB file on the postgres backend")
     def test_db_file_created(self):
         assert _TMP_DB.exists()
 
     def test_tables_exist(self):
+        # Portable table introspection: sqlite_master on sqlite, information_schema
+        # on postgres (PRAGMA/sqlite_master do not exist on PG — contract C3).
         with hub_db.get_conn() as conn:
-            tables = {r[0] for r in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            ).fetchall()}
+            if _IS_PG:
+                tables = {r[0] for r in conn.execute(
+                    "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'public'"
+                ).fetchall()}
+            else:
+                tables = {r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()}
         expected = {
             "runs", "skills", "todos", "job_queue",
             "agent_registry", "conversations", "messages",

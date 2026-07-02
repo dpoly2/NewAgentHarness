@@ -17,6 +17,7 @@ from core.database import (
     _create_record,
     _get_ws_events_since,
     _insert_ws_event,
+    _mark_worker_draining,
     _now_iso,
     _queue_job_record,
     _reap_stale_jobs,
@@ -24,13 +25,24 @@ from core.database import (
     _save_run_record,
     _try_acquire_scheduler_lock,
     _update_job_record,
+    _upsert_worker_node,
     _utcnow,
+    _worker_heartbeat,
+    _worker_id,
 )
 
 # Reaper threshold (minutes a job may stay 'running' before being marked failed).
 JOB_REAP_MINUTES = int(os.environ.get("JOB_REAP_MINUTES", "15") or "15")
 # How often the reaper loop runs (seconds).
 JOB_REAP_INTERVAL_SEC = int(os.environ.get("JOB_REAP_INTERVAL_SEC", "180") or "180")
+# Worker heartbeat interval (seconds) and the staleness window the reaper uses to
+# declare a node dead (SCALABILITY §2 suggests ~10s heartbeat).
+WORKER_HEARTBEAT_SEC = int(os.environ.get("WORKER_HEARTBEAT_SEC", "10") or "10")
+WORKER_HEARTBEAT_TIMEOUT_SEC = int(os.environ.get("WORKER_HEARTBEAT_TIMEOUT_SEC", "45") or "45")
+# This node's role + advertised capacity/inference endpoint for the registry.
+WORKER_ROLE = os.environ.get("WORKER_ROLE", "worker")
+WORKER_CAPACITY = int(os.environ.get("WORKER_CAPACITY", "5") or "5")
+WORKER_OLLAMA_URL = os.environ.get("OLLAMA_URL", "")
 # Scheduler-leader lease TTL (seconds) and renewal interval (seconds).
 SCHEDULER_LEASE_TTL_SEC = int(os.environ.get("SCHEDULER_LEASE_TTL_SEC", "30") or "30")
 SCHEDULER_LEASE_RENEW_SEC = int(os.environ.get("SCHEDULER_LEASE_RENEW_SEC", "10") or "10")
@@ -90,8 +102,10 @@ class HubServer:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._worker_tasks: list[asyncio.Task] = []
         self._event_poll_task: asyncio.Task | None = None
+        self._ws_listen_task: asyncio.Task | None = None
         self._reaper_task: asyncio.Task | None = None
         self._scheduler_lease_task: asyncio.Task | None = None
+        self._heartbeat_task: asyncio.Task | None = None
         self.logger = get_logger("server")
 
     async def submit_job(self, config: dict) -> str:
@@ -129,8 +143,27 @@ class HubServer:
                 },
             )
 
+    async def _forward_payload(self, payload: dict) -> None:
+        """Fan a single event payload out to this node's connected WS clients,
+        pruning any that error. Shared by the poll loop (sqlite / fallback) and the
+        LISTEN/NOTIFY listener (postgres)."""
+        dead_clients: list[Any] = []
+        for client in list(self._clients):
+            try:
+                await client.send_json(payload)
+            except Exception:
+                dead_clients.append(client)
+        for client in dead_clients:
+            self._clients.discard(client)
+
     async def _event_poll_loop(self) -> None:
-        """Poll ws_events table and forward new events to this worker's connected WS clients."""
+        """Poll ws_events and forward new events to this worker's WS clients.
+
+        This is the SQLite path (no LISTEN/NOTIFY) and the documented Postgres
+        FALLBACK. On Postgres the primary path is _ws_listen_loop (LISTEN/NOTIFY);
+        hub_server starts the listener there and skips this poller. Kept intact so
+        SQLite does not regress and PG has a working degraded mode.
+        """
         self._loop = asyncio.get_running_loop()
         cleanup_counter = 0
         while True:
@@ -138,14 +171,7 @@ class HubServer:
                 events = _get_ws_events_since(self._last_event_id)
                 for event_id, payload in events:
                     self._last_event_id = event_id
-                    dead_clients: list[Any] = []
-                    for client in list(self._clients):
-                        try:
-                            await client.send_json(payload)
-                        except Exception:
-                            dead_clients.append(client)
-                    for client in dead_clients:
-                        self._clients.discard(client)
+                    await self._forward_payload(payload)
                 # Periodic cleanup of old ws_events (~every 5 minutes)
                 cleanup_counter += 1
                 if cleanup_counter >= 1500:  # 1500 * 200ms = 5 min
@@ -156,6 +182,62 @@ class HubServer:
             except Exception:
                 self.logger.exception("Error in event poll loop")
             await asyncio.sleep(0.2)
+
+    async def _ws_listen_loop(self) -> None:
+        """Postgres LISTEN/NOTIFY broadcast (T7 / POSTGRES_MIGRATION §7.2).
+
+        Runs a dedicated psycopg connection that ``LISTEN ws_events`` and blocks on
+        notifications; each carries a ws_events row id. On boot we drain any events
+        missed while starting (id > _last_event_id) so nothing is lost between the
+        table insert and LISTEN registration, then forward each notified row.
+
+        ws_events stays the durable replay log (Inez run-event replay reads it) —
+        this loop only replaces the *polling*, not the table.
+
+        verified: sqlite; pg path unexecuted (no infra). The notify handling uses
+        psycopg3's connection.notifies() generator (blocking, timeout-bounded).
+        """
+        self._loop = asyncio.get_running_loop()
+        import psycopg  # local import: only needed on the PG path
+        from core.config import DATABASE_URL
+        from core.database import _get_ws_event_by_id, _get_ws_events_since
+
+        while True:
+            conn = None
+            try:
+                conn = await asyncio.to_thread(psycopg.connect, DATABASE_URL, autocommit=True)
+                await asyncio.to_thread(conn.execute, "LISTEN ws_events")
+                # Catch up on anything inserted before LISTEN was armed.
+                for event_id, payload in _get_ws_events_since(self._last_event_id):
+                    self._last_event_id = max(self._last_event_id, event_id)
+                    await self._forward_payload(payload)
+                # Block for notifications; timeout lets us honour cancellation.
+                while True:
+                    notifies = await asyncio.to_thread(
+                        lambda: list(conn.notifies(timeout=5.0, stop_after=1))
+                    )
+                    for note in notifies:
+                        try:
+                            event_id = int(note.payload)
+                        except (TypeError, ValueError):
+                            continue
+                        got = _get_ws_event_by_id(event_id)
+                        if got is None:
+                            continue
+                        eid, payload = got
+                        self._last_event_id = max(self._last_event_id, eid)
+                        await self._forward_payload(payload)
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                self.logger.exception("Error in ws LISTEN/NOTIFY loop; retrying")
+                await asyncio.sleep(1.0)
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
 
     async def _db_worker_loop(self) -> None:
         """Poll job_queue for unclaimed jobs and execute them. Safe to run in N workers."""
@@ -289,7 +371,7 @@ class HubServer:
         single idempotent UPDATE guarded by the stale condition.
         """
         try:
-            return _reap_stale_jobs(JOB_REAP_MINUTES)
+            return _reap_stale_jobs(JOB_REAP_MINUTES, WORKER_HEARTBEAT_TIMEOUT_SEC)
         except Exception:
             self.logger.exception("Job reaper failed")
             return 0
@@ -311,6 +393,55 @@ class HubServer:
                 await asyncio.sleep(max(30, JOB_REAP_INTERVAL_SEC))
             except asyncio.CancelledError:
                 break
+
+    # ── Worker registry + heartbeat (T8 / SCALABILITY §2) ────────────────────
+
+    def register_node(self) -> str:
+        """Upsert this process's worker_nodes row on boot. Runs on EVERY node
+        (worker/api/control), not just the scheduler leader."""
+        try:
+            wid = _upsert_worker_node(
+                role=WORKER_ROLE, capacity=WORKER_CAPACITY, ollama_url=WORKER_OLLAMA_URL
+            )
+            self.logger.info("Registered worker node %s (role=%s, capacity=%s)", wid, WORKER_ROLE, WORKER_CAPACITY)
+            return wid
+        except Exception:
+            self.logger.exception("Worker node registration failed")
+            return _worker_id()
+
+    async def _heartbeat_loop(self) -> None:
+        """Refresh this node's last_heartbeat + owned jobs' heartbeat_at every
+        WORKER_HEARTBEAT_SEC. Runs on every node so the reaper can distinguish a
+        live worker from a dead one (T8). Not wired via _JOB_SPECS because those
+        fire on the scheduler leader ONLY — every node must heartbeat itself.
+        """
+        cleanup_counter = 0
+        while True:
+            try:
+                _worker_heartbeat()
+                # Age out old ws_events (~every 5 min). On SQLite the poll loop also
+                # does this; on Postgres the poll loop is off, so do it here — the
+                # DELETE is idempotent and safe to run from any/all nodes.
+                cleanup_counter += 1
+                if cleanup_counter * max(2, WORKER_HEARTBEAT_SEC) >= 300:
+                    cleanup_counter = 0
+                    _cleanup_old_ws_events()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                self.logger.exception("Worker heartbeat failed")
+            try:
+                await asyncio.sleep(max(2, WORKER_HEARTBEAT_SEC))
+            except asyncio.CancelledError:
+                break
+
+    def deregister_node(self) -> None:
+        """Mark this node 'draining' on graceful shutdown so it stops attracting
+        new claims while in-flight jobs finish (SCALABILITY §3)."""
+        try:
+            _mark_worker_draining()
+        except Exception:
+            pass
 
     # ── Scheduler leader election (Feature 3, failure #5) ────────────────────
 
