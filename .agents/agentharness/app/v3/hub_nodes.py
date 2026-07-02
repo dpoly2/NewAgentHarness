@@ -283,6 +283,64 @@ def _strip_json_fence(text: str) -> str:
     return cleaned.strip()
 
 
+def _parse_eval_response(raw: str) -> tuple[float, str]:
+    """Extract (score, critique) from an evaluator LLM response.
+
+    Tries three strategies in order so small local models that ignore the
+    'JSON only' instruction still produce a usable score:
+
+    1. Full JSON parse (clean responses from capable models).
+    2. First JSON object extracted from prose (```json fences or bare {...}).
+    3. Score regex scan — matches patterns like:
+         **Score:** 0.8/1.0  |  Score: 0.85  |  score: 0.9  |  9/10  |  90/100
+       The first match is normalised to [0.0, 1.0]. The raw text is used as
+       the critique so the prose evaluation is preserved rather than lost.
+    """
+    text = _strip_json_fence(raw)
+
+    # Strategy 1: clean JSON
+    try:
+        payload = json.loads(text)
+        score = max(0.0, min(1.0, float(payload.get("score", 0.0))))
+        critique = str(payload.get("critique", "")).strip()
+        return score, critique
+    except Exception:
+        pass
+
+    # Strategy 2: first {...} block inside prose
+    json_match = re.search(r"\{[^{}]*\"score\"[^{}]*\}", raw, re.DOTALL)
+    if json_match:
+        try:
+            payload = json.loads(json_match.group())
+            score = max(0.0, min(1.0, float(payload.get("score", 0.0))))
+            critique = str(payload.get("critique", "")).strip() or raw[:400]
+            return score, critique
+        except Exception:
+            pass
+
+    # Strategy 3: prose score patterns
+    # Matches: "0.8/1.0", "0.85", "8/10", "85/100", "80%"
+    score_pat = re.compile(
+        r"(?:score|rating)[:\s*]*"       # label
+        r"([0-9]+(?:\.[0-9]+)?)"         # numerator
+        r"(?:/\s*([0-9]+(?:\.[0-9]+)?))?",  # optional /denominator
+        re.IGNORECASE,
+    )
+    m = score_pat.search(raw)
+    if m:
+        numerator   = float(m.group(1))
+        denominator = float(m.group(2)) if m.group(2) else (
+            100.0 if numerator > 1.0 else 1.0
+        )
+        score = max(0.0, min(1.0, numerator / denominator))
+        # Use the raw prose as the critique (it contains the actual evaluation)
+        critique = raw.strip()[:800]
+        return score, critique
+
+    # All strategies failed
+    return 0.0, f"Could not parse evaluator response: {raw[:300]}"
+
+
 def _invoke(
     messages: list[Any],
     temperature: float,
@@ -398,13 +456,7 @@ def node_evaluate(state: dict, emit: callable = None) -> dict:
         HumanMessage(content=f"TASK:\n{state['task']}\n\nOUTPUT:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
     raw, _ = _invoke(messages, 0.0, '{"score": 0.0, "critique": "[no model output]"}')
-    try:
-        payload = json.loads(_strip_json_fence(raw))
-        score = max(0.0, min(1.0, float(payload.get("score", 0.0))))
-        critique = str(payload.get("critique", "")).strip()
-    except Exception:
-        score = 0.0
-        critique = f"Could not parse evaluator response: {raw[:300]}"
+    score, critique = _parse_eval_response(raw)
     _emit(
         emit,
         "node_update",
