@@ -99,6 +99,30 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
             _update_record("conversations", conv_id, {"updated_at": _now_iso()})
 
             queued_runs = []
+            collab_conv_id = None
+            if dispatches:
+                # Document multi-agent dispatch in agent_conversations so the
+                # Agents tab shows a full audit trail of every Inez-driven run.
+                try:
+                    import sqlite3 as _sql, json as _json
+                    from core.config import DB_PATH as _DB_PATH
+                    _ac = _sql.connect(str(_DB_PATH))
+                    _ac.row_factory = _sql.Row
+                    collab_conv_id = uuid.uuid4().hex
+                    participant_agents = [d.get("agent_id") for d in dispatches if d.get("agent_id")]
+                    _ac.execute(
+                        "INSERT INTO agent_conversations "
+                        "(conversation_id, user_id, initiator_agent, participant_agents, goal, status, created_at, message_count) "
+                        "VALUES (?,?,?,?,?,?,?,?)",
+                        (collab_conv_id, "inez", "inez-chief-of-staff",
+                         _json.dumps(participant_agents), body.message[:500],
+                         "in_progress", _now_iso(), len(dispatches))
+                    )
+                    _ac.commit()
+                    _ac.close()
+                except Exception as _ce:
+                    pass  # non-fatal
+
             for dispatch in dispatches:
                 agent_id = dispatch.get("agent_id", "")
                 project = dispatch.get("project", "")
@@ -107,6 +131,42 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
                 if agent_id and task:
                     job_run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
                     queued_runs.append({"run_id": job_run_id, "agent_id": agent_id, "project": project})
+                    # Log each dispatch as a message in the collaboration record
+                    if collab_conv_id:
+                        try:
+                            import sqlite3 as _sql2, json as _json2
+                            from core.config import DB_PATH as _DB2
+                            _am = _sql2.connect(str(_DB2))
+                            _am.execute(
+                                "INSERT INTO agent_messages "
+                                "(message_id, conversation_id, sender_agent, recipient_agent, message_type, payload_json, status, created_at) "
+                                "VALUES (?,?,?,?,?,?,?,?)",
+                                (uuid.uuid4().hex, collab_conv_id,
+                                 "inez-chief-of-staff", agent_id, "task",
+                                 _json2.dumps({"task": task, "project": project, "run_id": job_run_id}),
+                                 "delivered", _now_iso())
+                            )
+                            _am.commit()
+                            _am.close()
+                        except Exception:
+                            pass
+
+            # Mark collaboration complete once all dispatches are queued
+            if collab_conv_id:
+                try:
+                    import sqlite3 as _sql3
+                    from core.config import DB_PATH as _DB3
+                    _af = _sql3.connect(str(_DB3))
+                    _af.execute(
+                        "UPDATE agent_conversations SET status=?, completed_at=?, result_json=? WHERE conversation_id=?",
+                        ("completed", _now_iso(),
+                         json.dumps({"inez_message": inez_message, "queued_runs": queued_runs}),
+                         collab_conv_id)
+                    )
+                    _af.commit()
+                    _af.close()
+                except Exception:
+                    pass
 
             response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
             if result.get("has_citations"):
