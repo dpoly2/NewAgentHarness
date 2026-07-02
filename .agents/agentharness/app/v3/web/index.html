@@ -4912,44 +4912,76 @@
                         <div class="split-grid">
                             <div class="section-stack">
                                     <div class="form-card">
-                                    <h3>AI Provider</h3>
+                                    <h3>Active LLM</h3>
                                     <form id="configForm" class="form-grid">
                                         <div class="field">
                                             <label>Provider</label>
-                                            <select name="llm_provider">
-                                                ${['openai','anthropic','ollama','github','groq','gemini'].map(p => `<option value="${p}" ${(config?.llm_provider||'openai')===p?'selected':''}>${p}</option>`).join('')}
+                                            <select name="llm_provider" id="activeLlmProvider">
+                                                ${['openai','anthropic','gemini','groq','perplexity','github','ollama'].map(p => `<option value="${p}" ${(config?.llm_provider||'openai')===p?'selected':''}>${p}</option>`).join('')}
                                             </select>
                                         </div>
                                         <div class="field">
                                             <label>Model</label>
-                                            <input name="llm_model" value="${escapeHtml(String(config?.llm_model || config?.OPENAI_MODEL || 'gpt-4o-mini'))}" placeholder="e.g. gpt-4o-mini" />
+                                            <input name="llm_model" id="activeLlmModel" value="${escapeHtml(String(config?.llm_model || config?.OPENAI_MODEL || 'gpt-4o-mini'))}" placeholder="e.g. gpt-4o-mini" />
                                         </div>
                                         <div class="field">
-                                            <label>API Key</label>
-                                            <input name="llm_api_key" type="password" value="${escapeHtml(config?.llm_api_key || '')}" placeholder="sk-... or leave blank for env var" autocomplete="new-password" />
-                                        </div>
-                                        <div class="field">
-                                            <label>Base URL <span style="color:var(--text-muted);font-weight:400">(blank = default)</span></label>
-                                            <input name="llm_base_url" value="${escapeHtml(config?.llm_base_url || '')}" placeholder="https://api.openai.com/v1" />
+                                            <label>Base URL <span style="color:var(--text-muted);font-weight:400">(blank = provider default)</span></label>
+                                            <input name="llm_base_url" id="activeLlmBaseUrl" value="${escapeHtml(config?.llm_base_url || '')}" placeholder="leave blank for default" />
                                         </div>
                                         <div class="field">
                                             <label>Thread Pool Size</label>
                                             <input name="thread_pool_size" type="number" min="1" max="16" value="${escapeHtml(String(config?.thread_pool_size || 3))}" />
                                         </div>
                                         <div class="field">
-                                            <label>API Token</label>
-                                            <input name="api_token" value="${escapeHtml(config?.api_token || '••••••••••••••••')}" readonly />
+                                            <label>Hub API Token <span style="color:var(--text-muted);font-weight:400">(read-only)</span></label>
+                                            <input value="${escapeHtml(config?.api_token || '••••••••••••••••')}" readonly style="opacity:0.6;cursor:default" />
                                         </div>
                                         <div class="field">
-                                            <label>SerpAPI Key <span style="color:var(--text-muted);font-weight:400">(for web search)</span></label>
-                                            <input name="serpapi_api_key" type="password" value="${escapeHtml(config?.serpapi_api_key || '')}" placeholder="Your SerpAPI key or leave blank" autocomplete="new-password" />
-                                            <small style="color:var(--text-muted);font-size:0.85em;margin-top:4px;display:block">
-                                                Get free key at <a href="https://serpapi.com/" target="_blank" style="color:var(--accent)">serpapi.com</a> (100 searches/month)
-                                            </small>
+                                            <label>SerpAPI Key <span style="color:var(--text-muted);font-weight:400">(web search)</span></label>
+                                            <input name="serpapi_api_key" type="password" value="${escapeHtml(config?.serpapi_api_key || '')}" placeholder="Your SerpAPI key" autocomplete="new-password" />
+                                            <small style="color:var(--text-muted);font-size:0.85em;margin-top:4px;display:block">Free key at <a href="https://serpapi.com/" target="_blank" style="color:var(--accent)">serpapi.com</a> (100/month)</small>
                                         </div>
                                         <div class="form-actions span-2">
-                                            <button class="action-btn" type="submit">Save Config</button>
+                                            <button class="action-btn" type="submit">Save</button>
                                         </div>
+                                    </form>
+                                </div>
+                                <div class="form-card">
+                                    <h3>Provider API Keys</h3>
+                                    <p style="color:var(--text-muted);font-size:0.85em;margin:0 0 14px">Keys are stored securely in the hub database. Setting a key here activates that provider in the model catalog.</p>
+                                    <form id="providerKeysForm">
+                                    ${[
+                                        { id:'openai',     label:'OpenAI',      icon:'⬡', hint:'sk-...', envVar:'OPENAI_API_KEY',      link:'https://platform.openai.com/api-keys',          baseUrl:'' },
+                                        { id:'anthropic',  label:'Anthropic',   icon:'◈', hint:'sk-ant-...', envVar:'ANTHROPIC_API_KEY',   link:'https://console.anthropic.com/settings/keys',  baseUrl:'' },
+                                        { id:'gemini',     label:'Gemini',      icon:'◉', hint:'AIza...', envVar:'GEMINI_API_KEY',       link:'https://aistudio.google.com/app/apikey',        baseUrl:'' },
+                                        { id:'groq',       label:'Groq',        icon:'⚡', hint:'gsk_...', envVar:'GROQ_API_KEY',         link:'https://console.groq.com/keys',                baseUrl:'https://api.groq.com/openai/v1' },
+                                        { id:'perplexity', label:'Perplexity',  icon:'◎', hint:'pplx-...', envVar:'PERPLEXITY_API_KEY',  link:'https://perplexity.ai/settings/api',            baseUrl:'https://api.perplexity.ai' },
+                                        { id:'github',     label:'GitHub Models',icon:'⌥', hint:'ghp_... (models:read)', envVar:'GITHUB_TOKEN', link:'https://github.com/settings/tokens',  baseUrl:'https://models.inference.ai.azure.com' },
+                                    ].map(p => {
+                                        const stored = config?.[`llm_key_${p.id}`] || '';
+                                        const hasKey = stored.length > 0;
+                                        const tail   = hasKey ? '••••' + stored.slice(-4) : '';
+                                        const badge  = hasKey
+                                            ? `<span style="color:var(--success);font-size:11px;white-space:nowrap">✓ configured</span>`
+                                            : `<span style="color:var(--text-muted);font-size:11px;white-space:nowrap">not set</span>`;
+                                        return `
+                                        <div style="display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+                                            <div style="font-weight:500;font-size:0.9em">${p.icon} ${p.label}</div>
+                                            <div style="display:flex;flex-direction:column;gap:4px">
+                                                <input name="llm_key_${p.id}" type="password" value="${escapeHtml(stored)}"
+                                                    placeholder="${p.hint}" autocomplete="new-password"
+                                                    style="font-size:0.85em;padding:5px 8px" />
+                                                <span style="color:var(--text-muted);font-size:0.78em">env: <code>${p.envVar}</code>${p.baseUrl ? ` · base: <code style="font-size:0.9em">${p.baseUrl}</code>` : ''}</span>
+                                            </div>
+                                            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;min-width:90px">
+                                                ${badge}
+                                                <a href="${p.link}" target="_blank" style="color:var(--accent);font-size:0.78em">Get key ↗</a>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                    <div style="padding-top:12px">
+                                        <button class="action-btn" type="submit" style="width:100%">Save API Keys</button>
+                                    </div>
                                     </form>
                                 </div>
                                 <div class="form-card">
@@ -5010,6 +5042,8 @@
                     event.preventDefault();
                     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
                     payload.thread_pool_size = Number(payload.thread_pool_size || 3);
+                    // api_token is read-only and protected — never send it
+                    delete payload.api_token;
                     try {
                         await api('PUT', '/api/config', { data: payload });
                         showToast('Configuration updated', 'var(--success)');
@@ -5017,6 +5051,50 @@
                         showToast(error.message || 'Unable to save config', 'var(--error)');
                     }
                 });
+                $('#providerKeysForm').addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    const raw = Object.fromEntries(new FormData(event.currentTarget).entries());
+                    // Include all key fields (empty string clears a key)
+                    try {
+                        await api('PUT', '/api/config', { data: raw });
+                        showToast('API keys saved', 'var(--success)');
+                        // Re-render settings so status badges update
+                        renderSection('settings');
+                    } catch (error) {
+                        showToast(error.message || 'Unable to save keys', 'var(--error)');
+                    }
+                });
+                // Update model placeholder when provider changes
+                const _PROV_DEFAULT_MODELS = {
+                    openai: 'gpt-4o-mini', anthropic: 'claude-sonnet-4-5',
+                    gemini: 'gemini-2.5-flash', groq: 'llama-3.3-70b-versatile',
+                    perplexity: 'sonar', github: 'gpt-4o', ollama: 'llama3.2'
+                };
+                const _provSel  = $('#activeLlmProvider');
+                const _modelInp = $('#activeLlmModel');
+                const _baseInp  = $('#activeLlmBaseUrl');
+                const _PROV_BASE_URLS = {
+                    groq: 'https://api.groq.com/openai/v1',
+                    perplexity: 'https://api.perplexity.ai',
+                    github: 'https://models.inference.ai.azure.com',
+                    ollama: 'http://localhost:11434/v1',
+                };
+                if (_provSel && _modelInp) {
+                    _provSel.addEventListener('change', () => {
+                        const p = _provSel.value;
+                        if (!_modelInp.value || Object.values(_PROV_DEFAULT_MODELS).includes(_modelInp.value)) {
+                            _modelInp.value = _PROV_DEFAULT_MODELS[p] || '';
+                        }
+                        _modelInp.placeholder = _PROV_DEFAULT_MODELS[p] || '';
+                        if (_baseInp) {
+                            const def = _PROV_BASE_URLS[p] || '';
+                            if (!_baseInp.value || Object.values(_PROV_BASE_URLS).includes(_baseInp.value)) {
+                                _baseInp.value = def;
+                            }
+                            _baseInp.placeholder = def || 'leave blank for default';
+                        }
+                    });
+                }
                 $('#changePasswordForm').addEventListener('submit', async (event) => {
                     event.preventDefault();
                     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());

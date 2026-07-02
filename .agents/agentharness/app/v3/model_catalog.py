@@ -203,11 +203,32 @@ PROVIDER_BASE_URLS: dict[str, str] = {
 
 
 def provider_has_key(provider: str) -> bool:
-    """True if the provider's API key is configured in env."""
+    """True if the provider's API key is configured in env or DB."""
     env_key = PROVIDER_ENV_KEYS.get(provider, "")
     if not env_key:
         return provider == "ollama"  # ollama needs no key
-    return bool(os.environ.get(env_key, "").strip())
+    if os.environ.get(env_key, "").strip():
+        return True
+    # Fall back to DB-stored per-provider key
+    try:
+        from hub_db import get_config as _gc
+        return bool((_gc(f"llm_key_{provider}") or "").strip())
+    except Exception:
+        return False
+
+
+def _get_provider_api_key(provider: str) -> str:
+    """Return the best available API key for a provider (env var → DB)."""
+    env_key = PROVIDER_ENV_KEYS.get(provider, "")
+    if env_key:
+        key = os.environ.get(env_key, "").strip()
+        if key:
+            return key
+    try:
+        from hub_db import get_config as _gc
+        return (_gc(f"llm_key_{provider}") or "").strip()
+    except Exception:
+        return ""
 
 
 def get_catalog() -> list[dict]:
@@ -307,8 +328,7 @@ def build_llm_from_route(route: dict, temperature: float = 0.2):
     """Build a LangChain LLM from a route() result dict."""
     provider  = route["provider"]
     model_id  = route["model_id"]
-    env_key   = PROVIDER_ENV_KEYS.get(provider, "")
-    api_key   = os.environ.get(env_key, "sk-placeholder") if env_key else "ollama"
+    api_key   = _get_provider_api_key(provider) or ("ollama" if provider == "ollama" else "sk-placeholder")
     base_url  = PROVIDER_BASE_URLS.get(provider, "")
 
     if provider == "anthropic":
