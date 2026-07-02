@@ -1006,18 +1006,19 @@
             return str.length > size ? `${str.slice(0, size)}…` : str;
         }
 
+        const _TZ = 'America/Chicago';
         function fmtDate(value) {
             if (!value) return '—';
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return escapeHtml(value);
-            return date.toLocaleDateString();
+            return date.toLocaleDateString('en-US', { timeZone: _TZ });
         }
 
         function fmtDateTime(value) {
             if (!value) return '—';
             const date = new Date(value);
             if (Number.isNaN(date.getTime())) return escapeHtml(value);
-            return date.toLocaleString();
+            return date.toLocaleString('en-US', { timeZone: _TZ, month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) + ' CT';
         }
 
         function fmtRelative(value) {
@@ -1412,7 +1413,7 @@
                     state.inezStatusSteps = [];
                     state.inezConversationId = event.conversation_id || state.inezConversationId;
                     state.inezThinking = false;
-                    const rts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const rts = new Date().toLocaleTimeString('en-US', { timeZone: _TZ, hour: '2-digit', minute: '2-digit' });
                     state.inezMessages.push({
                         role: 'inez',
                         content: event.inez_message || (event.error ? `I ran into an issue: ${event.error}` : '…'),
