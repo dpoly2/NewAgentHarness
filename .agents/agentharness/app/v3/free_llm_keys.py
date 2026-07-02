@@ -167,11 +167,16 @@ def _test_key(key: str, model: str) -> bool:
             body = json.loads(resp.read())
             return bool(body.get("choices"))
     except urllib.error.HTTPError as e:
-        # 402 = out of budget, 401 = bad key, 429 = rate limited
-        logger.debug("Key test HTTP %s for model %s", e.code, model)
+        # 402 = out of budget, 401 = bad key, 429 = rate limited, 503 = provider down
+        if e.code in (503, 502, 504):
+            logger.warning("Key test HTTP %s (provider down) for model %s", e.code, model)
+        else:
+            logger.debug("Key test HTTP %s for model %s", e.code, model)
         return False
     except Exception as e:
-        logger.debug("Key test error for model %s: %s", model, e)
+        # Timeouts and connection errors are expected for slow/dead providers — warn
+        # once so DevOps can see the pattern without flooding logs.
+        logger.warning("Key test skipped for model %s: %s", model, type(e).__name__)
         return False
 
 

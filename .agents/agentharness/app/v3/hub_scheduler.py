@@ -729,25 +729,26 @@ async def job_markets_v2_monthly_curriculum_refresh(hub):
 # ── Capitol Trades Automation ────────────────────────────────────────────────
 
 async def job_capitol_trades_daily_refresh(hub):
-    """Refresh politician trade disclosures via the Capitol Trades API."""
+    """Refresh politician trade disclosures — queue an intelligence agent to pull and store latest data."""
     logger = get_logger("scheduler")
-    _notify("Capitol Trades: refreshing politician disclosures...", logger)
+    # Use submit_job so auth is bypassed and the refresh runs inside the executor
+    # rather than calling the HTTP endpoint (which requires a Bearer token the
+    # scheduler does not have).
+    config = {
+        "agent_id": "markets-intelligence-desk",
+        "project": "markets",
+        "graph": "reflexion",
+        "task": (
+            "Capitol Trades daily refresh: Call GET /api/capitol-trades/refresh-all on the "
+            "internal hub API to pull the latest politician trade disclosures. Store any new "
+            "trades and generate copy-trade signals for strong-conviction positions. "
+            "Log a summary of new_trades and new_signals."
+        ),
+    }
     try:
-        import os as _os
-        import httpx
-        _hub_host = _os.environ.get("HUB_HOST", "localhost")
-        _hub_port = _os.environ.get("HUB_PORT", "8765")
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(f"http://{_hub_host}:{_hub_port}/api/capitol-trades/refresh-all")
-            if resp.status_code == 200:
-                data = resp.json()
-                new_trades = data.get("total_new_trades", 0)
-                new_signals = data.get("total_new_signals", 0)
-                _notify(f"Capitol Trades: {new_trades} new disclosures, {new_signals} copy signals generated", logger)
-            else:
-                logger.warning("Capitol Trades refresh returned %s", resp.status_code)
+        await _submit_via_hub(hub, config, logger, "Capitol Trades daily refresh queued")
     except Exception:
-        logger.exception("Capitol Trades daily refresh failed")
+        logger.warning("Capitol Trades daily refresh could not be queued — will retry next run")
 
 
 async def job_capitol_trades_signal_digest(hub):

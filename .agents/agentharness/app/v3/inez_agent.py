@@ -1580,7 +1580,8 @@ def think(
                 partial_lines = []
                 for ar in partial:
                     a_id = ar.get("agent_id", "?")
-                    a_resp = (ar.get("response") or ar.get("summary") or "")[:200]
+                    # str() coercion: response may be a dict if LLM nested its output
+                    a_resp = str(ar.get("response") or ar.get("summary") or "")[:200]
                     a_err = ar.get("error")
                     partial_lines.append(
                         f"**{a_id}**: {a_resp}" if not a_err else f"**{a_id}** ⚠️ {a_err}"
@@ -1623,7 +1624,7 @@ def think(
                     f"exchange_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                     json.dumps({
                         "user":       user_message[:200],
-                        "inez":       result["inez_message"][:200],
+                        "inez":       str(result.get("inez_message", ""))[:200],
                         "agents":     [r.get("agent_id") for r in result.get("agent_results", [])],
                         "db_writes":  sum(r.get("db_writes_applied", 0) for r in result.get("agent_results", [])),
                     }),

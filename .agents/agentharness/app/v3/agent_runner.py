@@ -673,7 +673,9 @@ def build_synthesis_context(results: list[dict]) -> str:
     lines = ["[AGENT RESULTS — synthesize these into your response]"]
     for r in results:
         lines.append(f"\n## {r.get('agent_id','unknown')} result")
-        lines.append(r.get("response", r.get("summary", "No output")))
+        # response/summary may be a dict if the LLM nested its output — str() it
+        resp = r.get("response") or r.get("summary") or "No output"
+        lines.append(str(resp) if not isinstance(resp, str) else resp)
         if r.get("db_writes_applied", 0):
             lines.append(f"_(saved {r['db_writes_applied']} record(s) to database)_")
         if r.get("todos_created", 0):

@@ -147,6 +147,7 @@ if FASTAPI_OK:
                     pass
                 hub._release_scheduler_lock_safe()
             hub._executor.shutdown(wait=False)
+            hub._inez_executor.shutdown(wait=False)
             if PID_FILE.exists():
                 PID_FILE.unlink()
 
