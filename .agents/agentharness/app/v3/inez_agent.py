@@ -1530,6 +1530,19 @@ def think(
                 agent_results = run_dispatches(dispatches, emit=emit, llm=model)
                 result["agent_results"] = agent_results
 
+                # Emit a summary card for each completed agent so the UI can show
+                # per-agent output even before the synthesis step finishes.
+                if emit:
+                    for ar in agent_results:
+                        try:
+                            emit("agent_result",
+                                 agent_id=ar.get("agent_id", ""),
+                                 response=(ar.get("response") or ar.get("summary") or "")[:500],
+                                 error=ar.get("error"),
+                                 db_writes=ar.get("db_writes_applied", 0))
+                        except Exception:
+                            pass
+
                 # ── Step 4: Synthesis — Inez reads all agent outputs ──────────
                 synthesis_context = build_synthesis_context(agent_results)
                 if synthesis_context:
@@ -1550,14 +1563,41 @@ def think(
                     ]
                     synth_response = model.invoke(synth_messages)
                     synth_raw = synth_response.content if hasattr(synth_response, "content") else str(synth_response)
-                    # Use synthesis as final message, keep original as fallback
+                    # _parse_inez_response falls back to treating plain prose as
+                    # inez_message when no JSON structure is found — so synthesis
+                    # replies land correctly whether prose or JSON.
                     synth_parsed = _parse_inez_response(synth_raw)
-                    if synth_parsed.get("inez_message"):
-                        result["inez_message"] = synth_parsed["inez_message"]
+                    synth_msg = synth_parsed.get("inez_message") or synth_raw.strip()
+                    if synth_msg:
+                        result["inez_message"] = synth_msg
             except ImportError:
                 logger.warning("agent_runner not available — dispatches not executed")
             except Exception as de:
-                logger.error("Dispatch execution error: %s", de)
+                logger.error("Dispatch execution error: %s", de, exc_info=True)
+                # Surface the error so the user sees what went wrong instead of
+                # the vague "I am dispatching X agents…" pre-synthesis message.
+                partial = result.get("agent_results", [])
+                partial_lines = []
+                for ar in partial:
+                    a_id = ar.get("agent_id", "?")
+                    a_resp = (ar.get("response") or ar.get("summary") or "")[:200]
+                    a_err = ar.get("error")
+                    partial_lines.append(
+                        f"**{a_id}**: {a_resp}" if not a_err else f"**{a_id}** ⚠️ {a_err}"
+                    )
+                error_detail = str(de)[:300]
+                if partial_lines:
+                    result["inez_message"] = (
+                        "I encountered an issue during dispatch synthesis. "
+                        f"Here is what the agents returned before the error:\n\n"
+                        + "\n\n".join(partial_lines)
+                        + f"\n\n_(Synthesis error: {error_detail})_"
+                    )
+                else:
+                    result["inez_message"] = (
+                        f"I tried to dispatch agents but encountered an error: {error_detail}. "
+                        "Please check the logs or try again."
+                    )
 
         # ── Persist todos Inez created directly ──────────────────────────────
         if DB_OK and result.get("todos"):

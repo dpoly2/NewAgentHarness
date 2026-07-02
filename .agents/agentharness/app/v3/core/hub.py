@@ -96,6 +96,9 @@ class HubServer:
         self._active_runs: dict[str, threading.Event] = {}
         self._clients: set[Any] = set()
         self._executor = ThreadPoolExecutor(max_workers=3)
+        # Dedicated executor for Inez chat turns so interactive responses
+        # are never starved by background graph runs filling _executor.
+        self._inez_executor = ThreadPoolExecutor(max_workers=2)
         self._scheduler = None
         self._is_scheduler_leader: bool = False
         self._queue_paused = False

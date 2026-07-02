@@ -82,7 +82,7 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
         """
         try:
             result = await loop.run_in_executor(
-                hub._executor, lambda: think(body.message, history, emit=_inez_emit, conversation_id=conv_id)
+                hub._inez_executor, lambda: think(body.message, history, emit=_inez_emit, conversation_id=conv_id)
             )
 
             inez_message = result.get("inez_message", "")
@@ -98,11 +98,17 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
             _create_record("messages", message_data)
             _update_record("conversations", conv_id, {"updated_at": _now_iso()})
 
-            queued_runs = []
-            collab_conv_id = None
+            # agent_results are already complete — think() ran run_dispatches()
+            # synchronously before returning.  Do NOT re-submit to hub.submit_job;
+            # that would run each agent a second time and waste API quota.
+            agent_results = result.get("agent_results", [])
+            queued_runs = [
+                {"run_id": r.get("run_id", uuid.uuid4().hex), "agent_id": r.get("agent_id", ""), "project": r.get("project", "")}
+                for r in agent_results
+            ]
+
             if dispatches:
-                # Document multi-agent dispatch in agent_conversations so the
-                # Agents tab shows a full audit trail of every Inez-driven run.
+                # Document the completed multi-agent run in agent_conversations.
                 try:
                     import sqlite3 as _sql, json as _json
                     from core.config import DB_PATH as _DB_PATH
@@ -116,59 +122,32 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
                         "VALUES (?,?,?,?,?,?,?,?)",
                         (collab_conv_id, "inez", "inez-chief-of-staff",
                          _json.dumps(participant_agents), body.message[:500],
-                         "in_progress", _now_iso(), len(dispatches))
+                         "completed", _now_iso(), len(dispatches))
+                    )
+                    # Log one message row per dispatched agent with its result
+                    for ar in agent_results:
+                        a_id = ar.get("agent_id", "")
+                        a_resp = (ar.get("response") or ar.get("summary") or "")[:500]
+                        a_err = ar.get("error")
+                        _ac.execute(
+                            "INSERT INTO agent_messages "
+                            "(message_id, conversation_id, sender_agent, recipient_agent, message_type, payload_json, status, created_at) "
+                            "VALUES (?,?,?,?,?,?,?,?)",
+                            (uuid.uuid4().hex, collab_conv_id,
+                             a_id, "inez-chief-of-staff", "result",
+                             _json.dumps({"response": a_resp, "error": a_err}),
+                             "error" if a_err else "delivered", _now_iso())
+                        )
+                    _ac.execute(
+                        "UPDATE agent_conversations SET result_json=?, completed_at=? WHERE conversation_id=?",
+                        (_json.dumps({"inez_message": inez_message}), _now_iso(), collab_conv_id)
                     )
                     _ac.commit()
                     _ac.close()
-                except Exception as _ce:
+                except Exception:
                     pass  # non-fatal
 
-            for dispatch in dispatches:
-                agent_id = dispatch.get("agent_id", "")
-                project = dispatch.get("project", "")
-                graph = dispatch.get("graph", "reflexion")
-                task = dispatch.get("task", "")
-                if agent_id and task:
-                    job_run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
-                    queued_runs.append({"run_id": job_run_id, "agent_id": agent_id, "project": project})
-                    # Log each dispatch as a message in the collaboration record
-                    if collab_conv_id:
-                        try:
-                            import sqlite3 as _sql2, json as _json2
-                            from core.config import DB_PATH as _DB2
-                            _am = _sql2.connect(str(_DB2))
-                            _am.execute(
-                                "INSERT INTO agent_messages "
-                                "(message_id, conversation_id, sender_agent, recipient_agent, message_type, payload_json, status, created_at) "
-                                "VALUES (?,?,?,?,?,?,?,?)",
-                                (uuid.uuid4().hex, collab_conv_id,
-                                 "inez-chief-of-staff", agent_id, "task",
-                                 _json2.dumps({"task": task, "project": project, "run_id": job_run_id}),
-                                 "delivered", _now_iso())
-                            )
-                            _am.commit()
-                            _am.close()
-                        except Exception:
-                            pass
-
-            # Mark collaboration complete once all dispatches are queued
-            if collab_conv_id:
-                try:
-                    import sqlite3 as _sql3
-                    from core.config import DB_PATH as _DB3
-                    _af = _sql3.connect(str(_DB3))
-                    _af.execute(
-                        "UPDATE agent_conversations SET status=?, completed_at=?, result_json=? WHERE conversation_id=?",
-                        ("completed", _now_iso(),
-                         json.dumps({"inez_message": inez_message, "queued_runs": queued_runs}),
-                         collab_conv_id)
-                    )
-                    _af.commit()
-                    _af.close()
-                except Exception:
-                    pass
-
-            response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
+            response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error, "agent_results": agent_results}
             if result.get("has_citations"):
                 response_data["has_citations"] = True
                 response_data["citations"] = result.get("citations", [])
