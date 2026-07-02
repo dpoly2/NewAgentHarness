@@ -82,7 +82,7 @@ async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends
         """
         try:
             result = await loop.run_in_executor(
-                hub._executor, lambda: think(body.message, history, emit=_inez_emit)
+                hub._executor, lambda: think(body.message, history, emit=_inez_emit, conversation_id=conv_id)
             )
 
             inez_message = result.get("inez_message", "")

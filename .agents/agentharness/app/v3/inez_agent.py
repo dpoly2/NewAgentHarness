@@ -43,7 +43,7 @@ INEZ_AGENT_ID = "inez-chief-of-staff"
 # ── LLM setup ────────────────────────────────────────────────────────────────
 try:
     from langchain_openai import ChatOpenAI
-    from langchain_core.messages import SystemMessage, HumanMessage
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
     LLM_OK = True
 except ImportError:
     LLM_OK = False
@@ -975,7 +975,10 @@ def _build_system_prompt(history: list[dict], cache_key: str = "default") -> str
     skill = _load_skill()
     todos = _load_todos_context()
     memory = _load_memory_context()
-    conv = _format_conversation_history(history)
+    # Conversation history is now passed as real LangChain message objects in the
+    # think() call, not embedded in the system prompt. The {conversation_history}
+    # placeholder is kept for skill-file compatibility but set to a short note.
+    conv = "Conversation history is provided as message context above."
     awareness = _build_proactive_awareness()
 
     # Pull full portfolio context from DB (replaces file-based client roster)
@@ -1262,6 +1265,7 @@ def think(
     user_message: str,
     history: list[dict],
     emit=None,
+    conversation_id: str = "default",
 ) -> dict:
     """
     Inez analyzes the user message and returns a structured response.
@@ -1403,7 +1407,7 @@ def think(
         except Exception as _ws:
             logger.warning("Web search error: %s", _ws)
 
-    conv_id = history[0].get("conversation_id", "default") if history else "default"
+    conv_id = conversation_id or (history[0].get("conversation_id", "default") if history else "default")
     system_prompt = _build_system_prompt(history, cache_key=conv_id[:16])
 
     # ── Step 2: Inez analysis — determines what to say and who to dispatch ────
@@ -1461,10 +1465,21 @@ def think(
 
     try:
         model = _llm(temperature=0.3, weight="heavy")  # main reasoning → fast free key if available
-        messages = [
-            SystemMessage(content=system_prompt + dispatch_instructions),
-            HumanMessage(content=augmented_message),
-        ]
+
+        # Build messages: system prompt + prior turns as real message objects (so
+        # the LLM sees the full back-and-forth, not just a text summary). Cap at
+        # the last 20 turns to avoid blowing context on small models.
+        messages = [SystemMessage(content=system_prompt + dispatch_instructions)]
+        for turn in (history[:-1] or [])[-20:]:  # exclude the current message (already in augmented_message)
+            role = turn.get("role", "user")
+            content = turn.get("content", "")
+            if not content:
+                continue
+            if role in ("assistant", "inez"):
+                messages.append(AIMessage(content=content))
+            else:
+                messages.append(HumanMessage(content=content))
+        messages.append(HumanMessage(content=augmented_message))
         # The reasoning call can take tens of seconds on a local CPU model; surface
         # a status step so the UI shows progress instead of a silent wait.
         if emit:
