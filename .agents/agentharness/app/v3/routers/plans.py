@@ -122,7 +122,64 @@ class NodeRespondBody(BaseModel):
     notes: str = ""
 
 
-@router.post("/plans/from-yaml")
+try:
+    from core.plan_autoload import (
+        PLAN_INBOX_DIR,
+        PLAN_PROCESSED_DIR,
+        PLAN_FAILED_DIR,
+        async_scan_plan_inbox,
+    )
+    AUTOLOAD_OK = True
+except ImportError:
+    AUTOLOAD_OK = False
+
+
+@router.post("/plans/scan")
+async def scan_plan_inbox(current_user: dict = Depends(get_current_user)):
+    """Trigger an immediate scan of the plan inbox folder.
+
+    Picks up any .yaml / .yml / .json files dropped into
+    .agents/agentharness/plans/inbox/ and imports them as draft plans.
+    Returns per-file results with status: imported | skipped | failed.
+    """
+    if not AUTOLOAD_OK:
+        raise HTTPException(503, "plan_autoload module not available")
+    results = await async_scan_plan_inbox()
+    imported = [r for r in results if r["status"] == "imported"]
+    failed   = [r for r in results if r["status"] == "failed"]
+    skipped  = [r for r in results if r["status"] == "skipped"]
+    return {
+        "success": True,
+        "scanned": len(results),
+        "imported": len(imported),
+        "skipped": len(skipped),
+        "failed": len(failed),
+        "results": results,
+        "inbox_dir": str(PLAN_INBOX_DIR),
+    }
+
+
+@router.get("/plans/inbox/status")
+async def plan_inbox_status(_: dict = Depends(get_current_user)):
+    """Return counts of files currently waiting in the inbox."""
+    if not AUTOLOAD_OK:
+        raise HTTPException(503, "plan_autoload module not available")
+    waiting = [
+        p.name for p in PLAN_INBOX_DIR.iterdir()
+        if p.is_file() and p.suffix.lower() in {".yaml", ".yml", ".json"}
+    ] if PLAN_INBOX_DIR.exists() else []
+    processed_count = sum(1 for _ in PLAN_PROCESSED_DIR.iterdir()) if PLAN_PROCESSED_DIR.exists() else 0
+    failed_count    = sum(1 for _ in PLAN_FAILED_DIR.iterdir())    if PLAN_FAILED_DIR.exists()    else 0
+    return {
+        "inbox_dir": str(PLAN_INBOX_DIR),
+        "waiting": len(waiting),
+        "waiting_files": waiting,
+        "processed_total": processed_count,
+        "failed_total": failed_count,
+    }
+
+
+
 async def create_plan_from_yaml(body: YAMLPlanBody, current_user: dict = Depends(get_current_user)):
     """
     Create a plan from a compact YAML definition.

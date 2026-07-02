@@ -394,7 +394,10 @@ def write_agent_skill_file(agent_id: str, content: str) -> None:
 
 def node_load_memory(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="load_memory", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="load_memory", status="running",
+          run_id=state.get("run_id"), progress=0.05,
+          text=f"[{agent_id}] Loading memory & skill…")
     skill_content, _ = read_agent_skill_file(state["agent_id"])
     skill_version = _extract_skill_version(skill_content, state.get("skill_version", 1))
     try:
@@ -416,6 +419,8 @@ def node_load_memory(state: dict, emit: callable = None) -> dict:
         status="complete",
         run_id=state.get("run_id"),
         skill_version=skill_version,
+        progress=0.15,
+        text=f"[{agent_id}] Memory loaded (skill v{skill_version})",
     )
     return {
         "skill_content": skill_content,
@@ -426,7 +431,11 @@ def node_load_memory(state: dict, emit: callable = None) -> dict:
 
 def node_act(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="act", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    task_preview = (state.get("task") or "")[:80]
+    _emit(emit, "node_update", node="act", status="running",
+          run_id=state.get("run_id"), progress=0.25,
+          text=f"[{agent_id}] Acting on: {task_preview}…")
     messages = [
         SystemMessage(content=_skill_system_prompt(state)),
         HumanMessage(content=state["task"]),
@@ -439,13 +448,18 @@ def node_act(state: dict, emit: callable = None) -> dict:
         status="complete",
         run_id=state.get("run_id"),
         preview=output[:200],
+        progress=0.55,
+        text=f"[{agent_id}] Act complete — {len(output)} chars",
     )
     return {"output": output, "messages": messages + response_messages}
 
 
 def node_evaluate(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="evaluate", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="evaluate", status="running",
+          run_id=state.get("run_id"), progress=0.60,
+          text=f"[{agent_id}] Evaluating output…")
     messages = [
         SystemMessage(
             content=(
@@ -465,13 +479,18 @@ def node_evaluate(state: dict, emit: callable = None) -> dict:
         run_id=state.get("run_id"),
         score=score,
         critique=critique,
+        progress=0.75,
+        text=f"[{agent_id}] Score: {score:.0%} — {critique[:80]}",
     )
     return {"score": score, "critique": critique}
 
 
 def node_revise(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="revise", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="revise", status="running",
+          run_id=state.get("run_id"), progress=0.78,
+          text=f"[{agent_id}] Revising (score {state.get('score', 0):.0%})…")
     if state.get("score", 1.0) >= 0.75:
         _emit(emit, "node_update", node="revise", status="skipped", run_id=state.get("run_id"))
         return {
@@ -552,6 +571,8 @@ def node_revise(state: dict, emit: callable = None) -> dict:
         run_id=state.get("run_id"),
         revision_count=revision_count,
         skill_version=updated_version,
+        progress=0.90,
+        text=f"[{state.get('agent_id','?')}] Revised (r{revision_count}, skill v{updated_version})",
     )
     return {
         "output": revised_output,
@@ -563,7 +584,10 @@ def node_revise(state: dict, emit: callable = None) -> dict:
 
 def node_save_memory(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="save_memory", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="save_memory", status="running",
+          run_id=state.get("run_id"), progress=0.92,
+          text=f"[{agent_id}] Saving memory…")
     payload = {
         "run_id": state.get("run_id"),
         "agent_id": state.get("agent_id"),
@@ -596,7 +620,9 @@ def node_save_memory(state: dict, emit: callable = None) -> dict:
             _HubDbFallback().update_agent_memory(state["agent_id"], memory_update)
     except Exception:
         _HubDbFallback().update_agent_memory(state["agent_id"], memory_update)
-    _emit(emit, "node_update", node="save_memory", status="complete", run_id=state.get("run_id"))
+    _emit(emit, "node_update", node="save_memory", status="complete",
+          run_id=state.get("run_id"), progress=1.0,
+          text=f"[{state.get('agent_id','?')}] Done — score {state.get('score', 0.0):.0%}")
     _emit(
         emit,
         "run_completed",
@@ -612,19 +638,24 @@ def node_save_memory(state: dict, emit: callable = None) -> dict:
 
 def node_plan(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="plan", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="plan", status="running", run_id=state.get("run_id"),
+          progress=0.20, text=f"[{agent_id}] Building research plan…")
     messages = [
         SystemMessage(content="Create a concise research plan with 3-7 numbered steps."),
         HumanMessage(content=f"Task:\n{state['task']}"),
     ] if LANGGRAPH_OK else []
     output, _ = _invoke(messages, 0.2, "[no model output]")
-    _emit(emit, "node_update", node="plan", status="complete", run_id=state.get("run_id"))
+    _emit(emit, "node_update", node="plan", status="complete", run_id=state.get("run_id"),
+          progress=0.35, text=f"[{agent_id}] Plan ready")
     return {"output": output}
 
 
 def node_search(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="search", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="search", status="running", run_id=state.get("run_id"),
+          progress=0.40, text=f"[{agent_id}] Searching & synthesizing findings…")
     messages = [
         SystemMessage(
             content=(
@@ -635,13 +666,16 @@ def node_search(state: dict, emit: callable = None) -> dict:
         HumanMessage(content=f"Task:\n{state['task']}\n\nResearch Plan:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
     output, _ = _invoke(messages, 0.1, "[no model output]")
-    _emit(emit, "node_update", node="search", status="complete", run_id=state.get("run_id"))
+    _emit(emit, "node_update", node="search", status="complete", run_id=state.get("run_id"),
+          progress=0.58, text=f"[{agent_id}] Search complete")
     return {"output": output}
 
 
 def node_synthesize(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="synthesize", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="synthesize", status="running", run_id=state.get("run_id"),
+          progress=0.65, text=f"[{agent_id}] Synthesizing final answer…")
     messages = [
         SystemMessage(
             content=(
@@ -652,13 +686,16 @@ def node_synthesize(state: dict, emit: callable = None) -> dict:
         HumanMessage(content=f"Task:\n{state['task']}\n\nFindings:\n{state.get('output', '')}"),
     ] if LANGGRAPH_OK else []
     output, _ = _invoke(messages, 0.1, "[no model output]")
-    _emit(emit, "node_update", node="synthesize", status="complete", run_id=state.get("run_id"))
+    _emit(emit, "node_update", node="synthesize", status="complete", run_id=state.get("run_id"),
+          progress=0.72, text=f"[{agent_id}] Synthesis complete")
     return {"output": output}
 
 
 def node_wp_plan(state: dict, emit: callable = None) -> dict:
     _cancel_check(state)
-    _emit(emit, "node_update", node="wp_plan", status="running", run_id=state.get("run_id"))
+    agent_id = state.get("agent_id", "?")
+    _emit(emit, "node_update", node="wp_plan", status="running", run_id=state.get("run_id"),
+          progress=0.20, text=f"[{agent_id}] Planning WordPress implementation…")
     messages = [
         SystemMessage(
             content=(
@@ -669,7 +706,8 @@ def node_wp_plan(state: dict, emit: callable = None) -> dict:
         HumanMessage(content=f"Task:\n{state['task']}"),
     ] if LANGGRAPH_OK else []
     output, _ = _invoke(messages, 0.1, "[no model output]")
-    _emit(emit, "node_update", node="wp_plan", status="complete", run_id=state.get("run_id"))
+    _emit(emit, "node_update", node="wp_plan", status="complete", run_id=state.get("run_id"),
+          progress=0.38, text=f"[{agent_id}] WP plan ready")
     return {"output": output}
 
 

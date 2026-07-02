@@ -1042,12 +1042,12 @@ class HubScheduler:
                 {
                     "id": job.id,
                     "name": job.name,
-                    "next_fire": _serialize_datetime(job.next_run_time),
+                    "next_fire": _serialize_datetime(getattr(job, "next_run_time", None)),
                     "trigger": str(job.trigger),
                     "built_in": job.id in BUILT_IN_JOB_IDS,
                 }
             )
-        return sorted(jobs, key=lambda item: (item["next_fire"] is None, item["next_fire"] or "", item["id"]))
+        return sorted(jobs, key=lambda item: (item["next_fire"] is None, item["next_fire"] or "", item["id"] or ""))
 
     def add_user_job(self, job_config: dict) -> str:
         """Add a user-defined job from DB config"""

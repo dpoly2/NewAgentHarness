@@ -135,12 +135,12 @@ with a single JSON object in this exact format:
 ```
 
 Rules:
-- `db_writes` must only use these tables: travel_trips, knowledge_base, todos, documents, projects, clients, automations, events_log
+- `db_writes` must only use these tables: knowledge_base, todos, documents, projects, clients, automations, events_log
 - For `knowledge_base` inserts include: title, content, category, source, project_slug
-- For `travel_trips` upserts include: name, destination, depart_date, return_date, status, budget, notes
 - For `todos` inserts include: title, description, priority, project
 - Omit any section you don't need (empty array or omit key entirely)
 - Do NOT wrap response in markdown — return raw JSON only
+- NEVER write to travel_trips unless your agent_id starts with "travel-"
 """
 
 # ---------------------------------------------------------------------------
@@ -178,7 +178,7 @@ def _json_llm(model):
     return model
 
 
-def _apply_db_write(write: dict) -> bool:
+def _apply_db_write(write: dict, agent_id: str = "") -> bool:
     """Apply a single db_write directive from agent output."""
     if not DB_OK:
         return False
@@ -188,8 +188,24 @@ def _apply_db_write(write: dict) -> bool:
         logger.warning("agent_runner: blocked db_write to table %r", table)
         return False
 
+    # Only travel-domain agents may write to travel_trips
+    if table == "travel_trips" and not str(agent_id).startswith("travel-"):
+        logger.warning(
+            "agent_runner: blocked non-travel agent %r from writing to travel_trips", agent_id
+        )
+        return False
+
     op   = write.get("op", "insert").lower()
     data = write.get("data", {})
+
+    # data must be a dict — agents occasionally return a string
+    if not isinstance(data, dict):
+        logger.warning(
+            "agent_runner: db_write table=%s op=%s — data is %s, expected dict, skipping",
+            table, op, type(data).__name__,
+        )
+        return False
+
     rid  = write.get("id", "")
     if not data:
         return False
@@ -475,7 +491,7 @@ def run_agent(
     # 6. Apply db_writes
     writes_ok = 0
     for write in parsed.get("db_writes", []):
-        if _apply_db_write(write):
+        if _apply_db_write(write, agent_id=agent_id):
             writes_ok += 1
 
     # 7. Apply inline todos
@@ -487,7 +503,7 @@ def run_agent(
                     "table": "todos",
                     "op": "insert",
                     "data": todo,
-                })
+                }, agent_id=agent_id)
                 todos_ok += 1
             except Exception:
                 pass
