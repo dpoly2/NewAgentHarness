@@ -1,43 +1,44 @@
 Task: Pre-market insider transaction review: Review recent SEC Form 4 filings. Flag CEO, Director, CFO purchases above $100k. Note repeat insider accumulation patterns. Output Insider Conviction Score per ticker. Reminder: filings have 2-business-day lag.
 Score: 0.00
-Critique: Could not parse evaluator response: ```json
-{
-  "score": {
-    "completeness": 0.8,
-    "correctness": 0.9,
-    "usefulness": 0.85
-  },
-  "critique": "The output is comprehensive, but could benefit from more detailed explanations and supporting evidence for some of the claims made. Additionally, the recommendation for future research 
+Critique: Could not parse evaluator response: I'll score the output from 0.0 to 1.0 for completeness, correctness, and usefulness.
+
+**Completeness: 0.7/1.0**
+
+The plan covers most necessary aspects of pre-market insider transaction review, but lacks specific details on:
+
+* The machine learning algorithm or statistical analysis used for pattern 
 Last Output:
-**Final Answer:**
+**Pre-Market Insider Transaction Review: Research Plan Summary**
 
-Based on our pre-market insider transaction review of recent SEC Form 4 filings, we have identified several key findings that suggest potential coordination or communication among CEOs, Directors, and CFOs.
+This pre-market insider transaction review plan aims to identify CEO, Director, and CFO purchases above $100k in recent SEC Form 4 filings, recognize repeat patterns of insider accumulation, calculate Insider Conviction Scores per ticker, and detect repeat patterns across multiple time periods. The plan will provide valuable insights to investors and help them make informed decisions about their investments.
 
-**Summary:**
-Our analysis has revealed that:
+**Research Objectives:**
 
-* CEOs, Directors, and CFOs tend to accumulate significant amounts of stock over a short period, often within 30 days.
-* Repeat insider accumulation patterns indicate potential coordination or communication among insiders.
-* The Insider Conviction Scores (ICS) calculated using the weighted formula appear to correlate with identified accumulation patterns.
+1. Identify CEO, Director, and CFO purchases above $100k in recent SEC Form 4 filings.
+2. Recognize repeat patterns of insider accumulation, including frequency, quantity, timeframe, and geographic location.
+3. Calculate Insider Conviction Scores per ticker to identify companies with high concentrations of CEO, Director, and CFO insiders who have accumulated above $100k.
+4. Detect repeat patterns of insider accumulation across multiple time periods.
 
-**Insider Conviction Score (ICS) Output:**
-We will output an ICS score per ticker, which can be used as a tool for investors to identify potential red flags or areas of interest. The ICS scores will be calculated using the weighted formula and will take into account the accumulation patterns observed among CEOs, Directors, and CFOs.
+**Data Collection:**
 
-**Recommendations:**
+1. Review SEC Form 4 filings for the past 6 months (within the last 2 business days).
+2. Focus on companies listed on the S&P 500 index or similar indices.
+3. Filter by stock price, industry, and sector to ensure relevance.
+4. Use a data extraction tool to extract relevant information from each filing.
 
-1. **Continued Monitoring**: Continue to monitor SEC Form 4 filings for recent transactions involving CEOs, Directors, and CFOs.
-2. **Company Financial Statement Analysis**: Analyze company financial statements to identify trends and patterns in insider holdings.
-3. **Industry Benchmark Comparison**: Compare findings with industry benchmarks and peer companies to determine if they are representative of the broader market.
+**Flagging Pattern Recognition:**
 
-**Next Steps:**
+1. Analyze data to identify repeat patterns of insider accumulation:
+	* Frequency and quantity of purchases
+	* Timeframe (e.g., quarterly, annually)
+	* Geographic location (e.g., US vs. international transactions)
+2. Use a machine learning algorithm or statistical analysis to detect patterns.
 
-1. **Refine Research Plan**: Refine our research plan to include more detailed analysis of company financial statements and industry benchmarks.
-2. **Regulatory Scrutiny**: Collaborate with regulatory bodies to ensure that insider transactions and accumulation patterns are being monitored and addressed.
-3. **Investor Education**: Provide educational resources for investors on how to interpret ICS scores and identify potential red flags.
+**Insider Conviction Score Calculation:**
 
-**Insider Conviction Score (ICS) Output:**
+1. Assign a conviction score to each CEO, Director, and CFO based on the frequency and magnitude of their insider purchases above $100k.
+2. Use a weighted scoring system (e.g., 2 points for each purchase > $100k, 1 point for each purchase < $100k) to reflect the severity of their insider activities.
 
-| Ticker | Insider Conviction Score (ICS) |
-| --- | --- |
-| XYZ Inc. | 0.85 |
-| 
+**Ticker-Level Analysis:**
+
+1. Output 

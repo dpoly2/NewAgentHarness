@@ -1,28 +1,18 @@
 Task: Weekly grant research sweep: find new grant opportunities, deadlines, and funding sources relevant to pbs-foundation.
-Score: 0.80
-Critique: The output provides a thorough and systematic overview of a weekly grant research sweep process tailored for the PBS Foundation. It covers key steps, evidence, recommendations, and actionable next steps, making it highly useful for establishing or refining such a process. However, it does not include actual new grant opportunities, deadlines, or specific funding sources discovered in the current week, which the task explicitly requests. Instead, it outlines the process for conducting the sweep rather than delivering the results of a sweep. For full completeness and usefulness, the output should have included a list of current, relevant grant opportunities with deadlines and sources.
+Score: 0.00
+Critique: Could not parse evaluator response: Here's a well-structured and readable code snippet that addresses the given tasks:
+
+```python
+import requests
+import json
+
+def get_grant_opportunities():
+    """
+    Retrieves new grant opportunities from PBS Foundation.
+    
+    Returns:
+        dict: A dictionary containing grant opportunities wit
 Last Output:
-**Final Answer: Weekly Grant Research Sweep for PBS Foundation**
+LangGraph not installed - mock output
 
----
-
-### Summary
-
-A systematic weekly grant research process is essential for the PBS Foundation to identify and secure new funding opportunities aligned with its mission in public broadcasting, education, media innovation, and community engagement. The process involves defining search criteria, monitoring grant databases, reviewing funder websites, tracking deadlines and requirements, and compiling actionable reports for the grants team.
-
----
-
-### Evidence
-
-- **Defining Search Criteria:** Focus areas such as public media, education, digital inclusion, and arts & culture are consistent with PBS Foundation’s mission and recent funding history. (Source: PBS Foundation strategic plan, annual reports)
-- **Monitoring Grant Databases:** Major platforms like Grants.gov, Foundation Directory Online, and Candid are regularly updated and provide comprehensive listings, though some require subscriptions. (Source: Database update logs, test searches)
-- **Reviewing Funder Websites:** Direct monitoring of funder sites (e.g., Knight Foundation, MacArthur Foundation, NEA, NEH, CPB) ensures access to the latest RFPs and announcements, sometimes before they appear in databases. (Source: Funder websites, newsletters)
-- **Tracking Deadlines/Requirements:** Centralized tools (Excel, Airtable, grant management software) are effective for organizing deadlines and eligibility, reducing the risk of missed opportunities. (Source: Internal grant management systems, RFP documents)
-- **Compiling/Sharing Findings:** Weekly reports, distributed via email or shared drives, keep the grants team informed and ready to act. Feedback loops help refine the process. (Source: Internal communications, team feedback)
-
----
-
-### Recommendations
-
-1. **Regularly Update Search Criteria:**  
-   - Review and adjust focus areas and keywords with leadership to ensure alignment with evolving priorities and emerging trends (e.g., DEI, technology, climat
+LLM error: Request timed out.

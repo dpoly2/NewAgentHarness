@@ -1,0 +1,42 @@
+Task: Weekly marketing content plan: Based on this week's best trade setups and market insights, draft 3 educational content pieces (1 LinkedIn post, 1 short-form video script, 1 newsletter section). Frame around education and market awareness — no specific buy/sell recommendations. Include compliance disclaimer in all pieces.
+Score: 0.00
+Critique: Could not parse evaluator response: Here is the scored output from 0.0 to 1.0 for completeness, correctness, and usefulness:
+
+**Score:** 0.8/1.0
+
+**Summary:**
+The provided weekly marketing content plan outlines three educational content pieces (LinkedIn post, short-form video script, and newsletter section) that educate audience on ma
+Last Output:
+Here's a synthesized final answer with summary, evidence, recommendations, and next steps:
+
+**Weekly Marketing Content Plan**
+
+As we navigate through this week's market trends and best trade setups, it's essential to educate our audience on the key insights that will help them make informed decisions. Here are three educational content pieces to share with your community:
+
+### Educational Content Piece 1: LinkedIn Post
+
+**Title:** "Understanding Market Sentiment: A Key to Successful Trading"
+
+**Content:** This post will delve into the world of market sentiment, exploring how it affects trading decisions. We'll discuss the different types of sentiment indicators and how they can be used to identify potential trade opportunities.
+
+* Evidence: Studies have shown that market sentiment plays a significant role in determining trading outcomes (1).
+* Recommendation: Educate your audience on the importance of market sentiment in making informed trading decisions.
+* Compliance Disclaimer: "LangGraph is not affiliated with any financial institution or investment advisor. All information provided is for educational purposes only."
+
+### Educational Content Piece 2: Short-Form Video Script
+
+**Title:** "Market Insights: What to Expect This Week"
+
+**Script:**
+
+[Intro music plays]
+
+Narrator: "Welcome back to [Your Channel Name]. This week, we're focusing on market sentiment and best trade setups. Let's break it down."
+
+[Visuals of market charts and graphs appear on screen]
+
+Narrator: "Market sentiment is a crucial factor in trading decisions. It can indicate whether the market is oversold or overbought."
+
+* Evidence: A study by [Research Institution] found that market sentiment has a significant impact on trading outcomes (2).
+* Recommendation: Provide visual aids to help illustrate the concept of market sentiment and its relationship with trade setups.
+* Compliance Disclaimer: "LangGraph is not affiliated with any financial institution or investment advisor. All information provid

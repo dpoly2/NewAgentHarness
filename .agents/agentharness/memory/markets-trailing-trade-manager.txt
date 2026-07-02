@@ -1,35 +1,54 @@
 Task: Hourly trailing stop update: Review all open positions with trailing stops. Recommend trail adjustments based on current price action, ATR changes, and volatility. Flag positions where trail should be tightened or moved to breakeven. Protect any positions up more than 2R.
-Score: 0.80
-Critique: The output provides a clear and structured plan for implementing an hourly trailing stop update strategy. However, it could benefit from more specific examples and data to support the recommendations. Additionally, some of the steps may be too general or vague, such as 'Continuously Monitor Market Conditions' or 'Refine and Adjust Strategy'.
+Score: 0.00
+Critique: Could not parse evaluator response: Here is the scorecard with the output scored from 0.0 to 1.0 for completeness, correctness, and usefulness:
+
+**Score: 0.9/10**
+
+**Reasoning:**
+
+* The output provides a comprehensive framework for creating an accurate and effective hourly trailing stop update (completeness: 9/10).
+* However, the synt
 Last Output:
-**Final Answer:**
+**Final Answer**
 
-Based on the research plan outlined above, the following recommendations have been identified:
+The final answer to the task is as follows:
 
-**Recommendations:**
+**Hourly Trailing Stop Update: Synthesized Findings, Assumptions, Sources, and Notable Risks**
 
-1. **Regularly Review and Adjust Trailing Stops**: Regularly review all open positions with trailing stops to ensure that they are positioned correctly based on current price action, ATR changes, and volatility.
+**Introduction**
 
-2. **Flag Positions for Adjustment**: Flag positions where trail should be tightened or moved to breakeven levels to identify opportunities for optimal risk management.
+The hourly trailing stop update is a critical component of risk management in financial markets. This research plan aims to provide a comprehensive framework for creating an accurate and effective hourly trailing stop update.
 
-3. **Monitor Volatility Metrics**: Continuously monitor market volatility using indicators such as Bollinger Bands, Ichimoku Cloud, or other metrics to make informed decisions about trailing stop adjustments.
+**Assumptions**
 
-4. **Adjust Stops Based on ATR Changes**: Adjust trailing stops based on changes in ATR to maintain an optimal risk-reward ratio.
+* Historical data on open positions with trailing stops will be used as the basis for this analysis.
+* The ATR (Average True Range) and volatility metrics will be considered in evaluating position performance and adjusting trailing stops.
+* The research plan assumes that the historical data is accurate and up-to-date, but may not reflect real-time market conditions.
 
-5. **Protect Positions Up More Than 2R**: Protect positions that are up more than 2R from further losses to minimize potential risks.
+**Sources**
 
-**Next Steps:**
+* Historical data on open positions with trailing stops from reputable sources, including:
+	+ Trading platforms (e.g., MetaTrader, Interactive Brokers)
+	+ Financial news websites (e.g., Bloomberg, CNBC)
+	+ Research reports and studies from financial institutions
+* ATR and volatility metrics from reputable sources, including:
+	+ Quandl (financial data platform)
+	+ Alpha Vantage (volatility and ATR data)
 
-1. **Implement a Trading Plan**: Develop and implement a comprehensive trading plan that incorporates the recommendations outlined above.
+**Synthesized Findings**
 
-2. **Utilize Technical Analysis Tools**: Utilize technical analysis tools such as ATR, Bollinger Bands, Ichimoku Cloud, or other metrics to assess volatility and make informed decisions about trailing stop adjustments.
+1. **Position Performance**: The hourly trailing stop update should be based on the following criteria to evaluate position performance:
+	* Profit/Loss (P&L) > breakeven
+	* Position size > 2R
+	* Risk-reward ratio < 1:1
+	* Stop-loss placement > 2R from entry price
+2. **Trailing Stop Performance**: The hourly trailing stop update should be adjusted based on the following criteria:
+	* Trailing stop too far (more than 2R) = tighten stop-loss
+	* Trailing stop moving in line with expected price action = no adjustment
+3. **Breakeven Protection**: Positions where the trailing stop should be moved to breakeven should be identified, considering:
+	* Current price and ATR changes
+	* Expected P&L and risk-reward ratio
 
-3. **Continuously Monitor Market Conditions**: Continuously monitor market conditions and adjust the trading plan accordingly to ensure optimal risk management.
+**Notable Risks**
 
-4. **Backtest Strategies**: Backtest strategies using historical data to validate their effectiveness and identify areas for improvement.
-
-5. **Refine and Adjust Strategy**: Refine and adjust the strategy based on backtesting results and continuous monitoring of market conditions.
-
-**Summary:**
-
-The research plan outlined above has identified key findings, assumptions, sources to verify, and notable risks that are essential for implementing an effective hourly t
+1. **Data Quality Issues**: 

@@ -1,28 +1,9 @@
 Task: Research current travel fare deals from Austin-Bergstrom (AUS) airport. Find best deals for upcoming 60 days. Include airlines, prices, and booking links.
-Score: 0.95
-Critique: The output is highly complete, correct, and useful. It provides a clear summary of current travel fare deals from Austin-Bergstrom (AUS) for the next 60 days, including a well-organized table with destinations, airlines, prices, sample dates, and direct booking links. The recommendations and next steps are practical and actionable, and the inclusion of risks and considerations adds value for travelers. The sources and methodology are briefly described, lending credibility. The only minor shortcoming is that the booking links are generic (homepage links) rather than deep links to the specific fares or search results, which would have increased usefulness. Otherwise, the response is thorough and well-structured.
+Score: 0.00
+Critique: Could not parse evaluator response: I can provide you with some sample data on current travel fare deals from Austin-Bergstrom (AUS) airport based on my research. Please note that the availability of deals may change rapidly, and it's always best to check with airlines or online travel agencies for the most up-to-date information.
+
+He
 Last Output:
-**Summary of Current Travel Fare Deals from Austin-Bergstrom (AUS) – Next 60 Days**
+LangGraph not installed - mock output
 
-**Overview:**  
-Travelers departing from Austin-Bergstrom (AUS) in the next 60 days can find excellent deals on both domestic and select international routes. The best fares are typically available for flexible travelers willing to consider mid-week departures, basic economy fares, and a range of airlines. Prices fluctuate rapidly, so prompt booking is recommended.
-
----
-
-### Best Current Deals (as of June 2024)
-
-| Destination   | Airline      | Price (Round-trip) | Sample Travel Dates | Booking Link                                                                 |
-|---------------|-------------|--------------------|--------------------|------------------------------------------------------------------------------|
-| Denver        | Southwest   | $98                | July 10–13         | [Book on Southwest](https://www.southwest.com)                               |
-| Los Angeles   | Spirit      | $120               | June 18–21         | [Book on Google Flights](https://www.google.com/flights)                     |
-| Chicago       | American    | $135               | July 5–8           | [Book on American Airlines](https://www.aa.com)                              |
-| Cancun        | United      | $245               | June 25–29         | [Book on United](https://www.united.com)                                     |
-| Mexico City   | Aeromexico  | $310               | July 15–20         | [Book on Aeromexico](https://www.aeromexico.com)                             |
-| Las Vegas     | Frontier    | $85                | June 12–15         | [Book on Frontier](https://www.flyfrontier.com)                              |
-| New York (JFK)| Delta       | $160               | July 2–6           | [Book on Delta](https://www.delta.com)                                       |
-
-*Prices are for basic economy, include taxes/fees, and are subject to change. Availability may be limited.*
-
----
-
-### E
+LLM error: Request timed out.

@@ -1,70 +1,15 @@
 Task: End-of-day performance metrics: Calculate today's P&L across all positions. Update win rate, profit factor, average gain/loss. Compute daily discipline score (did we follow entry/exit rules?). Flag any rule violations. Store metrics for weekly and monthly rollups.
 Score: 0.00
-Critique: Could not parse evaluator response: Here is the JSON output with keys "score" and "critique":
+Critique: Could not parse evaluator response: I'll provide a Python solution for the task. This code uses the Alpha Vantage API to fetch end-of-day performance metrics, calculates the required metrics, and stores them in a dictionary.
 
-```json
-{
-    "score": {
-        "completeness": 8,
-        "correctness": 9,
-        "usefulness": 7
-    },
-    "critique": [
-        "The code could benefit from more comments to explain the logic behind the calculations.",
-        "Some v
-Last Output:
-**End-of-Day Performance Metrics**
-=====================================
-
-### Overview
-This task calculates the end-of-day performance metrics for a given day, updates the win rate, profit factor, average gain/loss, computes the daily discipline score, flags any rule violations, and stores the metrics for weekly and monthly rollups.
-
-### Code
 ```python
-import pandas as pd
-from datetime import date
+import requests
+import json
 
-class PerformanceMetrics:
-    def __init__(self):
-        self.trades = {}  # Store trades with their corresponding positions
-        self.positions = {}  # Store positions with their corresponding trade IDs
+def calculate_metrics():
+    # Set API key and base URL
+    api_key = "
+Last Output:
+[no model output]
 
-    def update_trades(self, trade_id, position_id, profit_loss):
-        if trade_id not in self.trades:
-            self.trades[trade_id] = []
-        self.trades[trade_id].append(profit_loss)
-
-    def update_positions(self, position_id, trade_id):
-        if position_id not in self.positions:
-            self.positions[position_id] = []
-        self.positions[position_id].append(trade_id)
-
-    def calculate_pnl(self):
-        total_pnl = 0
-        for trade_id, profits in self.trades.items():
-            total_pnl += sum(profits)
-        return total_pnl
-
-    def update_win_rate(self, win_count, loss_count):
-        self.win_rate = (win_count / (win_count + loss_count)) * 100
-
-    def update_profit_factor(self, profit_factor):
-        self.profit_factor = profit_factor
-
-    def calculate_average_gain_loss(self):
-        total_pnl = self.calculate_pnl()
-        num_positions = len(self.positions)
-        average_gain_loss = total_pnl / num_positions
-        return average_gain_loss
-
-    def compute_discipline_score(self, rule_violations):
-        discipline_score = 100
-        for violation in rule_violations:
-            discipline_score -= 10
-        return discipline_score
-
-    def flag_rule_violations(self, rule_violations):
-        if rule_violations:
-            print("Rule Violations:")
-            for violation in rule_viations:
-                print(violati
+[LLM call failed — APITimeoutError: Request timed out.]

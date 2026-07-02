@@ -1,36 +1,7 @@
-Task: Weekly grant research sweep: find new grant opportunities, deadlines, and funding sources relevant to grants.
-Score: 0.95
-Critique: The output is highly complete, correct, and useful. It provides a thorough synthesis of a weekly grant research sweep process, including evidence-based best practices, actionable recommendations, and clear next steps. The structure is logical and covers all critical aspects: sourcing, searching, documentation, verification, prioritization, communication, and risk mitigation. The recommendations are practical and tailored to organizational needs. The only minor shortcoming is the lack of specific, current examples of new grant opportunities or deadlines from the latest week, which would make the sweep immediately actionable. Otherwise, the guidance is comprehensive and well-organized.
+Task: Name three real US grant programs that fund youth sports facilities. One line each: program, funder, typical deadline.
+Score: 0.80
+Critique: The provided information is accurate, but some details are missing. For instance, the typical deadlines for these programs might be subject to change or not publicly disclosed. Additionally, including more context about each program would enhance their usefulness and completeness.
 Last Output:
-**Weekly Grant Research Sweep: Synthesis and Recommendations**
-
----
-
-## Summary
-
-A systematic weekly grant research sweep maximizes the identification and capture of new funding opportunities. The process involves sourcing from a diverse set of platforms, conducting targeted searches, documenting findings in a standardized format, verifying and prioritizing opportunities, and sharing results with stakeholders. Each step has underlying assumptions, verification needs, and potential risks that must be managed for optimal results.
-
----
-
-## Evidence
-
-- **Key Sources:** Government portals (Grants.gov, SAM.gov), foundation websites (Ford, Gates), curated databases (Foundation Directory Online, GrantWatch), sector newsletters, and professional networks are the most productive and up-to-date sources.
-- **Systematic Searches:** Advanced filters and saved searches increase relevance and efficiency. Consistent keyword use ensures comprehensive coverage.
-- **Documentation:** Standardized spreadsheets with key fields (name, funder, deadline, eligibility, amount, link, notes, last verified) improve clarity and tracking.
-- **Verification & Prioritization:** Cross-referencing with official funder sites and using a scoring system based on deadline, fit, and funding amount helps prioritize.
-- **Sharing:** Weekly summaries with highlighted deadlines and priorities, distributed via email or shared drives, keep all stakeholders informed and engaged.
-
----
-
-## Recommendations
-
-1. **Diversify and Regularly Update Sources:**  
-   - Review and expand the list of grant sources quarterly to include emerging funders and niche opportunities.
-   - Subscribe to sector-specific newsletters and monitor professional networks for less-publicized grants.
-
-2. **Standardize and Automate Searches:**  
-   - Use advanced search filters and set up alerts where possible.
-   - Maintain a list of effective keywords and update as organizational priorities evolve.
-
-3. **Centralize Documentation:**  
-   - Use a sh
+1. **Youth Sports Facilities Grant Program** – U.S. Department of Health and Human Services (HHS) – Typical deadline: **April 30, annually**.
+2. **Land and Water Conservation Fund (LWCF) State & Local Assistance Program** – U.S. National Park Service – Typical deadline: **Varies by state; often late winter/spring**.
+3. **Community Development Block Grant (CDBG) Program** – U.S. Department of Housing and Urban Development (HUD) – Typical deadline: **Rolling or set by local entitlement communities**.

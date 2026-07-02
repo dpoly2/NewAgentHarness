@@ -1,24 +1,84 @@
 Task: Check and process Sigma Signal newsletter submission inbox. Review pending submissions, draft responses, prepare content pipeline update.
-Score: 0.90
-Critique: The output is comprehensive and provides detailed information about the review of pending submissions, draft responses, and content pipeline update. However, it could benefit from a more concise summary or key takeaways at the end to make it easier for readers to quickly grasp the main points.
+Score: 0.00
+Critique: Could not parse evaluator response: Here's an improved version of your code with added comments, proper error handling, and JSON output:
+
+```python
+import re
+import json
+
+def filter_spam_emails(emails):
+    """
+    Filter out spam or irrelevant emails from the inbox.
+
+    Args:
+        emails (list): A list of email addresses in the i
 Last Output:
-### Sigma Signal Newsletter Submission Inbox Check and Processing
+Here is a revised version of the code with added comments and proper error handling:
 
-#### Review of Pending Submissions
+```python
+import re
 
-After reviewing the current pending submissions in the Sigma Signal newsletter submission inbox, I have identified the following items that require attention:
+def filter_spam_emails(emails):
+    """
+    Filter out spam or irrelevant emails from the inbox.
 
-1.  **Brain Teaser Submission**: "Logic Puzzle: The Three Switches" - This brain teaser requires a moderate level of difficulty and is suitable for brothers aged 18-60.
-2.  **Trivia Submission**: "Phi Beta Sigma History Riddle" - This trivia submission requires knowledge of Phi Beta Sigma's history and founders, making it an excellent addition to our upcoming issue.
-3.  **Membership Tips Submission**: "Fraternity Engagement Tip" - This membership tips submission provides valuable advice on fraternity engagement and chapter participation, aligning perfectly with our current focus.
+    Args:
+        emails (list): A list of email addresses in the inbox.
 
-#### Draft Responses
+    Returns:
+        list: A filtered list of email addresses.
+    """
+    # Regular expression to match spam or irrelevant emails
+    pattern = r'\S+@\s\S+\.\s\S'
+    
+    # Filter out spam or irrelevant emails
+    filtered_emails = [email for email in emails if not re.match(pattern, email)]
+    
+    return filtered_emails
 
-For the above submissions, I have drafted responses as follows:
+def generate_markdown_response(email, content):
+    """
+    Generate a Markdown response for an email.
 
-1.  Brain Teaser Response:
-    *   "To solve this logic puzzle, you need to turn all three switches to their respective positions. However, each switch corresponds to a different light bulb in a room. If you turn switch A to 'on,' you'll see the corresponding light bulb. Then, turn switch B to 'off.' Now, turn switch C to 'on' and observe the remaining two bulbs. The correct solution is to turn switches A and C to their respective positions, leaving switch B off."
-2.  Trivia Response:
-    *   "The founders of Phi Beta Sigma were Dr. Edward Alexander Bouchet, Dr. Charles Henry Chapman, and Dr. Vertner Woodson Tandy. They established the organization in 1904 at Howard University in Washington, D.C., with the goal of promoting brotherhood, scholarship, and service among African American men."
-3.  Membership Tips Response:
-    *   "To increase fraternity engagement and chapter participation, it's essential to foster a sense of community within your chapter. Organize regular events, such as brotherhood dinners or community service projects, that encou
+    Args:
+        email (str): The email address.
+        content (str): The article content.
+
+    Returns:
+        str: A Markdown response string.
+    """
+    # Regular expression to match the format of a Markdown response
+    pattern = r'# \S+'
+    
+    # Generate a Markdown response
+    markdown_response = f"# {content}\n\n"
+    
+    return markdown_response
+
+def prepare_content_pipeline_update():
+    """
+    Prepare a content pipeline update with relevant information and next steps.
+
+    Returns:
+        dict: A dictionary containing the updated content pipeline.
+    """
+    # Initialize an empty dictionary to store the updated content pipeline
+    content_pipeline = {}
+    
+    # Add relevant information to the content pipeline
+    content_pipeline['summary'] = "Operations Brief: Sigma Signal Newsletter Review"
+    
+    # Add next steps to the content pipeline
+    content_pipeline['next_steps'] = ["Review and respond to pending submissions", "Draft responses for each submission"]
+    
+    return content_pipeline
+
+def check_and_process_inbox():
+    """
+    Check and process the Sigma Signal newsletter submission inbox.
+
+    Returns:
+        dict: A dictionary containing the updated inbox status.
+    """
+    # Initialize an empty list to store the filtered emails
+  
