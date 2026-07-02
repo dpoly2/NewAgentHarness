@@ -369,6 +369,7 @@ class ArchonHubApp(
         # Inez state
         self._inez_history = []           # list of {role, content} for LLM context
         self._inez_conv_id = None         # current conversation_id (for Hub persistence)
+        self._inez_pending = {}           # server run_id -> local think_run_id (async 202 reply routing)
         self._inez_status = {}            # cached /api/inez/status response
         self._inez_hud_visible = True     # whether the INEZ awareness HUD strip is shown
 
@@ -967,8 +968,28 @@ class ArchonHubApp(
         if event_type in {"run_started", "node_update", "run_completed", "run_failed"}:
             self._handle_run_event(event_type, event)
             return
+        if event_type == "inez_response":
+            self._handle_inez_response(event)
+            return
         if event_type == "notification":
             self.show_toast(event.get("text", "Notification"), event.get("color", ACCENT))
+
+    def _handle_inez_response(self, event):
+        """Route an async Inez reply (delivered over WebSocket) to the chat bubble
+        that initiated it.
+
+        POST /api/inez/chat returns 202 immediately; the actual answer arrives here
+        as an `inez_response` broadcast. `_inez_pending` maps the server's run_id to
+        the local thinking-bubble id so we render into the right conversation and
+        ignore replies belonging to other clients/turns. The event payload carries
+        the same fields the HTTP body used to (inez_message, dispatches, …), so we
+        hand it to the unchanged _inez_handle_result renderer.
+        """
+        server_run_id = event.get("run_id")
+        think_run_id = self._inez_pending.pop(server_run_id, None) if server_run_id else None
+        if not think_run_id:
+            return  # not a turn this client is waiting on (or already handled)
+        self._inez_handle_result(think_run_id, event)
 
     def _handle_run_event(self, event_type, data):
         run_id = data.get("run_id")

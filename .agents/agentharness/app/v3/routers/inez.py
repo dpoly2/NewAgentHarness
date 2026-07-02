@@ -5,7 +5,7 @@ import json
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 
 from core.auth import get_current_user
 from core.database import (
@@ -27,9 +27,14 @@ except ImportError:
 
 router = APIRouter()
 
+# Strong references to in-flight background Inez turns. asyncio.create_task holds
+# only a weak reference, so without this set the task can be garbage-collected
+# mid-run once the request handler returns. Discarded in the task's done callback.
+_inflight_turns: set[asyncio.Task] = set()
+
 
 @router.post("/inez/chat")
-async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
+async def inez_chat(body: InezChatRequest, response: Response, _: dict = Depends(get_current_user)):
     try:
         from inez_agent import think
     except ImportError:
@@ -66,51 +71,84 @@ async def inez_chat(body: InezChatRequest, _: dict = Depends(get_current_user)):
                 pass
         asyncio.run_coroutine_threadsafe(hub.broadcast(event), loop)
 
-    result = await loop.run_in_executor(hub._executor, lambda: think(body.message, history, emit=_inez_emit))
+    async def _process_turn() -> None:
+        """Run think() and deliver the result off the request path.
 
-    inez_message = result.get("inez_message", "")
-    dispatches = result.get("dispatches", [])
-    needs_agents = result.get("needs_agents", False)
-    error = result.get("error")
+        think() is a multi-call LLM pipeline (~40s+ on slow local models); running
+        it inline blocked the HTTP response past the ~100s reverse-proxy limit and
+        524'd. Instead we return 202 immediately (below) and drive the whole turn
+        here: progress + the final answer reach the client over WebSocket, and the
+        durable run_events log lets a reconnecting client replay the outcome.
+        """
+        try:
+            result = await loop.run_in_executor(
+                hub._executor, lambda: think(body.message, history, emit=_inez_emit)
+            )
 
-    message_data: dict = {"id": uuid.uuid4().hex, "conversation_id": conv_id, "role": "assistant", "content": inez_message, "agent_id": "inez-chief-of-staff", "created_at": _now_iso()}
-    if result.get("has_citations"):
-        message_data["has_citations"] = True
-        message_data["citations"] = json.dumps(result.get("citations", []))
-        message_data["search_query"] = result.get("search_query")
-    _create_record("messages", message_data)
-    _update_record("conversations", conv_id, {"updated_at": _now_iso()})
+            inez_message = result.get("inez_message", "")
+            dispatches = result.get("dispatches", [])
+            needs_agents = result.get("needs_agents", False)
+            error = result.get("error")
 
-    queued_runs = []
-    for dispatch in dispatches:
-        agent_id = dispatch.get("agent_id", "")
-        project = dispatch.get("project", "")
-        graph = dispatch.get("graph", "reflexion")
-        task = dispatch.get("task", "")
-        if agent_id and task:
-            job_run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
-            queued_runs.append({"run_id": job_run_id, "agent_id": agent_id, "project": project})
+            message_data: dict = {"id": uuid.uuid4().hex, "conversation_id": conv_id, "role": "assistant", "content": inez_message, "agent_id": "inez-chief-of-staff", "created_at": _now_iso()}
+            if result.get("has_citations"):
+                message_data["has_citations"] = True
+                message_data["citations"] = json.dumps(result.get("citations", []))
+                message_data["search_query"] = result.get("search_query")
+            _create_record("messages", message_data)
+            _update_record("conversations", conv_id, {"updated_at": _now_iso()})
 
-    response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
-    if result.get("has_citations"):
-        response_data["has_citations"] = True
-        response_data["citations"] = result.get("citations", [])
-        response_data["search_query"] = result.get("search_query")
-    # Generate follow-up suggestions only after the first exchange to avoid
-    # a redundant LLM call on brand-new conversations (first user message has
-    # no prior context to generate meaningful follow-ups from).
-    if len(history) > 1 and result.get("followup_suggestions"):
-        response_data["followup_suggestions"] = result.get("followup_suggestions", [])
+            queued_runs = []
+            for dispatch in dispatches:
+                agent_id = dispatch.get("agent_id", "")
+                project = dispatch.get("project", "")
+                graph = dispatch.get("graph", "reflexion")
+                task = dispatch.get("task", "")
+                if agent_id and task:
+                    job_run_id = await hub.submit_job({"agent_id": agent_id, "project": project, "graph": graph, "task": task, "max_revisions": 2, "priority": "high"})
+                    queued_runs.append({"run_id": job_run_id, "agent_id": agent_id, "project": project})
 
-    # Deliver the final answer over WebSocket. The frontend intentionally leaves
-    # the chat in the "thinking" state after the HTTP call and renders the reply
-    # from this `inez_response` event — which the backend previously never sent,
-    # so the UI hung on the last progress step ("Synthesizing…"). Also persisted
-    # to the durable event log so a dropped socket can replay it.
-    _inez_emit("inez_response", message_id=message_data["id"],
-               **{k: v for k, v in response_data.items()
-                  if k not in ("run_id", "conversation_id")})
-    return response_data
+            response_data: dict = {"run_id": run_id, "conversation_id": conv_id, "inez_message": inez_message, "dispatches": dispatches, "needs_agents": needs_agents, "queued_runs": queued_runs, "error": error}
+            if result.get("has_citations"):
+                response_data["has_citations"] = True
+                response_data["citations"] = result.get("citations", [])
+                response_data["search_query"] = result.get("search_query")
+            # Generate follow-up suggestions only after the first exchange to avoid
+            # a redundant LLM call on brand-new conversations (first user message has
+            # no prior context to generate meaningful follow-ups from).
+            if len(history) > 1 and result.get("followup_suggestions"):
+                response_data["followup_suggestions"] = result.get("followup_suggestions", [])
+
+            # Deliver the final answer over WebSocket. The frontend leaves the chat
+            # in the "thinking" state after the 202 and renders the reply from this
+            # `inez_response` event. Also persisted to the durable event log so a
+            # dropped socket can replay it.
+            _inez_emit("inez_response", message_id=message_data["id"],
+                       **{k: v for k, v in response_data.items()
+                          if k not in ("run_id", "conversation_id")})
+        except Exception as exc:  # never leave the UI stuck in "thinking"
+            # Persist a fallback assistant message so the turn is recoverable, then
+            # emit inez_response with an error so the client exits the thinking state.
+            fallback = "Sorry — something went wrong while processing that. Please try again."
+            try:
+                err_msg: dict = {"id": uuid.uuid4().hex, "conversation_id": conv_id, "role": "assistant", "content": fallback, "agent_id": "inez-chief-of-staff", "created_at": _now_iso()}
+                _create_record("messages", err_msg)
+                _update_record("conversations", conv_id, {"updated_at": _now_iso()})
+                msg_id = err_msg["id"]
+            except Exception:
+                msg_id = None
+            _inez_emit("inez_response", message_id=msg_id, inez_message=fallback,
+                       dispatches=[], needs_agents=False, queued_runs=[], error=str(exc))
+
+    task = loop.create_task(_process_turn())
+    _inflight_turns.add(task)
+    task.add_done_callback(_inflight_turns.discard)
+
+    # 202 Accepted: the turn is running in the background. The client tracks it via
+    # run_id (WS events + the /inez/runs/{run_id}/events replay endpoint) and renders
+    # the answer from the `inez_response` WS event, not this body.
+    response.status_code = 202
+    return {"run_id": run_id, "conversation_id": conv_id, "status": "processing"}
 
 
 @router.get("/inez/runs/{run_id}/events")

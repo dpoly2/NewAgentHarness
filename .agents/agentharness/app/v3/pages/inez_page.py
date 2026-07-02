@@ -94,9 +94,19 @@ class InezPageMixin:
                         "message": send_task,
                         "conversation_id": self._inez_conv_id,
                     }, timeout=_HUB_LLM_TIMEOUT)
-                    if resp:
+                    if resp and "inez_message" in resp:
+                        # Legacy synchronous server: the full answer is in the body.
                         self._inez_conv_id = resp.get("conversation_id", self._inez_conv_id)
-                    _on_inez_result(resp or {})
+                        _on_inez_result(resp)
+                    elif resp and resp.get("run_id"):
+                        # Async server: 202 Accepted. The answer arrives later as an
+                        # `inez_response` WebSocket event; map the server run_id to
+                        # this bubble so _handle_inez_response can render it here.
+                        self._inez_conv_id = resp.get("conversation_id", self._inez_conv_id)
+                        self._inez_pending[resp["run_id"]] = think_run_id
+                    else:
+                        _on_inez_result({"inez_message": "Inez did not respond. Please try again.",
+                                         "dispatches": [], "needs_agents": False, "error": "no response"})
                 except Exception as exc:
                     _on_inez_result({"inez_message": str(exc), "dispatches": [], "needs_agents": False, "error": str(exc)})
             threading.Thread(target=_hub_think, daemon=True).start()
