@@ -224,7 +224,8 @@ def get_agent_model_override(agent_id: str) -> dict | None:
         model = config.get("preferred_model", "")
         if prov and model:
             return {"provider": prov, "model": model,
-                    "base_url": config.get("preferred_base_url", "")}
+                    "base_url": config.get("preferred_base_url", ""),
+                    "api_key": config.get("preferred_api_key", "")}
     except Exception as e:
         logger.debug("get_agent_model_override failed: %s", e)
     return None
@@ -319,6 +320,11 @@ def build_llm(provider: str, model: str, base_url: str = "",
         "model":       model,
         "temperature": temperature,
         "api_key":     resolved_key or "sk-placeholder",
+        # Bound the call so a slow local model (e.g. a 7B on CPU) can't hang the
+        # dispatch, and cap output so structured JSON generation stays timely.
+        "timeout":     int(os.environ.get("AGENT_LLM_TIMEOUT", "120")),
+        "max_retries": 0,
+        "max_tokens":  int(os.environ.get("AGENT_LLM_MAX_TOKENS", "1536")),
     }
     if resolved_url:
         kwargs["base_url"] = resolved_url
@@ -351,6 +357,7 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
                 provider=override["provider"],
                 model=override["model"],
                 base_url=override.get("base_url", ""),
+                api_key=override.get("api_key", ""),
                 temperature=temperature,
             )
         except Exception as e:
@@ -403,7 +410,13 @@ def get_llm_for_agent(agent_id: str, skill_text: str = "",
             except Exception as e:
                 logger.warning("Ollama LLM failed (%s), falling back: %s", agent_id, e)
 
-    # 5. Global config fallback
+    # 5. Global fallback — unified gateway (Feature 2), local-first "background"
+    # tier (shared circuit breaker). Falls through to the legacy hub_nodes factory.
+    try:
+        import gateway
+        return gateway.build_model("background", temperature=temperature)
+    except Exception:
+        pass
     try:
         from hub_nodes import _llm
         return _llm(temperature=temperature)

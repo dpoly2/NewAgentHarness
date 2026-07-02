@@ -353,6 +353,9 @@ def validate_provider_key(provider: str) -> bool:
 # callers (hub_nodes._llm, llm_router) share one rotation.
 _rr_lock = threading.Lock()
 _rr_index = 0
+# Provider returned by the most recent next_free_provider() pick, so a caller
+# that hits a live auth failure can disable exactly that provider.
+_last_pick: str | None = None
 
 
 def get_usable_free_providers() -> list[str]:
@@ -388,7 +391,7 @@ def next_free_provider() -> tuple[str, str, str] | None:
     providers = get_usable_free_providers()
     if not providers:
         return None
-    global _rr_index
+    global _rr_index, _last_pick
     with _rr_lock:
         provider = providers[_rr_index % len(providers)]
         _rr_index += 1
@@ -396,7 +399,39 @@ def next_free_provider() -> tuple[str, str, str] | None:
     model = _hub_get_config(f"llm_model_{provider}_free") or ""
     if not key or not model:
         return None
+    _last_pick = provider
     return (provider, key, model)
+
+
+_AUTH_ERROR_MARKERS = (
+    "401", "invalid api key", "incorrect api key", "invalid_api_key",
+    "unauthorized", "authentication", "no such key",
+)
+
+
+def note_free_call_failure(exc: object, provider: str | None = None) -> str | None:
+    """Disable a free provider after a *live* auth failure (e.g. 401).
+
+    Periodic validation (validate_provider_key) can pass a key that then 401s on
+    real calls (expired/quota). When a caller catches such an error it passes the
+    exception here; if it looks auth-related we disable that provider (defaults to
+    the last one picked) and cache it invalid for 6h so it is not reselected until
+    the next successful key sync. Non-auth errors (timeouts, etc.) are ignored.
+    """
+    msg = str(exc).lower()
+    if not any(m in msg for m in _AUTH_ERROR_MARKERS):
+        return None
+    p = provider or _last_pick
+    if not p or not callable(_hub_update_config):
+        return None
+    try:
+        _hub_update_config({f"llm_enabled_{p}": "0"})
+        with _cache_lock:
+            _validation_cache[p] = (False, datetime.now(timezone.utc) + timedelta(hours=6))
+        logger.warning("Disabled free provider %s after live auth failure: %s", p, str(exc)[:160])
+    except Exception:
+        logger.exception("Failed disabling free provider %s", p)
+    return p
 
 
 # ── Retry state helpers ────────────────────────────────────────────────────────

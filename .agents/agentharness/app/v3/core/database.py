@@ -1500,32 +1500,117 @@ def _count_queued_jobs() -> int:
     return row[0] if row else 0
 
 
-def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
-    """Try to become the scheduler leader. Returns True if this process holds the lock.
+def _reap_stale_jobs(threshold_minutes: int = 15) -> int:
+    """Mark job_queue rows stuck in 'running' past `threshold_minutes` as 'failed'.
 
-    Stores {pid}:{timestamp} in hub_config. If the existing entry is from a
-    different PID and is still fresh (< ttl seconds old), returns False.
+    When a worker crashes mid-run, its job_queue row is left status='running' forever
+    (no heartbeat exists). This is the reaper: it flips any 'running' row whose
+    started_at is older than the threshold to status='failed' with completed_at=now.
+
+    Behavior is *fail*, not *requeue*: a job that outlived the threshold almost
+    certainly had a worker crash mid-execution, and its graph run may have already
+    produced side effects (report sweeps, sub-agent submissions). Requeueing could
+    duplicate those effects, so we mark it failed — matching how _db_worker_loop
+    records a crashed run. Operators can manually resubmit if desired.
+
+    Concurrency: this is a single atomic UPDATE guarded by the stale-condition WHERE.
+    Under N workers, whichever process runs it first flips the rows; every other
+    process's identical UPDATE simply matches zero rows. There is no read-then-write
+    race. Returns the number of rows reaped.
+
+    started_at is stored as a naive-UTC ISO string (see _now_iso), so the cutoff is
+    computed the same way to keep the lexicographic/temporal comparison valid.
+    """
+    try:
+        threshold_minutes = int(threshold_minutes)
+    except (TypeError, ValueError):
+        threshold_minutes = 15
+    if threshold_minutes < 0:
+        threshold_minutes = 15
+
+    from datetime import timedelta
+
+    now = _utcnow()
+    cutoff_iso = (now - timedelta(minutes=threshold_minutes)).isoformat()
+    now_iso = now.isoformat()
+    conn = _db_connection()
+    try:
+        cur = conn.execute(
+            """
+            UPDATE job_queue
+               SET status = 'failed', completed_at = ?
+             WHERE status = 'running'
+               AND started_at IS NOT NULL
+               AND started_at < ?
+            """,
+            (now_iso, cutoff_iso),
+        )
+        conn.commit()
+        reaped = cur.rowcount or 0
+        if reaped:
+            logger.warning("Reaped %s stale job(s) stuck in 'running' > %s min", reaped, threshold_minutes)
+        return reaped
+    finally:
+        conn.close()
+
+
+def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
+    """Try to acquire OR renew the scheduler-leader lease. Returns True iff `pid` holds it.
+
+    The lease is stored in hub_config under key 'scheduler_leader' as the string
+    "{pid}:{expiry_iso}", where expiry_iso is a timezone-aware ISO timestamp
+    `ttl` seconds in the future. The lease is acquirable when:
+      * no lease exists, or
+      * the stored PID is this process (renewal), or
+      * the stored lease has expired (previous leader died / stopped renewing).
+
+    Idempotent + failover-safe: every worker calls this on an interval. The current
+    leader keeps renewing (extending expiry); non-leaders only win once the lease
+    expires. Because the read+write happen inside one connection and the write is an
+    unconditional INSERT OR REPLACE keyed on the singleton row, the worst-case race
+    (two workers acquiring simultaneously after expiry) resolves on the next renewal
+    tick when only one PID's expiry stays in the future — and the tracked-job wrapper
+    additionally re-checks leadership at fire time, so a brief overlap cannot double-run
+    a job.
     """
     from datetime import timedelta
+
+    try:
+        ttl = int(ttl)
+    except (TypeError, ValueError):
+        ttl = 30
+    if ttl <= 0:
+        ttl = 30
+
     conn = _db_connection()
     try:
         row = conn.execute(
-            "SELECT value, updated_at FROM hub_config WHERE key = 'scheduler_leader'"
+            "SELECT value FROM hub_config WHERE key = 'scheduler_leader'"
         ).fetchone()
-        now = _utcnow()
-        if row is not None:
-            existing_pid_str, updated_at_str = row[0], row[1]
+        now = datetime.now(timezone.utc)
+        if row is not None and row[0]:
+            raw = row[0]
+            # Stored as JSON-encoded string by set_config, or a bare string legacy value.
             try:
-                existing_pid = int(existing_pid_str.split(":")[0])
-                updated_at = datetime.fromisoformat(updated_at_str)
-                age = (now - updated_at).total_seconds()
-                if existing_pid != pid and age < ttl:
-                    return False  # Another process holds the lock
+                decoded = json.loads(raw)
+                if isinstance(decoded, str):
+                    raw = decoded
             except Exception:
-                pass  # Malformed record — proceed to overwrite
+                pass
+            try:
+                existing_pid_str, expiry_str = str(raw).split(":", 1)
+                existing_pid = int(existing_pid_str)
+                expiry = datetime.fromisoformat(expiry_str)
+                if expiry.tzinfo is None:
+                    expiry = expiry.replace(tzinfo=timezone.utc)
+                if existing_pid != pid and expiry > now:
+                    return False  # A live leader holds the lease
+            except Exception:
+                pass  # Malformed lease — overwrite it
+        expiry_iso = (now + timedelta(seconds=ttl)).isoformat()
         conn.execute(
             "INSERT OR REPLACE INTO hub_config (key, value, updated_at) VALUES ('scheduler_leader', ?, ?)",
-            (f"{pid}:{now.isoformat()}", now.isoformat()),
+            (json.dumps(f"{pid}:{expiry_iso}"), now.isoformat()),
         )
         conn.commit()
         return True
@@ -1534,12 +1619,12 @@ def _try_acquire_scheduler_lock(pid: int, ttl: int = 30) -> bool:
 
 
 def _release_scheduler_lock(pid: int) -> None:
-    """Release the scheduler lock if this process holds it."""
+    """Release the scheduler lease if this process holds it (best-effort)."""
     conn = _db_connection()
     try:
         conn.execute(
-            "DELETE FROM hub_config WHERE key = 'scheduler_leader' AND value LIKE ?",
-            (f"{pid}:%",),
+            "DELETE FROM hub_config WHERE key = 'scheduler_leader' AND (value LIKE ? OR value LIKE ?)",
+            (f"{pid}:%", f'"{pid}:%'),
         )
         conn.commit()
     finally:

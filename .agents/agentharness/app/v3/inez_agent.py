@@ -125,6 +125,36 @@ def _llm(temperature: float = 0.3, weight: str = "light"):
     weight is forwarded to the factory: "heavy" prefers a fast free provider
     (round-robin balanced) over slow local Ollama for costly reasoning calls.
     """
+    # Unified gateway (Feature 2): the "reason" tier fronts openai:gpt-4o-mini
+    # with local fallback + a shared circuit breaker, so a transient cloud issue
+    # degrades to local instead of erroring the chat. Falls through to the
+    # OpenAI-preferred logic below if the gateway has no usable provider.
+    try:
+        import gateway
+        return gateway.build_model("reason", temperature=temperature)
+    except Exception:
+        pass
+    # Prefer a capable cloud model for Inez when an OpenAI key is configured.
+    # Inez is the interactive assistant; with the free-proxy keys dead the only
+    # other option is the slow local Ollama model, which makes chats hang on
+    # "Consulting…". A working OpenAI key keeps Inez fast and reliable — scoped
+    # to Inez only (background agents keep their existing routing). Model via
+    # INEZ_MODEL; disable by clearing llm_key_openai.
+    try:
+        key = ""
+        if DB_OK and hasattr(db, "get_config"):
+            key = db.get_config("llm_key_openai") or ""
+        key = key or os.environ.get("OPENAI_API_KEY", "")
+        if key and str(key).startswith("sk-"):
+            from llm_router import build_llm
+            return build_llm(
+                provider="openai",
+                model=os.environ.get("INEZ_MODEL", "gpt-4o-mini"),
+                api_key=key,
+                temperature=temperature,
+            )
+    except Exception:
+        pass
     try:
         from hub_nodes import _llm as _hub_llm
         return _hub_llm(temperature=temperature, weight=weight)
@@ -1435,6 +1465,10 @@ def think(
             SystemMessage(content=system_prompt + dispatch_instructions),
             HumanMessage(content=augmented_message),
         ]
+        # The reasoning call can take tens of seconds on a local CPU model; surface
+        # a status step so the UI shows progress instead of a silent wait.
+        if emit:
+            emit("inez_thinking", message="Consulting the AI engine…")
         response = model.invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
 
@@ -1475,7 +1509,10 @@ def think(
                 for d in dispatches:
                     if travel_tool_data and "travel" in d.get("agent_id", "").lower():
                         d["context"] = (d.get("context", "") + "\n\n" + travel_tool_data).strip()
-                agent_results = run_dispatches(dispatches, emit=emit)
+                # Pass Inez's fast model down so dispatched agents don't grind on
+                # the dead-free-key → slow-Ollama path (keeps dispatch scoped to
+                # Inez's interactive model without changing background routing).
+                agent_results = run_dispatches(dispatches, emit=emit, llm=model)
                 result["agent_results"] = agent_results
 
                 # ── Step 4: Synthesis — Inez reads all agent outputs ──────────

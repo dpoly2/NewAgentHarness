@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ArchonHub · Issue Monitor</title>
+<link rel="icon" href="/web/favicon.ico" />
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --card:#1c2330; --border:#2b3340;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff;
+    --green:#3fb950; --red:#f85149; --amber:#d29922; --grey:#6e7681;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:12px;padding:16px 24px;
+    border-bottom:1px solid var(--border);background:var(--panel);position:sticky;top:0;z-index:5}
+  header h1{font-size:17px;margin:0;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  header .spacer{flex:1}
+  button{background:var(--card);color:var(--text);border:1px solid var(--border);
+    border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px}
+  button:hover{border-color:var(--accent)}
+  main{padding:20px 24px;max-width:1200px;margin:0 auto}
+  .banner{padding:14px 16px;border-radius:8px;margin-bottom:18px;font-weight:500;
+    border:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  .banner.ok{background:rgba(63,185,80,.12);border-color:rgba(63,185,80,.4)}
+  .banner.bad{background:rgba(248,81,73,.12);border-color:rgba(248,81,73,.4)}
+  .banner .dot{width:10px;height:10px;border-radius:50%}
+  .banner.ok .dot{background:var(--green)} .banner.bad .dot{background:var(--red)}
+  .banner small{color:var(--muted);font-weight:400}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px}
+  .stat .n{font-size:26px;font-weight:700}
+  .stat .l{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  .stat.urgent .n{color:var(--red)} .stat.high .n{color:var(--amber)}
+  section{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    padding:16px 18px;margin-bottom:18px}
+  section h2{font-size:14px;margin:0 0 12px;font-weight:600;color:var(--text)}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  td.title{max-width:520px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .b-urgent{background:rgba(248,81,73,.18);color:#ff7b72}
+  .b-high{background:rgba(210,153,34,.18);color:#e3b341}
+  .b-medium{background:rgba(88,166,255,.16);color:#79c0ff}
+  .b-low{background:rgba(110,118,129,.18);color:#adbac7}
+  .b-partial{background:rgba(248,81,73,.18);color:#ff7b72}
+  .b-complete{background:rgba(63,185,80,.16);color:#56d364}
+  .muted{color:var(--muted)} .small{font-size:12px}
+  .empty{color:var(--muted);font-style:italic;padding:8px 2px}
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.twocol{grid-template-columns:1fr}}
+  .auth{max-width:480px;margin:60px auto;text-align:center}
+  .auth input{width:100%;padding:9px;border-radius:6px;border:1px solid var(--border);
+    background:var(--card);color:var(--text);margin:10px 0}
+  code{background:var(--card);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛠️ Issue Monitor <span class="sub">· DevOps reliability</span></h1>
+  <div class="spacer"></div>
+  <span id="updated" class="sub"></span>
+  <button onclick="load()">↻ Refresh</button>
+</header>
+<main id="app">
+  <div class="empty">Loading…</div>
+</main>
+
+<script>
+const $ = (h)=>{const d=document.createElement('div');d.innerHTML=h;return d.firstElementChild;};
+function token(){return localStorage.getItem('archon_token')||'';}
+function esc(s){return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function timeAgo(iso){ if(!iso) return '—'; const d=new Date(iso); const s=(Date.now()-d.getTime())/1000;
+  if(s<60)return Math.round(s)+'s ago'; if(s<3600)return Math.round(s/60)+'m ago';
+  if(s<86400)return Math.round(s/3600)+'h ago'; return Math.round(s/86400)+'d ago';}
+function pbadge(p){p=(p||'').toLowerCase();return `<span class="badge b-${['urgent','high','medium','low'].includes(p)?p:'low'}">${esc(p||'—')}</span>`;}
+function sbadge(s){s=(s||'').toLowerCase();const c=s==='complete'?'b-complete':s==='partial'?'b-partial':'b-low';return `<span class="badge ${c}">${esc(s||'—')}</span>`;}
+
+function authPrompt(msg){
+  document.getElementById('app').innerHTML = `
+    <div class="auth">
+      <h2>Sign-in required</h2>
+      <p class="muted">${esc(msg||'No ArchonHub session token found.')}</p>
+      <p class="small muted">Open the main app and log in first (this page reuses that session),
+         or paste a valid token below.</p>
+      <input id="tok" placeholder="Paste archon token…" />
+      <button onclick="(function(){const v=document.getElementById('tok').value.trim();
+        if(v){localStorage.setItem('archon_token',v);load();}})()">Use token</button>
+    </div>`;
+}
+
+async function load(){
+  if(!token()){ authPrompt(); return; }
+  try{
+    const r = await fetch('/api/devops/status',{headers:{'Authorization':'Bearer '+token()}});
+    if(r.status===401||r.status===403){ authPrompt('Session expired or invalid.'); return; }
+    if(!r.ok){ throw new Error('HTTP '+r.status); }
+    render(await r.json());
+    document.getElementById('updated').textContent = 'updated '+new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById('app').innerHTML = `<div class="banner bad"><span class="dot"></span>
+      Failed to load status: ${esc(e.message)}</div>`;
+  }
+}
+
+function render(d){
+  const m=d.monitoring||{}, t=d.tickets||{}, bp=t.by_priority||{};
+  const banner = m.healthy
+    ? `<div class="banner ok"><span class="dot"></span>Monitoring healthy
+         <small>· last sweep ${timeAgo(m.last_sweep)}</small></div>`
+    : `<div class="banner bad"><span class="dot"></span>Monitoring degraded
+         <small>· last sweep ${timeAgo(m.last_sweep)} (${esc(m.last_sweep_status||'n/a')}),
+         ${m.recent_failures||0} recent failure(s)</small>
+         ${m.degraded_note?`<br><small>${esc(m.degraded_note)}</small>`:''}</div>`;
+
+  const stats = `<div class="grid">
+    <div class="stat"><div class="n">${t.total||0}</div><div class="l">Total tickets</div></div>
+    <div class="stat"><div class="n">${t.open||0}</div><div class="l">Open</div></div>
+    <div class="stat urgent"><div class="n">${bp.urgent||0}</div><div class="l">Urgent</div></div>
+    <div class="stat high"><div class="n">${bp.high||0}</div><div class="l">High</div></div>
+    <div class="stat"><div class="n">${(d.fixes_ready||[]).length}</div><div class="l">Fixes ready</div></div>
+  </div>`;
+
+  const incidents = (t.items&&t.items.length) ? `<table>
+    <tr><th>Issue</th><th>Priority</th><th>Status</th><th>Owner</th><th>Opened</th></tr>
+    ${t.items.map(x=>`<tr><td class="title">${esc(x.title)}</td><td>${pbadge(x.priority)}</td>
+      <td class="small">${esc(x.status||'pending')}</td><td class="small muted">${esc(x.assigned_agent||'—')}</td>
+      <td class="small muted">${timeAgo(x.created_at)}</td></tr>`).join('')}
+    </table>` : `<div class="empty">No open incidents 🎉</div>`;
+
+  const reports = (d.reports&&d.reports.length) ? `<table>
+    <tr><th>Report</th><th>Status</th><th>Summary</th><th>When</th></tr>
+    ${d.reports.map(r=>`<tr><td class="small">${esc(r.title)}</td><td>${sbadge(r.status)}</td>
+      <td class="small muted title">${esc((r.summary||'').slice(0,180))}</td>
+      <td class="small muted">${timeAgo(r.generated_at||r.created_at)}</td></tr>`).join('')}
+    </table>` : `<div class="empty">No sweeps yet.</div>`;
+
+  const fixes = (d.fixes&&d.fixes.length) ? d.fixes.map(f=>`<div class="small">• ${esc(f.title)}
+      <span class="muted">(${timeAgo(f.created_at)})</span></div>`).join('') : `<div class="empty">No fix proposals yet.</div>`;
+  const rca = (d.rca&&d.rca.length) ? d.rca.map(r=>`<div class="small">• ${esc(r.title)}
+      <span class="muted">(${timeAgo(r.created_at)})</span></div>`).join('') : `<div class="empty">No diagnoses yet.</div>`;
+
+  document.getElementById('app').innerHTML = `
+    ${banner}${stats}
+    <section><h2>Open incidents</h2>${incidents}</section>
+    <section><h2>Recent log sweeps</h2>${reports}</section>
+    <div class="twocol">
+      <section><h2>🔧 Fix proposals</h2>${fixes}</section>
+      <section><h2>🔍 Root-cause notes</h2>${rca}</section>
+    </div>`;
+}
+
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

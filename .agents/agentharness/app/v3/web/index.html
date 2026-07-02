@@ -12,6 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
     <style>
         :root {
+            color-scheme: dark;
             --bg: #0B0F17;
             --bg-card: #111827;
             --bg-panel: #0A1F44;
@@ -42,9 +43,32 @@
             margin: 0; padding: 0; height: 100vh; overflow: hidden;
         }
         button, input, select, textarea { font: inherit; }
-        button { cursor: pointer; }
+        button { cursor: pointer; -webkit-appearance: none; appearance: none; background: transparent; border: none; color: inherit; }
         a { color: inherit; text-decoration: none; }
         .hidden { display: none !important; }
+        #securityBanner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            background: color-mix(in srgb, var(--warning) 15%, transparent);
+            border-bottom: 1px solid color-mix(in srgb, var(--warning) 40%, transparent);
+            font-size: 13px;
+            color: var(--text);
+        }
+        #securityBanner .banner-icon { font-size: 16px; flex-shrink: 0; }
+        #securityBanner .banner-text { flex: 1; }
+        #securityBanner .banner-btn {
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: var(--warning);
+            color: #000;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #securityBanner .banner-dismiss { opacity: 0.5; font-size: 16px; cursor: pointer; flex-shrink: 0; }
         .app-shell { height: 100vh; width: 100%; }
         #sidebar {
             position: fixed;
@@ -601,12 +625,21 @@
         .inez-bubble.inez { background: color-mix(in srgb, var(--inez) 12%, transparent); border: 1px solid color-mix(in srgb, var(--inez) 35%, transparent); }
         .inez-bubble.user { background: rgba(0,184,255,0.12); border: 1px solid rgba(45,212,255,0.24); }
         .inez-bubble small { display: block; margin-top: 6px; color: var(--text-muted); font-size: 11px; }
-        .inez-thinking { display: flex; align-items: center; gap: 8px; color: var(--inez-light); font-size: 13px; font-style: italic; padding: 10px 16px; background: color-mix(in srgb, var(--inez) 8%, transparent); border: 1px solid color-mix(in srgb, var(--inez) 20%, transparent); border-radius: 16px; }
+        .inez-thinking { display: flex; align-items: flex-start; gap: 10px; color: var(--inez-light); font-size: 13px; padding: 10px 16px; background: color-mix(in srgb, var(--inez) 8%, transparent); border: 1px solid color-mix(in srgb, var(--inez) 20%, transparent); border-radius: 16px; min-width: 180px; max-width: min(70%, 520px); }
+        .inez-thinking-body { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+        .inez-thinking-current { display: flex; align-items: center; gap: 8px; font-style: italic; }
+        .inez-thinking-steps { display: grid; gap: 3px; max-height: 120px; overflow-y: auto; scrollbar-width: thin; margin-bottom: 2px; }
+        .inez-step { display: flex; align-items: flex-start; gap: 6px; font-size: 11.5px; font-style: normal; color: color-mix(in srgb, var(--text-muted) 70%, transparent); line-height: 1.4; }
+        .inez-step-check { flex-shrink: 0; font-size: 10px; margin-top: 2px; color: color-mix(in srgb, var(--inez) 55%, transparent); }
+        .inez-phase-tag { display: inline-block; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); margin-right: 6px; opacity: 0.8; }
         .dispatch-cards { display: grid; gap: 6px; margin-top: 10px; }
         .dispatch-card { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(0,184,255,0.06); border: 1px solid rgba(0,184,255,0.18); border-radius: 10px; font-size: 12px; }
         .dispatch-card .agent-name { color: var(--accent); font-weight: 600; }
         .dispatch-card .agent-proj { color: var(--text-muted); }
         .dispatch-card .agent-graph { color: var(--text-muted); margin-left: auto; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 20px; }
+        .inez-followup-suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .inez-suggestion-btn { background: color-mix(in srgb, var(--inez) 10%, transparent); border: 1px solid color-mix(in srgb, var(--inez) 30%, transparent); color: var(--text); border-radius: 20px; padding: 5px 12px; font-size: 12px; cursor: pointer; transition: background 0.15s, border-color 0.15s; text-align: left; }
+        .inez-suggestion-btn:hover { background: color-mix(in srgb, var(--inez) 20%, transparent); border-color: color-mix(in srgb, var(--inez) 50%, transparent); }
         .inez-input { border-top: 1px solid color-mix(in srgb, var(--inez) 20%, transparent); padding: 16px; display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; background: color-mix(in srgb, var(--inez) 4%, transparent); }
         .inez-input textarea { min-height: 52px; max-height: 160px; }
         .inez-send-btn { background: var(--inez); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
@@ -781,6 +814,12 @@
             </div>
         </aside>
         <main id="main">
+            <div id="securityBanner" class="hidden">
+                <span class="banner-icon">⚠</span>
+                <span class="banner-text">You're using default credentials — your hub is not secure. <strong>Change your password now.</strong></span>
+                <button class="banner-btn" onclick="openChangePasswordModal()">Change Password</button>
+                <button class="banner-dismiss" onclick="document.getElementById('securityBanner').classList.add('hidden')" aria-label="Dismiss">✕</button>
+            </div>
             <div id="content"></div>
             <div class="status-bar hidden" id="statusBar">
                 <div class="status-group">
@@ -854,6 +893,7 @@
             inezMessages: [],
             inezConversationId: null,
             inezThinking: false,
+            inezStatusSteps: [],
             notifications: [],
             runProgress: {},
             mobileNavOpen: false,
@@ -1281,8 +1321,61 @@
             }
         }
 
+        function openChangePasswordModal() {
+            openModal('Change Password', `
+                <form id="changePwForm" style="display:flex;flex-direction:column;gap:16px;">
+                    <div>
+                        <label style="display:block;margin-bottom:6px;font-size:13px;opacity:.7;">Current Password</label>
+                        <input type="password" id="cpCurrent" placeholder="Current password" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:6px;font-size:13px;opacity:.7;">New Password</label>
+                        <input type="password" id="cpNew" placeholder="New password (min 8 chars)" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;" />
+                    </div>
+                    <div>
+                        <label style="display:block;margin-bottom:6px;font-size:13px;opacity:.7;">Confirm New Password</label>
+                        <input type="password" id="cpConfirm" placeholder="Confirm new password" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;box-sizing:border-box;" />
+                    </div>
+                    <div id="cpError" style="color:var(--error);font-size:13px;display:none;"></div>
+                    <button type="submit" style="padding:10px 20px;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;cursor:pointer;">Update Password</button>
+                </form>
+            `);
+            $('#changePwForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const current = $('#cpCurrent').value;
+                const newPw = $('#cpNew').value;
+                const confirm = $('#cpConfirm').value;
+                const errEl = $('#cpError');
+                errEl.style.display = 'none';
+                if (newPw !== confirm) { errEl.textContent = 'New passwords do not match.'; errEl.style.display = 'block'; return; }
+                if (newPw.length < 8) { errEl.textContent = 'New password must be at least 8 characters.'; errEl.style.display = 'block'; return; }
+                try {
+                    await api('POST', '/api/auth/change-password', { current_password: current, new_password: newPw });
+                    document.getElementById('securityBanner').classList.add('hidden');
+                    closeModal();
+                    showToast('Password updated successfully', 'var(--success)');
+                } catch (err) {
+                    let msg = 'Failed to update password.';
+                    try { const d = JSON.parse(err.message); msg = d.detail || msg; } catch { if (err.message) msg = err.message; }
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                }
+            });
+        }
+
         function handleWSEvent(event) {
             handlePlanWSEvent(event);
+            if (event.type === 'connected') {
+                const warnings = event.security_warnings || [];
+                const banner = document.getElementById('securityBanner');
+                if (banner) {
+                    if (warnings.includes('default_admin_password')) {
+                        banner.classList.remove('hidden');
+                    } else {
+                        banner.classList.add('hidden');
+                    }
+                }
+            }
             if (event.type === 'node_update') { updateRunProgress(event); }
             if (event.type === 'todo_update') { if (state.currentPage === 'todos') showTodos(); }
             if (event.type === 'notif') {
@@ -1296,6 +1389,61 @@
             if (event.type === 'run_completed' && state.currentPage === 'dashboard') showDashboard();
             if (event.type === 'briefing_ready' && state.currentPage === 'briefing') showBriefing();
             if (['message', 'chat_message', 'conversation_message'].includes(event.type)) handleChatWS(event);
+            if (event.type === 'inez_thinking') {
+                const text = event.text || event.message || '';
+                if (text && state.inezThinking) {
+                    state.inezStatusSteps = [...(state.inezStatusSteps || []), {
+                        text,
+                        step: event.step || null,
+                        phase: event.phase || null,
+                    }];
+                    const msgEl = $('#inezMessages');
+                    if (msgEl) {
+                        msgEl.innerHTML = renderInezMessages() + renderInezThinking();
+                        const steps = msgEl.querySelector('.inez-thinking-steps');
+                        if (steps) steps.scrollTop = steps.scrollHeight;
+                        scrollInezToBottom();
+                    }
+                }
+            }
+            if (event.type === 'inez_response' && event.inez_message !== undefined) {
+                if (state.inezThinking || state.inezConversationId === event.conversation_id) {
+                    state.inezStatusSteps = [];
+                    state.inezConversationId = event.conversation_id || state.inezConversationId;
+                    state.inezThinking = false;
+                    const rts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    state.inezMessages.push({
+                        role: 'inez',
+                        content: event.inez_message || (event.error ? `I ran into an issue: ${event.error}` : '…'),
+                        dispatches: event.dispatches || [],
+                        ts: rts,
+                        ...(event.has_citations && { has_citations: true, citations: event.citations, search_query: event.search_query }),
+                        ...(event.followup_suggestions && { followup_suggestions: event.followup_suggestions }),
+                    });
+                    const msgEl = $('#inezMessages');
+                    if (msgEl) { msgEl.innerHTML = renderInezMessages(); scrollInezToBottom(); }
+                    const btn = $('#inezSendBtn');
+                    if (btn) btn.disabled = false;
+                }
+            }
+            if (event.type === 'inez_followups') {
+                if (state.inezConversationId === event.conversation_id) {
+                    const suggestions = event.suggestions || [];
+                    if (suggestions.length && state.inezMessages.length) {
+                        // Attach follow-ups to the most recent inez message
+                        const lastInezIdx = [...state.inezMessages].reverse().findIndex(m => m.role === 'inez');
+                        if (lastInezIdx !== -1) {
+                            const idx = state.inezMessages.length - 1 - lastInezIdx;
+                            state.inezMessages[idx] = {
+                                ...state.inezMessages[idx],
+                                followup_suggestions: suggestions,
+                            };
+                            const msgEl = $('#inezMessages');
+                            if (msgEl) { msgEl.innerHTML = renderInezMessages(); scrollInezToBottom(); }
+                        }
+                    }
+                }
+            }
         }
 
         function closeMobileNav() {
@@ -2949,7 +3097,27 @@
 
                 const stats = statsData?.stats || {};
                 const recent = statsData?.recent_feedback || [];
-                const prefs = prefsData?.preferences || [];
+                // The API returns preferences as a flat settings object (not an array),
+                // e.g. { preferred_length: 'medium', use_emojis: true, ... }. Normalize
+                // it to the {dimension, preference, confidence} rows this view renders.
+                let prefs = prefsData?.preferences;
+                if (prefs && !Array.isArray(prefs)) {
+                    const STYLE_KEYS = {
+                        preferred_length: 'Length',
+                        preferred_formality: 'Formality',
+                        use_emojis: 'Emojis',
+                        citation_density: 'Citation density',
+                        code_style: 'Code style',
+                    };
+                    prefs = Object.entries(STYLE_KEYS)
+                        .filter(([k]) => prefs[k] !== undefined && prefs[k] !== null)
+                        .map(([k, label]) => ({
+                            dimension: label,
+                            preference: typeof prefs[k] === 'boolean' ? (prefs[k] ? 'on' : 'off') : String(prefs[k]),
+                            confidence: null,
+                        }));
+                }
+                prefs = Array.isArray(prefs) ? prefs : [];
 
                 const total = stats.total_feedback || 0;
                 const pos = stats.positive_count || 0;
@@ -2967,7 +3135,7 @@
                 const prefRows = prefs.map(p => `<tr>
                     <td style="font-weight:500">${escapeHtml(p.dimension||'')}</td>
                     <td>${escapeHtml(p.preference||'')}</td>
-                    <td class="muted">${Math.round((p.confidence||0)*100)}%</td>
+                    <td class="muted">${typeof p.confidence === 'number' ? Math.round(p.confidence*100)+'%' : '—'}</td>
                 </tr>`).join('') || '<tr><td colspan="3" class="muted" style="text-align:center;padding:16px">No learned preferences yet</td></tr>';
 
                 renderShell('Feedback & Corrections', 'How agents are learning from your interactions.',
@@ -4430,11 +4598,21 @@
                         ${d.graph ? `<span class="agent-graph">${escapeHtml(d.graph)}</span>` : ''}
                     </div>`).join('');
 
+                const suggestions = (msg.followup_suggestions || []);
+                const suggestionsHtml = suggestions.length
+                    ? `<div class="inez-followup-suggestions">${suggestions.map(s =>
+                        `<button class="inez-suggestion-btn" onclick="(function(){const i=$('#inezInput');if(i){i.value=${JSON.stringify(s)};i.focus();}})()">
+                            ${escapeHtml(s)}
+                        </button>`
+                      ).join('')}</div>`
+                    : '';
+
                 return `<div class="inez-bubble-row">
                     <div class="inez-mini-avatar">👑</div>
                     <div>
                         <div class="inez-bubble inez">${escapeHtml(msg.content)}${ts}</div>
                         ${dispatches ? `<div class="dispatch-cards">${dispatches}</div>` : ''}
+                        ${suggestionsHtml}
                     </div>
                 </div>`;
             }).join('');
@@ -4442,11 +4620,31 @@
 
         function renderInezThinking() {
             if (!state.inezThinking) return '';
+            const steps = state.inezStatusSteps || [];
+            const allSteps = steps.length > 0 ? steps : [{ text: 'Inez is thinking…', step: null, phase: null }];
+            const prevItems = allSteps.slice(0, -1);
+            const currentStep = allSteps[allSteps.length - 1];
+            const currentText = typeof currentStep === 'string' ? currentStep : currentStep.text;
+            const currentPhase = typeof currentStep === 'object' && currentStep.phase ? currentStep.phase : null;
+            const currentPhaseLabel = currentPhase ? `<span class="inez-phase-tag">${escapeHtml(currentPhase)}</span>` : '';
+            const prevHtml = prevItems.length > 0
+                ? `<div class="inez-thinking-steps">${prevItems.map(s => {
+                    const st = typeof s === 'string' ? s : s.text;
+                    const ph = typeof s === 'object' && s.phase ? s.phase : null;
+                    const pl = ph ? `<span class="inez-phase-tag">${escapeHtml(ph)}</span>` : '';
+                    return `<div class="inez-step"><span class="inez-step-check">✓</span>${pl}<span>${escapeHtml(st)}</span></div>`;
+                  }).join('')}</div>`
+                : '';
             return `<div class="inez-bubble-row">
                 <div class="inez-mini-avatar">👑</div>
                 <div class="inez-thinking">
-                    <div class="inez-dots"><span></span><span></span><span></span></div>
-                    Inez is thinking...
+                    <div class="inez-thinking-body">
+                        ${prevHtml}
+                        <div class="inez-thinking-current">
+                            <div class="inez-dots"><span></span><span></span><span></span></div>
+                            ${currentPhaseLabel}<span>${escapeHtml(currentText)}</span>
+                        </div>
+                    </div>
                 </div>
             </div>`;
         }
@@ -4505,6 +4703,7 @@
                 const ts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                 state.inezMessages.push({ role: 'user', content, dispatches: [], ts });
                 state.inezThinking = true;
+                state.inezStatusSteps = [];
                 const btn = $('#inezSendBtn');
                 if (btn) btn.disabled = true;
 
@@ -4521,30 +4720,23 @@
                         conversation_id: state.inezConversationId || null
                     });
                     state.inezConversationId = result.conversation_id || state.inezConversationId;
-                    state.inezThinking = false;
-                    const rts = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    state.inezMessages.push({
-                        role: 'inez',
-                        content: result.inez_message || '',
-                        dispatches: result.dispatches || [],
-                        ts: rts
-                    });
+                    // inezThinking stays true — response arrives via inez_response WebSocket event
                 } catch (err) {
                     state.inezThinking = false;
                     state.inezMessages.push({
                         role: 'inez',
-                        content: `I ran into an issue: ${err.message || 'Unknown error'}`,
+                        content: `Failed to reach Inez: ${err.message || 'Unknown error'}`,
                         dispatches: [],
                         ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     });
+                    if (btn) btn.disabled = false;
                 }
 
                 const msgEl2 = $('#inezMessages');
                 if (msgEl2) {
-                    msgEl2.innerHTML = renderInezMessages() + renderInezThinking();
+                    msgEl2.innerHTML = renderInezMessages() + (state.inezThinking ? renderInezThinking() : '');
                     scrollInezToBottom();
                 }
-                if (btn) btn.disabled = false;
             });
 
             // Allow Enter to submit (Shift+Enter = newline)

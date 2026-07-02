@@ -70,6 +70,43 @@ except Exception:
 # Each agent_team entry: {"agent_id": str, "task": str, "project": str}
 
 REPORT_JOBS: dict[str, dict] = {
+    "log_monitor": {
+        "report_type": "operations",
+        "title_template": "DevOps Log Monitor — {date}",
+        "project_slug": "devops",
+        "agents": [
+            {
+                "agent_id": "devops-log-monitor",
+                "project": "devops",
+                "task": (
+                    "Review the new ArchonHub log lines in the provided context. Detect genuine "
+                    "errors/regressions, de-duplicate by root signature, and open one ticket (todos) "
+                    "per distinct issue with severity, suspected component, and the exact evidence "
+                    "line(s). Ignore INFO/DEBUG noise and single transient warnings. If nothing "
+                    "qualifies, open no tickets and say so."
+                ),
+            },
+            {
+                "agent_id": "devops-root-cause-analyst",
+                "project": "devops",
+                "task": (
+                    "For each issue in the provided log digest, diagnose the most likely root cause "
+                    "against the ArchonHub codebase. Name the responsible module/file, classify the "
+                    "cause (code/config/dependency/data/transient), and record a concise RCA."
+                ),
+            },
+            {
+                "agent_id": "devops-fix-engineer",
+                "project": "devops",
+                "task": (
+                    "For the diagnosed issues in the provided log digest, propose a minimal, "
+                    "review-ready fix for each: target file:line, the change (diff/snippet), "
+                    "rationale, blast radius, verification, and rollback. Do not deploy — propose only."
+                ),
+            },
+        ],
+    },
+
     "daily_briefing": {
         "report_type": "briefing",
         "title_template": "Morning Briefing — {date}",

@@ -161,6 +161,23 @@ def _uid() -> str:
     return str(uuid.uuid4())
 
 
+def _json_llm(model):
+    """Enable JSON output mode for OpenAI-compatible models (incl. Ollama).
+
+    The runner contract requires a single JSON object; small local models often
+    ignore that instruction and return prose. Binding response_format=json_object
+    forces valid JSON at the API layer. Non-OpenAI models (Anthropic/Gemini) or
+    already-bound runnables are returned unchanged.
+    """
+    try:
+        from langchain_openai import ChatOpenAI  # type: ignore
+        if isinstance(model, ChatOpenAI):
+            return model.bind(response_format={"type": "json_object"})
+    except Exception:
+        pass
+    return model
+
+
 def _apply_db_write(write: dict) -> bool:
     """Apply a single db_write directive from agent output."""
     if not DB_OK:
@@ -339,6 +356,7 @@ def run_agent(
     extra_context: str = "",
     run_id: str | None = None,
     emit: Callable | None = None,
+    llm: object | None = None,
 ) -> dict:
     """
     Execute one agent:
@@ -413,19 +431,43 @@ def run_agent(
 
     # 4. Call LLM
     _emit("agent_thinking", message=f"{agent_id} working on task...")
+    messages = [SystemMessage(content=system), HumanMessage(content=task)]
+    raw = None
     try:
-        model = (
-            _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
-            if ROUTER_OK else _llm(temperature=0.3)
-        )
-        response = model.invoke([
-            SystemMessage(content=system),
-            HumanMessage(content=task),
-        ])
+        # A caller (e.g. Inez) can pass a ready LLM so its dispatched agents use
+        # the same fast model instead of routing through the (possibly dead)
+        # free-key → slow-Ollama path.
+        if llm is not None:
+            model = llm
+        else:
+            model = (
+                _get_llm_for_agent(agent_id, skill_text=skill_content, temperature=0.3)
+                if ROUTER_OK else _llm(temperature=0.3)
+            )
+        response = _json_llm(model).invoke(messages)
         raw = response.content if hasattr(response, "content") else str(response)
     except Exception as exc:
-        logger.error("agent_runner LLM error agent=%s: %s", agent_id, exc)
-        return _error_result(agent_id, str(exc))
+        # The primary route (llm_router free-key providers) can fail with an
+        # expired/invalid key (401) or a timeout. Fall back once to the local
+        # keyless Ollama backend so the agent still produces output instead of
+        # erroring the entire dispatch.
+        logger.warning(
+            "agent_runner primary LLM failed agent=%s: %s — falling back to local Ollama",
+            agent_id, exc,
+        )
+        # Self-heal: if this was a free-key auth failure (401), disable that
+        # provider so it stops getting picked on subsequent calls.
+        try:
+            import free_llm_keys as _fk
+            _fk.note_free_call_failure(exc)
+        except Exception:
+            pass
+        try:
+            response = _json_llm(_llm(temperature=0.3)).invoke(messages)
+            raw = response.content if hasattr(response, "content") else str(response)
+        except Exception as exc2:
+            logger.error("agent_runner LLM error agent=%s: primary=%s fallback=%s", agent_id, exc, exc2)
+            return _error_result(agent_id, f"{exc} | fallback failed: {exc2}")
 
     # 5. Parse structured output
     parsed = _parse_agent_output(raw)
@@ -533,6 +575,7 @@ def run_dispatches(
     dispatches: list[dict],
     emit: Callable | None = None,
     max_follow_up_depth: int = 1,
+    llm: object | None = None,
 ) -> list[dict]:
     """
     Execute a list of Inez dispatch objects in parallel (up to 4 concurrent).
@@ -574,6 +617,7 @@ def run_dispatches(
                     d.get("context", ""),
                     None,   # run_id
                     emit,
+                    llm,
                 ): d
                 for d in queue
                 if d.get("agent_id") and d.get("task")
