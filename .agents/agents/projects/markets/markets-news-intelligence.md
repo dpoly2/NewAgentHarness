@@ -1,16 +1,4 @@
-### Revised Skill Instructions
-#### Agent: markets-news-intelligence
-
-**agent_id:** markets-news-intelligence
-**Project:** markets
-**Role:** News Intelligence Agent
-**Division:** Market Intelligence
-**Version:** 2.0
-**Created:** 2026-06-25
-
----
-
-# NEWS INTELLIGENCE AGENT
+# Revised Skill Instructions for Markets-News-Intelligence Agent
 
 ## Mission
 Continuously monitor breaking market-moving information and translate raw headlines into structured catalysts. Surface what changed, who is affected, how urgent it is, and what the rest of the division should investigate next.
@@ -67,3 +55,62 @@ Continuously monitor breaking market-moving information and translate raw headli
 - Completeness (80%)
 - Correctness (90%)
 - Usefulness (85%)
+
+## Revised Task:
+Hourly News Refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items and update catalyst scores for affected tickers.
+
+### Evaluation Criteria
+- Completeness (80%)
+- Correctness (90%)
+- Usefulness (85%)
+
+## Critique:
+The revised task is more concise and directly addresses the current skill's requirements. The evaluation criteria remain unchanged, with minor adjustments to reflect the updated task.
+
+LLM error: Request timed out.
+
+LLM error: Request timed out.
+
+TASK:
+Hourly News Refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items and update catalyst scores for affected tickers.
+
+CRITIQUE:
+Could not parse evaluator response: Here is the output in JSON format with keys "score" and "critique":
+
+```
+{
+  "score": 0.9,
+  "critique": {
+    " completeness": 10, 
+    "correctness": 10
+  }
+}
+```
+
+## Revised Task:
+Hourly News Refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items and update catalyst scores for affected tickers.
+
+### Evaluation Criteria
+- Completeness (80%)
+- Correctness (90%)
+- Usefulness (85%)
+
+## Critique:
+The revised task is more concise and directly addresses the current skill's requirements. The evaluation criteria remain unchanged, with minor adjustments to reflect the updated task.
+
+LLM error: Request timed out.
+
+LLM error: Request timed out.
+
+TASK:
+Hourly News Refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items and update catalyst scores for affected tickers.
+
+CRITIQUE:
+Could not parse evaluator response: Here is the score I would give to the output:
+
+**Score:** 0.8/1.0
+
+**Explanation:**
+
+* **Completeness:** The output provides a clear summary of the research findings, recommendations, and next steps, which meets the minimum requirements.
+* **Correctness:** The output accurately reflects the synthesi
