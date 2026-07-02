@@ -858,6 +858,7 @@
             { id: 'alpaca', icon: '📈', label: 'Alpaca' },
             { id: 'copy_trading', icon: '📋', label: 'Copy Trading' },
             { group: 'System' },
+            { id: 'issues', icon: '🐛', label: 'Issues' },
             { id: 'clients', icon: '👥', label: 'Clients' },
             { id: 'projects', icon: '📁', label: 'Projects' },
             { id: 'travel', icon: '✈', label: 'Travel' },
@@ -1488,6 +1489,7 @@
                 if (replaceHash) history.replaceState(null, '', route); else location.hash = route;
             }
             const pages = {
+                issues: showIssues,
                 login: showLogin,
                 dashboard: showDashboard,
                 runs: showRuns,
@@ -2185,6 +2187,146 @@
                     showToast(error.message || 'Unable to update client', 'var(--error)');
                 }
             });
+        }
+
+        async function showIssues() {
+            if (!(await requireAuth())) return;
+            setLoading('Issues', 'Loading DevOps issue tracker…');
+            try {
+                const response = await api('GET', '/api/todos');
+                const all = asArray(response, ['todos']);
+
+                // Partition: devops agent tickets vs everything else flagged
+                const devops = all.filter(t =>
+                    (t.title || '').toLowerCase().includes('[devops]') ||
+                    (t.source === 'devops') ||
+                    (t.assigned_agent || '').startsWith('devops')
+                );
+                const open   = devops.filter(t => t.status !== 'done' && t.status !== 'resolved');
+                const closed = devops.filter(t => t.status === 'done' || t.status === 'resolved');
+
+                // Group open by category: real errors vs apply-fix noise vs other
+                const isNoise = t => (t.title || '').toLowerCase().includes('apply fix') ||
+                                     (t.title || '').toLowerCase().includes('log message') ||
+                                     (t.title || '').toLowerCase().includes('log format') ||
+                                     (t.title || '').toLowerCase().includes('punctuation');
+                const real  = open.filter(t => !isNoise(t));
+                const noise = open.filter(t => isNoise(t));
+
+                const SEVER_COLOR = { high: 'var(--error)', medium: 'var(--warning)', low: 'var(--text-muted)', critical: '#ff4444' };
+
+                const issueRow = (t) => {
+                    const sev   = t.priority || 'medium';
+                    const desc  = (t.description || '').replace(/\n/g, ' ');
+                    const short = desc.length > 180 ? desc.slice(0, 180) + '…' : desc;
+                    return `
+                    <tr>
+                        <td style="max-width:320px">
+                            <strong style="font-size:0.9em">${escapeHtml(t.title || 'Untitled')}</strong>
+                            <div class="muted" style="font-size:0.78em;margin-top:3px">${escapeHtml(short)}</div>
+                        </td>
+                        <td>${badge(sev, SEVER_COLOR[sev] || 'var(--text-muted)')}</td>
+                        <td>${badge(t.status || 'pending', statusColor(t.status || 'pending'))}</td>
+                        <td style="font-size:0.8em;white-space:nowrap">${fmtDate(t.created_at)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <button class="action-btn resolve-issue-btn" data-id="${escapeHtml(t.id)}" style="font-size:0.8em;padding:4px 10px">Resolve</button>
+                                <button class="danger-btn delete-issue-btn"  data-id="${escapeHtml(t.id)}" style="font-size:0.8em;padding:4px 10px">Dismiss</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                };
+
+                const table = (rows, emptyMsg) => rows.length ? `
+                    <table>
+                        <thead><tr><th>Issue</th><th>Severity</th><th>Status</th><th>Logged</th><th>Actions</th></tr></thead>
+                        <tbody>${rows.map(issueRow).join('')}</tbody>
+                    </table>` : emptyState(emptyMsg, '');
+
+                renderShell(
+                    'Issues',
+                    `DevOps agent issue tracker — ${open.length} open, ${closed.length} resolved.`,
+                    `
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+                        ${[
+                            { label: 'Open', val: open.length,   color: open.length  ? 'var(--error)'   : 'var(--success)' },
+                            { label: 'Real Errors', val: real.length,  color: real.length  ? 'var(--error)'   : 'var(--success)' },
+                            { label: 'Noise/Cosmetic', val: noise.length, color: 'var(--text-muted)' },
+                            { label: 'Resolved', val: closed.length, color: 'var(--success)' },
+                        ].map(s => `<div class="panel" style="flex:1;min-width:120px;text-align:center;padding:14px 10px">
+                            <div style="font-size:1.8em;font-weight:700;color:${s.color}">${s.val}</div>
+                            <div style="font-size:0.8em;color:var(--text-muted);margin-top:2px">${s.label}</div>
+                        </div>`).join('')}
+                    </div>
+
+                    <div class="table-wrap" style="margin-bottom:20px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <h3 style="margin:0">🔴 Real Errors (${real.length})</h3>
+                            ${real.length ? `<button class="danger-btn" id="resolveAllRealBtn" style="font-size:0.82em">Resolve All</button>` : ''}
+                        </div>
+                        ${table(real, 'No real errors — system is clean')}
+                    </div>
+
+                    <div class="table-wrap" style="margin-bottom:20px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <h3 style="margin:0">🟡 Cosmetic / Apply-Fix Proposals (${noise.length})</h3>
+                            ${noise.length ? `<button class="secondary-btn" id="dismissAllNoiseBtn" style="font-size:0.82em">Dismiss All</button>` : ''}
+                        </div>
+                        ${table(noise, 'No cosmetic proposals pending')}
+                    </div>
+
+                    ${closed.length ? `
+                    <div class="table-wrap">
+                        <h3>✅ Resolved (${closed.length})</h3>
+                        ${table(closed, '')}
+                    </div>` : ''}
+                    `,
+                    `<button class="action-btn" id="issuesRefreshBtn">Refresh</button>`
+                );
+
+                $('#issuesRefreshBtn').addEventListener('click', showIssues);
+
+                // Per-row resolve
+                $$('.resolve-issue-btn').forEach(btn => btn.addEventListener('click', async () => {
+                    try {
+                        await api('PUT', `/api/todos/${encodeURIComponent(btn.dataset.id)}`, { status: 'done' });
+                        showToast('Issue resolved', 'var(--success)');
+                        showIssues();
+                    } catch(e) { showToast(e.message || 'Failed', 'var(--error)'); }
+                }));
+
+                // Per-row dismiss (delete)
+                $$('.delete-issue-btn').forEach(btn => btn.addEventListener('click', async () => {
+                    try {
+                        await api('DELETE', `/api/todos/${encodeURIComponent(btn.dataset.id)}`);
+                        showToast('Issue dismissed', 'var(--text-muted)');
+                        showIssues();
+                    } catch(e) { showToast(e.message || 'Failed', 'var(--error)'); }
+                }));
+
+                // Resolve all real
+                const resolveAllBtn = $('#resolveAllRealBtn');
+                if (resolveAllBtn) resolveAllBtn.addEventListener('click', async () => {
+                    try {
+                        await Promise.all(real.map(t => api('PUT', `/api/todos/${encodeURIComponent(t.id)}`, { status: 'done' })));
+                        showToast(`Resolved ${real.length} issues`, 'var(--success)');
+                        showIssues();
+                    } catch(e) { showToast(e.message || 'Failed', 'var(--error)'); }
+                });
+
+                // Dismiss all noise
+                const dismissAllBtn = $('#dismissAllNoiseBtn');
+                if (dismissAllBtn) dismissAllBtn.addEventListener('click', async () => {
+                    try {
+                        await Promise.all(noise.map(t => api('DELETE', `/api/todos/${encodeURIComponent(t.id)}`)));
+                        showToast(`Dismissed ${noise.length} cosmetic proposals`, 'var(--text-muted)');
+                        showIssues();
+                    } catch(e) { showToast(e.message || 'Failed', 'var(--error)'); }
+                });
+
+            } catch(e) {
+                renderShell('Issues', 'Failed to load issues.', `<div class="error-banner">${escapeHtml(e.message)}</div>`);
+            }
         }
 
         async function showClients() {
