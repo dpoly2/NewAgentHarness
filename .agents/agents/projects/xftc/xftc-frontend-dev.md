@@ -34,3 +34,7 @@
 - templates/schedule.php — meet schedule
 - templates/results.php — performance results
 - templates/parts/header.php + footer.php
+
+## Design System Reference
+When generating any client-facing output, read `DESIGN.md` in this project's directory first.
+Apply brand colors, typography, voice, and anti-patterns from that file.

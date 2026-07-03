@@ -37,3 +37,7 @@
 ## Key Files
 - `.agents/projects/smithcap/PROJECT.md`
 - `.agents/projects/smithcap/DEAL-PIPELINE.md`
+
+## Design System Reference
+When generating any client-facing output, read `DESIGN.md` in this project's directory first.
+Apply brand colors, typography, voice, and anti-patterns from that file.

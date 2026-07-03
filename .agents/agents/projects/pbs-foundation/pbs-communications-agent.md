@@ -29,3 +29,7 @@
 ## Key Files
 - `.agents/projects/pbs-foundation/PROJECT.md`
 - `.agents/projects/pbs-foundation/CHARTER.md`
+
+## Design System Reference
+When generating any client-facing output, read `DESIGN.md` in this project's directory first.
+Apply brand colors, typography, voice, and anti-patterns from that file.
