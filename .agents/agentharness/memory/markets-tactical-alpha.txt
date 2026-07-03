@@ -1,47 +1,7 @@
 Task: Next-day trading plan: Based on today's journal, tomorrow's economic calendar, overnight macro setup, and current open positions — build tomorrow's game plan. Key levels to watch, potential setups to monitor, risk events to respect. Keep it to 5 actionable items.
 Score: 0.00
-Critique: Could not parse evaluator response: **Next-Day Trading Plan:**
-
-**Score:** 0.8/1.0 (comprehensive, but some assumptions may not be fully justified)
-
-**Critique:**
-
-* The plan is well-structured and covers key aspects of next-day trading.
-* It provides actionable items for each step, which can help traders stay focused and on track.
-* 
+Critique: [no model output]
 Last Output:
-**Next-Day Trading Plan:**
+[no model output]
 
-Based on today's journal, tomorrow's economic calendar, overnight macro setup, and current open positions, here are 5 actionable items for building tomorrow's game plan:
-
-1. **Review Overnight Macro Setup**: Analyze overnight macroeconomic data, such as GDP growth rates (e.g., Q4 GDP report), inflation expectations (e.g., Consumer Price Index (CPI) forecast), and interest rate decisions (e.g., Federal Reserve meeting minutes). Evaluate the overall economic sentiment and potential market direction to identify potential trading opportunities.
-
-Assumptions:
-
-* The overnight macroeconomic data will provide a clear understanding of the economic environment.
-* The Q4 GDP report will be released on [insert date] and have a significant impact on market sentiment.
-
-Sources:
-
-* National Bureau of Economic Research (NBER)
-* Federal Reserve Economic Data (FRED)
-* Bloomberg Economic Data
-
-Action Item: Review overnight macroeconomic data for Q4 GDP report release on [insert date].
-
-2. **Monitor Economic Calendar**: Keep an eye on tomorrow's economic calendar, including key events like earnings reports (e.g., Apple Q4 earnings), central bank meetings (e.g., Federal Reserve Open Market Committee meeting), and holiday closures (e.g., Christmas Day). This will help identify potential market disruptions and trading opportunities.
-
-Assumptions:
-
-* The earnings report for [insert company] will be released on [insert date] and have a significant impact on market sentiment.
-* The Federal Reserve Open Market Committee meeting will take place on [insert date] and may influence interest rates.
-
-Sources:
-
-* Company website
-* Bloomberg Economic Calendar
-* Reuters Economic News
-
-Action Item: Monitor earnings report for Apple Q4 earnings release on [insert date].
-
-3. **Watch Key Levels**: Identify critical levels of support (e.g., 10-day moving average, 50-period moving average) and resistance (e.g., 20-period moving average, 200-period moving average) based on today'
+[LLM call failed — NotFoundError: Error code: 404 - {'error': {'message': "model 'gemini-2.5-flash' not found", 'type': 'not_found_error', 'param': None, 'code': None}}]
