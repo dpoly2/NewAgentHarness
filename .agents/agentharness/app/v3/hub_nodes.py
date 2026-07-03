@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
+import shutil
 import uuid
 from pathlib import Path
 from typing import Any, Callable
@@ -76,6 +78,7 @@ except ImportError:
 
 
 MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+logger = logging.getLogger(__name__)
 
 _AI_CONFIG_PATHS = [
     AGENTS_DIR / "data" / "ai_config.json",
@@ -412,6 +415,25 @@ def node_load_memory(state: dict, emit: callable = None) -> dict:
         memory_context = db.load_memory_context(state["agent_id"])
     except Exception:
         memory_context = "No prior runs."
+    # Obsidian vault search for additional context (best-effort)
+    try:
+        if shutil.which("obsidian"):
+            import subprocess
+
+            _search_result = subprocess.run(
+                ["obsidian", "search", "--query", state.get("agent_id", ""), "--limit", "3"],
+                timeout=5, capture_output=True, text=True, check=False
+            )
+            if _search_result.returncode == 0 and _search_result.stdout.strip():
+                memory_context = memory_context + "\n\nObsidian vault context:\n" + _search_result.stdout[:1000]
+            else:
+                logger.debug(
+                    "Obsidian search returned no context for agent %s (code=%s)",
+                    agent_id,
+                    _search_result.returncode,
+                )
+    except Exception:
+        logger.debug("Obsidian search failed for agent %s", agent_id, exc_info=True)
     _emit(
         emit,
         "node_update",
@@ -620,6 +642,33 @@ def node_save_memory(state: dict, emit: callable = None) -> dict:
             _HubDbFallback().update_agent_memory(state["agent_id"], memory_update)
     except Exception:
         _HubDbFallback().update_agent_memory(state["agent_id"], memory_update)
+    # Obsidian daily note append (best-effort — never blocks or crashes)
+    try:
+        import datetime as _dt
+        import subprocess
+
+        if shutil.which("obsidian"):
+            _ts = _dt.datetime.now().strftime("%H:%M")
+            _score_pct = f"{state.get('score', 0.0):.0%}"
+            _task_preview = str(state.get("task", ""))[:200]
+            _out_preview = str(state.get("output", ""))[:300]
+            _entry = (
+                f"## [{agent_id}] — {_ts}\n"
+                f"**Task:** {_task_preview}\n"
+                f"**Score:** {_score_pct}\n"
+                f"**Summary:** {_out_preview}\n"
+            )
+            _obsidian_result = subprocess.run(
+                ["obsidian", "daily:append", "--text", _entry],
+                timeout=5, capture_output=True, text=True, check=False
+            )
+            logger.debug(
+                "Obsidian daily append finished for agent %s with code %s",
+                agent_id,
+                _obsidian_result.returncode,
+            )
+    except Exception:
+        logger.debug("Obsidian daily append failed for agent %s", agent_id, exc_info=True)
     _emit(emit, "node_update", node="save_memory", status="complete",
           run_id=state.get("run_id"), progress=1.0,
           text=f"[{state.get('agent_id','?')}] Done — score {state.get('score', 0.0):.0%}")
