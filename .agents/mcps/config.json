@@ -1,1 +1,10 @@
-{"mcpServers": {}}
+{
+  "mcpServers": {
+    "ruflo": {
+      "command": "npx",
+      "args": ["ruflo@latest", "mcp", "start"],
+      "description": "Ruflo vector memory (AgentDB HNSW) + GOAP planner + swarm coordination",
+      "env": {}
+    }
+  }
+}

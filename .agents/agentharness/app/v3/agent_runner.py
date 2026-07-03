@@ -65,6 +65,15 @@ HARNESS   = HERE.parent.parent
 AGENTS_DIR = HARNESS.parent
 SKILLS_DIR = AGENTS_DIR / "agents" / "projects"
 
+# ---------------------------------------------------------------------------
+# Karpathy behavioral guidelines — loaded once, prepended to every agent prompt
+# ---------------------------------------------------------------------------
+_KARPATHY_GUIDELINES_PATH = AGENTS_DIR / "rules" / "karpathy-guidelines.md"
+try:
+    _KARPATHY_GUIDELINES = _KARPATHY_GUIDELINES_PATH.read_text(encoding="utf-8").strip() + "\n\n---\n\n"
+except Exception:
+    _KARPATHY_GUIDELINES = ""
+
 import sys
 for _p in (HERE, HARNESS, AGENTS_DIR):
     if str(_p) not in sys.path:
@@ -437,7 +446,8 @@ def run_agent(
         skill_badge = ""
 
     system = (
-        skill_badge
+        _KARPATHY_GUIDELINES
+        + skill_badge
         + skill_content
         + "\n\n"
         + (f"Memory/Prior context:\n{memory}\n\n" if memory else "")

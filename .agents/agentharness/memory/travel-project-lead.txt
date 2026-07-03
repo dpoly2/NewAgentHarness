@@ -1,0 +1,7 @@
+Task: Review the current architecture diagram and analyze scalability, security vulnerabilities, performance bottlenecks, technology choices, and provide recommendations for improvement.
+Score: 0.00
+Critique: [no model output]
+Last Output:
+[no model output]
+
+[LLM call failed — NotFoundError: Error code: 404 - {'error': {'message': "model 'gemini-3.5-flash' not found", 'type': 'not_found_error', 'param': None, 'code': None}}]
