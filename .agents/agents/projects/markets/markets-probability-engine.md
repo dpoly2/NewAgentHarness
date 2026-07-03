@@ -36,3 +36,8 @@ For each ticker on the watchlist:
   "flagged_for_removal": false
 }
 ```
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `prediction-market-analysis` — Compare implied probabilities across prediction venues, options markets, and macro derivatives.
+- `signal-synthesis` — Standardize multi-desk evidence into a confidence score and escalation state.

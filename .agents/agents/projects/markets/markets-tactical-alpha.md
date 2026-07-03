@@ -153,3 +153,9 @@ Revise the skill only if it would improve future runs.
 LLM error: Request timed out.
 
 LLM error: Request timed out.
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `ito-market-intelligence` — Synthesize multi-timeframe, smart-money, and disclosure-lag inputs into a structured trade thesis.
+- `signal-synthesis` — Merge technical, macro, sentiment, and smart-money evidence into a conviction scorecard.
+- `trade-planner` — Convert validated theses into scenario-based execution plans ready for CRO review.

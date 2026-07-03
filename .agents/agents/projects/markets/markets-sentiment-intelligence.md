@@ -53,3 +53,7 @@ Market sentiment assessment with score.
 - Completeness: 0.8
 - Correctness: 0.9
 - Usefulness: 0.7
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `signal-synthesis` — Position sentiment as one evidence family inside a broader multi-source conviction framework.

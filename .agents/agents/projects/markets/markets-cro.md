@@ -161,3 +161,8 @@ The risk score is calculated based on the following factors:
 * Position-size ceiling
 * VaR snapshot, correlation alerts, and drawdown notes
 * Risk conditions required before reconsideration
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `trade-planner` — Audit entries, stops, sizing, and scenario matrices in a CRO-ready trade plan.
+- `prediction-market-analysis` — Compare prediction-market probabilities with listed-market pricing to test risk assumptions.

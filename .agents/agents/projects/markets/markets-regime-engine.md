@@ -27,3 +27,7 @@ Classify daily market regime to inform strategy adjustments.
 #### Governance
 - Publish regime even with imperfect confidence
 - Regime must be data-driven and revisable
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `regime-detection` — Classify the active regime, transition risk, and per-regime strategy playbook before signaling.

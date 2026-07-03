@@ -51,3 +51,8 @@ Turn raw chart behavior into disciplined timing, structure, and invalidation dec
 - Never recommend entries at obvious resistance without a defined trigger
 - Technicals must include invalidation, not just upside targets
 - If structure evidence conflicts, say so and lower readiness
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `signal-synthesis` — Translate chart structure into one scored component of the full market thesis.
+- `regime-detection` — Adjust technical interpretation based on trend, mean-reversion, or high-volatility conditions.

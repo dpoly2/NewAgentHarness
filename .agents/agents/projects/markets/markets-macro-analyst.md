@@ -42,3 +42,8 @@ Interpret the macro environment to inform risk deployment, reduction, or redirec
 ## Governance
 - Never present macro forecasts as certainty
 - Separate released data from inferred impact
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `signal-synthesis` — Combine macro posture with technical, sentiment, and smart-money inputs for escalation decisions.
+- `prediction-market-analysis` — Use prediction markets as a macro-probability cross-check against rates, vol, and sector pricing.

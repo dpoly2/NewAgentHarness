@@ -51,3 +51,8 @@ Design defined-risk options structures that fit the current regime, catalyst cal
 | Usefulness | Is the output actionable for trading decisions? |
 
 Note: The revised skill only includes changes to improve future runs, without altering the existing task.
+
+## Skills
+When executing tasks, apply the following skills from `.agents/agents/skills/markets/`:
+- `trade-planner` — Translate a directional thesis into a defined-risk options structure with sizing and checklist controls.
+- `ito-market-intelligence` — Use drift-diffusion and smart-money context to align options structures with market regime.
