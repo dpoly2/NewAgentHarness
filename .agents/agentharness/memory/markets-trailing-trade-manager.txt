@@ -1,54 +1,7 @@
 Task: Hourly trailing stop update: Review all open positions with trailing stops. Recommend trail adjustments based on current price action, ATR changes, and volatility. Flag positions where trail should be tightened or moved to breakeven. Protect any positions up more than 2R.
 Score: 0.00
-Critique: Could not parse evaluator response: Here is the scorecard with the output scored from 0.0 to 1.0 for completeness, correctness, and usefulness:
-
-**Score: 0.9/10**
-
-**Reasoning:**
-
-* The output provides a comprehensive framework for creating an accurate and effective hourly trailing stop update (completeness: 9/10).
-* However, the synt
+Critique: [no model output]
 Last Output:
-**Final Answer**
+[no model output]
 
-The final answer to the task is as follows:
-
-**Hourly Trailing Stop Update: Synthesized Findings, Assumptions, Sources, and Notable Risks**
-
-**Introduction**
-
-The hourly trailing stop update is a critical component of risk management in financial markets. This research plan aims to provide a comprehensive framework for creating an accurate and effective hourly trailing stop update.
-
-**Assumptions**
-
-* Historical data on open positions with trailing stops will be used as the basis for this analysis.
-* The ATR (Average True Range) and volatility metrics will be considered in evaluating position performance and adjusting trailing stops.
-* The research plan assumes that the historical data is accurate and up-to-date, but may not reflect real-time market conditions.
-
-**Sources**
-
-* Historical data on open positions with trailing stops from reputable sources, including:
-	+ Trading platforms (e.g., MetaTrader, Interactive Brokers)
-	+ Financial news websites (e.g., Bloomberg, CNBC)
-	+ Research reports and studies from financial institutions
-* ATR and volatility metrics from reputable sources, including:
-	+ Quandl (financial data platform)
-	+ Alpha Vantage (volatility and ATR data)
-
-**Synthesized Findings**
-
-1. **Position Performance**: The hourly trailing stop update should be based on the following criteria to evaluate position performance:
-	* Profit/Loss (P&L) > breakeven
-	* Position size > 2R
-	* Risk-reward ratio < 1:1
-	* Stop-loss placement > 2R from entry price
-2. **Trailing Stop Performance**: The hourly trailing stop update should be adjusted based on the following criteria:
-	* Trailing stop too far (more than 2R) = tighten stop-loss
-	* Trailing stop moving in line with expected price action = no adjustment
-3. **Breakeven Protection**: Positions where the trailing stop should be moved to breakeven should be identified, considering:
-	* Current price and ATR changes
-	* Expected P&L and risk-reward ratio
-
-**Notable Risks**
-
-1. **Data Quality Issues**: 
+[LLM call failed — NotFoundError: Error code: 404 - {'error': {'message': "model 'gemini-2.5-flash' not found", 'type': 'not_found_error', 'param': None, 'code': None}}]
