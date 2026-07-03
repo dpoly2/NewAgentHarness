@@ -1541,6 +1541,21 @@ def think(
                 emit("inez_thinking", message=f"Dispatching {len(dispatches)} agent(s)...")
             try:
                 from agent_runner import run_dispatches, build_synthesis_context
+                if len(dispatches) >= 3:
+                    try:
+                        from goap_planner import plan_from_goal, write_plan_to_inbox
+
+                        _project = dispatches[0].get("project", "archon") if dispatches else "archon"
+                        _plan = plan_from_goal(
+                            user_message[:300],
+                            _project,
+                            agent_id="inez",
+                            context={"dispatches": dispatches},
+                        )
+                        _inbox_path = write_plan_to_inbox(_plan, _project)
+                        logger.info("[GOAP] Plan written: %s (%d steps)", _inbox_path.name, len(_plan.get("steps", [])))
+                    except Exception as _ge:
+                        logger.debug("[GOAP] Plan skipped: %s", _ge)
                 # Inject travel tool data as context for travel agents
                 for d in dispatches:
                     if travel_tool_data and "travel" in d.get("agent_id", "").lower():
