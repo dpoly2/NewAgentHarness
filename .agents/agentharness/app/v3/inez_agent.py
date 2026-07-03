@@ -1298,6 +1298,27 @@ def think(
             "error": "LangChain/OpenAI not installed",
         }
 
+    # Shield scan on incoming Inez task
+    try:
+        from agent_shield import scan_prompt
+        _inez_shield = scan_prompt(user_message, agent_id="inez")
+        if not _inez_shield.safe:
+            logger.warning("[AgentShield] Inez task blocked: %s", _inez_shield.blocked_reason)
+            return {
+                "inez_message": (
+                    "I can't process that request. It was flagged by security screening: "
+                    f"{_inez_shield.blocked_reason}"
+                ),
+                "dispatches": [],
+                "agent_results": [],
+                "needs_agents": False,
+                "todos": [],
+                "tasks": [],
+                "error": None,
+            }
+    except Exception:
+        pass
+
     if emit:
         emit("inez_thinking", message="Inez is analyzing your request...")
 

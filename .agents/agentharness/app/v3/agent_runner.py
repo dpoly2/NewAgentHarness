@@ -413,6 +413,29 @@ def run_agent(
 
     _emit("agent_start", task=task[:120])
 
+    # AgentShield pre-dispatch security scan
+    try:
+        from agent_shield import scan_task_and_log, ShieldResult
+        _shield = scan_task_and_log(task, agent_id, db=db if DB_OK else None)
+        if not _shield.safe:
+            logger.warning(
+                "[AgentShield] BLOCKED %s — %s: %s",
+                agent_id, _shield.risk_level, _shield.blocked_reason
+            )
+            return _error_result(
+                agent_id,
+                f"[AgentShield] Task blocked ({_shield.risk_level}): {_shield.blocked_reason}"
+            )
+        elif _shield.risk_level in ("high", "medium"):
+            logger.warning(
+                "[AgentShield] %s flagged for %s: %s",
+                agent_id, _shield.risk_level, ", ".join(_shield.flags)
+            )
+    except ImportError:
+        pass  # AgentShield not available, proceed normally
+    except Exception as _se:
+        logger.debug("[AgentShield] scan error (non-blocking): %s", _se)
+
     if not NODES_OK or not LC_OK:
         return _error_result(agent_id, "hub_nodes / langchain not available")
 
