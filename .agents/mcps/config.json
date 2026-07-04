@@ -5,6 +5,15 @@
       "args": ["ruflo@latest", "mcp", "start"],
       "description": "Ruflo vector memory (AgentDB HNSW) + GOAP planner + swarm coordination",
       "env": {}
+    },
+    "open-design": {
+      "command": "npx",
+      "args": ["-y", "open-design-mcp@latest"],
+      "description": "Open Design daemon MCP bridge for prototypes, decks, HyperFrame, images, and video",
+      "env": {
+        "OD_API_TOKEN": "${OD_API_TOKEN}",
+        "OD_DAEMON_URL": "${OD_DAEMON_URL}"
+      }
     }
   }
 }
