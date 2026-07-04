@@ -1,4 +1,4 @@
-# 07-SECURITY-MODEL
+# 06-SECURITY-CONTRACT
 
 _Generated from the current ArchonHub source tree on 2026-07-03._
 

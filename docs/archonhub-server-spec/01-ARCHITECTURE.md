@@ -1,4 +1,4 @@
-# 01-SYSTEM-ARCHITECTURE
+# 01-ARCHITECTURE
 
 _Generated from the current ArchonHub source tree on 2026-07-03._
 
