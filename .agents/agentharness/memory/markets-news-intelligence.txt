@@ -1,39 +1,7 @@
 Task: Hourly news refresh: Scan for breaking news, new SEC filings, intraday catalysts affecting open positions or watchlist tickers. Immediately flag URGENT items (FDA decisions, earnings surprises, major news). Update catalyst scores for affected tickers.
 Score: 0.00
-Critique: Could not parse evaluator response: Here is the scored output:
-
-**Final Answer:**
-
-Based on the research, it appears that the market has experienced a high level of activity, with numerous breaking news stories, new SEC filings, and intraday catalysts affecting open positions or watchlist tickers. The hourly news refresh has flagged 1
+Critique: [no model output]
 Last Output:
-**Final Answer:**
+[no model output]
 
-Based on the research, it appears that the market has experienced a high level of activity, with numerous breaking news stories, new SEC filings, and intraday catalysts affecting open positions or watchlist tickers. The hourly news refresh has flagged 15 URGENT items that require immediate attention.
-
-**Summary:**
-The analysis highlights several key findings, including:
-
-* Breaking news stories (FDA decisions, earnings surprises, major news) have increased activity in the market.
-* New SEC filings have changed a company's financial position or operations, affecting open positions or watchlist tickers.
-* Intraday catalysts have potential implications for open positions or watchlist tickers.
-
-**Evidence:**
-The research relies on reputable sources such as Bloomberg, CNBC, and Reuters to verify breaking news, market analysis, and SEC filings. Additionally, the report highlights several potential risks associated with the identified tickers, including FDA decisions affecting pharmaceutical companies, earnings surprises impacting technology stocks, and major news affecting financial institutions.
-
-**Recommendations:**
-To mitigate potential risks and maximize returns in the market, we recommend:
-
-1. Diversifying portfolio to reduce exposure to affected tickers.
-2. Monitoring FDA decisions, particularly those affecting pharmaceutical companies.
-3. Being cautious when investing in technology stocks due to unexpected revenue growth or expense management.
-4. Watching major news that could disrupt financial institutions' operations and stock performance.
-
-**Next Steps:**
-To ensure continuous monitoring of catalyst scores for affected tickers, we recommend:
-
-1. Regularly reviewing catalyst scores to ensure they remain high or very high.
-2. Staying informed about breaking news, market analysis, and SEC filings to make informed investment decisions.
-3. Rebalancing portfolio as needed to maintain an optimal asset allocation.
-
-**Risk Assessment:**
-Our analysis has
+[LLM call failed — NotFoundError: Error code: 404 - {'error': {'message': "model 'gemini-2.5-flash' not found", 'type': 'not_found_error', 'param': None, 'code': None}}]
